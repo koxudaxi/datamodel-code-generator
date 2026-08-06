@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -119,6 +120,372 @@ def test_windows_staging_fallback_rejects_a_replaced_anchor_before_creating_a_pr
 
 
 @pytest.mark.allow_direct_assert
+def test_windows_staging_fallback_rejects_a_removed_anchor_before_creating_a_private_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A deleted Windows anchor is rejected instead of being recreated as an attacker path."""
+    parent = tmp_path / "parent"
+    parent.mkdir()
+    parent_stat = parent.stat()
+    anchor = publication_module.PublicationAnchor(parent, (parent_stat.st_dev, parent_stat.st_ino), None)
+    parent.rename(tmp_path / "moved-parent")
+    monkeypatch.setattr(publication_module.os, "name", "nt")
+
+    with pytest.raises(OSError, match="publication destination changed"):
+        publication_module.StagingDirectory.create(anchor, prefix=".stage-")
+
+
+@pytest.mark.allow_direct_assert
+def test_staging_directory_handles_deleted_sources_closed_handles_and_cleanup_failures(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Descriptor staging treats deleted and undeletable private files as transaction cleanup cases."""
+    parent = tmp_path / "parent"
+    parent.mkdir()
+    anchor = publication_module.publication_anchor(parent)
+    staging = publication_module.StagingDirectory.create(anchor, prefix=".stage-")
+    file_fd, name = staging.create_file(prefix=".source-")
+    os.close(file_fd)
+    (staging.path / name).unlink()
+    staging.discard_file(name)
+    staging.cleanup()
+    staging.cleanup()
+    with pytest.raises(OSError, match="already closed"):
+        staging.create_file(prefix=".source-")
+    publication_module.close_anchor(anchor)
+
+    anchor = publication_module.publication_anchor(parent)
+    staging = publication_module.StagingDirectory.create(anchor, prefix=".stage-")
+    file_fd, name = staging.create_file(prefix=".source-")
+    os.close(file_fd)
+    original_unlink = publication_module.os.unlink
+
+    def fail_staged_unlink(path: str, *args: object, **kwargs: object) -> None:
+        if path == name:
+            msg = "staged file is busy"
+            raise OSError(msg)
+        original_unlink(path, *args, **kwargs)
+
+    monkeypatch.setattr(publication_module.os, "unlink", fail_staged_unlink)
+    with pytest.raises(OSError, match="staged file is busy"):
+        staging.cleanup()
+    monkeypatch.undo()
+    (staging.path / name).unlink()
+    staging.path.rmdir()
+    publication_module.close_anchor(anchor)
+
+
+@pytest.mark.allow_direct_assert
+def test_staging_directory_fails_closed_for_unavailable_private_names(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Name collisions and an open failure never leave an attacker-controlled staging entry behind."""
+    parent = tmp_path / "parent"
+    parent.mkdir()
+    anchor = publication_module.publication_anchor(parent)
+
+    monkeypatch.setattr(publication_module, "_private_name", lambda _prefix: ".stage")
+    original_open = publication_module.os.open
+
+    def fail_staging_open(path: str, *args: object, **kwargs: object) -> int:
+        if path == ".stage":
+            msg = "private staging open failed"
+            raise OSError(msg)
+        return original_open(path, *args, **kwargs)
+
+    monkeypatch.setattr(publication_module.os, "open", fail_staging_open)
+    with pytest.raises(OSError, match="private staging open failed"):
+        publication_module.StagingDirectory.create(anchor, prefix=".stage-")
+    assert not list(parent.iterdir())
+    monkeypatch.undo()
+
+    staging = publication_module.StagingDirectory.create(anchor, prefix=".stage-")
+    monkeypatch.setattr(publication_module, "_private_name", lambda _prefix: ".source")
+
+    def collide_with_reserved_name(path: str, *args: object, **kwargs: object) -> int:
+        if path == ".source":
+            raise FileExistsError(path)
+        return original_open(path, *args, **kwargs)
+
+    monkeypatch.setattr(publication_module.os, "open", collide_with_reserved_name)
+    with pytest.raises(FileExistsError, match="could not reserve private staged file"):
+        staging.create_file(prefix=".source-")
+    staging.path.rmdir()
+    staging.cleanup()
+    monkeypatch.undo()
+
+    monkeypatch.setattr(
+        publication_module.os,
+        "mkdir",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(FileExistsError()),
+    )
+    with pytest.raises(FileExistsError, match="could not reserve private staging"):
+        publication_module.StagingDirectory.create(anchor, prefix=".stage-")
+    publication_module.close_anchor(anchor)
+
+
+@pytest.mark.allow_direct_assert
+def test_descriptor_publication_error_and_rollback_primitives_preserve_private_entries(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Descriptor-only error recovery keeps backups and failed cleanup inside the pinned parent."""
+    parent = tmp_path / "parent"
+    parent.mkdir()
+    anchor = publication_module.publication_anchor(parent)
+    moved_parent = tmp_path / "moved-parent"
+    parent.rename(moved_parent)
+    assert not publication_module._directory_fd_matches_path(anchor.directory_fd, parent)
+    publication_module.close_anchor(anchor)
+    moved_parent.rename(parent)
+
+    target = parent / "target.py"
+    target.write_text("generated\n", encoding="utf-8")
+    publication_module._validate_publication_anchor(
+        publication_module.StagedFile(None, target, target)
+    )
+    directory_fd = os.open(parent, publication_module._directory_open_flags())
+    target_stat = os.stat(target.name, dir_fd=directory_fd, follow_symlinks=False)
+    collision = ".target.py.collision.bak"
+    os.close(os.open(collision, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600, dir_fd=directory_fd))
+    monkeypatch.setattr(publication_module, "_backup_names", lambda _name: iter((collision,)))
+    with pytest.raises(FileExistsError, match="could not reserve backup"):
+        publication_module._backup_existing_target_at(directory_fd, target.name, target_stat)
+    monkeypatch.undo()
+
+    def fail_hardlink(*_args: object, **_kwargs: object) -> None:
+        msg = "hardlinks unavailable"
+        raise OSError(msg)
+
+    monkeypatch.setattr(publication_module, "_backup_names", lambda _name: iter((collision,)))
+    monkeypatch.setattr(publication_module.os, "link", fail_hardlink)
+    with pytest.raises(FileExistsError, match="could not reserve backup"):
+        publication_module._backup_existing_target_at(directory_fd, target.name, target_stat)
+    monkeypatch.undo()
+
+    backup_name = ".target.py.backup"
+    os.link(target.name, backup_name, src_dir_fd=directory_fd, dst_dir_fd=directory_fd, follow_symlinks=False)
+    publication_module._restore_backup_at(
+        publication_module._BoundPublishedFile(target, directory_fd, target.name, backup_name)
+    )
+    assert not (parent / backup_name).exists()
+
+    missing_target = parent / "missing.py"
+    missing_backup = ".missing.py.backup"
+    os.close(os.open(missing_backup, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600, dir_fd=directory_fd))
+    publication_module._restore_backup_at(
+        publication_module._BoundPublishedFile(missing_target, directory_fd, missing_target.name, missing_backup)
+    )
+    assert missing_target.is_file()
+
+    symlink_target = parent / "symlink.py"
+    os.symlink(target.name, ".symlink.py.backup", dir_fd=directory_fd)
+    os.symlink(target.name, symlink_target.name, dir_fd=directory_fd)
+    publication_module._restore_backup_at(
+        publication_module._BoundPublishedFile(symlink_target, directory_fd, symlink_target.name, ".symlink.py.backup")
+    )
+    assert not (parent / ".symlink.py.backup").exists()
+
+    original_unlink = publication_module.os.unlink
+
+    def fail_target_unlink(path: str, *args: object, **kwargs: object) -> None:
+        if path == target.name:
+            msg = "target is busy"
+            raise OSError(msg)
+        original_unlink(path, *args, **kwargs)
+
+    monkeypatch.setattr(publication_module.os, "unlink", fail_target_unlink)
+    assert publication_module._rollback_bound_file(
+        publication_module._BoundPublishedFile(target, directory_fd, target.name, None)
+    ) == [target]
+    monkeypatch.undo()
+
+    staged = parent / "staged.py"
+    staged.write_text("staged\n", encoding="utf-8")
+    staged_file = publication_module.StagedFile(staged, target, target)
+    publication_module._set_staged_mode(staged_file, 0o640)
+
+    def fail_staged_chmod(*_args: object, **_kwargs: object) -> None:
+        msg = "staged file is busy"
+        raise OSError(msg)
+
+    monkeypatch.setattr(Path, "chmod", fail_staged_chmod)
+    publication_module._set_staged_mode(staged_file, 0o640)
+    monkeypatch.undo()
+    os.close(directory_fd)
+
+
+@pytest.mark.allow_direct_assert
+def test_descriptor_publication_copy_and_journal_failure_paths_use_real_files(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Copy fallback and rollback failures leave the original source and report owned directories."""
+    source = tmp_path / "source.py"
+    source.write_text("source\n", encoding="utf-8")
+    source_stat = source.stat()
+    backup = tmp_path / "backup.py"
+    file_fd = publication_module._open_file_at(source, os.O_RDONLY, 0, None)
+    os.close(file_fd)
+
+    def fail_hardlink(*_args: object, **_kwargs: object) -> None:
+        msg = "hardlinks unavailable"
+        raise OSError(msg)
+
+    monkeypatch.setattr(publication_module.os, "link", fail_hardlink)
+    publication_module._copy_target(source, backup, source_stat, directory_fd=None)
+    assert backup.read_text(encoding="utf-8") == "source\n"
+    monkeypatch.undo()
+
+    failed_backup = tmp_path / "failed-backup.py"
+
+    def fail_copy(*_args: object, **_kwargs: object) -> None:
+        msg = "copy interrupted"
+        raise OSError(msg)
+
+    monkeypatch.setattr(publication_module.shutil, "copyfileobj", fail_copy)
+    with pytest.raises(OSError, match="copy interrupted"):
+        publication_module._copy_target(source, failed_backup, source_stat, directory_fd=None)
+    assert not failed_backup.exists()
+    monkeypatch.undo()
+
+    planned = publication_module._planned_staged_file((source, tmp_path / "planned.py"))
+    assert planned.staged_file == source
+
+    target_directory = tmp_path / "target-directory"
+    target_directory.mkdir()
+    with pytest.raises(IsADirectoryError):
+        publication_module.publish_staged_files(
+            (publication_module.StagedFile(source, target_directory, target_directory),)
+        )
+
+    generated = tmp_path / "generated.py"
+    generated.write_text("generated\n", encoding="utf-8")
+    nested_target = tmp_path / "created" / "target.py"
+    original_replace = publication_module.os.replace
+    original_rmdir = publication_module.os.rmdir
+
+    def fail_replace(source_path: str | Path, *args: object, **kwargs: object) -> None:
+        if source_path == generated:
+            msg = "replacement interrupted"
+            raise OSError(msg)
+        original_replace(source_path, *args, **kwargs)
+
+    def fail_created_directory_removal(name: str, *args: object, **kwargs: object) -> None:
+        if name == "created":
+            msg = "directory is busy"
+            raise OSError(msg)
+        original_rmdir(name, *args, **kwargs)
+
+    monkeypatch.setattr(publication_module.os, "replace", fail_replace)
+    monkeypatch.setattr(publication_module.os, "rmdir", fail_created_directory_removal)
+    with pytest.raises(OSError, match="failed to roll back batch output"):
+        publication_module.publish_staged_files(
+            (publication_module.StagedFile(generated, nested_target, nested_target),)
+        )
+    monkeypatch.undo()
+    assert generated.is_file()
+    assert nested_target.parent.is_dir()
+
+
+@pytest.mark.allow_direct_assert
+def test_path_publication_helpers_preserve_modes_and_own_only_created_directories(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The lexical fallback helpers have the same real-filesystem rollback semantics as descriptor publication."""
+    target = tmp_path / "target.py"
+    staged = tmp_path / "staged.py"
+    target.write_text("stale\n", encoding="utf-8")
+    staged.write_text("generated\n", encoding="utf-8")
+    target.chmod(0o640)
+
+    publication_module._preserve_target_mode(staged, target)
+
+    assert staged.stat().st_mode & 0o777 == 0o640
+
+    created_directories: list[Path] = []
+    nested_target = tmp_path / "created" / "nested" / "model.py"
+    publication_module._create_target_parent(nested_target, created_directories)
+
+    assert created_directories == [tmp_path / "created", tmp_path / "created" / "nested"]
+    assert publication_module._create_directory(created_directories[-1]) is False
+
+    backup = tmp_path / "target.backup"
+    backup.hardlink_to(target)
+    publication_module._restore_backup(backup, target)
+
+    assert not backup.exists()
+
+    for directory in reversed(created_directories):
+        assert publication_module._remove_created_directory(directory) == []
+
+    collision = tmp_path / ".target.py.reserved.bak"
+    collision.write_text("reserved\n", encoding="utf-8")
+    monkeypatch.setattr(publication_module, "_backup_names", lambda _target_name: iter((collision.name,)))
+    with pytest.raises(FileExistsError, match="could not reserve backup"):
+        publication_module._backup_existing_target(target)
+
+
+@pytest.mark.allow_direct_assert
+def test_remote_lock_legacy_staging_reuses_and_discards_one_private_file(tmp_path: Path) -> None:
+    """The direct API retains its Path staging compatibility without leaking a temporary lock."""
+    lockfile = tmp_path / "nested" / "datamodel-codegen.lock"
+    updater = RemoteReferenceLock.open(lockfile, update=True, locked=False)
+    updater.record_response("https://schemas.example/schema.json", None, None, b"schema")
+
+    staged_path = updater.stage()
+
+    assert isinstance(staged_path, Path)
+    assert staged_path.is_file()
+    assert updater.stage() == staged_path
+    updater.discard_stage()
+    assert not staged_path.exists()
+    assert not lockfile.parent.exists()
+
+
+@pytest.mark.allow_direct_assert
+def test_remote_lock_stage_is_inactive_after_commit_or_without_update(tmp_path: Path) -> None:
+    """Read-only and committed collectors never allocate legacy staging files."""
+    lockfile = tmp_path / "datamodel-codegen.lock"
+    readonly = RemoteReferenceLock.open(lockfile, update=False, locked=False)
+    assert readonly.stage() is None
+
+    updater = RemoteReferenceLock.open(lockfile, update=True, locked=False)
+    updater.record_response("https://schemas.example/schema.json", None, None, b"schema")
+    updater.commit()
+
+    assert updater.stage() is None
+
+
+@pytest.mark.allow_direct_assert
+def test_remote_lock_can_commit_an_empty_observed_closure(tmp_path: Path) -> None:
+    """An explicit update writes a deterministic empty lock when no remote resource was fetched."""
+    lockfile = tmp_path / "datamodel-codegen.lock"
+
+    RemoteReferenceLock.open(lockfile, update=True, locked=False).commit()
+
+    assert json.loads(lockfile.read_text(encoding="utf-8")) == {"resources": [], "version": 1}
+
+
+@pytest.mark.allow_direct_assert
+def test_remote_lock_commit_releases_no_resources_when_anchor_preparation_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An anchor failure is surfaced as a lock error before any staging resource exists."""
+    lockfile = tmp_path / "datamodel-codegen.lock"
+    updater = RemoteReferenceLock.open(lockfile, update=True, locked=False)
+    updater.record_response("https://schemas.example/schema.json", None, None, b"schema")
+
+    def fail_anchor(*_args: object, **_kwargs: object) -> object:
+        msg = "destination unavailable"
+        raise OSError(msg)
+
+    monkeypatch.setattr(publication_module, "publication_anchor", fail_anchor)
+
+    with pytest.raises(RemoteLockError, match="destination unavailable"):
+        updater.commit()
+
+    assert not lockfile.exists()
+
+
 def test_remote_lock_reports_missing_malformed_unknown_and_changed_entries(tmp_path: Path) -> None:
     """Verification fails closed for each lock integrity error condition."""
     lockfile = tmp_path / "datamodel-codegen.lock"

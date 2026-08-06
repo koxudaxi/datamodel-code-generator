@@ -23,23 +23,23 @@ from datamodel_code_generator import MIN_VERSION, Error, chdir, inferred_message
 from datamodel_code_generator.__main__ import (
     Exit,
     JobPlan,
-    _backup_existing_target,
-    _create_directory,
-    _create_target_parent,
     _generated_files_from_result,
     _generation_output_json,
     _json_ready,
     _plan_jobs,
     _publish_staged_files,
+    _selected_jobs,
+    _StagedJobPlan,
+    _write_generated_result,
+    generate_pyproject_config,
+)
+from datamodel_code_generator._publication import (
+    _backup_existing_target,
+    _create_target_parent,
     _PublishedFile,
     _remove_created_directory,
     _restore_backup,
     _rollback_published_file,
-    _selected_jobs,
-    _staged_files,
-    _StagedJobPlan,
-    _write_generated_result,
-    generate_pyproject_config,
 )
 from datamodel_code_generator.arguments import arg_parser
 from tests.conftest import (
@@ -2755,6 +2755,13 @@ def test_pyproject_jobs_restore_backup_replaces_when_samefile_is_unavailable(
 
     assert target.read_text(encoding="utf-8") == "stale\n"
 
+    monkeypatch.undo()
+    backup.write_text("stale again\n", encoding="utf-8")
+    target.write_text("generated again\n", encoding="utf-8")
+    _restore_backup(backup, target)
+
+    assert target.read_text(encoding="utf-8") == "stale again\n"
+
 
 @pytest.mark.skipif(sys.platform == "win32", reason="symlink creation requires elevated privileges")
 @pytest.mark.allow_direct_assert
@@ -2905,7 +2912,6 @@ def test_pyproject_jobs_windows_fallback_preserves_target_mode(tmp_path: Path) -
 
     assert stat.S_IMODE(staged_file.stat().st_mode) == 0o640
 
-
 def test_pyproject_jobs_staging_failure_removes_earlier_staging(
     tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -2913,11 +2919,14 @@ def test_pyproject_jobs_staging_failure_removes_earlier_staging(
     first_output = tmp_path / "first.py"
     second_output = tmp_path / "second.py"
     metadata_output = tmp_path / "second.metadata.json"
+    lockfile = tmp_path / "remote.lock"
     (tmp_path / "pyproject.toml").write_text(
         f"""
 [tool.datamodel-codegen]
 disable-timestamp = true
 input-file-type = "jsonschema"
+update-lock = true
+lockfile = "{lockfile.as_posix()}"
 
 [tool.datamodel-codegen.jobs.first]
 input = "{(JSON_SCHEMA_DATA_PATH / "person.json").as_posix()}"
@@ -2954,6 +2963,7 @@ emit-model-metadata = "{metadata_output.as_posix()}"
     _assert_file_does_not_exist(first_output)
     _assert_file_does_not_exist(second_output)
     _assert_file_does_not_exist(metadata_output)
+    _assert_file_does_not_exist(lockfile)
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="batch publication anchors use directory descriptors on POSIX")

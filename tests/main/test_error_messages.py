@@ -228,6 +228,12 @@ def test_output_path_can_write_inside_input_directory(
     )
 
 
+def test_remote_lock_modes_are_mutually_exclusive_in_public_config() -> None:
+    """The public config model preserves the parser's remote lock policy guard."""
+    with pytest.raises(ValueError, match="--update-lock and --locked cannot be used together"):
+        GenerateConfig(update_lock=True, locked=True)
+
+
 def test_missing_input_conflict_preserves_missing_file_error(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],

@@ -32,6 +32,8 @@ from tests.main.conftest import (
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
 
+    from pytest_mock import MockerFixture
+
     from datamodel_code_generator.watch_dependencies import WatchDependencies
 
 PROJECT_ROOT = Path(__file__).parents[2]
@@ -2790,6 +2792,70 @@ def test_watch_cli_update_lock_does_not_trigger_its_own_regeneration(
         assert_output(f"done={done_count}\n", WATCH_DATA_PATH / "batch_no_cycle.txt")
     finally:
         _stop_watch_cli(process, stdout_thread, stderr_thread)
+
+
+def test_watch_initial_remote_lock_errors_discard_the_open_transaction(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Initial watch failures release an active update transaction before the loop can start."""
+    input_file = tmp_path / "source.json"
+    output_file = tmp_path / "output.py"
+    lockfile = tmp_path / "locks" / "remote.lock"
+    input_file.write_text("{", encoding="utf-8")
+    common_args = [
+        "--input",
+        str(input_file),
+        "--output",
+        str(output_file),
+        "--input-file-type",
+        "jsonschema",
+        "--disable-timestamp",
+        "--lockfile",
+        str(lockfile),
+    ]
+
+    monkeypatch.chdir(tmp_path)
+    run_main_with_args([*common_args, "--update-lock", "--watch"], expected_exit=Exit.ERROR)
+
+    input_file.write_text((JSON_SCHEMA_DATA_PATH / "person.json").read_text(encoding="utf-8"), encoding="utf-8")
+    run_main_with_args(
+        [*common_args, "--output", str(input_file), "--update-lock", "--watch"],
+        expected_exit=Exit.ERROR,
+    )
+
+
+def test_watch_exception_after_initial_remote_lock_commit_preserves_real_artifacts(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    mocker: MockerFixture,
+) -> None:
+    """A watch-loop exception happens after the initial output and lock journal have committed."""
+    input_file = JSON_SCHEMA_DATA_PATH / "person.json"
+    output_file = tmp_path / "output.py"
+    lockfile = tmp_path / "remote.lock"
+    monkeypatch.chdir(tmp_path)
+    mocker.patch("datamodel_code_generator.watch.watch_and_regenerate", side_effect=RuntimeError("watch loop failed"))
+
+    run_main_with_args(
+        [
+            "--input",
+            str(input_file),
+            "--output",
+            str(output_file),
+            "--input-file-type",
+            "jsonschema",
+            "--disable-timestamp",
+            "--lockfile",
+            str(lockfile),
+            "--update-lock",
+            "--watch",
+        ],
+        expected_exit=Exit.ERROR,
+    )
+
+    assert_output(output_file.read_text(encoding="utf-8"), PROJECT_ROOT / "tests/data/expected/main/person.py")
+    assert_output(lockfile.read_text(encoding="utf-8"), PROJECT_ROOT / "tests/data/expected/http/remote_lock_empty.txt")
 
 
 def test_watch_cli_locked_lock_recovery_after_external_deletion(

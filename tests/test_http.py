@@ -1301,6 +1301,92 @@ def test_remote_lock_transaction_attempts_all_cleanup_after_one_staged_source_un
     assert transaction._anchors == {}
     assert not any(context.path.exists() for context in contexts)
 
+    monkeypatch.undo()
+    transaction = _RemoteLockTransaction.open(entries, plans)
+    assert transaction is not None
+    contexts = tuple(transaction._staging_contexts.values())
+    anchors = tuple(transaction._anchors.values())
+    original_cleanup = publication_module.StagingDirectory.cleanup
+    original_close_anchor = publication_module.close_anchor
+
+    def fail_after_first_context_cleanup(context: publication_module.StagingDirectory) -> None:
+        original_cleanup(context)
+        if context is contexts[0]:
+            msg = "simulated staging-context cleanup failure"
+            raise OSError(msg)
+
+    def fail_after_first_anchor_close(anchor: publication_module.PublicationAnchor | None) -> None:
+        original_close_anchor(anchor)
+        if anchor is anchors[0]:
+            msg = "simulated anchor cleanup failure"
+            raise OSError(msg)
+
+    monkeypatch.setattr(publication_module.StagingDirectory, "cleanup", fail_after_first_context_cleanup)
+    monkeypatch.setattr(publication_module, "close_anchor", fail_after_first_anchor_close)
+    with pytest.raises(OSError, match="simulated staging-context cleanup failure"):
+        transaction.discard()
+
+    assert transaction._staging_contexts == {}
+    assert transaction._anchors == {}
+    assert not any(context.path.exists() for context in contexts)
+
+
+@pytest.mark.allow_direct_assert
+def test_remote_lock_transaction_cleans_open_and_second_stage_failures(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Every opened lock resource is released when a later lock cannot open or stage."""
+    from datamodel_code_generator import _publication as publication_module
+    from datamodel_code_generator.__main__ import Config, _remote_lock_plan, _RemoteLockTransaction
+    from datamodel_code_generator.remote_lock import RemoteReferenceLock
+
+    first = Config(lockfile=tmp_path / "first.lock", update_lock=True)
+    invalid_second = Config(lockfile=tmp_path / "second.lock", update_lock=True)
+    failed_entries = (("first", first, None), ("second", invalid_second, None))
+    failed_plans = tuple(_remote_lock_plan(config, None) for _, config, _ in failed_entries)
+    original_create = publication_module.StagingDirectory.create
+    staging_calls = 0
+
+    def fail_second_staging_directory(
+        anchor: publication_module.PublicationAnchor, *, prefix: str
+    ) -> publication_module.StagingDirectory:
+        nonlocal staging_calls
+        staging_calls += 1
+        if staging_calls == 2:
+            msg = "second staging directory reservation failed"
+            raise OSError(msg)
+        return original_create(anchor, prefix=prefix)
+
+    monkeypatch.setattr(publication_module.StagingDirectory, "create", fail_second_staging_directory)
+
+    with pytest.raises(Error, match="second staging directory reservation failed"):
+        _RemoteLockTransaction.open(failed_entries, failed_plans)
+
+    assert not list(tmp_path.glob(".datamodel-codegen-lock-*"))
+    monkeypatch.undo()
+
+    second = Config(lockfile=tmp_path / "second.lock", update_lock=True)
+    entries = (("first", first, None), ("second", second, None))
+    plans = tuple(_remote_lock_plan(config, None) for _, config, _ in entries)
+    transaction = _RemoteLockTransaction.open(entries, plans)
+    assert transaction is not None
+    contexts = tuple(transaction._staging_contexts.values())
+    original_stage = RemoteReferenceLock.stage
+
+    def fail_only_second_stage(lock: RemoteReferenceLock, *args: object, **kwargs: object) -> Path | object:
+        if lock.path == second.lockfile:
+            msg = "second staged lock write failed"
+            raise OSError(msg)
+        return original_stage(lock, *args, **kwargs)
+
+    monkeypatch.setattr(RemoteReferenceLock, "stage", fail_only_second_stage)
+    with pytest.raises(Error, match="second staged lock write failed"):
+        transaction.staged_files()
+
+    assert transaction._staging_contexts == {}
+    assert transaction._anchors == {}
+    assert not any(context.path.exists() for context in contexts)
+
 
 def test_generate_reuses_remote_lock_config_without_retaining_a_collector(
     mocker: MockerFixture,
@@ -1863,6 +1949,146 @@ def test_cli_does_not_commit_an_updated_lock_when_check_fails(
     assert not lockfile.exists()
 
 
+def test_cli_batch_check_update_lock_keeps_the_existing_output_and_discards_the_staged_lock(tmp_path: Path) -> None:
+    """A clean batch check cannot publish a newly staged update-mode lock artifact."""
+    source_input = JSON_SCHEMA_DATA_PATH / "person.json"
+    output_path = tmp_path / "output.py"
+    output_path.write_text(
+        (DATA_PATH / "expected" / "main" / "person.py").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    lockfile = tmp_path / "remote.lock"
+    (tmp_path / "pyproject.toml").write_text(
+        f"""
+[tool.datamodel-codegen]
+allow-private-network = true
+check = true
+disable-timestamp = true
+input-file-type = "jsonschema"
+update-lock = true
+
+[tool.datamodel-codegen.jobs.pet]
+input = "{source_input.as_posix()}"
+output = "{output_path.as_posix()}"
+lockfile = "{lockfile.as_posix()}"
+""",
+        encoding="utf-8",
+    )
+
+    with chdir(tmp_path):
+        run_main_with_args(["--all-jobs", "--formatters", "builtin"])
+
+    assert_output(output_path.read_text(encoding="utf-8"), DATA_PATH / "expected" / "main" / "person.py")
+    assert not lockfile.exists()
+
+
+def test_cli_check_update_lock_keeps_the_existing_output_and_discards_the_staged_lock(tmp_path: Path) -> None:
+    """A clean single-command check also discards its active transaction rather than committing a lock."""
+    source_input = JSON_SCHEMA_DATA_PATH / "person.json"
+    output_path = tmp_path / "output.py"
+    output_path.write_text(
+        (DATA_PATH / "expected" / "main" / "person.py").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    lockfile = tmp_path / "remote.lock"
+
+    run_main_with_args([
+        "--input",
+        str(source_input),
+        "--output",
+        str(output_path),
+        "--input-file-type",
+        "jsonschema",
+        "--disable-timestamp",
+        "--check",
+        "--update-lock",
+        "--lockfile",
+        str(lockfile),
+    ])
+
+    assert_output(output_path.read_text(encoding="utf-8"), DATA_PATH / "expected" / "main" / "person.py")
+    assert not lockfile.exists()
+
+
+def test_cli_batch_mixed_check_and_update_lock_publishes_the_write_job_lock(tmp_path: Path) -> None:
+    """A check-only job cannot suppress the common journal for a separate updating job."""
+    source_input = JSON_SCHEMA_DATA_PATH / "person.json"
+    check_output = tmp_path / "check.py"
+    check_output.write_text(
+        (DATA_PATH / "expected" / "main" / "person.py").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    write_output = tmp_path / "write.py"
+    check_lock = tmp_path / "check.lock"
+    write_lock = tmp_path / "write.lock"
+    (tmp_path / "pyproject.toml").write_text(
+        f"""
+[tool.datamodel-codegen]
+disable-timestamp = true
+input-file-type = "jsonschema"
+
+[tool.datamodel-codegen.jobs.check]
+input = "{source_input.as_posix()}"
+output = "{check_output.as_posix()}"
+check = true
+update-lock = true
+lockfile = "{check_lock.as_posix()}"
+
+[tool.datamodel-codegen.jobs.write]
+input = "{source_input.as_posix()}"
+output = "{write_output.as_posix()}"
+update-lock = true
+lockfile = "{write_lock.as_posix()}"
+""",
+        encoding="utf-8",
+    )
+
+    with chdir(tmp_path):
+        run_main_with_args(["--all-jobs", "--formatters", "builtin"])
+
+    expected_output = DATA_PATH / "expected" / "main" / "person.py"
+    assert_output(check_output.read_text(encoding="utf-8"), expected_output)
+    assert_output(write_output.read_text(encoding="utf-8"), expected_output)
+    assert_http_e2e_file(write_lock, "remote_lock_empty.txt")
+
+
+@pytest.mark.allow_direct_assert
+def test_cli_remote_lock_transaction_reports_command_spool_failure(
+    mocker: MockerFixture,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A command-spool allocation failure discards the pre-opened lock transaction without publishing."""
+    source_input = JSON_SCHEMA_DATA_PATH / "person.json"
+    output_path = tmp_path / "output.py"
+    lockfile = tmp_path / "remote.lock"
+    mocker.patch(
+        "datamodel_code_generator.__main__.tempfile.TemporaryFile",
+        side_effect=OSError("simulated command spool failure"),
+    )
+
+    run_main_with_args(
+        [
+            "--input",
+            str(source_input),
+            "--output",
+            str(output_path),
+            "--input-file-type",
+            "jsonschema",
+            "--disable-timestamp",
+            "--update-lock",
+            "--lockfile",
+            str(lockfile),
+        ],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="could not prepare command output staging",
+    )
+
+    assert not output_path.exists()
+    assert not lockfile.exists()
+
+
 def test_cli_batch_shares_the_default_remote_lock_and_verifies_the_union(
     mocker: MockerFixture,
     local_http_server: str,
@@ -1999,6 +2225,138 @@ lockfile = "{lockfile.as_posix()}"
     assert not first_output.exists()
     assert not second_output.exists()
     assert not lockfile.exists()
+
+
+def test_cli_batch_ignores_inactive_lock_paths_that_share_a_generated_artifact(tmp_path: Path) -> None:
+    """Inactive lock settings neither reserve nor publish their otherwise unsafe paths."""
+    source_input = JSON_SCHEMA_DATA_PATH / "person.json"
+    first_output = tmp_path / "first.py"
+    second_output = tmp_path / "second.py"
+    active_output = tmp_path / "active.py"
+    active_lock = tmp_path / "active.lock"
+    (tmp_path / "pyproject.toml").write_text(
+        f"""
+[tool.datamodel-codegen.jobs.first]
+input = "{source_input.as_posix()}"
+output = "{first_output.as_posix()}"
+input-file-type = "jsonschema"
+disable-timestamp = true
+lockfile = "{first_output.as_posix()}"
+
+[tool.datamodel-codegen.jobs.second]
+input = "{source_input.as_posix()}"
+output = "{second_output.as_posix()}"
+input-file-type = "jsonschema"
+disable-timestamp = true
+lockfile = "{first_output.as_posix()}"
+
+[tool.datamodel-codegen.jobs.active]
+input = "{source_input.as_posix()}"
+output = "{active_output.as_posix()}"
+input-file-type = "jsonschema"
+disable-timestamp = true
+update-lock = true
+lockfile = "{active_lock.as_posix()}"
+""",
+        encoding="utf-8",
+    )
+
+    with chdir(tmp_path):
+        run_main_with_args(["--all-jobs", "--formatters", "builtin"])
+
+    expected_output = DATA_PATH / "expected" / "main" / "person.py"
+    assert_output(first_output.read_text(encoding="utf-8"), expected_output)
+    assert_output(second_output.read_text(encoding="utf-8"), expected_output)
+    assert_output(active_output.read_text(encoding="utf-8"), expected_output)
+    assert_http_e2e_file(active_lock, "remote_lock_empty.txt")
+
+
+@pytest.mark.skipif(os.name == "nt", reason="the alias fixture requires POSIX symlinks")
+def test_cli_batch_rejects_update_lock_aliases_before_generation(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Distinct lock spellings for one replacement target fail before either job runs."""
+    source_input = JSON_SCHEMA_DATA_PATH / "person.json"
+    locks = tmp_path / "locks"
+    locks.mkdir()
+    lockfile = locks / "remote.lock"
+    alias = locks / "remote-alias.lock"
+    alias.symlink_to(lockfile.name)
+    first_output = tmp_path / "first.py"
+    second_output = tmp_path / "second.py"
+    (tmp_path / "pyproject.toml").write_text(
+        f"""
+[tool.datamodel-codegen.jobs.first]
+input = "{source_input.as_posix()}"
+output = "{first_output.as_posix()}"
+input-file-type = "jsonschema"
+update-lock = true
+lockfile = "{lockfile.as_posix()}"
+
+[tool.datamodel-codegen.jobs.second]
+input = "{source_input.as_posix()}"
+output = "{second_output.as_posix()}"
+input-file-type = "jsonschema"
+update-lock = true
+lockfile = "{alias.as_posix()}"
+""",
+        encoding="utf-8",
+    )
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--all-jobs", "--formatters", "builtin"],
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr_contains="aliases with ambiguous replacement semantics",
+        )
+
+    assert not first_output.exists()
+    assert not second_output.exists()
+    assert not lockfile.exists()
+    assert alias.is_symlink()
+
+
+def test_cli_batch_rejects_parent_child_lock_paths_before_generation(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Nested lock destinations cannot make one batch publish into another lock path."""
+    source_input = JSON_SCHEMA_DATA_PATH / "person.json"
+    lock_parent = tmp_path / "locks"
+    first_output = tmp_path / "first.py"
+    second_output = tmp_path / "second.py"
+    (tmp_path / "pyproject.toml").write_text(
+        f"""
+[tool.datamodel-codegen.jobs.first]
+input = "{source_input.as_posix()}"
+output = "{first_output.as_posix()}"
+input-file-type = "jsonschema"
+update-lock = true
+lockfile = "{lock_parent.as_posix()}"
+
+[tool.datamodel-codegen.jobs.second]
+input = "{source_input.as_posix()}"
+output = "{second_output.as_posix()}"
+input-file-type = "jsonschema"
+update-lock = true
+lockfile = "{(lock_parent / 'nested.lock').as_posix()}"
+""",
+        encoding="utf-8",
+    )
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--all-jobs", "--formatters", "builtin"],
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr_contains="Remote lock paths for 'first' and 'second' overlap",
+        )
+
+    assert not first_output.exists()
+    assert not second_output.exists()
+    assert not lock_parent.exists()
 
 
 def test_cli_diff_locks_old_and_new_remote_closures_without_committing_on_difference(

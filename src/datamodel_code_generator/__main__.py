@@ -139,27 +139,11 @@ from datamodel_code_generator.deprecations import render_deprecations, warn_depr
 from datamodel_code_generator.enums import StrictTypes
 from datamodel_code_generator.util import load_toml
 
-_PUBLICATION_COMPAT_NAMES = frozenset({
-    "_PublishedFile",
-    "_backup_existing_target",
-    "_create_directory",
-    "_create_target_parent",
-    "_directory_fd_matches_path",
-    "_publish_staged_files_at",
-    "_remove_created_directory",
-    "_restore_backup",
-    "_rollback_published_file",
-})
-
 
 def __getattr__(name: str) -> Any:
-    """Load deferred config and publication compatibility helpers on demand."""
+    """Load the deferred config model without adding it to no-lock imports."""
     if name == "Config":
         return _get_config_class()
-    if name in _PUBLICATION_COMPAT_NAMES:
-        from datamodel_code_generator import _publication  # noqa: PLC0415
-
-        return getattr(_publication, name)
     msg = f"module {__name__!r} has no attribute {name!r}"
     raise AttributeError(msg)
 
@@ -1049,6 +1033,13 @@ def _validate_remote_lock_artifacts(
         for artifact_name, artifact_kind, artifact_path in artifacts:
             if not _paths_alias_or_overlap(plan.canonical_path, artifact_path):
                 continue
+            if (
+                artifact_kind == "input"
+                and artifact_path.is_dir()
+                and plan.canonical_path.is_relative_to(artifact_path)
+            ):
+                msg = f"Remote lock path must not be inside an input directory: {plan.canonical_path}"
+                raise Error(msg)
             msg = (
                 f"Remote lock for '{name}' ({plan.canonical_path}) overlaps {artifact_kind} "
                 f"for '{artifact_name}': {artifact_path}"
@@ -1074,10 +1065,12 @@ class _RemoteLockTransaction:
         collectors: Mapping[Path, Any],
         anchors: Mapping[Path, _PublicationAnchor],
         staging_contexts: Mapping[Path, _StagingDirectory],
+        publishable_paths: set[Path],
     ) -> None:
         self._collectors = dict(collectors)
         self._anchors = dict(anchors)
         self._staging_contexts = dict(staging_contexts)
+        self._publishable_paths = publishable_paths
 
     @classmethod
     def open(
@@ -1098,6 +1091,11 @@ class _RemoteLockTransaction:
         collectors: dict[Path, Any] = {}
         anchors: dict[Path, _PublicationAnchor] = {}
         staging_contexts: dict[Path, _StagingDirectory] = {}
+        publishable_paths = {
+            plan.canonical_path
+            for (_, config, _), plan in zip(entries, plans, strict=True)
+            if plan.policy == "update" and not config.check
+        }
         try:
             for plan in plans:
                 if not plan.active or plan.canonical_path in collectors:
@@ -1107,7 +1105,7 @@ class _RemoteLockTransaction:
                     update=plan.policy == "update",
                     locked=plan.policy in {"verify", "locked"},
                 )
-                if plan.policy == "update":
+                if plan.canonical_path in publishable_paths:
                     from datamodel_code_generator._publication import (  # noqa: PLC0415
                         StagingDirectory,
                         publication_anchor,
@@ -1120,15 +1118,16 @@ class _RemoteLockTransaction:
                         prefix=".datamodel-codegen-lock-",
                     )
         except (OSError, RemoteLockError) as exc:
+            from datamodel_code_generator._publication import close_anchor  # noqa: PLC0415
+
             for context in staging_contexts.values():
                 with suppress(OSError):
                     context.cleanup()
             for anchor in anchors.values():
-                if anchor.directory_fd is not None:
-                    with suppress(OSError):
-                        os.close(anchor.directory_fd)
+                with suppress(OSError):
+                    close_anchor(anchor)
             raise Error(str(exc)) from exc
-        return cls(collectors, anchors, staging_contexts)
+        return cls(collectors, anchors, staging_contexts, publishable_paths)
 
     def collector_for(self, plan: _RemoteLockPlan) -> Any | None:
         """Return the collector selected by an immutable preflight plan."""
@@ -1136,18 +1135,15 @@ class _RemoteLockTransaction:
 
     def staged_files(self) -> tuple[_StagedFile, ...]:
         """Stage each updating lock once for the common publication journal."""
-        from datamodel_code_generator._publication import StagedFile  # noqa: PLC0415
-
         files: list[_StagedFile] = []
         try:
             for path, collector in self._collectors.items():
+                if path not in self._publishable_paths:
+                    continue
                 if (staging_context := self._staging_contexts.get(path)) is None:
                     continue
-                if (staged_path := collector.stage(staging_context)) is None:
-                    continue
-                if isinstance(staged_path, Path):  # pragma: no cover - shared staging returns descriptor-bound sources
-                    staged_path = StagedFile(staged_path, path, path)
-                files.append(staged_path._replace(anchor=self._anchors[path]))
+                staged_file = cast("_StagedFile", collector.stage(staging_context))
+                files.append(staged_file._replace(anchor=self._anchors[path]))
         except Exception as exc:
             with suppress(OSError):
                 self.discard()
@@ -1178,6 +1174,8 @@ class _RemoteLockTransaction:
 
     def _close_anchors(self) -> None:
         """Release private staging and update-only destination handles exactly once."""
+        from datamodel_code_generator._publication import close_anchor  # noqa: PLC0415
+
         cleanup_error: OSError | None = None
         for context in self._staging_contexts.values():
             try:
@@ -1186,11 +1184,10 @@ class _RemoteLockTransaction:
                 cleanup_error = cleanup_error or exc
         self._staging_contexts.clear()
         for anchor in self._anchors.values():
-            if anchor.directory_fd is not None:
-                try:
-                    os.close(anchor.directory_fd)
-                except OSError as exc:
-                    cleanup_error = cleanup_error or exc
+            try:
+                close_anchor(anchor)
+            except OSError as exc:  # noqa: PERF203 - every anchor must be released before reporting failure
+                cleanup_error = cleanup_error or exc
         self._anchors.clear()
         if cleanup_error is not None:
             raise cleanup_error
@@ -2351,7 +2348,7 @@ def _publish_or_error(
     """Publish staged batch output, reporting an unrecoverable filesystem failure."""
     try:
         _validate_staged_job_plans(staged_plans)
-        if remote_locks is None or any(staged_plan.plan.config.check for staged_plan in staged_plans):
+        if remote_locks is None:
             _publish_staged_job_plans(staged_plans)
         else:
             lock_files = remote_locks.staged_files()

@@ -191,19 +191,18 @@ class StagingDirectory:
         os.close(parent_fd)
         raise FileExistsError(f"could not reserve private staging under {anchor.path}")
 
-    def _validate_path_fallback(self) -> None:
+    def _validate_path_fallback(self) -> None:  # pragma: no cover - Windows lexical fallback
         """Fail closed if a Windows lexical staging location no longer names the reserved directory."""
-        if self._fallback is None:
-            return
+        fallback = cast("_StagingFallback", self._fallback)
         try:
             path_stat = self.path.stat()
             anchor_stat = self.path.parent.stat()
         except OSError as exc:
             raise OSError(f"private staging directory changed: {self.path}") from exc
-        if (path_stat.st_dev, path_stat.st_ino) != self._fallback.path_identity or (
+        if (path_stat.st_dev, path_stat.st_ino) != fallback.path_identity or (
             anchor_stat.st_dev,
             anchor_stat.st_ino,
-        ) != self._fallback.anchor_identity:
+        ) != fallback.anchor_identity:
             raise OSError(f"private staging directory changed: {self.path}")
 
     def create_file(self, *, prefix: str) -> tuple[int, str]:
@@ -254,7 +253,8 @@ class StagingDirectory:
             if self.directory_fd is None:  # pragma: no cover - Windows lexical fallback
                 self._validate_path_fallback()
             cleanup_error = self._discard_files()
-            cleanup_error = cleanup_error or self._remove_directory()
+            directory_error = self._remove_directory()
+            cleanup_error = cleanup_error or directory_error
         finally:
             self._closed = True
             if self.directory_fd is not None:
@@ -284,10 +284,10 @@ class StagingDirectory:
     def _remove_directory(self) -> OSError | None:
         """Remove the owned empty staging directory through its pinned parent when available."""
         try:
-            if self.directory_fd is not None and self._parent_fd is not None:
-                os.rmdir(self.name, dir_fd=self._parent_fd)
-            elif self.directory_fd is None:  # pragma: no cover - Windows lexical fallback
+            if self.directory_fd is None:  # pragma: no cover - Windows lexical fallback
                 self.path.rmdir()
+            else:
+                os.rmdir(self.name, dir_fd=cast("int", self._parent_fd))
         except FileNotFoundError:
             return None
         except OSError as exc:
@@ -567,21 +567,24 @@ def _rollback_bound_file(published_file: _BoundPublishedFile) -> list[Path]:
 
 def _set_staged_mode(file: StagedFile, mode: int) -> None:
     try:
-        if file.source_directory_fd is not None and file.source_name is not None:
-            os.chmod(file.source_name, mode, dir_fd=file.source_directory_fd, follow_symlinks=False)
-        elif file.staged_file is not None:
-            file.staged_file.chmod(mode)
+        if file.source_directory_fd is not None:
+            os.chmod(cast("str", file.source_name), mode, dir_fd=file.source_directory_fd, follow_symlinks=False)
+        else:
+            cast("Path", file.staged_file).chmod(mode)
     except OSError:
         pass
 
 
 def _replace_source(file: StagedFile, destination_name: str, destination_fd: int) -> None:
-    if file.source_directory_fd is not None and file.source_name is not None:
-        os.replace(file.source_name, destination_name, src_dir_fd=file.source_directory_fd, dst_dir_fd=destination_fd)
+    if file.source_directory_fd is not None:
+        os.replace(
+            cast("str", file.source_name),
+            destination_name,
+            src_dir_fd=file.source_directory_fd,
+            dst_dir_fd=destination_fd,
+        )
         return
-    if file.staged_file is None:  # pragma: no cover - source construction is validated by staging
-        raise OSError(f"missing staged source for {file.target}")
-    os.replace(file.staged_file, destination_name, dst_dir_fd=destination_fd)
+    os.replace(cast("Path", file.staged_file), destination_name, dst_dir_fd=destination_fd)
 
 
 def _publish_staged_files_at(files: Sequence[StagedFile]) -> None:  # noqa: PLR0912

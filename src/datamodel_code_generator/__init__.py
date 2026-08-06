@@ -24,6 +24,7 @@ from typing import (
     TextIO,
     TypeAlias,
     TypeVar,
+    cast,
 )
 from urllib.parse import ParseResult
 
@@ -1812,9 +1813,7 @@ def _generate_with_atomic_remote_update(  # noqa: PLR0912, PLR0914, PLR0915
                     )
                 )
             elif staged_artifact.exists():
-                for staged_file in sorted(staged_artifact.rglob("*")):
-                    if not staged_file.is_file():
-                        continue
+                for staged_file in filter(Path.is_file, sorted(staged_artifact.rglob("*"))):
                     relative_path = staged_file.relative_to(staged_artifact)
                     target_file = target_artifact / relative_path
                     publication_files.append(
@@ -1825,10 +1824,8 @@ def _generate_with_atomic_remote_update(  # noqa: PLR0912, PLR0914, PLR0915
                             anchor,
                         )
                     )
-        if (staged_lock := remote_lock.stage(lock_staging)) is not None:
-            if isinstance(staged_lock, Path):  # pragma: no cover - descriptor staging returns StagedFile
-                staged_lock = StagedFile(staged_lock, canonical_lockfile, canonical_lockfile)
-            publication_files.append(staged_lock._replace(anchor=lock_anchor))
+        staged_lock = cast("StagedFile", remote_lock.stage(lock_staging))
+        publication_files.append(staged_lock._replace(anchor=lock_anchor))
         publish_staged_files(publication_files)
         remote_lock.mark_committed()
     except BaseException:

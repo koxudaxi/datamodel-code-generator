@@ -18,7 +18,7 @@ import socket
 import ssl
 from _thread import allocate_lock  # noqa: PLC2701
 from collections import OrderedDict
-from collections.abc import Sequence  # noqa: TC003  # Runtime public annotation introspection
+from collections.abc import Callable, Sequence  # noqa: TC003  # Runtime public annotation introspection
 from dataclasses import dataclass, field
 from ipaddress import IPv4Address, IPv6Address, IPv6Network, ip_address
 from types import MappingProxyType
@@ -31,7 +31,7 @@ from datamodel_code_generator import SchemaFetchError
 from datamodel_code_generator.enums import HTTPBackend
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Mapping
+    from collections.abc import Iterable, Mapping
     from types import TracebackType
     from typing import Protocol, overload
 
@@ -1201,6 +1201,8 @@ def _get_body(  # noqa: PLR0913, PLR0914
     # Decode the raw entity explicitly. HTTP client charset heuristics must not
     # change how the same locked bytes are interpreted between runs.
     body = response.content
+    if not isinstance(body, bytes):  # pragma: no cover - compatibility for text-only HTTP client test doubles
+        body = response.text.encode(encoding)
     if response_observer is not None:
         # Redirects are transport details. The lock identity remains the
         # caller's original logical request while the digest covers only the

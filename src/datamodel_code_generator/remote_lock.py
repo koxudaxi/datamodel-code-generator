@@ -324,7 +324,6 @@ class RemoteReferenceLock:
         if self._committed or not self.update:
             return
         from datamodel_code_generator._publication import (  # noqa: PLC0415
-            StagedFile,
             StagingDirectory,
             close_anchor,
             publication_anchor,
@@ -338,11 +337,7 @@ class RemoteReferenceLock:
             target = target.expanduser().parent.resolve(strict=False) / target.name
             anchor = publication_anchor(target.parent)
             staging_directory = StagingDirectory.create(anchor, prefix=".datamodel-codegen-lock-")
-            staged_source = self.stage(staging_directory)
-            if staged_source is None:  # pragma: no cover - update mode always stages once
-                return
-            if isinstance(staged_source, Path):  # pragma: no cover - descriptor staging returns StagedFile
-                staged_source = StagedFile(staged_source, target, target)
+            staged_source = cast("StagedFile", self.stage(staging_directory))
             publish_staged_files((staged_source._replace(target=target, resolved_target=target, anchor=anchor),))
         except OSError as exc:
             with contextlib.suppress(OSError):
@@ -355,6 +350,5 @@ class RemoteReferenceLock:
             if staging_directory is not None:
                 with contextlib.suppress(OSError):
                     staging_directory.cleanup()
-            if anchor is not None:
-                with contextlib.suppress(OSError):
-                    close_anchor(anchor)
+            with contextlib.suppress(OSError):
+                close_anchor(anchor)
