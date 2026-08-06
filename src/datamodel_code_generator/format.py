@@ -423,6 +423,9 @@ class CodeFormatter:
     def _load_custom_formatter(self, custom_formatter_import: str) -> CustomCodeFormatter:
         """Load and instantiate a custom formatter from a module path."""
         import_ = import_module(custom_formatter_import)
+        from datamodel_code_generator.watch_dependencies import record_module_dependency  # noqa: PLC0415
+
+        record_module_dependency(import_)
 
         if not hasattr(import_, "CodeFormatter"):
             msg = f"Custom formatter module `{import_.__name__}` must contains object with name CodeFormatter"

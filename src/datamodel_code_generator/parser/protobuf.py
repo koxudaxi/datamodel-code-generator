@@ -30,6 +30,7 @@ if TYPE_CHECKING:
 
 CUSTOM_OPTION_STATEMENT_PATTERN = re.compile(r"(?ms)^[ \t]*option\s+\([^)]+\)\s*=\s*.*?;")
 WEAK_IMPORT_PATTERN = re.compile(r'^\s*import\s+weak\s+"([^"]+)"\s*;', re.MULTILINE)
+IMPORT_PATTERN = re.compile(r'^\s*import\s+(?:public\s+|weak\s+)?"([^"]+)"\s*;', re.MULTILINE)
 
 LABEL_REQUIRED = 2
 LABEL_REPEATED = 3
@@ -690,6 +691,7 @@ class ProtobufParser(JsonSchemaParser):
             with tempfile.NamedTemporaryFile(suffix=".pb", delete=False) as output_file:
                 output_path = Path(output_file.name)
             try:
+                self._record_lexical_import_candidates(input_files, include_paths)
                 args = [
                     "grpc_tools.protoc",
                     *(f"-I{path}" for path in [*include_paths, well_known_include]),
@@ -712,6 +714,36 @@ class ProtobufParser(JsonSchemaParser):
             finally:
                 with contextlib.suppress(OSError):
                     output_path.unlink()
+
+    def _record_lexical_import_candidates(self, input_files: Sequence[Path], include_paths: Sequence[Path]) -> None:
+        """Breadth-first record source imports before ``protoc`` can reject a nested missing file."""
+        from datamodel_code_generator.watch_dependencies import record_local_dependency  # noqa: PLC0415
+
+        pending_texts = [input_file.read_text(encoding=self.config.encoding) for input_file in input_files]
+        pending_files: list[Path] = []
+        visited_files: set[Path] = set()
+        source_include_paths = include_paths[1:]
+        while pending_texts or pending_files:
+            if pending_texts:
+                text = pending_texts.pop()
+            else:
+                source_path = pending_files.pop()
+                if source_path in visited_files:
+                    continue
+                visited_files.add(source_path)
+                try:
+                    text = source_path.read_text(encoding=self.config.encoding)
+                except OSError:
+                    continue
+            for import_path in IMPORT_PATTERN.findall(text):
+                candidates = tuple(include_path / import_path for include_path in source_include_paths)
+                existing_candidate = next((candidate for candidate in candidates if candidate.is_file()), None)
+                if existing_candidate is not None:
+                    record_local_dependency(existing_candidate)
+                    pending_files.append(existing_candidate)
+                else:
+                    for candidate in candidates:
+                        record_local_dependency(candidate)
 
     @staticmethod
     def _record_descriptor_dependencies(descriptor_set: Any, include_paths: Sequence[Path]) -> None:
