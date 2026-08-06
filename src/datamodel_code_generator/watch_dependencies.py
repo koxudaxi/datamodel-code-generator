@@ -500,7 +500,7 @@ class WatchDependencies(_Weakrefable):
         )
 
     @staticmethod
-    def _polling_dependencies_changed(
+    def _snapshot_polling_dependencies_changed(
         snapshot: _DependencySnapshot, path_variants: frozenset[Path] | None = None
     ) -> bool:
         return any(
@@ -509,9 +509,9 @@ class WatchDependencies(_Weakrefable):
             if path_variants is None or any(dependency.is_relative_to(path_variant) for path_variant in path_variants)
         )
 
-    def polling_dependencies_changed(self) -> bool:
+    def _polling_dependencies_changed(self) -> bool:
         """Return whether a polling watcher missed an exact dependency event."""
-        return self._polling_dependencies_changed(self._snapshot)
+        return self._snapshot_polling_dependencies_changed(self._snapshot)
 
     def includes(self, path: Path) -> bool:
         """Return whether an event belongs to the immutable current dependency graph."""
@@ -551,7 +551,7 @@ class WatchDependencies(_Weakrefable):
         has_output_below = any(
             output.is_relative_to(path_variant) for path_variant in path_variants for output in snapshot.outputs
         )
-        return not has_output_below or self._polling_dependencies_changed(snapshot, path_variants)
+        return not has_output_below or self._snapshot_polling_dependencies_changed(snapshot, path_variants)
 
 
 def collector_is_active() -> bool:

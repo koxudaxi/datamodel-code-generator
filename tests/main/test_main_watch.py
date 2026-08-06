@@ -2092,18 +2092,18 @@ def test_watch_dependencies_accepts_polling_parent_events_for_changed_inputs(tmp
     dependencies.enable_polling_fingerprints()
 
     assert _path_fingerprint(tmp_path / "missing.json") == (-1, -1, -1)
-    assert not dependencies.polling_dependencies_changed()
+    assert not dependencies._polling_dependencies_changed()
     assert not dependencies.accepts_event(project_directory, accept_directory_events=True)
     replacement = project_directory / "schema-replacement.json"
     replacement.write_text(WATCH_SCHEMA_CHANGED, encoding="utf-8")
     replacement.replace(input_file)
-    assert dependencies.polling_dependencies_changed()
+    assert dependencies._polling_dependencies_changed()
     assert dependencies.accepts_event(project_directory, accept_directory_events=True)
 
     with dependencies.generation():
         pass
     output_file.touch()
-    assert not dependencies.polling_dependencies_changed()
+    assert not dependencies._polling_dependencies_changed()
     assert not dependencies.accepts_event(project_directory, accept_directory_events=True)
 
 

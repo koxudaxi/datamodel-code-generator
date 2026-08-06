@@ -2339,6 +2339,8 @@ def _run_watched_jobs(
         generation.failed = result is not Exit.OK
     if result is Exit.OK:
         dependencies._commit_remote_lock_intent(remote_lock_intent)  # noqa: SLF001
+    else:
+        dependencies._merge_remote_lock_intent(remote_lock_intent)  # noqa: SLF001
     return result
 
 
