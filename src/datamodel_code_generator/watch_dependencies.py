@@ -104,7 +104,9 @@ def _resolved_path(path: Path) -> Path:
 
 def _configured_path(config_values: Mapping[str, Any], field_name: str, fallback: str | Path | None) -> Path | None:
     value = config_values.get(field_name, fallback)
-    return Path(value) if isinstance(value, (str, Path)) else fallback
+    if isinstance(value, (str, Path)):
+        return Path(value)
+    return Path(fallback) if isinstance(fallback, str) else fallback
 
 
 def _logical_working_directory() -> Path:

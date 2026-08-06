@@ -14,6 +14,7 @@ import sys
 from dataclasses import dataclass
 from functools import lru_cache
 from importlib import import_module, invalidate_caches
+from importlib.abc import Loader
 from importlib.machinery import ModuleSpec, PathFinder
 from importlib.util import source_from_cache
 from pathlib import Path
@@ -118,16 +119,16 @@ def _prepare_watch_module(module: ModuleType) -> tuple[ModuleType, CodeType] | N
     replacement.__package__ = spec.parent
     replacement.__loader__ = loader
     replacement.__spec__ = spec
-    replacement.__cached__ = spec.cached
+    replacement.__dict__["__cached__"] = spec.cached
     if spec.submodule_search_locations is not None:
-        replacement.__path__ = list(spec.submodule_search_locations)  # ty: ignore[unresolved-attribute]
+        replacement.__path__ = list(spec.submodule_search_locations)
     return replacement, compile(source, module_path, "exec")
 
 
-class _WatchSourceLoader:
+class _WatchSourceLoader(Loader):
     """Load a watched package child from its source instead of its bytecode cache."""
 
-    def __init__(self, loader: object, origin: str | None) -> None:
+    def __init__(self, loader: Loader, origin: str | None) -> None:
         self._loader = loader
         self._origin = origin
 
@@ -186,7 +187,7 @@ def _fresh_watch_module(module: ModuleType) -> ModuleType:
 
 def _restore_watch_package(
     module_name: str,
-    modules: dict[str, object],
+    modules: dict[str, ModuleType],
     module_namespaces: dict[ModuleType, dict[str, Any]],
     parent_module: object,
     parent_attribute: object,
@@ -274,20 +275,21 @@ def _load_watch_formatter_module(module_name: str, watch_dependencies: Any) -> M
 
     with PROCESS_STATE_LOCK:
         module = sys.modules.get(module_name)
-        state = _WATCH_FORMATTER_STATES.get(module) if isinstance(module, ModuleType) else None
-        if state is not None and state.generation() is generation:
-            module_names = state.module_names
-        elif module is None:
+        if module is None:
             previous_modules = frozenset(sys.modules.copy())
             module = import_module(module_name)
             module_names = _local_package_modules(module, previous_modules=previous_modules)
         else:
-            module = (
-                _fresh_watch_package(module)
-                if getattr(module, "__path__", None) is not None
-                else _fresh_watch_module(module)
-            )
-            module_names = _local_package_modules(module, previous_modules=frozenset())
+            state = _WATCH_FORMATTER_STATES.get(module)
+            if state is not None and state.generation() is generation:
+                module_names = state.module_names
+            else:
+                module = (
+                    _fresh_watch_package(module)
+                    if getattr(module, "__path__", None) is not None
+                    else _fresh_watch_module(module)
+                )
+                module_names = _local_package_modules(module, previous_modules=frozenset())
         _WATCH_FORMATTER_STATES[module] = _WatchFormatterState(ref(generation), module_names)
     for tracked_name in module_names:
         watch_dependencies.record_module_dependency(sys.modules.get(tracked_name))
