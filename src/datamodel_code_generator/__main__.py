@@ -160,6 +160,7 @@ else:
 # Options that should be excluded from pyproject.toml config generation
 EXCLUDED_CONFIG_OPTIONS: frozenset[str] = frozenset({
     "check",
+    "diff_against",
     "generate_pyproject_config",
     "generate_cli_command",
     "generate_prompt",
@@ -385,6 +386,7 @@ def _get_config_class() -> type[Config]:
         @field_validator(
             "input",
             "output",
+            "diff_against",
             "custom_template_dir",
             "custom_file_header_path",
             "http_local_ref_path",
@@ -610,6 +612,7 @@ def _get_config_class() -> type[Config]:
         output_model_type: DataModelType = DataModelType.PydanticV2BaseModel
         output: Optional[Path] = None  # noqa: UP045
         check: bool = False
+        diff_against: Optional[Path] = None  # noqa: UP045
         repair_invalid_dotted_stdout: bool = Field(default=False, exclude=True)
         forced_invalid_dotted_stdout_repair_modules: tuple[tuple[str, ...], ...] = Field(default=(), exclude=True)
         debug: bool = False
@@ -1360,10 +1363,29 @@ def _normalize_line_endings(text: str) -> str:
     return text.replace("\r\n", "\n")
 
 
+class OutputComparisonOptions(NamedTuple):
+    """Formatting context for a generated-output comparison."""
+
+    is_directory_output: bool
+    input_diff: bool = False
+    single_file_display_path: str | None = None
+
+    @property
+    def fromfile_suffix(self) -> str:
+        """Return the unified-diff label suffix for the previous output."""
+        return " (old input)" if self.input_diff else ""
+
+    @property
+    def tofile_suffix(self) -> str:
+        """Return the unified-diff label suffix for the generated output."""
+        return " (new input)" if self.input_diff else " (expected)"
+
+
 def _compare_single_file(
     generated_path: Path,
     actual_path: Path,
     encoding: str,
+    comparison: OutputComparisonOptions,
 ) -> tuple[bool, list[str]]:
     """Compare generated file content with existing file.
 
@@ -1374,7 +1396,7 @@ def _compare_single_file(
     """
     generated_content = _normalize_line_endings(generated_path.read_text(encoding=encoding))
 
-    display_path = actual_path.as_posix()
+    display_path = comparison.single_file_display_path or actual_path.as_posix()
     if not actual_path.exists():
         return True, [f"MISSING: {display_path} (file does not exist but should be generated)"]
 
@@ -1387,8 +1409,8 @@ def _compare_single_file(
         difflib.unified_diff(
             actual_content.splitlines(keepends=True),
             generated_content.splitlines(keepends=True),
-            fromfile=display_path,
-            tofile=f"{display_path} (expected)",
+            fromfile=f"{display_path}{comparison.fromfile_suffix}",
+            tofile=f"{display_path}{comparison.tofile_suffix}",
         )
     )
     return True, diff_lines
@@ -1405,6 +1427,7 @@ def _compare_directories(
     generated_dir: Path,
     actual_dir: Path,
     encoding: str,
+    comparison: OutputComparisonOptions,
 ) -> tuple[list[DirectoryChangedFile], list[str], list[str]]:
     """Compare generated directory with existing directory."""
     changed_files: list[DirectoryChangedFile] = []
@@ -1431,14 +1454,101 @@ def _compare_directories(
                         difflib.unified_diff(
                             actual_content.splitlines(keepends=True),
                             generated_content.splitlines(keepends=True),
-                            fromfile=rel_path.as_posix(),
-                            tofile=f"{rel_path.as_posix()} (expected)",
+                            fromfile=f"{rel_path.as_posix()}{comparison.fromfile_suffix}",
+                            tofile=f"{rel_path.as_posix()}{comparison.tofile_suffix}",
                         )
                     ),
                 )
             )
 
     return changed_files, missing_files, extra_files
+
+
+class OutputComparison(NamedTuple):
+    """Generated-file differences shared by --check and --diff-against."""
+
+    differences: list[CheckDifferencePayload]
+    content: str
+
+
+def _compare_generated_single_file(
+    generated_output: Path,
+    actual_output: Path,
+    encoding: str,
+    comparison: OutputComparisonOptions,
+) -> OutputComparison:
+    """Build one single-file comparison report."""
+    from datamodel_code_generator._structured_output import CheckDifferencePayload  # noqa: PLC0415
+
+    differences: list[CheckDifferencePayload] = []
+    content_parts: list[str] = []
+    diff_found, diff_lines = _compare_single_file(generated_output, actual_output, encoding, comparison)
+    if not diff_found:
+        return OutputComparison(differences=differences, content="")
+
+    path = comparison.single_file_display_path or actual_output.as_posix()
+    diff_text = "".join(diff_lines)
+    if actual_output.exists():
+        differences.append(CheckDifferencePayload(kind="changed", path=path, diff=diff_text))
+    else:
+        differences.append(CheckDifferencePayload(kind="missing", path=path, message=diff_text))
+    if diff_text:
+        content_parts.append(diff_text)
+    return OutputComparison(differences=differences, content="".join(content_parts))
+
+
+def _compare_generated_directories(
+    generated_output: Path,
+    actual_output: Path,
+    encoding: str,
+    comparison: OutputComparisonOptions,
+) -> OutputComparison:
+    """Build one directory manifest comparison report."""
+    from datamodel_code_generator._structured_output import CheckDifferencePayload  # noqa: PLC0415
+
+    differences: list[CheckDifferencePayload] = []
+    content_parts: list[str] = []
+    changed_files, missing_files, extra_files = _compare_directories(
+        generated_output,
+        actual_output,
+        encoding,
+        comparison,
+    )
+    for changed_file in changed_files:
+        diff_text = "".join(changed_file.diff_lines)
+        differences.append(CheckDifferencePayload(kind="changed", path=changed_file.path, diff=diff_text))
+        content_parts.append(diff_text)
+    for missing in missing_files:
+        if comparison.input_diff:
+            message = f"ADDED: {missing} (generated only from new input)"
+            kind = "added"
+        else:
+            message = f"MISSING: {missing} (should be generated)"
+            kind = "missing"
+        differences.append(CheckDifferencePayload(kind=kind, path=missing, message=message))
+        content_parts.append(f"{message}\n")
+    for extra in extra_files:
+        if comparison.input_diff:
+            message = f"REMOVED: {extra} (generated only from old input)"
+            kind = "removed"
+        else:
+            message = f"EXTRA: {extra} (no longer generated)"
+            kind = "extra"
+        differences.append(CheckDifferencePayload(kind=kind, path=extra, message=message))
+        content_parts.append(f"{message}\n")
+    return OutputComparison(differences=differences, content="".join(content_parts))
+
+
+def _compare_generated_outputs(
+    generated_output: Path,
+    actual_output: Path,
+    encoding: str,
+    comparison: OutputComparisonOptions,
+) -> OutputComparison:
+    """Compare formatted generated output without retaining full file manifests in memory."""
+    if comparison.is_directory_output:
+        return _compare_generated_directories(generated_output, actual_output, encoding, comparison)
+    return _compare_generated_single_file(generated_output, actual_output, encoding, comparison)
 
 
 def _format_cli_value(value: str | list[str]) -> str:
@@ -1539,10 +1649,32 @@ def _check_output_json(
     success: bool,
     content: str,
     differences: list[CheckDifferencePayload],
+    kind: Literal["check", "input-diff"] = "check",
 ) -> str:
     from datamodel_code_generator._structured_output import check_output_json  # noqa: PLC0415
 
-    return check_output_json(success=success, content=content, differences=differences)
+    return check_output_json(success=success, content=content, differences=differences, kind=kind)
+
+
+def _write_comparison_output(
+    comparison: OutputComparison,
+    output_format: str | None,
+    *,
+    kind: Literal["check", "input-diff"] = "check",
+) -> None:
+    """Write a common comparison report in text or structured JSON."""
+    if output_format == "json":
+        sys.stdout.write(
+            _check_output_json(
+                success=not comparison.differences,
+                content=comparison.content,
+                differences=comparison.differences,
+                kind=kind,
+            )
+            + "\n"
+        )
+        return
+    sys.stdout.write(comparison.content)
 
 
 def _generation_output_json_schema() -> str:
@@ -1616,11 +1748,12 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
     settings_path: Path | None = None,
     validators: Mapping[str, ModelValidators] | None = None,
     default_value_overrides: Mapping[str, Any] | None = None,
+    input_filename: str | None = None,
 ) -> str | Mapping[tuple[str, ...], str] | None:
     """Run code generation with the given config and parameters."""
     generation_config = config.model_copy(
         update={
-            "input_filename": None,
+            "input_filename": input_filename,
             "output": output,
             "preset": None,
             "extra_template_data": extra_template_data,
@@ -2460,6 +2593,72 @@ def _run_jobs_json(args: Sequence[str], staged_plans: Sequence[_StagedJobPlan]) 
         return Exit.ERROR
 
 
+class GenerationRunContext(NamedTuple):
+    """Shared immutable generation arguments for a two-input comparison."""
+
+    config: Config
+    extra_template_data: defaultdict[str, dict[str, Any]] | None
+    aliases: Mapping[str, str | list[str]] | None
+    serialization_aliases: Mapping[str, str] | None
+    command_line: str | None
+    custom_formatters_kwargs: dict[str, str] | None
+    settings_path: Path | None
+    validators: Mapping[str, ModelValidators] | None
+    default_value_overrides: Mapping[str, Any] | None
+
+    def run(
+        self,
+        input_: Path | str | ParseResult | Mapping[str, Any],
+        output: Path | None,
+        *,
+        input_filename: str,
+    ) -> str | Mapping[tuple[str, ...], str] | None:
+        """Generate one input with the shared resolved configuration."""
+        return run_generate_from_config(
+            config=self.config,
+            input_=input_,
+            output=output,
+            extra_template_data=self.extra_template_data,
+            aliases=self.aliases,
+            serialization_aliases=self.serialization_aliases,
+            command_line=self.command_line,
+            custom_formatters_kwargs=self.custom_formatters_kwargs,
+            settings_path=self.settings_path,
+            validators=self.validators,
+            default_value_overrides=self.default_value_overrides,
+            input_filename=input_filename,
+        )
+
+
+def _diff_against_validation_error(config: Config, namespace: Namespace) -> str | None:
+    """Return the first incompatible --diff-against configuration, if any."""
+    if config.diff_against is None:
+        return None
+    incompatible_options = (
+        (
+            config.url is not None,
+            "Error: --diff-against cannot be used with --url; use local --input and --diff-against paths",
+        ),
+        (bool(config.input_model), "Error: --diff-against cannot be used with --input-model"),
+        (config.input is None, "Error: --diff-against requires --input with the new local schema path"),
+        (
+            config.output is None,
+            "Error: --diff-against requires --output as a virtual output path to select file or directory layout",
+        ),
+        (config.check, "Error: --diff-against and --check cannot be used together"),
+        (config.watch, "Error: --diff-against and --watch cannot be used together"),
+        (
+            config.emit_model_metadata is not None,
+            "Error: --diff-against cannot be used with --emit-model-metadata",
+        ),
+        (
+            bool(namespace.fail_on_multi_module_stdout),
+            "Error: --diff-against cannot be used with --fail-on-multi-module-stdout",
+        ),
+    )
+    return next((message for is_incompatible, message in incompatible_options if is_incompatible), None)
+
+
 def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
     args: Sequence[str] | None = None,
     *,
@@ -2665,6 +2864,10 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
             print(content, end="")  # noqa: T201
         return Exit.OK
 
+    if diff_error := _diff_against_validation_error(config, namespace):
+        print(diff_error, file=sys.stderr)  # noqa: T201
+        return Exit.ERROR
+
     if not config.input and not config.url and not config.input_model and sys.stdin.isatty():
         print(  # noqa: T201
             "Not Found Input: require `stdin` or arguments `--input`, `--url`, or `--input-model`",
@@ -2806,20 +3009,24 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
         and config.output is not None
         and not config.check
         and not _batch_output_is_staged
+        and config.diff_against is None
     )
-    if config.check or writes_json_output_file:
+    if config.check or writes_json_output_file or config.diff_against is not None:
         config_output = cast("Path", config.output)
         is_directory_output = not config_output.suffix
         temp_context: tempfile.TemporaryDirectory[str] | None = tempfile.TemporaryDirectory()
         temp_dir = Path(temp_context.name)
         if is_directory_output:
-            generate_output: Path | None = temp_dir / config_output.name
+            generate_output: Path | None = temp_dir / ("new" if config.diff_against else "") / config_output.name
+            compare_output = temp_dir / "old" / config_output.name if config.diff_against else None
         else:
-            generate_output = temp_dir / "output.py"
+            generate_output = temp_dir / ("new.py" if config.diff_against else "output.py")
+            compare_output = temp_dir / "old.py" if config.diff_against else None
     else:
         temp_context = None
         generate_output = config.output
         is_directory_output = False
+        compare_output = None
 
     repair_invalid_dotted_stdout = (
         generate_output is None
@@ -2870,7 +3077,21 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
         if writes_json_output_file:
             _validate_generation_path_conflicts(input_, config.output, config.emit_model_metadata)
 
-        if watch_dependencies is None:
+        if compare_output is not None:
+            comparison_context = GenerationRunContext(
+                config=config,
+                extra_template_data=extra_template_data,
+                aliases=aliases,
+                serialization_aliases=serialization_aliases,
+                command_line=_command_header(args) if config.enable_command_header else None,
+                custom_formatters_kwargs=custom_formatters_kwargs,
+                settings_path=_batch_original_output or config.output,
+                validators=validators_config,
+                default_value_overrides=default_value_overrides,
+            )
+            comparison_context.run(cast("Path", config.diff_against), compare_output, input_filename="<input>")
+            result = comparison_context.run(input_, generate_output, input_filename="<input>")
+        elif watch_dependencies is None:
             result = run_generate_from_config(
                 config=config,
                 input_=input_,
@@ -2923,7 +3144,12 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
             )
         ) is not None:
             return cleanup_and_return(write_error)
-    elif namespace.output_format == "json" and generate_output is not None and not config.check:
+    elif (
+        namespace.output_format == "json"
+        and generate_output is not None
+        and not config.check
+        and config.diff_against is None
+    ):
         display_output = _batch_original_output or (config.output if writes_json_output_file else None)
         sys.stdout.write(
             _generation_output_json(
@@ -2932,94 +3158,30 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
             )
             + "\n"
         )
+
+    if config.diff_against is not None and compare_output is not None and generate_output is not None:
+        comparison = _compare_generated_outputs(
+            generate_output,
+            compare_output,
+            config.encoding,
+            OutputComparisonOptions(
+                is_directory_output=is_directory_output,
+                input_diff=True,
+                single_file_display_path=cast("Path", config.output).name,
+            ),
+        )
+        _write_comparison_output(comparison, namespace.output_format, kind="input-diff")
+        return cleanup_and_return(Exit.DIFF if comparison.differences else Exit.OK)
+
     if config.check and config.output is not None and generate_output is not None:
-        from datamodel_code_generator._structured_output import CheckDifferencePayload  # noqa: PLC0415
-
-        has_differences = False
-        single_file_diff_lines: list[str] = []
-        changed_files: list[DirectoryChangedFile] = []
-        missing_files: list[str] = []
-        extra_files: list[str] = []
-        difference_items: list[CheckDifferencePayload] = []
-
-        if is_directory_output:
-            changed_files, missing_files, extra_files = _compare_directories(
-                generate_output,
-                config.output,
-                config.encoding,
-            )
-            for changed_file in changed_files:
-                diff_text = "".join(changed_file.diff_lines)
-                difference_items.append(
-                    CheckDifferencePayload(
-                        kind="changed",
-                        path=changed_file.path,
-                        diff=diff_text,
-                    )
-                )
-                if namespace.output_format != "json":
-                    print(diff_text, end="")  # noqa: T201
-                has_differences = True
-            for missing in missing_files:
-                difference_items.append(
-                    CheckDifferencePayload(
-                        kind="missing",
-                        path=missing,
-                        message=f"MISSING: {missing} (should be generated)",
-                    )
-                )
-                if namespace.output_format != "json":
-                    print(f"MISSING: {missing} (should be generated)")  # noqa: T201
-                has_differences = True
-            for extra in extra_files:
-                difference_items.append(
-                    CheckDifferencePayload(
-                        kind="extra",
-                        path=extra,
-                        message=f"EXTRA: {extra} (no longer generated)",
-                    )
-                )
-                if namespace.output_format != "json":
-                    print(f"EXTRA: {extra} (no longer generated)")  # noqa: T201
-                has_differences = True
-        else:
-            diff_found, single_file_diff_lines = _compare_single_file(generate_output, config.output, config.encoding)
-            if diff_found:
-                if config.output.exists():
-                    difference_items.append(
-                        CheckDifferencePayload(
-                            kind="changed",
-                            path=config.output.as_posix(),
-                            diff="".join(single_file_diff_lines),
-                        )
-                    )
-                else:
-                    difference_items.append(
-                        CheckDifferencePayload(
-                            kind="missing",
-                            path=config.output.as_posix(),
-                            message="".join(single_file_diff_lines),
-                        )
-                    )
-                if namespace.output_format != "json":
-                    print("".join(single_file_diff_lines), end="")  # noqa: T201
-                has_differences = True
-
-        if namespace.output_format == "json":
-            content = "".join(single_file_diff_lines)
-            content += "".join("".join(changed_file.diff_lines) for changed_file in changed_files)
-            content += "".join(f"MISSING: {missing} (should be generated)\n" for missing in missing_files)
-            content += "".join(f"EXTRA: {extra} (no longer generated)\n" for extra in extra_files)
-            sys.stdout.write(
-                _check_output_json(
-                    success=not has_differences,
-                    content=content,
-                    differences=difference_items,
-                )
-                + "\n"
-            )
-
-        return cleanup_and_return(Exit.DIFF if has_differences else Exit.OK)
+        comparison = _compare_generated_outputs(
+            generate_output,
+            config.output,
+            config.encoding,
+            OutputComparisonOptions(is_directory_output=is_directory_output),
+        )
+        _write_comparison_output(comparison, namespace.output_format)
+        return cleanup_and_return(Exit.DIFF if comparison.differences else Exit.OK)
 
     if config.watch and start_watch:
         try:

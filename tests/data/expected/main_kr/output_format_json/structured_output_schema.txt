@@ -66,13 +66,15 @@
     },
     "CheckDifferencePayload": {
       "additionalProperties": false,
-      "description": "One --check difference emitted by --output-format json.",
+      "description": "One generated-output difference emitted by --check or --diff-against.",
       "properties": {
         "kind": {
           "enum": [
             "changed",
             "missing",
-            "extra"
+            "extra",
+            "added",
+            "removed"
           ],
           "title": "Kind",
           "type": "string"
@@ -115,7 +117,7 @@
     },
     "CheckOutputPayload": {
       "additionalProperties": false,
-      "description": "Structured JSON payload emitted by --check --output-format json.",
+      "description": "Structured JSON payload emitted by generated-output comparison commands.",
       "properties": {
         "version": {
           "const": 1,
@@ -128,7 +130,10 @@
           "type": "string"
         },
         "kind": {
-          "const": "check",
+          "enum": [
+            "check",
+            "input-diff"
+          ],
           "title": "Kind",
           "type": "string"
         },
@@ -755,6 +760,7 @@
       "deprecations": "#/$defs/DeprecationsOutputPayload",
       "experimental": "#/$defs/ExperimentalOutputPayload",
       "generation": "#/$defs/GenerationPayload",
+      "input-diff": "#/$defs/CheckOutputPayload",
       "prompt": "#/$defs/PromptPayload",
       "pyproject-config": "#/$defs/PyprojectConfigOutputPayload"
     },

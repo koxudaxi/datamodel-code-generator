@@ -39,6 +39,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--custom-template-dir": "Use custom Jinja2 templates for model generation.",
     "--dataclass-arguments": "Customize dataclass decorator arguments via JSON dictionary.",
     "--default-values": "Override field default values via inline JSON or a JSON file path.",
+    "--diff-against": "Compare generated code from two local schema revisions without writing generated files.",
     "--disable-appending-item-suffix": "Disable appending 'Item' suffix to array item types.",
     "--disable-future-imports": "Prevent automatic addition of __future__ imports in generated code.",
     "--disable-timestamp": "Disable timestamp in generated file header for reproducible output.",

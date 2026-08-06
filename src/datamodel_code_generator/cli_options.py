@@ -880,6 +880,28 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     # General Options
     # ==========================================================================
     "--check": CLIOptionMeta(name="--check", category=OptionCategory.GENERAL),
+    "--diff-against": CLIOptionMeta(
+        name="--diff-against",
+        category=OptionCategory.GENERAL,
+        requires=(
+            CLIOptionRelation(
+                option="--input",
+                message="`--diff-against` requires --input with the new local schema path.",
+            ),
+            CLIOptionRelation(
+                option="--output",
+                message="`--diff-against` requires --output to select file or directory output layout.",
+            ),
+        ),
+        conflicts=(
+            CLIOptionRelation(option="--check"),
+            CLIOptionRelation(option="--watch"),
+            CLIOptionRelation(option="--url"),
+            CLIOptionRelation(option="--input-model"),
+            CLIOptionRelation(option="--emit-model-metadata"),
+            CLIOptionRelation(option="--fail-on-multi-module-stdout"),
+        ),
+    ),
     "--fail-on-multi-module-stdout": CLIOptionMeta(
         name="--fail-on-multi-module-stdout", category=OptionCategory.GENERAL
     ),
