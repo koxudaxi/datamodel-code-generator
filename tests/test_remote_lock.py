@@ -3,16 +3,13 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 import pytest
 
 from datamodel_code_generator import _publication as publication_module
 from datamodel_code_generator import remote_lock
 from datamodel_code_generator.remote_lock import RemoteLockError, RemoteReferenceLock
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 @pytest.mark.allow_direct_assert
@@ -60,6 +57,45 @@ def test_remote_lock_never_persists_url_or_request_secrets(tmp_path: Path) -> No
     assert "lock-secret" not in content
     assert "access_token" not in content
     assert "path-secret" not in content
+
+
+@pytest.mark.allow_direct_assert
+def test_remote_lock_commit_resolves_a_relative_target_from_the_current_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Direct lock commits preserve relative-path behavior while using descriptor publication."""
+    monkeypatch.chdir(tmp_path)
+    lock = RemoteReferenceLock.open(Path("relative.lock"), update=True, locked=False)
+    lock.record_response("https://schemas.example/schema.json", None, None, b"schema")
+
+    lock.commit()
+
+    assert (tmp_path / "relative.lock").is_file()
+
+
+@pytest.mark.allow_direct_assert
+def test_windows_staging_fallback_fails_closed_after_its_private_path_is_replaced(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A Windows path fallback never writes to or cleans a replacement staging directory."""
+    parent = tmp_path / "parent"
+    parent.mkdir()
+    parent_stat = parent.stat()
+    anchor = publication_module.PublicationAnchor(parent, (parent_stat.st_dev, parent_stat.st_ino), None)
+    monkeypatch.setattr(publication_module.os, "name", "nt")
+    staging = publication_module.StagingDirectory.create(anchor, prefix=".stage-")
+    moved_staging = tmp_path / "moved-staging"
+    staging.path.rename(moved_staging)
+    staging.path.mkdir()
+
+    with pytest.raises(OSError, match="private staging directory changed"):
+        staging.create_file(prefix=".source-")
+    with pytest.raises(OSError, match="private staging directory changed"):
+        staging.cleanup()
+
+    assert not list(staging.path.iterdir())
+    moved_staging.rmdir()
+    staging.path.rmdir()
 
 
 @pytest.mark.allow_direct_assert

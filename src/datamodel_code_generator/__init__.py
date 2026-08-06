@@ -1677,12 +1677,166 @@ def generate(
     config = _apply_generate_config_preset(config)
     config = _apply_missing_sentinel_config(config)
 
+    if (
+        config.update_lock
+        and not config.remote_lock_resolved
+        and (config.output is not None or config.emit_model_metadata is not None)
+    ):
+        if config.output is not None and _uses_legacy_process_state(config):
+            with PROCESS_STATE_LOCK:
+                return _generate_with_atomic_remote_update(input_, config, Path.cwd(), use_output_cwd=True)
+        with PROCESS_STATE_LOCK:
+            caller_cwd = Path.cwd()
+        return _generate_with_atomic_remote_update(input_, config, caller_cwd, use_output_cwd=False)
+
     if config.output is not None and _uses_legacy_process_state(config):
         with PROCESS_STATE_LOCK:
             return _generate(input_, config, Path.cwd(), use_output_cwd=config.output is not None)
     with PROCESS_STATE_LOCK:
         caller_cwd = Path.cwd()
     return _generate(input_, config, caller_cwd, use_output_cwd=False)
+
+
+def _generate_with_atomic_remote_update(
+    input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
+    config: GenerateConfig,
+    caller_cwd: Path,
+    *,
+    use_output_cwd: bool,
+) -> str | GeneratedModules | None:
+    """Generate into private staging and publish output, metadata, and update lock together."""
+    import tempfile  # noqa: PLC0415
+
+    from datamodel_code_generator._publication import (  # noqa: PLC0415
+        StagedFile,
+        StagingDirectory,
+        close_anchor,
+        publication_anchor,
+        publish_staged_files,
+    )
+    from datamodel_code_generator.remote_lock import RemoteReferenceLock  # noqa: PLC0415
+
+    path_updates = {
+        field: absolute_path
+        for field in ("output", "emit_model_metadata")
+        if (absolute_path := _absolute_generation_path(getattr(config, field), caller_cwd))
+        is not getattr(config, field)
+    }
+    if path_updates:
+        config = config.model_copy(update=path_updates)
+    lockfile = config.lockfile or caller_cwd / "datamodel-codegen.lock"
+    if not lockfile.is_absolute():
+        lockfile = caller_cwd / lockfile
+    lockfile = lockfile.expanduser()
+    canonical_lockfile = lockfile.parent.resolve(strict=False) / lockfile.name
+    _validate_generation_path_conflicts(input_, config.output, config.emit_model_metadata, canonical_lockfile)
+    remote_lock = RemoteReferenceLock.open(canonical_lockfile, update=True, locked=False)
+    contexts: list[tempfile.TemporaryDirectory[str]] = []
+    anchors = []
+    lock_anchor = None
+    lock_staging = None
+    try:
+        staged_updates: dict[str, Path] = {}
+        staged_artifacts: list[tuple[Path, Path, Any, Path, Path]] = []
+        if (output := config.output) is not None:
+            output_parent = Path(os.path.abspath(output.expanduser())).parent  # noqa: PTH100
+            while not output_parent.exists():
+                output_parent = output_parent.parent
+            output_context = tempfile.TemporaryDirectory(prefix=".datamodel-codegen-", dir=output_parent)
+            contexts.append(output_context)
+            staged_output = Path(output_context.name) / (output.name or "output")
+            if output.is_dir() or not output.suffix:
+                staged_output.mkdir()
+            staged_updates["output"] = staged_output
+            resolved_output_root = output.expanduser().resolve(strict=False)
+            resolved_output_parent = output.parent.expanduser().resolve(strict=False)
+            output_anchor = publication_anchor(resolved_output_root if output.is_dir() else resolved_output_parent)
+            anchors.append(output_anchor)
+            staged_artifacts.append((
+                staged_output,
+                output,
+                output_anchor,
+                resolved_output_root,
+                resolved_output_parent,
+            ))
+        if (metadata := config.emit_model_metadata) is not None:
+            metadata_parent = Path(os.path.abspath(metadata.expanduser())).parent  # noqa: PTH100
+            while not metadata_parent.exists():
+                metadata_parent = metadata_parent.parent
+            metadata_context = tempfile.TemporaryDirectory(prefix=".datamodel-codegen-", dir=metadata_parent)
+            contexts.append(metadata_context)
+            staged_metadata = Path(metadata_context.name) / (metadata.name or "model-metadata.json")
+            staged_updates["emit_model_metadata"] = staged_metadata
+            resolved_metadata_parent = metadata.parent.expanduser().resolve(strict=False)
+            metadata_anchor = publication_anchor(resolved_metadata_parent)
+            anchors.append(metadata_anchor)
+            staged_artifacts.append((
+                staged_metadata,
+                metadata,
+                metadata_anchor,
+                resolved_metadata_parent,
+                resolved_metadata_parent,
+            ))
+        lock_anchor = publication_anchor(canonical_lockfile.parent)
+        lock_staging = StagingDirectory.create(lock_anchor, prefix=".datamodel-codegen-lock-")
+        staged_config = config.model_copy(update=staged_updates)
+        staged_config._logical_output = config.output  # noqa: SLF001
+        staged_config.resolve_remote_lock(remote_lock)
+        generated = _generate(input_, staged_config, caller_cwd, use_output_cwd=use_output_cwd)
+        publication_files: list[StagedFile] = []
+        for (
+            staged_artifact,
+            target_artifact,
+            anchor,
+            resolved_artifact_root,
+            resolved_artifact_parent,
+        ) in staged_artifacts:
+            if staged_artifact.is_file():
+                publication_files.append(
+                    StagedFile(
+                        staged_artifact,
+                        target_artifact,
+                        resolved_artifact_parent / target_artifact.name,
+                        anchor,
+                    )
+                )
+            elif staged_artifact.exists():
+                for staged_file in sorted(staged_artifact.rglob("*")):
+                    if not staged_file.is_file():
+                        continue
+                    relative_path = staged_file.relative_to(staged_artifact)
+                    target_file = target_artifact / relative_path
+                    publication_files.append(
+                        StagedFile(
+                            staged_file,
+                            target_file,
+                            resolved_artifact_root / relative_path,
+                            anchor,
+                        )
+                    )
+        if (staged_lock := remote_lock.stage(lock_staging)) is not None:
+            if isinstance(staged_lock, Path):  # pragma: no cover - descriptor staging returns StagedFile
+                staged_lock = StagedFile(staged_lock, canonical_lockfile, canonical_lockfile)
+            publication_files.append(staged_lock._replace(anchor=lock_anchor))
+        publish_staged_files(publication_files)
+        remote_lock.mark_committed()
+        return generated
+    except BaseException:
+        remote_lock.discard_stage()
+        raise
+    finally:
+        if lock_staging is not None:
+            with contextlib.suppress(OSError):
+                lock_staging.cleanup()
+        if lock_anchor is not None:
+            with contextlib.suppress(OSError):
+                close_anchor(lock_anchor)
+        for anchor in anchors:
+            with contextlib.suppress(OSError):
+                close_anchor(anchor)
+        for context in contexts:
+            with contextlib.suppress(OSError):
+                context.cleanup()
 
 
 def _generate(  # noqa: PLR0912, PLR0914, PLR0915

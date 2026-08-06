@@ -1072,14 +1072,10 @@ class _RemoteLockTransaction:
 
     def __init__(
         self,
-        entries: Sequence[tuple[str, Config, Path | None]],
-        plans: Sequence[_RemoteLockPlan],
         collectors: Mapping[Path, Any],
         anchors: Mapping[Path, _PublicationAnchor],
         staging_contexts: Mapping[Path, _StagingDirectory],
     ) -> None:
-        self._plans = tuple(plans)
-        self._plans_by_config_id = {id(config): plan for (_, config, _), plan in zip(entries, plans, strict=True)}
         self._collectors = dict(collectors)
         self._anchors = dict(anchors)
         self._staging_contexts = dict(staging_contexts)
@@ -1128,15 +1124,7 @@ class _RemoteLockTransaction:
                     with suppress(OSError):
                         os.close(anchor.directory_fd)
             raise Error(str(exc)) from exc
-        return cls(entries, plans, collectors, anchors, staging_contexts)
-
-    def plan_for(self, config: Config) -> _RemoteLockPlan:
-        """Return the immutable preflight plan for one original job config."""
-        try:
-            return self._plans_by_config_id[id(config)]
-        except KeyError as exc:  # pragma: no cover - callers retain their original JobPlan config
-            msg = "Remote lock plan is not bound to this generation config"
-            raise Error(msg) from exc
+        return cls(collectors, anchors, staging_contexts)
 
     def collector_for(self, plan: _RemoteLockPlan) -> Any | None:
         """Return the collector selected by an immutable preflight plan."""
@@ -1155,7 +1143,8 @@ class _RemoteLockTransaction:
                     staged_path = _StagedFile(staged_path, path, path)
                 files.append(staged_path._replace(anchor=self._anchors[path]))
         except Exception as exc:
-            self.discard()
+            with suppress(OSError):
+                self.discard()
             msg = f"Unable to stage remote lock update: {exc}"
             raise Error(msg) from exc
         return tuple(files)
@@ -1168,21 +1157,37 @@ class _RemoteLockTransaction:
 
     def discard(self) -> None:
         """Discard all pending lock staging after an unsuccessful transaction."""
+        cleanup_error: OSError | None = None
         for collector in self._collectors.values():
-            collector.discard_stage()
-        self._close_anchors()
+            try:
+                collector.discard_stage()
+            except OSError as exc:  # noqa: PERF203 - every collector must get its cleanup opportunity
+                cleanup_error = cleanup_error or exc
+        try:
+            self._close_anchors()
+        except OSError as exc:
+            cleanup_error = cleanup_error or exc
+        if cleanup_error is not None:
+            raise cleanup_error
 
     def _close_anchors(self) -> None:
         """Release private staging and update-only destination handles exactly once."""
+        cleanup_error: OSError | None = None
         for context in self._staging_contexts.values():
-            with suppress(OSError):
+            try:
                 context.cleanup()
+            except OSError as exc:  # noqa: PERF203 - every staged lock must be cleaned before reporting failure
+                cleanup_error = cleanup_error or exc
         self._staging_contexts.clear()
         for anchor in self._anchors.values():
             if anchor.directory_fd is not None:
-                with suppress(OSError):
+                try:
                     os.close(anchor.directory_fd)
+                except OSError as exc:
+                    cleanup_error = cleanup_error or exc
         self._anchors.clear()
+        if cleanup_error is not None:
+            raise cleanup_error
 
 
 class _UnresolvedRemoteLocks:
@@ -2265,7 +2270,8 @@ def _run_jobs(
         staged_plans = _stage_job_plans(plans)
     except OSError as exc:
         if remote_locks is not None:
-            remote_locks.discard()
+            with suppress(OSError):
+                remote_locks.discard()
         print(f"Error: could not prepare batch output staging: {exc}", file=sys.stderr)  # noqa: T201
         return Exit.ERROR
 
@@ -2279,16 +2285,19 @@ def _run_jobs(
         if cleanup_error := _staging_cleanup_error(None, _cleanup_staged_job_plans(staged_plans)):
             print(f"Error: {cleanup_error}", file=sys.stderr)  # noqa: T201
         if remote_locks is not None:
-            remote_locks.discard()
+            with suppress(OSError):
+                remote_locks.discard()
         raise
 
     if cleanup_error := _staging_cleanup_error(None, _cleanup_staged_job_plans(staged_plans)):
         if remote_locks is not None:
-            remote_locks.discard()
+            with suppress(OSError):
+                remote_locks.discard()
         print(f"Error: {cleanup_error}", file=sys.stderr)  # noqa: T201
         return Exit.ERROR
     if remote_locks is not None:
-        remote_locks.discard()
+        with suppress(OSError):
+            remote_locks.discard()
     return result
 
 
@@ -2545,7 +2554,8 @@ def _run_single_remote_transaction(  # noqa: PLR0913, PLR0917
         try:
             _cleanup_staged_job_plans(staged_plans)
         finally:
-            remote_locks.discard()
+            with suppress(OSError):
+                remote_locks.discard()
 
 
 class GenerationRunContext(NamedTuple):
@@ -2933,7 +2943,8 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
         )
     except Error as e:
         if remote_transaction_owner and remote_locks is not None:
-            remote_locks.discard()
+            with suppress(OSError):
+                remote_locks.discard()
         if remote_lock_intent is not None and watch_dependencies is not None:
             watch_dependencies.merge_remote_lock_intent(remote_lock_intent)
         print(str(e), file=sys.stderr)  # noqa: T201
@@ -3101,13 +3112,15 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
         if not remote_transaction_owner or remote_locks is None:
             return finish_watch_remote_lock_intent(exit_code)
         if exit_code is not Exit.OK or config.check:
-            remote_locks.discard()
+            with suppress(OSError):
+                remote_locks.discard()
             return finish_watch_remote_lock_intent(exit_code)
         try:
             _publish_staged_files(remote_locks.staged_files())
             remote_locks.mark_committed()
         except (Error, OSError) as exc:
-            remote_locks.discard()
+            with suppress(OSError):
+                remote_locks.discard()
             print(f"Error: could not publish remote lock: {exc}", file=sys.stderr)  # noqa: T201
             return finish_watch_remote_lock_intent(Exit.ERROR)
         return finish_watch_remote_lock_intent(exit_code)

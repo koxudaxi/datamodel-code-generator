@@ -333,14 +333,16 @@ class RemoteReferenceLock:
         anchor = None
         staging_directory = None
         try:
-            anchor = publication_anchor(self.path.parent)
+            target = self.path if self.path.is_absolute() else Path.cwd() / self.path
+            target = target.expanduser().parent.resolve(strict=False) / target.name
+            anchor = publication_anchor(target.parent)
             staging_directory = StagingDirectory.create(anchor, prefix=".datamodel-codegen-lock-")
             staged_source = self.stage(staging_directory)
             if staged_source is None:  # pragma: no cover - update mode always stages once
                 return
             if isinstance(staged_source, Path):  # pragma: no cover - descriptor staging returns StagedFile
-                staged_source = StagedFile(staged_source, self.path, self.path)
-            publish_staged_files((staged_source._replace(anchor=anchor),))
+                staged_source = StagedFile(staged_source, target, target)
+            publish_staged_files((staged_source._replace(target=target, resolved_target=target, anchor=anchor),))
         except OSError as exc:
             self.discard_stage()
             msg = f"Unable to update remote lock {self.path}: {exc}"
