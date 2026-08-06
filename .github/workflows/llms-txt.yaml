@@ -54,11 +54,11 @@ jobs:
           enable-cache: true
           cache-suffix: docs-check-all
       - name: Setup Python
-        run: uv python install 3.14
+        run: uv python install 3.14.6
         env:
           UV_PYTHON_PREFERENCE: "only-managed"
       - name: Install tox
-        run: uv tool install --python-preference only-managed --python 3.14 tox --with tox-uv
+        run: uv tool install --python-preference only-managed --python 3.14.6 tox --with tox-uv
         env:
           UV_PYTHON_PREFERENCE: "only-managed"
       - name: Run aggregate docs check
