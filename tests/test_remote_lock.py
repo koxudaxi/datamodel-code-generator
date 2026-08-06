@@ -127,6 +127,23 @@ def test_remote_lock_commit_resolves_a_relative_target_from_the_current_director
 
 
 @pytest.mark.allow_direct_assert
+def test_nearest_existing_directory_rejects_a_nonexistent_path_root(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A real path root cannot make the ancestor walk loop forever when it is unavailable."""
+    path_root = Path(tmp_path.anchor)
+    real_is_dir = Path.is_dir
+
+    def root_is_unavailable(path: Path) -> bool:
+        return path != path_root and real_is_dir(path)
+
+    monkeypatch.setattr(Path, "is_dir", root_is_unavailable)
+
+    with pytest.raises(RemoteLockError, match="Unable to find an existing directory"):
+        remote_lock._nearest_existing_directory(path_root)
+
+
+@pytest.mark.allow_direct_assert
 def test_windows_staging_fallback_fails_closed_after_its_private_path_is_replaced(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -204,6 +221,17 @@ def test_staging_directory_handles_deleted_sources_closed_handles_and_cleanup_fa
     staging.cleanup()
     with pytest.raises(OSError, match="already closed"):
         staging.create_file(prefix=".source-")
+    publication_module.close_anchor(anchor)
+
+    class FailingStagingDirectory(publication_module.StagingDirectory):
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            msg = "staging setup failed"
+            raise OSError(msg)
+
+    anchor = publication_module.publication_anchor(parent)
+    with pytest.raises(OSError, match="staging setup failed"):
+        FailingStagingDirectory.create(anchor, prefix=".stage-")
+    assert not list(parent.iterdir())
     publication_module.close_anchor(anchor)
 
     anchor = publication_module.publication_anchor(parent)
@@ -489,6 +517,24 @@ def test_remote_lock_legacy_staging_reuses_and_discards_one_private_file(tmp_pat
     updater.discard_stage()
     assert not staged_path.exists()
     assert not lockfile.parent.exists()
+
+
+@pytest.mark.allow_direct_assert
+def test_remote_lock_commit_rejects_legacy_path_staging_without_leaking_a_temporary_file(tmp_path: Path) -> None:
+    """The direct Path staging API cannot be mixed with descriptor-bound commit publication."""
+    lockfile = tmp_path / "datamodel-codegen.lock"
+    updater = RemoteReferenceLock.open(lockfile, update=True, locked=False)
+    updater.record_response("https://schemas.example/schema.json", None, None, b"schema")
+    staged_path = updater.stage()
+
+    assert isinstance(staged_path, Path)
+    with pytest.raises(RemoteLockError, match="legacy Path staging"):
+        updater.commit()
+    assert not staged_path.exists()
+    assert not lockfile.exists()
+
+    updater.commit()
+    assert lockfile.is_file()
 
 
 @pytest.mark.allow_direct_assert

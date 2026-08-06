@@ -1736,10 +1736,9 @@ def _generate_with_atomic_remote_update(  # noqa: PLR0912, PLR0914, PLR0915
     }
     if path_updates:
         config = config.model_copy(update=path_updates)
-    lockfile = config.lockfile or caller_cwd / "datamodel-codegen.lock"
+    lockfile = config.lockfile.expanduser() if config.lockfile is not None else caller_cwd / "datamodel-codegen.lock"
     if not lockfile.is_absolute():
         lockfile = caller_cwd / lockfile
-    lockfile = lockfile.expanduser()
     canonical_lockfile = lockfile.parent.resolve(strict=False) / lockfile.name
     _validate_generation_path_conflicts(input_, config.output, config.emit_model_metadata, canonical_lockfile)
     remote_lock = RemoteReferenceLock.open(canonical_lockfile, update=True, locked=False)
@@ -1925,7 +1924,7 @@ def _generate(  # noqa: PLR0912, PLR0914, PLR0915
         )
     else:
         default_lockfile = caller_cwd / "datamodel-codegen.lock"
-        lockfile = config.lockfile or default_lockfile
+        lockfile = config.lockfile.expanduser() if config.lockfile is not None else default_lockfile
         if not lockfile.is_absolute():
             lockfile = (caller_cwd / lockfile).resolve()
         use_remote_lock = config.update_lock or config.locked or lockfile.is_file()

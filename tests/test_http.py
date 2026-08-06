@@ -974,6 +974,7 @@ def test_cli_locks_each_remote_identity_that_uses_the_same_local_mirror(
     run_main_with_args([*common_args, "--locked"])
 
 
+@pytest.mark.skipif(os.name == "nt", reason="the raw host:port local-mirror path is not a valid Windows path")
 def test_cli_verifies_an_http_lock_through_an_equivalent_local_mirror(
     mocker: MockerFixture,
     local_http_server: str,
@@ -1619,6 +1620,36 @@ def test_generate_returns_stdout_and_updates_a_lock_without_artifacts(
         HTTP_E2E_DATA_PATH / "expected" / "http" / "backend.py",
     )
     assert lockfile.is_file()
+
+
+@pytest.mark.parametrize("output", [None, Path("atomic.py")], ids=["non-atomic", "atomic"])
+def test_generate_expands_a_tilde_lockfile_before_resolving_the_caller_directory(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    output: Path | None,
+) -> None:
+    """Both public update paths expand an explicit lockfile before applying the invocation directory."""
+    home = tmp_path / "home"
+    caller = tmp_path / "caller"
+    home.mkdir()
+    caller.mkdir()
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+    monkeypatch.chdir(caller)
+
+    generate(
+        JSON_SCHEMA_DATA_PATH / "person.json",
+        config=GenerateConfig(
+            disable_timestamp=True,
+            input_file_type=InputFileType.JsonSchema,
+            lockfile=Path("~/remote.lock"),
+            output=output,
+            update_lock=True,
+        ),
+    )
+
+    assert (home / "remote.lock").is_file()
+    assert not (caller / "~").exists()
 
 
 def test_generate_publishes_relative_nested_artifacts_and_lock_together(

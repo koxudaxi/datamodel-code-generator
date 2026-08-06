@@ -20,12 +20,12 @@
 | [`--http-query-parameters`](#http-query-parameters) | Add query parameters to HTTP requests for remote schemas. |
 | [`--http-timeout`](#http-timeout) | Set timeout for HTTP requests to remote hosts. |
 | [`--ignore-pyproject`](#ignore-pyproject) | Ignore pyproject.toml configuration file. |
-| [`--locked`](#locked) | Pin remote schema bytes in a project lock file. |
-| [`--lockfile`](#lockfile) | Pin remote schema bytes in a project lock file. |
+| [`--locked`](#locked) | Require an existing remote lock and validate each fetched re... |
+| [`--lockfile`](#lockfile) | Select the remote reference integrity lock file. |
 | [`--module-split-mode`](#module-split-mode) | Split generated models into separate files, one per model cl... |
 | [`--shared-module-name`](#shared-module-name) | Customize the name of the shared module for deduplicated mod... |
 | [`--strict-refs`](#strict-refs) | Treat unresolved local `$ref` JSON pointers as errors. |
-| [`--update-lock`](#update-lock) | Pin remote schema bytes in a project lock file. |
+| [`--update-lock`](#update-lock) | Create or atomically update the selected remote lock after g... |
 | [`--watch`](#watch) | Watch input file(s) for changes and regenerate output automa... |
 | [`--watch-delay`](#watch-delay) | Set debounce delay in seconds for watch mode. |
 
@@ -2101,24 +2101,16 @@ testing without project configuration.
 
 ## `--locked` {#locked}
 
-Pin remote schema bytes in a project lock file.
+Require an existing remote lock and validate each fetched resource against it.
 
-Use `--update-lock` to create or refresh `datamodel-codegen.lock` after a
-successful generation. An existing selected lock is verified automatically.
-`--lockfile` only selects its path: a missing selected lock is ignored unless
-`--locked` requires it, while `--update-lock` creates it. The lock stores
-opaque SHA-256 request-identity digests and SHA-256 body digests, never
-response bodies or request values directly. A request identity includes its
-scheme, host, explicit port, path, header names, and ordered query parameter
-names only. If one generation receives different bodies for the same path and
-query-name identity, it fails closed rather than sharing a lock entry.
+`--locked` fails if the selected lock is missing, a resource is unrecorded, or its body differs. It conflicts with
+`--update-lock`.
 
-Without `--lockfile`, the CLI uses `datamodel-codegen.lock` beside the
-discovered `pyproject.toml`, or in the invocation working directory when no
-project is found. Explicit relative `--lockfile` paths resolve from the
-invocation working directory, not the project root or output directory. The
-public API uses the caller's working directory for both its default lock and
-relative `lockfile` paths.
+The lock stores opaque SHA-256 request-identity digests and SHA-256 body digests,
+never response bodies or request values directly. Each saved display origin contains only the scheme, host, and
+explicit port—never a path, query, or request headers. A request identity includes its scheme, host, explicit port,
+path, header names, and ordered query parameter names only. If one generation receives different bodies for the same
+path and query-name identity, it fails closed rather than sharing a lock entry.
 
 **Related:** [`--http-local-ref-path`](#http-local-ref-path), [`--url`](base-options.md#url)
 
@@ -2179,24 +2171,19 @@ relative `lockfile` paths.
 
 ## `--lockfile` {#lockfile}
 
-Pin remote schema bytes in a project lock file.
+Select the remote reference integrity lock file.
 
-Use `--update-lock` to create or refresh `datamodel-codegen.lock` after a
-successful generation. An existing selected lock is verified automatically.
-`--lockfile` only selects its path: a missing selected lock is ignored unless
-`--locked` requires it, while `--update-lock` creates it. The lock stores
-opaque SHA-256 request-identity digests and SHA-256 body digests, never
-response bodies or request values directly. A request identity includes its
-scheme, host, explicit port, path, header names, and ordered query parameter
-names only. If one generation receives different bodies for the same path and
-query-name identity, it fails closed rather than sharing a lock entry.
+An existing selected lock is verified automatically; a missing selected lock is ignored unless `--locked` requires it.
+Without `--lockfile`, the CLI uses `datamodel-codegen.lock` beside the discovered `pyproject.toml`, or in the invocation
+working directory when no project is found. Explicit relative `--lockfile` paths resolve from the invocation working
+directory, not the project root or output directory. The public API uses the caller's working directory for both its
+default lock and relative `lockfile` paths.
 
-Without `--lockfile`, the CLI uses `datamodel-codegen.lock` beside the
-discovered `pyproject.toml`, or in the invocation working directory when no
-project is found. Explicit relative `--lockfile` paths resolve from the
-invocation working directory, not the project root or output directory. The
-public API uses the caller's working directory for both its default lock and
-relative `lockfile` paths.
+The lock stores opaque SHA-256 request-identity digests and SHA-256 body digests,
+never response bodies or request values directly. Each saved display origin contains only the scheme, host, and
+explicit port—never a path, query, or request headers. A request identity includes its scheme, host, explicit port,
+path, header names, and ordered query parameter names only. If one generation receives different bodies for the same
+path and query-name identity, it fails closed rather than sharing a lock entry.
 
 **Related:** [`--http-local-ref-path`](#http-local-ref-path), [`--url`](base-options.md#url)
 
@@ -2477,26 +2464,18 @@ generation instead. Existing empty schemas remain valid references.
 
 ## `--update-lock` {#update-lock}
 
-Pin remote schema bytes in a project lock file.
+Create or atomically update the selected remote lock after generation.
 
-Use `--update-lock` to create or refresh `datamodel-codegen.lock` after a
-successful generation. An existing selected lock is verified automatically.
-`--lockfile` only selects its path: a missing selected lock is ignored unless
-`--locked` requires it, while `--update-lock` creates it. The lock stores
-opaque SHA-256 request-identity digests and SHA-256 body digests, never
-response bodies or request values directly. A request identity includes its
-scheme, host, explicit port, path, header names, and ordered query parameter
-names only. If one generation receives different bodies for the same path and
-query-name identity, it fails closed rather than sharing a lock entry.
+`--update-lock` creates or refreshes the selected `--lockfile` from every remote resource reached during this run.
+It conflicts with `--locked`.
 
-Without `--lockfile`, the CLI uses `datamodel-codegen.lock` beside the
-discovered `pyproject.toml`, or in the invocation working directory when no
-project is found. Explicit relative `--lockfile` paths resolve from the
-invocation working directory, not the project root or output directory. The
-public API uses the caller's working directory for both its default lock and
-relative `lockfile` paths.
+The lock stores opaque SHA-256 request-identity digests and SHA-256 body digests,
+never response bodies or request values directly. Each saved display origin contains only the scheme, host, and
+explicit port—never a path, query, or request headers. A request identity includes its scheme, host, explicit port,
+path, header names, and ordered query parameter names only. If one generation receives different bodies for the same
+path and query-name identity, it fails closed rather than sharing a lock entry.
 
-**Related:** [`--http-local-ref-path`](#http-local-ref-path), [`--url`](base-options.md#url)
+**Related:** [`--http-local-ref-path`](#http-local-ref-path), [`--lockfile`](#lockfile), [`--url`](base-options.md#url)
 
 **Option relationships:**
 

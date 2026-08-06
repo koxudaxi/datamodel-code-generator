@@ -2234,6 +2234,7 @@ def _publish_staged_files(files: Iterable[tuple[Path, Path] | _StagedFile]) -> N
 
     publish_staged_files(files)
 
+
 def _publish_staged_job_plans(staged_plans: Sequence[_StagedJobPlan]) -> None:
     """Publish every generated batch artifact after all jobs have completed successfully."""
     _publish_staged_files(file for staged_plan in staged_plans for file in _staged_files(staged_plan))

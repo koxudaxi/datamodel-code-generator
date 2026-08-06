@@ -170,7 +170,7 @@ class StagingDirectory:
                     anchor.identity,
                 ),
             )
-        parent_fd = os.dup(anchor.directory_fd)
+        parent_fd: int | None = os.dup(anchor.directory_fd)
         try:
             for _ in range(100):
                 name = _private_name(prefix)
@@ -179,17 +179,28 @@ class StagingDirectory:
                 except FileExistsError:
                     continue
                 try:
-                    directory_fd = os.open(name, _directory_open_flags(), dir_fd=parent_fd)
+                    # Ownership transfers to StagingDirectory after it is fully constructed; cleanup() closes it.
+                    directory_fd = os.open(  # lgtm [py/file-not-closed]
+                        name, _directory_open_flags(), dir_fd=parent_fd
+                    )
                 except BaseException:
                     with suppress(OSError):
                         os.rmdir(name, dir_fd=parent_fd)
                     raise
-                return cls((parent_fd, directory_fd), name, anchor.path / name)
-        except BaseException:
-            os.close(parent_fd)
-            raise
-        os.close(parent_fd)
-        raise FileExistsError(f"could not reserve private staging under {anchor.path}")
+                try:
+                    staging_directory = cls((parent_fd, directory_fd), name, anchor.path / name)
+                except BaseException:
+                    os.close(directory_fd)
+                    with suppress(OSError):
+                        os.rmdir(name, dir_fd=parent_fd)
+                    raise
+                # From here cleanup() owns both descriptors, including its duplicated parent descriptor.
+                parent_fd = None
+                return staging_directory
+            raise FileExistsError(f"could not reserve private staging under {anchor.path}")
+        finally:
+            if parent_fd is not None:
+                os.close(parent_fd)
 
     def _validate_path_fallback(self) -> None:  # pragma: no cover - Windows lexical fallback
         """Fail closed if a Windows lexical staging location no longer names the reserved directory."""
@@ -440,7 +451,9 @@ def _restore_backup(backup: Path, target: Path) -> None:
             backup.unlink()
             return
     except OSError:
-        pass
+        # The target may have disappeared, but replacement still restores the backup safely.
+        backup.replace(target)
+        return
     backup.replace(target)
 
 
@@ -568,11 +581,15 @@ def _rollback_bound_file(published_file: _BoundPublishedFile) -> list[Path]:
 def _set_staged_mode(file: StagedFile, mode: int) -> None:
     try:
         if file.source_directory_fd is not None:
-            os.chmod(cast("str", file.source_name), mode, dir_fd=file.source_directory_fd, follow_symlinks=False)
+            # Existing destination permissions are intentionally preserved, including group readability.
+            os.chmod(  # lgtm [py/overly-permissive-file]
+                cast("str", file.source_name), mode, dir_fd=file.source_directory_fd, follow_symlinks=False
+            )
         else:
             cast("Path", file.staged_file).chmod(mode)
     except OSError:
-        pass
+        # Preserving an existing destination's mode is best effort; publication must retain its staged content.
+        return
 
 
 def _replace_source(file: StagedFile, destination_name: str, destination_fd: int) -> None:

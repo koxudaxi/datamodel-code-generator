@@ -18,11 +18,12 @@ import os
 import tempfile
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, TextIO, TypeGuard, cast
+from typing import TYPE_CHECKING, TypeGuard, cast
 from urllib.parse import SplitResult, parse_qsl, urlsplit, urlunsplit
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from typing import TextIO
 
     from datamodel_code_generator._publication import StagedFile, StagingDirectory
 
@@ -165,7 +166,11 @@ def _remove_temporary_file(path: Path) -> None:
 def _nearest_existing_directory(path: Path) -> Path:
     """Return an existing ancestor without creating target lock directories."""
     while not path.is_dir():
-        path = path.parent
+        parent = path.parent
+        if parent == path:
+            msg = f"Unable to find an existing directory for remote lock: {path}"
+            raise RemoteLockError(msg)
+        path = parent
     return path
 
 
@@ -232,22 +237,21 @@ class RemoteReferenceLock:
         msg = f"Remote resource content does not match lock: {entry.url}"
         raise RemoteLockError(msg)
 
-    def _write_staged_content(self, file: object) -> None:
+    def _write_staged_content(self, file: TextIO) -> None:
         """Stream one deterministic lock document without retaining a second full payload."""
-        lock_file = cast("TextIO", file)
         entries = sorted(self._seen.values(), key=lambda entry: entry.request_sha256)
-        lock_file.write('{\n  "resources": ')
+        file.write('{\n  "resources": ')
         if not entries:
-            lock_file.write("[]")
+            file.write("[]")
         else:
-            lock_file.write("[\n")
+            file.write("[\n")
             for index, entry in enumerate(entries):
                 if index:
-                    lock_file.write(",\n")
+                    file.write(",\n")
                 serialized_entry = json.dumps(asdict(entry), ensure_ascii=False, indent=2, sort_keys=True)
-                lock_file.write("\n".join(f"    {line}" for line in serialized_entry.splitlines()))
-            lock_file.write("\n  ]")
-        lock_file.write(f',\n  "version": {_LOCK_VERSION}\n}}\n')
+                file.write("\n".join(f"    {line}" for line in serialized_entry.splitlines()))
+            file.write("\n  ]")
+        file.write(f',\n  "version": {_LOCK_VERSION}\n}}\n')
 
     def stage(self, staging_directory: StagingDirectory | Path | None = None) -> StagedFile | Path | None:
         """Write the updated lock into a pre-existing private staging directory.
@@ -299,7 +303,7 @@ class RemoteReferenceLock:
                 # fsync(), and close() can all fail before replacement.
                 cleanup.callback(_remove_temporary_file, temporary_path)
                 with temporary_file:
-                    self._write_staged_content(temporary_file)
+                    self._write_staged_content(cast("TextIO", temporary_file.file))
                     temporary_file.flush()
                     os.fsync(temporary_file.fileno())
                 self._staged_path = temporary_path
@@ -331,6 +335,10 @@ class RemoteReferenceLock:
         """Atomically persist a successful explicit update at most once."""
         if self._committed or not self.update:
             return
+        if self._staged_path is not None:
+            self.discard_stage()
+            msg = "Cannot commit remote lock after legacy Path staging; call discard_stage() before committing."
+            raise RemoteLockError(msg)
         from datamodel_code_generator._publication import (  # noqa: PLC0415
             StagingDirectory,
             close_anchor,
