@@ -235,6 +235,9 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         Generate tuple types for arrays with items array
                         syntax when minItems equals maxItems equals items
                         length
+  --use-tuple-for-fixed-length-arrays
+                        Generate tuple types for fixed-length arrays with a
+                        single items schema
   --use-type-alias      Use TypeAlias instead of root models (experimental)
   --use-type-alias-type
                         Use TypeAliasType for type aliases on Python 3.10 and

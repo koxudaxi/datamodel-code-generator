@@ -59,6 +59,7 @@ How do I convert enums to Literal types?
 - `--use-standard-primitive-types`: Use Python standard library types for string formats instead of str.
 - `--use-total-false-for-typed-dict`: Generate TypedDict declarations with `total=False`.
 - `--use-tuple-for-fixed-items`: Generate tuple types for arrays with items array syntax.
+- `--use-tuple-for-fixed-length-arrays`: Generate tuple types for homogeneous fixed-length arrays.
 - `--use-type-alias`: Use TypeAlias instead of root models for type definitions (experimental).
 - `--use-type-alias-type`: Use runtime TypeAliasType objects for aliases before Python 3.12 (experimental).
 - `--use-union-operator`: Use | operator for Union types (PEP 604).
@@ -449,6 +450,9 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         Generate tuple types for arrays with items array
                         syntax when minItems equals maxItems equals items
                         length
+  --use-tuple-for-fixed-length-arrays
+                        Generate tuple types for fixed-length arrays with a
+                        single items schema
   --use-type-alias      Use TypeAlias instead of root models (experimental)
   --use-type-alias-type
                         Use TypeAliasType for type aliases on Python 3.10 and

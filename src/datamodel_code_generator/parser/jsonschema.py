@@ -1410,7 +1410,19 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if any(item is False for item in obj.items):
                 return False
             return obj.minItems == obj.maxItems == len(obj.items)
-        return False
+        return self._get_fixed_length_homogeneous_tuple_length(obj) is not None
+
+    def _get_fixed_length_homogeneous_tuple_length(self, obj: JsonSchemaObject) -> int | None:
+        """Return the length of an opted-in homogeneous fixed-length tuple."""
+        if (
+            not self.use_tuple_for_fixed_length_arrays
+            or obj.prefixItems is not None
+            or not isinstance(obj.items, JsonSchemaObject)
+        ):
+            return None
+        if (tuple_length := obj.minItems) is None or tuple_length != obj.maxItems or tuple_length < 0:
+            return None
+        return tuple_length
 
     @classmethod
     def _get_fixed_length_prefix_tuple_items(cls, obj: JsonSchemaObject) -> list[JsonSchemaObject | bool] | None:
@@ -1474,15 +1486,15 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         *,
         include_true_tail_schema: bool = False,
         force_prefix_items: bool = False,
-    ) -> tuple[list[JsonSchemaObject | bool], bool, bool]:
-        """Return item schemas plus tuple/constraint flags for array-like schemas."""
+    ) -> tuple[list[JsonSchemaObject | bool], bool, bool, int | None]:
+        """Return item schemas plus tuple/constraint flags and homogeneous tuple length."""
         if (
             obj.prefixItems is not None
             and obj.minItems is not None
             and obj.minItems == obj.maxItems
             and (fixed_items := self._get_fixed_length_prefix_tuple_items(obj)) is not None
         ):
-            return fixed_items, True, True
+            return fixed_items, True, True, None
 
         if obj.prefixItems is not None and (force_prefix_items or self._has_prefix_items_tail_schema_or_boolean(obj)):
             items, has_false_schema = self._get_schemas_before_false(obj.prefixItems)
@@ -1498,15 +1510,17 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 is not None
             ):
                 items.append(tail_schema)
-            return items, False, False
+            return items, False, False, None
 
         match obj.items:
             case JsonSchemaObject() as item_schema:
-                return [item_schema], False, False
+                if (tuple_item_count := self._get_fixed_length_homogeneous_tuple_length(obj)) is not None:
+                    return [item_schema] if tuple_item_count else [], True, True, tuple_item_count
+                return [item_schema], False, False, None
             case list() as item_schemas:
                 items, has_false_schema = self._get_schemas_before_false(item_schemas)
                 if self._is_fixed_length_tuple(obj):
-                    return items, True, True
+                    return items, True, True, None
                 if (
                     not has_false_schema
                     and (
@@ -1518,15 +1532,15 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     is not None
                 ):
                     items.append(tail_schema)
-                return items, False, False
+                return items, False, False, None
 
         match obj.unevaluatedItems:
             case JsonSchemaObject() as item_schema:
-                return [item_schema], False, False
+                return [item_schema], False, False, None
             case True if include_true_tail_schema:
-                return [True], False, False
+                return [True], False, False, None
 
-        return [], False, False
+        return [], False, False, None
 
     @classmethod
     def _get_property_count_constraints(cls, obj: JsonSchemaObject) -> dict[str, int]:
@@ -1646,6 +1660,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if obj.maxItems is not None:
                 max_items.append(obj.maxItems)
             constraints["maxItems"] = min(max_items)
+        return constraints
+
+    def _get_array_constraints(self, obj: JsonSchemaObject) -> dict[str, Any]:
+        """Return direct and boolean-schema array constraints."""
+        constraints = self._get_constraint_values(obj)
+        constraints.update(self._get_array_items_constraints(obj))
         return constraints
 
     @classmethod
@@ -3783,24 +3803,33 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         max_union_elements: int,
     ) -> DataType:
         """Build a lightweight list type from array item schemas."""
-        item_schemas, _, _ = self._get_array_item_schemas(
+        item_schemas, _, _, tuple_item_count = self._get_array_item_schemas(
             schema,
             include_true_tail_schema=True,
             force_prefix_items=True,
         )
-        item_types = [
-            item_type
-            for item_schema in item_schemas
-            if (
-                item_type := self._build_lightweight_item_type(
-                    item_schema, depth, visited, max_depth, max_union_elements
+        is_homogeneous_tuple = tuple_item_count is not None
+        item_types = (
+            []
+            if is_homogeneous_tuple and tuple_item_count == 0
+            else [
+                item_type
+                for item_schema in item_schemas
+                if (
+                    item_type := self._build_lightweight_item_type(
+                        item_schema, depth, visited, max_depth, max_union_elements
+                    )
                 )
-            )
-            is not None
-        ]
+                is not None
+            ]
+        )
+        if not item_types and not (is_homogeneous_tuple and tuple_item_count == 0):
+            item_types = [DataType(type=ANY, import_=IMPORT_ANY)]
         return self.data_type(
-            data_types=item_types or [DataType(type=ANY, import_=IMPORT_ANY)],
-            is_list=True,
+            data_types=item_types,
+            is_list=not is_homogeneous_tuple,
+            is_tuple=is_homogeneous_tuple,
+            tuple_item_count=tuple_item_count if is_homogeneous_tuple else None,
         )
 
     def _build_lightweight_item_type(
@@ -7973,7 +8002,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         use_annotated = self.use_annotated if use_annotated is None else use_annotated
 
         required, nullable = self._resolve_array_field_required_nullable(obj)
-        items, is_tuple, suppress_item_constraints = self._get_array_item_schemas(obj)
+        items, is_tuple, suppress_item_constraints, tuple_item_count = self._get_array_item_schemas(obj)
 
         if items:
             item_data_types = self.parse_list_item(
@@ -7983,8 +8012,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 obj,
                 singular_name=singular_name,
             )
-        else:
+        elif not (is_tuple and tuple_item_count == 0):
             item_data_types = self._fallback_array_item_data_types()
+        else:
+            item_data_types = []
 
         python_type_flags = self._get_python_type_flags(obj)
         container_flags: dict[str, bool] = {}
@@ -7996,6 +8027,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         array_data_type = self.data_type(
             data_types=item_data_types,
             is_tuple=is_tuple,
+            tuple_item_count=tuple_item_count,
             **container_flags,
         )
         if localize_constraints:
@@ -8022,8 +8054,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             data_types.append(self.parse_object(name, obj, get_special_path("object", path)))
         if obj.enum and not self.ignore_enum_constraints:
             data_types.append(self.parse_enum(name, obj, get_special_path("enum", path)))
-        constraints = self._get_constraint_values(obj)
-        constraints.update(self._get_array_items_constraints(obj))
+        constraints = self._get_array_constraints(obj)
         if non_array_types:
             constraints = {}
         if suppress_item_constraints:
@@ -8076,6 +8107,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             and (len(direct_data_types) > 1 or not non_array_types)
         ):
             # self-reference
+            constraints = (
+                self._get_array_constraints(obj)
+                if self._get_fixed_length_homogeneous_tuple_length(obj) is not None
+                else field.constraints
+            )
             field = self.data_model_field_type(
                 data_type=self.data_type(
                     data_types=[
@@ -8085,7 +8121,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 ),
                 default=field.default,
                 required=field.required,
-                constraints=field.constraints,
+                constraints=constraints,
                 nullable=field.nullable,
                 strip_default_none=field.strip_default_none,
                 extras=field.extras,

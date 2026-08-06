@@ -794,6 +794,20 @@ def test_practical_preset_pydantic_v2(output_file: Path) -> None:
     )
 
 
+@freeze_time(TIMESTAMP)
+def test_practical_preset_keeps_homogeneous_fixed_length_arrays_as_lists(output_file: Path) -> None:
+    """Keep existing practical presets independent from the new tuple option."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "fixed_length_array_tuples.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        extra_args=["--preset", "practical-py310-20260619"],
+        assert_func=assert_file_content,
+        expected_file="openapi/fixed_length_array_tuples_practical_preset.py",
+        force_exec_validation=True,
+    )
+
+
 def test_standard_preset_requires_matching_target_python_version(
     output_file: Path,
     capsys: pytest.CaptureFixture[str],

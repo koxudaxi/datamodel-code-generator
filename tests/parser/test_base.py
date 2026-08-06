@@ -1068,9 +1068,17 @@ def test_merge_inherited_type_modifiers_overlays_kwargs() -> None:
             is_mapping=True,
             is_sequence=True,
             is_tuple=True,
+            tuple_item_count=3,
         ),
         preserve_container_shape=True,
         preserve_optional=True,
+    )
+
+    overriding_tuple_type = DataType(is_tuple=True, tuple_item_count=2)
+    _merge_data_type_modifiers(
+        overriding_tuple_type,
+        DataType(is_tuple=True, tuple_item_count=3),
+        preserve_container_shape=True,
     )
 
     assert copied_kwargs_type.kwargs == {"min_length": 2}
@@ -1083,6 +1091,8 @@ def test_merge_inherited_type_modifiers_overlays_kwargs() -> None:
     assert container_type.is_mapping
     assert container_type.is_sequence
     assert container_type.is_tuple
+    assert container_type.tuple_item_count == 3
+    assert overriding_tuple_type.tuple_item_count == 2
 
 
 def test_copy_resolved_inherited_field_preserves_wrapper_and_schema_metadata() -> None:
