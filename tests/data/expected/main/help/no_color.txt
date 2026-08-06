@@ -622,6 +622,13 @@ General options:
                         generated code is committed.
   --debug               show debug message (require "debug". `$ pip install
                         'datamodel-code-generator[debug]'`)
+  --diff-against OLD_INPUT
+                        Generate OLD_INPUT and --input into temporary outputs,
+                        then show their generated-code diff. Requires --input
+                        and --output; --output is a virtual output path that
+                        selects file or directory layout and is never
+                        modified. Exits with code 1 when generated outputs
+                        differ.
   --disable-warnings    disable warnings
   --fail-on-multi-module-stdout
                         Return an error instead of concatenating multiple

@@ -8707,14 +8707,15 @@ all selected jobs are validated: each must have an input and output, and output
 or model-metadata paths cannot overlap. `--job` and `--all-jobs` are mutually
 exclusive. Define job-specific input and output in TOML instead of combining
 job selection with `--input`, `--url`, `--input-model`, `--output`, `--profile`,
-or job-specific watch settings. `watch` and `watch-delay` may be set on the CLI
-or in the base `[tool.datamodel-codegen]` table, but cannot be set in a job table
-or in the selected profile. Batch watch observes the union of every selected
-job's local dependencies plus `pyproject.toml`. Each event reloads the project,
-replans the selection, and transactionally reruns the whole batch; it does not
-partially rebuild individual jobs. A failed cycle keeps the last published
-outputs and continues watching both prior and newly discovered dependencies for
-recovery.
+`--diff-against`, or job-specific watch settings. Input comparison is a
+single-profile/input operation and is rejected if it is inherited by any
+selected job. `watch` and `watch-delay` may be set on the CLI or in the base
+`[tool.datamodel-codegen]` table, but cannot be set in a job table or in the
+selected profile. Batch watch observes the union of every selected job's local
+dependencies plus `pyproject.toml`. Each event reloads the project, replans the
+selection, and transactionally reruns the whole batch; it does not partially
+rebuild individual jobs. A failed cycle keeps the last published outputs and
+continues watching both prior and newly discovered dependencies for recovery.
 
 ## 🎯 Configuration Priority
 
@@ -9645,7 +9646,7 @@ This documentation is auto-generated from test cases.
 | 🎨 [Template Customization](template-customization.md) | 27 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 8 | OpenAPI-specific features |
 | 📋 [GraphQL-only Options](graphql-only-options.md) | 1 |  |
-| ⚙️ [General Options](general-options.md) | 20 | Utilities and meta options |
+| ⚙️ [General Options](general-options.md) | 21 | Utilities and meta options |
 | 📝 [Utility Options](utility-options.md) | 12 | Help, version, debug options |
 
 ## 🎯 Focused Topics
@@ -9681,6 +9682,16 @@ These links are generated from CLI option metadata and summarize options that im
 | [`--custom-file-header`](template-customization.md#custom-file-header) | Conflicts | Always | [`--custom-file-header-path`](template-customization.md#custom-file-header-path) | `--custom-file-header` can not be used with `--custom-file-header-path`. |
 | [`--custom-file-header-path`](template-customization.md#custom-file-header-path) | Conflicts | Always | [`--custom-file-header`](template-customization.md#custom-file-header) | `--custom-file-header-path` can not be used with `--custom-file-header`. |
 | [`--all-exports-collision-strategy`](general-options.md#all-exports-collision-strategy) | Requires | Always | [`--all-exports-scope`](general-options.md#all-exports-scope) = `recursive` | `--all-exports-collision-strategy` can only be used with `--all-exports-scope=recursive`. |
+| [`--diff-against`](general-options.md#diff-against) | Requires | Always | [`--input`](base-options.md#input) | `--diff-against` requires --input with the new local schema path. |
+| [`--diff-against`](general-options.md#diff-against) | Requires | Always | [`--output`](base-options.md#output) | `--diff-against` requires --output to select file or directory output layout. |
+| [`--diff-against`](general-options.md#diff-against) | Conflicts | Always | [`--check`](general-options.md#check) | - |
+| [`--diff-against`](general-options.md#diff-against) | Conflicts | Always | [`--watch`](general-options.md#watch) | - |
+| [`--diff-against`](general-options.md#diff-against) | Conflicts | Always | [`--url`](base-options.md#url) | - |
+| [`--diff-against`](general-options.md#diff-against) | Conflicts | Always | [`--input-model`](base-options.md#input-model) | - |
+| [`--diff-against`](general-options.md#diff-against) | Conflicts | Always | [`--emit-model-metadata`](base-options.md#emit-model-metadata) | - |
+| [`--diff-against`](general-options.md#diff-against) | Conflicts | Always | [`--fail-on-multi-module-stdout`](general-options.md#fail-on-multi-module-stdout) | - |
+| [`--diff-against`](general-options.md#diff-against) | Conflicts | Always | `--job` | `--diff-against` compares one profile or input and cannot run named jobs. |
+| [`--diff-against`](general-options.md#diff-against) | Conflicts | Always | `--all-jobs` | `--diff-against` compares one profile or input and cannot run named jobs. |
 
 ## All Options
 
@@ -9732,6 +9743,7 @@ These links are generated from CLI option metadata and summarize options that im
 - [`--dataclass-arguments`](model-customization.md#dataclass-arguments)
 - [`--debug`](utility-options.md#debug)
 - [`--default-values`](field-customization.md#default-values)
+- [`--diff-against`](general-options.md#diff-against)
 - [`--disable-appending-item-suffix`](template-customization.md#disable-appending-item-suffix)
 - [`--disable-future-imports`](typing-customization.md#disable-future-imports)
 - [`--disable-timestamp`](template-customization.md#disable-timestamp)
@@ -10305,7 +10317,7 @@ schemas. Required unless using `--url` to fetch schema from a URL.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --input pet_simple.json --output output.py # (1)!
+    datamodel-codegen --input pet_simple.json --output output.py # (1)!
     ```
 
     1. :material-arrow-left: `--input` - the option documented here
@@ -10534,7 +10546,7 @@ is written to stdout.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --input pet_simple.json --output output.py # (1)!
+    datamodel-codegen --input pet_simple.json --output output.py # (1)!
     ```
 
     1. :material-arrow-left: `--output` - the option documented here
@@ -34873,6 +34885,7 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/general-opti
 | [`--allow-private-network`](#allow-private-network) | Allow HTTP requests to private network schema endpoints. |
 | [`--allow-remote-refs`](#allow-remote-refs) | Enable fetching of `$ref` targets over HTTP/HTTPS. |
 | [`--check`](#check) | Verify generated code matches existing output without modify... |
+| [`--diff-against`](#diff-against) | Compare generated code from two local schema revisions witho... |
 | [`--disable-warnings`](#disable-warnings) | Suppress warning messages during code generation. |
 | [`--fail-on-multi-module-stdout`](#fail-on-multi-module-stdout) | Fail instead of concatenating multiple modules in text stdou... |
 | [`--generate-cli-command`](#generate-cli-command) | Generate CLI command from pyproject.toml configuration. |
@@ -36276,6 +36289,67 @@ and generated code stay in sync. Works with both single files and directory outp
 
 ---
 
+## `--diff-against` {#diff-against}
+
+Compare generated code from two local schema revisions without writing generated files.
+
+Pass the newer revision with `--input` and the older one with `--diff-against`.
+The required `--output` value is a virtual destination: it selects single-file or
+directory layout and formatter settings, but datamodel-code-generator never writes it.
+The command exits non-zero when the formatted generated outputs differ, making it useful
+for reviewing schema migrations in CI.
+
+**Related:** [`--check`](#check), [`--input`](base-options.md#input), [`--output`](base-options.md#output), `--output-format`
+
+**Option relationships:**
+
+- **Requires:** [`--input`](base-options.md#input) - `--diff-against` requires --input with the new local schema path.
+- **Requires:** [`--output`](base-options.md#output) - `--diff-against` requires --output to select file or directory output layout.
+- **Conflicts:** [`--check`](general-options.md#check)
+- **Conflicts:** [`--watch`](general-options.md#watch)
+- **Conflicts:** [`--url`](base-options.md#url)
+- **Conflicts:** [`--input-model`](base-options.md#input-model)
+- **Conflicts:** [`--emit-model-metadata`](base-options.md#emit-model-metadata)
+- **Conflicts:** [`--fail-on-multi-module-stdout`](general-options.md#fail-on-multi-module-stdout)
+- **Conflicts:** `--job` - `--diff-against` compares one profile or input and cannot run named jobs.
+- **Conflicts:** `--all-jobs` - `--diff-against` compares one profile or input and cannot run named jobs.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input tests/data/openapi/input_diff/new.yaml --diff-against tests/data/openapi/input_diff/old.yaml --output models --input-file-type openapi --disable-timestamp # (1)!
+    ```
+
+    1. :material-arrow-left: `--diff-against` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```yaml
+    openapi: 3.0.0
+    info:
+      title: Current models
+      version: "1.0"
+    paths: {}
+    components:
+      schemas:
+        collections.Current:
+          type: object
+          properties:
+            name:
+              type: string
+    ```
+
+    **Output:**
+
+    ```
+    ADDED: collections.py (generated only from new input)
+    REMOVED: models.py (generated only from old input)
+    ```
+
+---
+
 ## `--disable-warnings` {#disable-warnings}
 
 Suppress warning messages during code generation.
@@ -36520,7 +36594,7 @@ a working CLI command into a reusable configuration file.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --generate-pyproject-config --input schema.yaml --output model.py # (1)!
+    datamodel-codegen --generate-pyproject-config --input schema.yaml --output model.py # (1)!
     ```
 
     1. :material-arrow-left: `--generate-pyproject-config` - the option documented here
@@ -37294,7 +37368,8 @@ order (experimental).
     Named batch jobs are experimental; their configuration schema, batch output,
     and transactional/watch execution contracts may change.
 
-**Related:** [`--job`](#job), [pyproject.toml Configuration](../pyproject_toml.md)
+**Related:** [`--job`](#job), [`--diff-against`](general-options.md#diff-against),
+[pyproject.toml Configuration](../pyproject_toml.md)
 
 !!! tip "Usage"
 
@@ -37309,6 +37384,11 @@ All selected jobs are validated before generation starts. Jobs that write to
 stdout, or whose output or model-metadata paths overlap, are rejected before
 any generated file is written. With `--output-format json`, one `batch`
 payload contains the result of every job.
+
+`--diff-against` is intentionally unavailable for every named-job execution,
+including a single selected job. Keeping one contract across `--job` and
+`--all-jobs` avoids ambiguous partial support when the selection grows. Run the
+comparison for one profile or input instead.
 
 With `--watch`, changes to `pyproject.toml` replan the complete job membership.
 All selected local dependencies are watched as one graph, and every event reruns
@@ -37458,7 +37538,8 @@ in a different order.
     Named batch jobs are experimental; their configuration schema, batch output,
     and transactional/watch execution contracts may change.
 
-**Related:** [pyproject.toml Configuration](../pyproject_toml.md), [`--all-jobs`](#all-jobs)
+**Related:** [pyproject.toml Configuration](../pyproject_toml.md),
+[`--all-jobs`](#all-jobs), [`--diff-against`](general-options.md#diff-against)
 
 !!! tip "Usage"
 
@@ -37487,8 +37568,9 @@ Jobs require their own `input` and `output`. A job can select one reusable
 profile using `profile = "name"`. Settings are resolved as base configuration,
 job profile, job settings, then safe batch-wide CLI overrides. `--input`,
 `--url`, `--input-model`, `--output`, and `--profile` cannot be combined with
-job selection. With `--watch`, one outer scheduler watches the selected jobs'
-combined dependency graph and `pyproject.toml`. Every event replans and
+job selection. `--diff-against` also cannot be combined with named jobs: compare
+one profile or input at a time. With `--watch`, one outer scheduler watches the
+selected jobs' combined dependency graph and `pyproject.toml`. Every event replans and
 transactionally reruns the complete selection; failures retain the published
 outputs and continue watching for recovery.
 
@@ -38234,6 +38316,7 @@ datamodel-codegen [OPTIONS]
 | [`--allow-private-network`](general-options.md#allow-private-network) | Allow HTTP requests to private network schema endpoints. |
 | [`--allow-remote-refs`](general-options.md#allow-remote-refs) | Enable fetching of `$ref` targets over HTTP/HTTPS. |
 | [`--check`](general-options.md#check) | Verify generated code matches existing output without modifying files. |
+| [`--diff-against`](general-options.md#diff-against) | Compare generated code from two local schema revisions without writing generated... |
 | [`--disable-warnings`](general-options.md#disable-warnings) | Suppress warning messages during code generation. |
 | [`--fail-on-multi-module-stdout`](general-options.md#fail-on-multi-module-stdout) | Fail instead of concatenating multiple modules in text stdout. |
 | [`--generate-cli-command`](general-options.md#generate-cli-command) | Generate CLI command from pyproject.toml configuration. |
@@ -38307,6 +38390,7 @@ All options sorted alphabetically:
 - [`--dataclass-arguments`](model-customization.md#dataclass-arguments) - Customize dataclass decorator arguments via JSON dictionary.
 - [`--debug`](utility-options.md#debug) - Show debug messages during code generation
 - [`--default-values`](field-customization.md#default-values) - Override field default values via inline JSON or a JSON file...
+- [`--diff-against`](general-options.md#diff-against) - Compare generated code from two local schema revisions witho...
 - [`--disable-appending-item-suffix`](template-customization.md#disable-appending-item-suffix) - Disable appending 'Item' suffix to array item types.
 - [`--disable-future-imports`](typing-customization.md#disable-future-imports) - Prevent automatic addition of __future__ imports in generate...
 - [`--disable-timestamp`](template-customization.md#disable-timestamp) - Disable timestamp in generated file header for reproducible ...
