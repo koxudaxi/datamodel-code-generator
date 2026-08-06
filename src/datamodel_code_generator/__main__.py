@@ -1690,13 +1690,10 @@ def _stage_job_plan(plan: JobPlan) -> _StagedJobPlan:
             model_metadata_anchor,
             tuple(contexts),
         )
-    except OSError:
-        for context in contexts:
-            with suppress(OSError):
-                context.cleanup()
-        for anchor in anchors:
-            if anchor.directory_fd is not None:  # pragma: no branch - POSIX staging anchors always hold an fd
-                os.close(anchor.directory_fd)
+    except OSError as exc:
+        cleanup_errors = _cleanup_staging_resources(contexts, anchors)
+        if cleanup_error := _staging_cleanup_error(exc, cleanup_errors):
+            raise cleanup_error from exc
         raise
 
 
@@ -1706,21 +1703,70 @@ def _stage_job_plans(plans: Sequence[JobPlan]) -> tuple[_StagedJobPlan, ...]:
     try:
         for plan in plans:
             staged_plans.append(_stage_job_plan(plan))  # noqa: PERF401
-    except OSError:
-        _cleanup_staged_job_plans(staged_plans)
+    except OSError as exc:
+        cleanup_errors = _cleanup_staged_job_plans(staged_plans)
+        if cleanup_error := _staging_cleanup_error(exc, cleanup_errors):
+            raise cleanup_error from exc
         raise
     return tuple(staged_plans)
 
 
-def _cleanup_staged_job_plans(staged_plans: Sequence[_StagedJobPlan]) -> None:
-    """Remove private staging directories after a batch result is known."""
-    for staged_plan in staged_plans:
-        for context in staged_plan.staging_contexts:
-            context.cleanup()
-        for anchor in (staged_plan.output_anchor, staged_plan.model_metadata_anchor):
-            if anchor is not None and anchor.directory_fd is not None:
-                with suppress(OSError):
-                    os.close(anchor.directory_fd)
+def _cleanup_staging_resources(
+    staging_contexts: Iterable[tempfile.TemporaryDirectory[str]],
+    anchors: Iterable[_PublicationAnchor | None],
+) -> tuple[OSError, ...]:
+    """Attempt every private staging cleanup and retain each cleanup failure."""
+    cleanup_errors = [
+        cleanup_error
+        for context in staging_contexts
+        if (cleanup_error := _cleanup_staging_context(context)) is not None
+    ]
+    cleanup_errors.extend(
+        cleanup_error for anchor in anchors if (cleanup_error := _close_staging_anchor(anchor)) is not None
+    )
+    return tuple(cleanup_errors)
+
+
+def _cleanup_staging_context(context: tempfile.TemporaryDirectory[str]) -> OSError | None:
+    """Clean one temporary directory while retaining its cleanup failure."""
+    try:
+        context.cleanup()
+    except OSError as exc:
+        return exc
+    return None
+
+
+def _close_staging_anchor(anchor: _PublicationAnchor | None) -> OSError | None:
+    """Release one directory descriptor while retaining its cleanup failure."""
+    if anchor is None or anchor.directory_fd is None:
+        return None
+    try:
+        os.close(anchor.directory_fd)
+    except OSError as exc:
+        return exc
+    return None
+
+
+def _staging_cleanup_error(primary: OSError | None, cleanup_errors: Sequence[OSError]) -> OSError | None:
+    """Combine cleanup diagnostics without discarding the original staging failure."""
+    if not cleanup_errors:
+        return None
+    cleanup_message = "; ".join(str(error) for error in cleanup_errors)
+    if primary is None:
+        return OSError(f"could not clean batch output staging: {cleanup_message}")
+    return OSError(f"{primary}; additionally, could not clean batch output staging: {cleanup_message}")
+
+
+def _cleanup_staged_job_plans(staged_plans: Sequence[_StagedJobPlan]) -> tuple[OSError, ...]:
+    """Remove every private batch staging resource after a batch result is known."""
+    return _cleanup_staging_resources(
+        (context for staged_plan in staged_plans for context in staged_plan.staging_contexts),
+        (
+            anchor
+            for staged_plan in staged_plans
+            for anchor in (staged_plan.output_anchor, staged_plan.model_metadata_anchor)
+        ),
+    )
 
 
 def _staged_files(staged_plan: _StagedJobPlan) -> Iterator[_StagedFile]:
@@ -2255,11 +2301,18 @@ def _run_jobs(args: Sequence[str], plans: Sequence[JobPlan]) -> Exit:
     try:
         match namespace.output_format:
             case "json":
-                return _run_jobs_json(args, staged_plans)
+                result = _run_jobs_json(args, staged_plans)
             case _:
-                return _run_jobs_text(args, staged_plans)
-    finally:
-        _cleanup_staged_job_plans(staged_plans)
+                result = _run_jobs_text(args, staged_plans)
+    except BaseException:
+        if cleanup_error := _staging_cleanup_error(None, _cleanup_staged_job_plans(staged_plans)):
+            print(f"Error: {cleanup_error}", file=sys.stderr)  # noqa: T201
+        raise
+
+    if cleanup_error := _staging_cleanup_error(None, _cleanup_staged_job_plans(staged_plans)):
+        print(f"Error: {cleanup_error}", file=sys.stderr)  # noqa: T201
+        return Exit.ERROR
+    return result
 
 
 def _run_watched_jobs(
