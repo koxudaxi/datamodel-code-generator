@@ -597,8 +597,13 @@ def _set_staged_mode(file: StagedFile, mode: int) -> None:
             # Existing destination permissions are intentionally preserved, including group readability.
             source_name = cast("str", file.source_name)
 
-            # codeql[py/overly-permissive-file]
-            os.chmod(source_name, mode, dir_fd=file.source_directory_fd, follow_symlinks=False)
+            os.chmod(
+                source_name,
+                mode,
+                dir_fd=file.source_directory_fd,
+                follow_symlinks=False,
+                # codeql[py/overly-permissive-file]
+            )
         else:
             cast("Path", file.staged_file).chmod(mode)
     except OSError:
