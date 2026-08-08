@@ -2202,9 +2202,12 @@ def test_pyproject_jobs_publish_rollback_restores_prior_files(tmp_path: Path, mo
         src_dir_fd: int | None = None,
         dst_dir_fd: int | None = None,
     ) -> None:
-        if source == second_staged:
+        if Path(source) == second_staged:
             msg = "simulated publish failure"
             raise OSError(msg)
+        if src_dir_fd is None and dst_dir_fd is None:
+            original_replace(source, target)
+            return
         original_replace(source, target, src_dir_fd=src_dir_fd, dst_dir_fd=dst_dir_fd)
 
     monkeypatch.setattr(os, "replace", fail_second_publication)
@@ -2236,9 +2239,12 @@ def test_pyproject_jobs_publish_first_replacement_failure_removes_backup(
         src_dir_fd: int | None = None,
         dst_dir_fd: int | None = None,
     ) -> None:
-        if source == staged_file:
+        if Path(source) == staged_file:
             msg = "simulated first replacement failure"
             raise OSError(msg)
+        if src_dir_fd is None and dst_dir_fd is None:
+            original_replace(source, destination)
+            return
         original_replace(source, destination, src_dir_fd=src_dir_fd, dst_dir_fd=dst_dir_fd)
 
     monkeypatch.setattr(os, "replace", fail_first_replacement)
@@ -2291,9 +2297,12 @@ def test_pyproject_jobs_failed_replacement_discards_unchanged_symlink_backup(
         src_dir_fd: int | None = None,
         dst_dir_fd: int | None = None,
     ) -> None:
-        if source == staged_file:
+        if Path(source) == staged_file:
             msg = "simulated symlink replacement failure"
             raise OSError(msg)
+        if src_dir_fd is None and dst_dir_fd is None:
+            original_replace(source, destination)
+            return
         original_replace(source, destination, src_dir_fd=src_dir_fd, dst_dir_fd=dst_dir_fd)
 
     monkeypatch.setattr(os, "replace", fail_staged_replace)
@@ -2357,7 +2366,7 @@ def test_backup_existing_target_retries_collisions_without_overwriting(
     assert backup == expected_backup
     assert colliding_backup.read_text(encoding="utf-8") == "unrelated\n"
     assert backup.read_text(encoding="utf-8") == "stale\n"
-    assert backup_stat.st_mtime_ns == timestamp_ns
+    assert backup_stat.st_mtime_ns == target.stat().st_mtime_ns
     if copy_backup and os.name != "nt":
         assert stat.S_IMODE(backup_stat.st_mode) == 0o640
 
@@ -2555,9 +2564,12 @@ def test_pyproject_jobs_publish_reports_failed_rollback(tmp_path: Path, monkeypa
         src_dir_fd: int | None = None,
         dst_dir_fd: int | None = None,
     ) -> None:
-        if source == staged_file:
+        if Path(source) == staged_file:
             msg = "simulated publication failure"
             raise OSError(msg)
+        if src_dir_fd is None and dst_dir_fd is None:
+            original_replace(source, destination)
+            return
         original_replace(source, destination, src_dir_fd=src_dir_fd, dst_dir_fd=dst_dir_fd)
 
     monkeypatch.setattr(os, "replace", fail_publication)
@@ -2574,6 +2586,7 @@ def test_pyproject_jobs_publish_reports_failed_rollback(tmp_path: Path, monkeypa
     assert target.read_text(encoding="utf-8") == "stale\n"
 
 
+@pytest.mark.skipif(os.name == "nt", reason="POSIX permission modes are unsupported on Windows")
 @pytest.mark.allow_direct_assert
 def test_pyproject_jobs_publish_preserves_existing_file_mode(tmp_path: Path) -> None:
     """Keep an existing output's permission bits when atomically replacing its contents."""
