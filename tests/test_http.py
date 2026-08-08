@@ -642,7 +642,7 @@ def test_cli_locked_remote_lock_rejects_changed_real_response(
     schema_url = f"{local_http_server}/pet.json"
     lockfile = tmp_path / "remote.lock"
     output_path = tmp_path / "output.py"
-    update_args = [
+    generation_args = [
         "--url",
         schema_url,
         "--output",
@@ -651,6 +651,9 @@ def test_cli_locked_remote_lock_rejects_changed_real_response(
         "jsonschema",
         "--allow-private-network",
         "--disable-timestamp",
+    ]
+    update_args = [
+        *generation_args,
         "--update-lock",
         "--lockfile",
         str(lockfile),
@@ -666,7 +669,7 @@ def test_cli_locked_remote_lock_rejects_changed_real_response(
     try:
         run_main_with_args(
             [
-                *update_args[:-4],
+                *generation_args,
                 "--locked",
                 "--lockfile",
                 str(lockfile),
@@ -2144,6 +2147,50 @@ lockfile = "{write_lock.as_posix()}"
 
 
 @pytest.mark.allow_direct_assert
+def test_cli_batch_reports_lock_cleanup_failure_after_publication(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A committed batch reports lock cleanup separately from publication."""
+    from datamodel_code_generator import __main__ as main_module
+
+    source_input = JSON_SCHEMA_DATA_PATH / "person.json"
+    output_path = tmp_path / "output.py"
+    lockfile = tmp_path / "remote.lock"
+    (tmp_path / "pyproject.toml").write_text(
+        f"""
+[tool.datamodel-codegen]
+disable-timestamp = true
+input-file-type = "jsonschema"
+
+[tool.datamodel-codegen.jobs.person]
+input = "{source_input.as_posix()}"
+output = "{output_path.as_posix()}"
+update-lock = true
+lockfile = "{lockfile.as_posix()}"
+""",
+        encoding="utf-8",
+    )
+    close_anchors = main_module._RemoteLockTransaction._close_anchors
+    cleanup_message = "simulated lock cleanup failure"
+
+    def close_anchors_then_fail(transaction: main_module._RemoteLockTransaction) -> None:
+        close_anchors(transaction)
+        raise OSError(cleanup_message)
+
+    monkeypatch.setattr(main_module._RemoteLockTransaction, "_close_anchors", close_anchors_then_fail)
+    with chdir(tmp_path):
+        run_main_with_args(["--all-jobs", "--formatters", "builtin"], expected_exit=Exit.ERROR)
+    captured = capsys.readouterr()
+
+    assert "could not clean batch output staging: simulated lock cleanup failure" in captured.err
+    assert "could not publish batch output" not in captured.err
+    assert_output(output_path.read_text(encoding="utf-8"), DATA_PATH / "expected" / "main" / "person.py")
+    assert_http_e2e_file(lockfile, "remote_lock_empty.txt")
+
+
+@pytest.mark.allow_direct_assert
 def test_cli_remote_lock_transaction_reports_command_spool_failure(
     mocker: MockerFixture,
     tmp_path: Path,
@@ -2217,6 +2264,48 @@ def test_cli_remote_lock_transaction_reports_cleanup_failure_after_publication(
         expected_stderr_contains="could not clean up command transaction",
     )
 
+    assert_output(output_path.read_text(encoding="utf-8"), DATA_PATH / "expected" / "main" / "person.py")
+    assert_http_e2e_file(lockfile, "remote_lock_empty.txt")
+
+
+@pytest.mark.allow_direct_assert
+def test_cli_remote_lock_transaction_reports_anchor_cleanup_after_publication(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A committed command reports anchor cleanup separately from publication."""
+    from datamodel_code_generator import __main__ as main_module
+
+    output_path = tmp_path / "output.py"
+    lockfile = tmp_path / "remote.lock"
+    close_anchors = main_module._RemoteLockTransaction._close_anchors
+    cleanup_message = "simulated lock cleanup failure"
+
+    def close_anchors_then_fail(transaction: main_module._RemoteLockTransaction) -> None:
+        close_anchors(transaction)
+        raise OSError(cleanup_message)
+
+    monkeypatch.setattr(main_module._RemoteLockTransaction, "_close_anchors", close_anchors_then_fail)
+    run_main_with_args(
+        [
+            "--input",
+            str(JSON_SCHEMA_DATA_PATH / "person.json"),
+            "--output",
+            str(output_path),
+            "--input-file-type",
+            "jsonschema",
+            "--disable-timestamp",
+            "--update-lock",
+            "--lockfile",
+            str(lockfile),
+        ],
+        expected_exit=Exit.ERROR,
+    )
+    captured = capsys.readouterr()
+
+    assert "could not clean up command transaction: simulated lock cleanup failure" in captured.err
+    assert "could not publish batch output" not in captured.err
     assert_output(output_path.read_text(encoding="utf-8"), DATA_PATH / "expected" / "main" / "person.py")
     assert_http_e2e_file(lockfile, "remote_lock_empty.txt")
 
@@ -2631,7 +2720,7 @@ def test_cli_rolls_back_new_lock_parent_and_stdout_when_publication_fails(
     """A failed first lock publication leaves neither stdout nor transaction-created parents behind."""
     mocker.stopall()
     lockfile = tmp_path / "locks" / "nested" / "remote.lock"
-    mocker.patch("datamodel_code_generator.__main__.os.replace", side_effect=OSError("full"))
+    mocker.patch("datamodel_code_generator._publication._replace_source", side_effect=OSError("full"))
 
     run_main_with_args(
         [

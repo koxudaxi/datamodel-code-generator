@@ -145,14 +145,13 @@ def test_nearest_existing_directory_rejects_a_nonexistent_path_root(
 
 @pytest.mark.allow_direct_assert
 def test_windows_staging_fallback_fails_closed_after_its_private_path_is_replaced(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
 ) -> None:
     """A Windows path fallback never writes to or cleans a replacement staging directory."""
     parent = tmp_path / "parent"
     parent.mkdir()
     parent_stat = parent.stat()
     anchor = publication_module.PublicationAnchor(parent, (parent_stat.st_dev, parent_stat.st_ino), None)
-    monkeypatch.setattr(publication_module.os, "name", "nt")
     staging = publication_module.StagingDirectory.create(anchor, prefix=".stage-")
     moved_staging = tmp_path / "moved-staging"
     staging.path.rename(moved_staging)
@@ -170,7 +169,7 @@ def test_windows_staging_fallback_fails_closed_after_its_private_path_is_replace
 
 @pytest.mark.allow_direct_assert
 def test_windows_staging_fallback_rejects_a_replaced_anchor_before_creating_a_private_directory(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
 ) -> None:
     """A Windows lexical staging fallback never blesses a replacement anchor directory."""
     parent = tmp_path / "parent"
@@ -180,8 +179,6 @@ def test_windows_staging_fallback_rejects_a_replaced_anchor_before_creating_a_pr
     moved_parent = tmp_path / "moved-parent"
     parent.rename(moved_parent)
     parent.mkdir()
-    monkeypatch.setattr(publication_module.os, "name", "nt")
-
     with pytest.raises(OSError, match="publication destination changed"):
         publication_module.StagingDirectory.create(anchor, prefix=".stage-")
 
@@ -190,7 +187,7 @@ def test_windows_staging_fallback_rejects_a_replaced_anchor_before_creating_a_pr
 
 @pytest.mark.allow_direct_assert
 def test_windows_staging_fallback_rejects_a_removed_anchor_before_creating_a_private_directory(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
 ) -> None:
     """A deleted Windows anchor is rejected instead of being recreated as an attacker path."""
     parent = tmp_path / "parent"
@@ -198,8 +195,6 @@ def test_windows_staging_fallback_rejects_a_removed_anchor_before_creating_a_pri
     parent_stat = parent.stat()
     anchor = publication_module.PublicationAnchor(parent, (parent_stat.st_dev, parent_stat.st_ino), None)
     parent.rename(tmp_path / "moved-parent")
-    monkeypatch.setattr(publication_module.os, "name", "nt")
-
     with pytest.raises(OSError, match="publication destination changed"):
         publication_module.StagingDirectory.create(anchor, prefix=".stage-")
 
@@ -224,7 +219,15 @@ def test_staging_directory_handles_deleted_sources_closed_handles_and_cleanup_fa
     publication_module.close_anchor(anchor)
 
     class FailingStagingDirectory(publication_module.StagingDirectory):
-        def __init__(self, *_args: object, **_kwargs: object) -> None:
+        def __init__(
+            self,
+            directory_fds: tuple[int | None, int | None],
+            name: str,
+            path: Path,
+            *,
+            fallback: publication_module._StagingFallback | None = None,
+        ) -> None:
+            super().__init__(directory_fds, name, path, fallback=fallback)
             msg = "staging setup failed"
             raise OSError(msg)
 
@@ -797,6 +800,7 @@ def test_remote_lock_cleans_up_after_atomic_write_failures(tmp_path: Path, monke
     monkeypatch.setattr(publication_module.os, "replace", raise_os_error)
     with pytest.raises(RemoteLockError, match="Unable to update remote lock"):
         updater.commit()
+    assert not lockfile.exists()
 
 
 @pytest.mark.allow_direct_assert

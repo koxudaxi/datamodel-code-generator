@@ -1152,13 +1152,12 @@ class _RemoteLockTransaction:
         return tuple(files)
 
     def mark_committed(self) -> None:
-        """Commit collector state only after the shared journal succeeds."""
+        """Commit collector state after publication; final cleanup remains owned by the caller."""
         for collector in self._collectors.values():
             collector.mark_committed()
-        self._close_anchors()
 
     def discard(self) -> None:
-        """Discard all pending lock staging after an unsuccessful transaction."""
+        """Discard pending lock staging and release every transaction resource."""
         cleanup_error: OSError | None = None
         for collector in self._collectors.values():
             try:
@@ -2197,6 +2196,20 @@ def _cleanup_staged_job_plans(staged_plans: Sequence[_StagedJobPlan]) -> tuple[O
     )
 
 
+def _cleanup_job_transaction(
+    staged_plans: Sequence[_StagedJobPlan], remote_locks: _RemoteLockTransaction | None
+) -> tuple[OSError, ...]:
+    """Release every output and lock resource after a batch result is known."""
+    cleanup_errors = _cleanup_staged_job_plans(staged_plans)
+    if remote_locks is None:
+        return cleanup_errors
+    try:
+        remote_locks.discard()
+    except OSError as exc:
+        return (*cleanup_errors, exc)
+    return cleanup_errors
+
+
 def _staged_files(staged_plan: _StagedJobPlan) -> Iterator[_StagedFile]:
     """Return staged files paired with their final targets without removing directory extras."""
     from datamodel_code_generator._publication import StagedFile  # noqa: PLC0415
@@ -2294,22 +2307,13 @@ def _run_jobs(
             case _:
                 result = _run_jobs_text(args, staged_plans, remote_locks, remote_lock_plans)
     except BaseException:
-        if cleanup_error := _staging_cleanup_error(None, _cleanup_staged_job_plans(staged_plans)):
+        if cleanup_error := _staging_cleanup_error(None, _cleanup_job_transaction(staged_plans, remote_locks)):
             print(f"Error: {cleanup_error}", file=sys.stderr)  # noqa: T201
-        if remote_locks is not None:
-            with suppress(OSError):
-                remote_locks.discard()
         raise
 
-    if cleanup_error := _staging_cleanup_error(None, _cleanup_staged_job_plans(staged_plans)):
-        if remote_locks is not None:
-            with suppress(OSError):
-                remote_locks.discard()
+    if cleanup_error := _staging_cleanup_error(None, _cleanup_job_transaction(staged_plans, remote_locks)):
         print(f"Error: {cleanup_error}", file=sys.stderr)  # noqa: T201
         return Exit.ERROR
-    if remote_locks is not None:
-        with suppress(OSError):
-            remote_locks.discard()
     return result
 
 
@@ -2574,8 +2578,12 @@ def _run_single_remote_transaction(  # noqa: PLR0913, PLR0917
             remote_locks.discard()
         except OSError as exc:
             cleanup_errors += (exc,)
-        if cleanup_error := _staging_cleanup_error(None, cleanup_errors):
-            print(f"Error: could not clean up command transaction: {cleanup_error}", file=sys.stderr)  # noqa: T201
+        if cleanup_errors:
+            cleanup_message = "; ".join(str(error) for error in cleanup_errors)
+            print(  # noqa: T201
+                f"Error: could not clean up command transaction: {cleanup_message}",
+                file=sys.stderr,
+            )
             exit_code = Exit.ERROR
     return exit_code
 
@@ -3139,11 +3147,16 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
             return finish_watch_remote_lock_intent(exit_code)
         try:
             _publish_staged_files(remote_locks.staged_files())
-            remote_locks.mark_committed()
         except (Error, OSError) as exc:
             with suppress(OSError):
                 remote_locks.discard()
             print(f"Error: could not publish remote lock: {exc}", file=sys.stderr)  # noqa: T201
+            return finish_watch_remote_lock_intent(Exit.ERROR)
+        remote_locks.mark_committed()
+        try:
+            remote_locks.discard()
+        except OSError as exc:
+            print(f"Error: could not clean up remote lock transaction: {exc}", file=sys.stderr)  # noqa: T201
             return finish_watch_remote_lock_intent(Exit.ERROR)
         return finish_watch_remote_lock_intent(exit_code)
 
