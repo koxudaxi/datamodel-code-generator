@@ -145,6 +145,9 @@ class _WatchSourceLoader(Loader):
         exec_module = getattr(self._loader, "exec_module", None)
         if callable(exec_module):
             exec_module(module)
+            return
+        msg = f"cannot load module {module.__name__!r}: get_source() returned None and exec_module() is unavailable"
+        raise ImportError(msg)
 
 
 class _WatchSourceFinder:
