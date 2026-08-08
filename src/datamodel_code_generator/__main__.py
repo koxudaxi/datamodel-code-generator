@@ -108,7 +108,7 @@ import stat
 import tempfile
 import warnings
 from collections.abc import Iterable, Iterator, Mapping, Sequence
-from contextlib import suppress
+from contextlib import redirect_stdout, suppress
 from enum import Enum, IntEnum
 from functools import lru_cache
 from keyword import iskeyword
@@ -2387,8 +2387,6 @@ def _write_batch_json_spool(spool: Any) -> None:
 
 def _run_jobs_json(args: Sequence[str], staged_plans: Sequence[_StagedJobPlan]) -> Exit:
     """Spool validated job payloads until generation and publication both succeed."""
-    from contextlib import redirect_stdout  # noqa: PLC0415
-
     from pydantic import ValidationError  # noqa: PLC0415
 
     from datamodel_code_generator._structured_output import BatchJobPayload  # noqa: PLC0415

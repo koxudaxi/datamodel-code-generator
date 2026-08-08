@@ -2442,6 +2442,7 @@ def test_pyproject_jobs_partial_copy_backup_failure_removes_backup(
     assert list(tmp_path.glob(".target.py.*.bak")) == []
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="batch publication anchors use directory descriptors on POSIX")
 @pytest.mark.allow_direct_assert
 def test_pyproject_jobs_post_publish_check_does_not_recreate_missing_parent(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -2548,6 +2549,7 @@ def test_pyproject_jobs_restore_backup_discards_unchanged_symlink_backup(tmp_pat
     assert target.is_symlink()
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="batch publication anchors use directory descriptors on POSIX")
 @pytest.mark.allow_direct_assert
 def test_pyproject_jobs_publish_reports_failed_rollback(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Include unrecovered paths when both publication and rollback fail."""
