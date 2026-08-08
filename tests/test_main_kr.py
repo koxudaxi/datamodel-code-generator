@@ -1542,21 +1542,13 @@ def test_pyproject_jobs_reject_input_diff_from_every_configuration_layer_without
     new_input = (JSON_SCHEMA_DATA_PATH / "person.json").resolve()
     output_paths = (tmp_path / "api.py", tmp_path / "events.py")
     metadata_paths = (tmp_path / "api.metadata.json", tmp_path / "events.metadata.json")
-    base_diff = profile_diff = job_diff = base_watch = ""
-    selection = ["--job", "api"]
-    cli_diff: list[str] = []
-    match provenance:
-        case "cli":
-            selection = ["--job", "api", "--job", "events"]
-            cli_diff = ["--diff-against", old_input.as_posix()]
-        case "base":
-            selection = ["--all-jobs"]
-            base_diff = f'diff-against = "{old_input.as_posix()}"'
-            base_watch = "watch = true"
-        case "profile":
-            profile_diff = f'diff-against = "{old_input.as_posix()}"'
-        case "job":
-            job_diff = f'diff-against = "{old_input.as_posix()}"'
+    configurations = {
+        "cli": (["--job", "api", "--job", "events"], ["--diff-against", old_input.as_posix()], "", "", "", ""),
+        "base": (["--all-jobs"], [], f'diff-against = "{old_input.as_posix()}"', "", "", "watch = true"),
+        "profile": (["--job", "api"], [], "", f'diff-against = "{old_input.as_posix()}"', "", ""),
+        "job": (["--job", "api"], [], "", "", f'diff-against = "{old_input.as_posix()}"', ""),
+    }
+    selection, cli_diff, base_diff, profile_diff, job_diff, base_watch = configurations[provenance]
 
     (tmp_path / "pyproject.toml").write_text(
         f"""
