@@ -70,6 +70,7 @@ assert_file_content = create_assert_file_content(INPUT_DIFF_EXPECTED_PATH)
         ),
     ],
 )
+@pytest.mark.allow_direct_assert
 def test_output_comparison_policy(input_diff: bool, expected_policy: tuple[str, str, str, str, str]) -> None:
     """Return an explicit policy for both normal and two-input comparisons."""
     assert _output_comparison_policy(input_diff=input_diff) == expected_policy
