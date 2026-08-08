@@ -3384,7 +3384,12 @@ output = "{output_file.as_posix()}"
             stderr_lines,
             tmp_path / "pyproject.toml",
             project_content(lock_path=alternate_lockfile),
-            lambda: len(stderr_lines) > replan_error_count,
+            lambda: (
+                len(stderr_lines) > replan_error_count
+                and _lines_contain(
+                    stderr_lines[replan_error_count:], f"HTTP 404 error fetching {watched_http_server}/missing.json"
+                )
+            ),
             "the changed lock-path replan to fail after planning the alternate lock",
         )
         alternate_lockfile.unlink()

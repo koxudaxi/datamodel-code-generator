@@ -5,7 +5,7 @@ the public API and CLI use the same journal so remote locks cannot follow a
 replaced staging parent or publish independently from generated artifacts.
 """
 
-# ruff: noqa: EM101, EM102, PERF203, PERF401, TRY003, TRY301
+# ruff: noqa: EM101, EM102, ERA001, PERF203, PERF401, TRY003, TRY301
 
 from __future__ import annotations
 
@@ -597,7 +597,7 @@ def _set_staged_mode(file: StagedFile, mode: int) -> None:
             # Existing destination permissions are intentionally preserved, including group readability.
             source_name = cast("str", file.source_name)
 
-            # CodeQL suppression: codeql[py/overly-permissive-file]
+            # codeql[py/overly-permissive-file]
             os.chmod(source_name, mode, dir_fd=file.source_directory_fd, follow_symlinks=False)
         else:
             cast("Path", file.staged_file).chmod(mode)
