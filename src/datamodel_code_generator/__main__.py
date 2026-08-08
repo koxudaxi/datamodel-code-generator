@@ -1527,7 +1527,7 @@ def _compare_generated_single_file(
         message = f"{missing_kind.upper()}: {path} ({single_file_missing_message_suffix})"
         return OutputComparison(
             differences=[CheckDifferencePayload(kind=missing_kind, path=path, message=message)],
-            content=f"{message}\n",
+            content=f"{message}\n" if comparison.input_diff else message,
         )
 
     diff_found, diff_lines = _compare_single_file(generated_output, actual_output, encoding, comparison)

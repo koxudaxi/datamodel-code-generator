@@ -96,8 +96,9 @@ def _uses_default_cli_formatters(extra_args: Sequence[str] | None) -> bool:
     return (formatters := _extract_cli_formatters(extra_args)) is None or set(formatters) == _DEFAULT_CLI_FORMATTERS
 
 
-def _uses_check_mode(extra_args: Sequence[str] | None) -> bool:
-    return extra_args is not None and "--check" in extra_args
+def _uses_virtual_output_mode(extra_args: Sequence[str] | None) -> bool:
+    """Return whether a command deliberately leaves its output path untouched."""
+    return extra_args is not None and any(option in extra_args for option in ("--check", "--diff-against"))
 
 
 def _uses_default_api_formatters(generate_options: dict[str, Any]) -> bool:
@@ -188,7 +189,7 @@ def _assert_builtin_cli_formatter_parity(
     if (
         output_path is None
         or not output_path.exists()
-        or _uses_check_mode(extra_args)
+        or _uses_virtual_output_mode(extra_args)
         or not _uses_default_cli_formatters(extra_args)
         or _http_get_is_mocked()
     ):
