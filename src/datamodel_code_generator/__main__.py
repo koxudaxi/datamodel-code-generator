@@ -2346,10 +2346,9 @@ def _run_watched_jobs(
         )
         for plan in batch_plan.jobs
     )
-    with dependencies.generation():
+    with dependencies.generation() as generation:
         result = _run_jobs(args, batch_plan.jobs)
-        if result is not Exit.OK:
-            dependencies.fail_generation()
+        generation.failed = result is not Exit.OK
     return result
 
 

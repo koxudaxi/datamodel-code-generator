@@ -363,12 +363,12 @@ class WatchDependencies(_Weakrefable):
             self._publish()
 
     @contextmanager
-    def generation(self) -> Iterator[None]:
+    def generation(self) -> Iterator[_CollectedGeneration]:
         """Collect one generation privately, publishing a complete graph only at its end."""
         collected = _CollectedGeneration(self)
         token = _current_collector.set(collected)
         try:
-            yield
+            yield collected
         except BaseException:
             with self._lock:
                 self._failed_static = self._pending_static
@@ -400,11 +400,6 @@ class WatchDependencies(_Weakrefable):
                 self._publish()
         finally:
             _current_collector.reset(token)
-
-    def fail_generation(self) -> None:
-        """Publish the active attempt as failed when a batch returns a non-OK exit."""
-        if (collector := _current_collector.get()) is not None and collector.owner is self:
-            collector.failed = True
 
     def add_file(self, path: Path | None) -> None:
         """Add one static local file dependency."""

@@ -1657,6 +1657,11 @@ input = "missing-schema.json"
 output = "output.py"
 aliases = []
 default-values = "job-defaults.json"
+
+[tool.datamodel-codegen.jobs.unprofiled]
+input = "unprofiled-missing-schema.json"
+output = "unprofiled-output.py"
+aliases = "unprofiled-aliases.json"
 """,
         encoding="utf-8",
     )
@@ -1674,6 +1679,8 @@ default-values = "job-defaults.json"
         tmp_path / "child-defaults.json",
         tmp_path / "job-defaults.json",
         tmp_path / "missing-schema.json",
+        tmp_path / "unprofiled-aliases.json",
+        tmp_path / "unprofiled-missing-schema.json",
     ):
         assert dependencies.includes(dependency)
 
