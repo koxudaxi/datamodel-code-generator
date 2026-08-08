@@ -112,14 +112,16 @@ def _watch_changes(
 ) -> None:
     """Publish filesystem changes from the persistent background watch stream."""
     force_polling = _force_polling()
-    poll_delay_ms = max(1, min(300, int(context.config.watch_delay * 1000)))
+    debounce_ms = max(1, int(context.config.watch_delay * 1000))
+    poll_delay_ms = min(300, debounce_ms)
     if force_polling:
         context.dependencies.enable_polling_fingerprints()
     pending_polling_fallback = False
     try:
         for changes in context.watchfiles.watch(
             *watch_roots,
-            debounce=int(context.config.watch_delay * 1000),
+            debounce=debounce_ms,
+            step=debounce_ms,
             force_polling=force_polling,
             poll_delay_ms=poll_delay_ms,
             recursive=True,

@@ -980,7 +980,10 @@ def test_watch_cli_reloads_custom_formatter_package_after_refactor(
     monkeypatch.setenv("DATAMODEL_CODEGEN_FORMATTER_EXECUTIONS", str(execution_marker))
     monkeypatch.setenv("WATCHFILES_FORCE_POLLING", "false")
     process, stdout_lines, stderr_lines, stdout_thread, stderr_thread = _start_watch_cli_until_ready(
-        input_file, output_file, working_directory=project_directory
+        input_file,
+        output_file,
+        ["--watch-delay", "0.5"],
+        working_directory=project_directory,
     )
 
     try:
@@ -1904,10 +1907,12 @@ def test_watch_polling_filters_unchanged_timeouts_and_late_directory_events(
     dependencies.configure(config, config_values={})
     replacement = tmp_path / "replacement.json"
     replacement.write_text(WATCH_SCHEMA_CHANGED, encoding="utf-8")
+    watch_options: dict[str, object] = {}
 
     class PollingEvents:
         @staticmethod
-        def watch(*_paths: object, **_kwargs: object) -> object:
+        def watch(*_paths: object, **watch_kwargs: object) -> object:
+            watch_options.update(watch_kwargs)
             yield set()
             yield {(None, str(tmp_path))}
             replacement.replace(input_file)
@@ -1928,6 +1933,8 @@ def test_watch_polling_filters_unchanged_timeouts_and_late_directory_events(
     assert state.has_pending_changes
     assert not state.pending_change_sample
     assert state.exhausted
+    assert watch_options["debounce"] == 50
+    assert watch_options["step"] == 50
     with dependencies.generation():
         pass
 
