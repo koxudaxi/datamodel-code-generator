@@ -445,10 +445,8 @@ class WatchDependencies(_Weakrefable):
             self._add_path(path, self._static_directories, self._static_symlink_events)
             self._publish()
 
-    def exclude_file(self, path: Path | None) -> None:
+    def exclude_file(self, path: Path) -> None:
         """Exclude one exact generated file from watch events."""
-        if path is None:
-            return
         with self._lock:
             outputs = self._outputs if self._pending_static is None else self._pending_static.outputs
             self._add_output(path, outputs, is_directory=False)
