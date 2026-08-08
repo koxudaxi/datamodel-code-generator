@@ -1567,6 +1567,9 @@ def test_watch_source_loader_finder_handles_unavailable_and_non_source_children(
     loader.exec_module(fallback_module)
     assert fallback_module.used_fallback
 
+    loader_without_executor = _WatchSourceLoader(SimpleNamespace(get_source=lambda _module_name: None), None)
+    loader_without_executor.exec_module(ModuleType("watch_loader_without_executor"))
+
     package_name = "watch_finder_package"
     package = ModuleType(package_name)
     package.__path__ = [str(tmp_path)]
