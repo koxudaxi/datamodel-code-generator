@@ -1288,13 +1288,16 @@ def test_remote_lock_transaction_attempts_all_cleanup_after_one_staged_source_un
     staged_files = transaction.staged_files()
     contexts = tuple(transaction._staging_contexts.values())
     failed_file = staged_files[0]
-    failed_source = failed_file.source_name
+    failed_name = failed_file.source_name
+    if failed_name is None:
+        assert failed_file.staged_file is not None
+        failed_name = failed_file.staged_file.name
     original_unlink = publication_module.os.unlink
     failed_once = False
 
-    def fail_one_source_unlink(path: str, *args: object, **kwargs: object) -> None:
+    def fail_one_source_unlink(path: str | Path, *args: object, **kwargs: object) -> None:
         nonlocal failed_once
-        if (path == failed_source or Path(path) == failed_file.staged_file) and not failed_once:
+        if not failed_once and Path(path).name == failed_name:
             failed_once = True
             msg = "simulated staged cleanup failure"
             raise OSError(msg)
@@ -1482,7 +1485,7 @@ def test_generate_publishes_output_metadata_and_remote_lock_as_one_journal(
         b'{"title":"ChangedPet","type":"object"}',
     )
     try:
-        mocker.patch("datamodel_code_generator._publication._publish_staged_files_at", side_effect=OSError("full"))
+        mocker.patch("datamodel_code_generator._publication._replace_source", side_effect=OSError("full"))
         with pytest.raises(OSError, match="full"):
             generate(urlparse(schema_url), config=config)
         assert_http_e2e_file(
@@ -1535,7 +1538,11 @@ def test_generate_rolls_back_output_and_metadata_when_late_lock_publication_and_
     replacement_error = "simulated late lock replacement failure"
     cleanup_error = "simulated lock cleanup failure"
 
-    def fail_lock_replacement(file: publication_module.StagedFile, destination_name: str, destination_fd: int) -> None:
+    def fail_lock_replacement(
+        file: publication_module.StagedFile,
+        destination_name: str | Path,
+        destination_fd: int | None,
+    ) -> None:
         if file.target == lockfile:
             raise OSError(replacement_error)
         original_replace_source(file, destination_name, destination_fd)
@@ -1858,6 +1865,7 @@ def test_generate_publishes_missing_multimodule_directory_with_remote_lock(
         del _SchemaHandler.routes["/child.json"]
 
 
+@pytest.mark.skipif(os.name == "nt", reason="descriptor anchor races require POSIX dir_fd support")
 def test_generate_rejects_a_changed_public_output_anchor_before_publication(
     mocker: MockerFixture,
     local_http_server: str,
@@ -1983,7 +1991,7 @@ def test_cli_preserves_existing_lock_when_atomic_update_fails(
         b'{"title":"ChangedPet","type":"object"}',
     )
     try:
-        mocker.patch("datamodel_code_generator._publication._publish_staged_files_at", side_effect=OSError("full"))
+        mocker.patch("datamodel_code_generator._publication._replace_source", side_effect=OSError("full"))
         run_main_with_args(
             common_args,
             expected_exit=Exit.ERROR,
@@ -2749,7 +2757,7 @@ def test_cli_rolls_back_stdout_metadata_and_lock_when_publication_fails(
         b'{"title":"ChangedPet","type":"object"}',
     )
     try:
-        mocker.patch("datamodel_code_generator._publication._publish_staged_files_at", side_effect=OSError("full"))
+        mocker.patch("datamodel_code_generator._publication._replace_source", side_effect=OSError("full"))
         run_main_with_args(
             common_args,
             expected_exit=Exit.ERROR,

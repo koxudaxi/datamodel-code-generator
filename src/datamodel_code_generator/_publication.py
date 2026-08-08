@@ -159,17 +159,22 @@ class StagingDirectory:
         if anchor.directory_fd is None:  # pragma: no cover - Windows uses the checked fallback path
             _validate_anchor_path(anchor)
             path = type(anchor.path)(tempfile.mkdtemp(prefix=prefix, dir=anchor.path))
-            path_stat = path.stat()
-            _validate_anchor_path(anchor)
-            return cls(
-                (None, None),
-                path.name,
-                path,
-                fallback=_StagingFallback(
-                    (path_stat.st_dev, path_stat.st_ino),
-                    anchor.identity,
-                ),
-            )
+            try:
+                path_stat = path.stat()
+                _validate_anchor_path(anchor)
+                return cls(
+                    (None, None),
+                    path.name,
+                    path,
+                    fallback=_StagingFallback(
+                        (path_stat.st_dev, path_stat.st_ino),
+                        anchor.identity,
+                    ),
+                )
+            except BaseException:
+                with suppress(OSError):
+                    path.rmdir()
+                raise
         parent_fd: int | None = os.dup(anchor.directory_fd)
         try:
             for _ in range(100):
@@ -592,14 +597,19 @@ def _set_staged_mode(file: StagedFile, mode: int) -> None:
         return
 
 
-def _replace_source(file: StagedFile, destination_name: str, destination_fd: int) -> None:
-    if file.source_directory_fd is not None:
+def _replace_source(file: StagedFile, destination_name: str | Path, destination_fd: int | None) -> None:
+    if (source_directory_fd := file.source_directory_fd) is not None:
+        if destination_fd is None:
+            raise OSError(f"descriptor-only staging requires a destination descriptor: {file.target}")
         os.replace(
             cast("str", file.source_name),
-            destination_name,
-            src_dir_fd=file.source_directory_fd,
+            cast("str", destination_name),
+            src_dir_fd=source_directory_fd,
             dst_dir_fd=destination_fd,
         )
+        return
+    if destination_fd is None:
+        cast("Path", file.staged_file).replace(destination_name)
         return
     os.replace(cast("Path", file.staged_file), destination_name, dst_dir_fd=destination_fd)
 
@@ -678,7 +688,7 @@ def _publish_staged_files_by_path(files: Sequence[StagedFile]) -> None:  # pragm
             _validate_planned_target(file)
             if file.staged_file is None:
                 raise OSError(f"descriptor-only staging is unavailable on Windows: {file.target}")
-            file.staged_file.replace(file.target)
+            _replace_source(file, file.target, None)
             _validate_planned_target(file)
             _validate_publication_anchor(file)
     except OSError as publish_error:

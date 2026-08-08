@@ -240,8 +240,8 @@ def test_staging_directory_handles_deleted_sources_closed_handles_and_cleanup_fa
     os.close(file_fd)
     original_unlink = publication_module.os.unlink
 
-    def fail_staged_unlink(path: str, *args: object, **kwargs: object) -> None:
-        if path == name:
+    def fail_staged_unlink(path: str | Path, *args: object, **kwargs: object) -> None:
+        if Path(path).name == name:
             msg = "staged file is busy"
             raise OSError(msg)
         original_unlink(path, *args, **kwargs)
@@ -256,6 +256,7 @@ def test_staging_directory_handles_deleted_sources_closed_handles_and_cleanup_fa
 
 
 @pytest.mark.allow_direct_assert
+@pytest.mark.skipif(os.name == "nt", reason="private descriptor names require POSIX dir_fd support")
 def test_staging_directory_fails_closed_for_unavailable_private_names(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -428,6 +429,18 @@ def test_descriptor_publication_copy_and_journal_failure_paths_use_real_files(
 
     planned = publication_module._planned_staged_file((source, tmp_path / "planned.py"))
     assert planned.staged_file == source
+    with pytest.raises(OSError, match="requires a destination descriptor"):
+        publication_module._replace_source(
+            publication_module.StagedFile(
+                None,
+                source,
+                source,
+                source_directory_fd=0,
+                source_name=source.name,
+            ),
+            source.name,
+            None,
+        )
 
     target_directory = tmp_path / "target-directory"
     target_directory.mkdir()
@@ -448,8 +461,8 @@ def test_descriptor_publication_copy_and_journal_failure_paths_use_real_files(
             raise OSError(msg)
         original_replace(source_path, *args, **kwargs)
 
-    def fail_created_directory_removal(name: str, *args: object, **kwargs: object) -> None:
-        if name == "created":
+    def fail_created_directory_removal(name: str | Path, *args: object, **kwargs: object) -> None:
+        if Path(name).name == "created":
             msg = "directory is busy"
             raise OSError(msg)
         original_rmdir(name, *args, **kwargs)
@@ -478,7 +491,8 @@ def test_path_publication_helpers_preserve_modes_and_own_only_created_directorie
 
     publication_module._preserve_target_mode(staged, target)
 
-    assert staged.stat().st_mode & 0o777 == 0o640
+    if os.name != "nt":
+        assert staged.stat().st_mode & 0o777 == 0o640
 
     created_directories: list[Path] = []
     nested_target = tmp_path / "created" / "nested" / "model.py"
