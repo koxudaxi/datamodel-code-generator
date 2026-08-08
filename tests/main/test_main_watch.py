@@ -149,8 +149,7 @@ def _watch_cli_command(input_path: Path, output_path: Path, extra_args: list[str
         "builtin",
         "--disable-timestamp",
     ])
-    if extra_args:
-        command.extend(extra_args)
+    command.extend(extra_args or ())
     return command
 
 
@@ -165,8 +164,7 @@ def _batch_watch_cli_command(extra_args: list[str] | None = None) -> list[str]:
         "builtin",
         "--disable-timestamp",
     ])
-    if extra_args:
-        command.extend(extra_args)
+    command.extend(extra_args or ())
     return command
 
 
@@ -356,6 +354,16 @@ def _start_watch_cli_until_ready(
             extra_args,
             working_directory,
         )
+    return _wait_for_watch_cli_ready(process, stdout_lines, stderr_lines, stdout_thread, stderr_thread)
+
+
+def _wait_for_watch_cli_ready(
+    process: subprocess.Popen[str],
+    stdout_lines: list[str],
+    stderr_lines: list[str],
+    stdout_thread: threading.Thread,
+    stderr_thread: threading.Thread,
+) -> tuple[subprocess.Popen[str], list[str], list[str], threading.Thread, threading.Thread]:
     try:
         _wait_for_watch_cli(
             process,
@@ -378,19 +386,7 @@ def _start_batch_watch_cli_until_ready(
     process, stdout_lines, stderr_lines, stdout_thread, stderr_thread = _start_watch_process(
         _batch_watch_cli_command(extra_args), working_directory
     )
-    try:
-        _wait_for_watch_cli(
-            process,
-            stdout_lines,
-            stderr_lines,
-            lambda: _lines_contain(stdout_lines, "Watching "),
-            "watch mode to start",
-        )
-        time.sleep(WATCH_CLI_READY_DELAY_SECONDS)
-    except BaseException:
-        _stop_watch_cli(process, stdout_thread, stderr_thread)
-        raise
-    return process, stdout_lines, stderr_lines, stdout_thread, stderr_thread
+    return _wait_for_watch_cli_ready(process, stdout_lines, stderr_lines, stdout_thread, stderr_thread)
 
 
 @pytest.mark.allow_direct_assert
@@ -2272,6 +2268,69 @@ def test_watch_dependencies_keep_explicit_metadata_outputs_when_raw_output_resol
 
     assert unreadable_output not in dependencies.outputs
     assert metadata_output in dependencies.outputs
+
+
+@pytest.mark.allow_direct_assert
+def test_batch_watch_records_raw_dependencies_after_a_failed_plan(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """An invalid batch job retains its raw input as a recovery event before watch startup."""
+    from datamodel_code_generator import __main__ as main_module
+    from datamodel_code_generator.arguments import arg_parser
+    from datamodel_code_generator.watch_dependencies import WatchDependencies
+
+    input_file = tmp_path / "input.json"
+    input_file.write_text(WATCH_SCHEMA_INITIAL, encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        f"""[tool.datamodel-codegen.jobs.invalid]
+input = "{input_file.as_posix()}"
+""",
+        encoding="utf-8",
+    )
+    dependencies = WatchDependencies()
+    monkeypatch.chdir(tmp_path)
+    arg_parser.parse_args(["--all-jobs"], namespace=main_module.namespace)
+
+    assert main_module._main(["--all-jobs"], start_watch=False, dependencies=dependencies) is Exit.ERROR
+    assert dependencies.accepts_event(input_file)
+
+
+@pytest.mark.allow_direct_assert
+def test_batch_watch_excludes_a_shared_update_lock_from_events(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """A successful update-mode batch makes its shared lock observable but not self-triggering."""
+    from datamodel_code_generator import __main__ as main_module
+    from datamodel_code_generator.arguments import arg_parser
+    from datamodel_code_generator.watch_dependencies import WatchDependencies
+
+    input_file = JSON_SCHEMA_DATA_PATH / "person.json"
+    output_path = tmp_path / "output.py"
+    lockfile = tmp_path / "remote.lock"
+    (tmp_path / "pyproject.toml").write_text(
+        f"""[tool.datamodel-codegen]
+disable-timestamp = true
+input-file-type = "jsonschema"
+
+[tool.datamodel-codegen.jobs.model]
+input = "{input_file.as_posix()}"
+output = "{output_path.as_posix()}"
+update-lock = true
+lockfile = "{lockfile.as_posix()}"
+""",
+        encoding="utf-8",
+    )
+    dependencies = WatchDependencies()
+    monkeypatch.chdir(tmp_path)
+    arg_parser.parse_args(["--all-jobs", "--formatters", "builtin"], namespace=main_module.namespace)
+    batch_plan = main_module._plan_jobs(main_module.namespace)
+
+    assert main_module._run_watched_jobs(["--all-jobs", "--formatters", "builtin"], batch_plan, dependencies) is Exit.OK
+    assert lockfile in dependencies.files
+    assert lockfile in dependencies.outputs
+    assert not dependencies.accepts_event(lockfile)
 
 
 @pytest.mark.skipif(find_spec("grpc_tools") is None, reason="requires the protobuf extra")

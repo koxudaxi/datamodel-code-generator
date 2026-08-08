@@ -784,6 +784,7 @@ def test_cli_reports_undecodable_real_response_without_a_lock(
 def test_generate_without_a_lock_does_not_copy_public_config(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    mocker: MockerFixture,
 ) -> None:
     """The common local-input path allocates no defensive remote-lock config copy."""
     (tmp_path / "schema.json").write_text('{"title":"Model","type":"object"}', encoding="utf-8")
@@ -794,13 +795,15 @@ def test_generate_without_a_lock_does_not_copy_public_config(
         input_file_type=InputFileType.JsonSchema,
     )
 
-    def fail_model_copy(*_args: object, **_kwargs: object) -> None:
-        pytest.fail("no-lock generation copied its public config")
-
-    monkeypatch.setattr(GenerateConfig, "model_copy", fail_model_copy)
+    model_copy = mocker.patch.object(
+        GenerateConfig,
+        "model_copy",
+        side_effect=AssertionError("no-lock generation copied its public config"),
+    )
     result = generate(Path("schema.json"), config=config)
 
     assert isinstance(result, str)
+    model_copy.assert_not_called()
 
 
 @pytest.mark.benchmark
@@ -1288,19 +1291,14 @@ def test_remote_lock_transaction_attempts_all_cleanup_after_one_staged_source_un
         collector = transaction.collector_for(plan)
         assert collector is not None
         collector.record_response("https://schemas.example/schema.json", None, None, plan.path.name.encode())
-    staged_files = transaction.staged_files()
+    transaction.staged_files()
     contexts = tuple(transaction._staging_contexts.values())
-    failed_file = staged_files[0]
-    failed_name = failed_file.source_name
-    if failed_name is None:
-        assert failed_file.staged_file is not None
-        failed_name = failed_file.staged_file.name
     original_unlink = publication_module._unlink
     failed_once = False
 
     def fail_one_source_unlink(path: str | Path, *args: object, **kwargs: object) -> None:
         nonlocal failed_once
-        if not failed_once and Path(path).name == failed_name:
+        if not failed_once:
             failed_once = True
             msg = "simulated staged cleanup failure"
             raise OSError(msg)
@@ -1809,12 +1807,14 @@ def test_generate_rejects_a_lockfile_inside_a_multimodule_output_before_fetching
     assert not output_path.exists()
 
 
-def test_generate_publishes_missing_multimodule_directory_with_remote_lock(
+@pytest.mark.parametrize("output_exists", [False, True])
+def test_generate_publishes_multimodule_directory_with_remote_lock(
     mocker: MockerFixture,
     local_http_server: str,
     tmp_path: Path,
+    output_exists: bool,
 ) -> None:
-    """Public update-lock generation publishes a missing suffixless multi-module directory."""
+    """Public update-lock generation publishes both new and existing suffixless module directories."""
     mocker.stopall()
     schema_url = f"{local_http_server}/root.json"
     child_url = f"{local_http_server}/child.json"
@@ -1834,6 +1834,8 @@ def test_generate_publishes_missing_multimodule_directory_with_remote_lock(
         {"content-type": "application/json"},
         b'{"title":"Child","type":"object","properties":{"name":{"type":"string"}}}',
     )
+    if output_exists:
+        output_path.mkdir()
     config = GenerateConfig(
         allow_private_network=True,
         allow_remote_refs=True,
@@ -1868,6 +1870,87 @@ def test_generate_publishes_missing_multimodule_directory_with_remote_lock(
         del _SchemaHandler.routes["/child.json"]
 
 
+def test_generate_atomic_remote_update_omits_absent_generated_artifacts(
+    mocker: MockerFixture,
+    tmp_path: Path,
+) -> None:
+    """An interrupted generator can still publish its lock without creating empty public artifacts."""
+    output_path = tmp_path / "output.py"
+    metadata_path = tmp_path / "metadata.json"
+    lockfile = tmp_path / "remote.lock"
+    mocker.patch("datamodel_code_generator._generate", return_value=None)
+
+    generate(
+        JSON_SCHEMA_DATA_PATH / "person.json",
+        config=GenerateConfig(
+            disable_timestamp=True,
+            emit_model_metadata=metadata_path,
+            input_file_type=InputFileType.JsonSchema,
+            output=output_path,
+            lockfile=lockfile,
+            update_lock=True,
+        ),
+    )
+
+    _assert_file_does_not_exist(output_path)
+    _assert_file_does_not_exist(metadata_path)
+    assert_http_e2e_file(lockfile, "remote_lock_empty.txt")
+
+
+def test_generate_atomic_remote_update_releases_output_resources_after_lock_staging_failure(
+    mocker: MockerFixture,
+    tmp_path: Path,
+) -> None:
+    """A failed private lock reservation releases the already-open public output anchor."""
+    from datamodel_code_generator import _publication as publication_module
+
+    output_path = tmp_path / "output.py"
+    lockfile = tmp_path / "remote.lock"
+    mocker.patch.object(publication_module.StagingDirectory, "create", side_effect=OSError("lock staging failed"))
+
+    with pytest.raises(OSError, match="lock staging failed"):
+        generate(
+            JSON_SCHEMA_DATA_PATH / "person.json",
+            config=GenerateConfig(
+                disable_timestamp=True,
+                input_file_type=InputFileType.JsonSchema,
+                output=output_path,
+                lockfile=lockfile,
+                update_lock=True,
+            ),
+        )
+
+    _assert_file_does_not_exist(output_path)
+    _assert_file_does_not_exist(lockfile)
+
+
+def test_generate_atomic_remote_update_releases_temporary_output_when_anchor_reservation_fails(
+    mocker: MockerFixture,
+    tmp_path: Path,
+) -> None:
+    """An output-anchor failure does not leak its private temporary directory or lock state."""
+    from datamodel_code_generator import _publication as publication_module
+
+    output_path = tmp_path / "output.py"
+    lockfile = tmp_path / "remote.lock"
+    mocker.patch.object(publication_module, "publication_anchor", side_effect=OSError("output anchor failed"))
+
+    with pytest.raises(OSError, match="output anchor failed"):
+        generate(
+            JSON_SCHEMA_DATA_PATH / "person.json",
+            config=GenerateConfig(
+                disable_timestamp=True,
+                input_file_type=InputFileType.JsonSchema,
+                output=output_path,
+                lockfile=lockfile,
+                update_lock=True,
+            ),
+        )
+
+    _assert_file_does_not_exist(output_path)
+    _assert_file_does_not_exist(lockfile)
+
+
 @pytest.mark.skipif(os.name == "nt", reason="descriptor anchor races require POSIX dir_fd support")
 def test_generate_rejects_a_changed_public_output_anchor_before_publication(
     mocker: MockerFixture,
@@ -1899,14 +1982,7 @@ def test_generate_rejects_a_changed_public_output_anchor_before_publication(
         {"content-type": "application/json"},
         b'{"title":"ChangedPet","type":"object"}',
     )
-    original_matches = publication_module._directory_fd_matches_path
-
-    def changed_output_anchor(directory_fd: int, path: Path) -> bool:
-        if path == output_path.parent.resolve():
-            return False
-        return original_matches(directory_fd, path)
-
-    mocker.patch.object(publication_module, "_directory_fd_matches_path", side_effect=changed_output_anchor)
+    mocker.patch.object(publication_module, "_directory_fd_matches_path", return_value=False)
     try:
         with pytest.raises(OSError, match="destination anchor changed"):
             generate(urlparse(schema_url), config=config)
@@ -2103,8 +2179,8 @@ def test_cli_check_update_lock_keeps_the_existing_output_and_discards_the_staged
     assert not lockfile.exists()
 
 
-def test_cli_batch_mixed_check_and_update_lock_publishes_the_write_job_lock(tmp_path: Path) -> None:
-    """A check-only job cannot suppress the common journal for a separate updating job."""
+def test_cli_batch_mixed_check_and_update_lock_publishes_the_shared_write_job_lock(tmp_path: Path) -> None:
+    """A check-only job cannot suppress a shared lock's staging for a later updating job."""
     source_input = JSON_SCHEMA_DATA_PATH / "person.json"
     check_output = tmp_path / "check.py"
     check_output.write_text(
@@ -2112,8 +2188,7 @@ def test_cli_batch_mixed_check_and_update_lock_publishes_the_write_job_lock(tmp_
         encoding="utf-8",
     )
     write_output = tmp_path / "write.py"
-    check_lock = tmp_path / "check.lock"
-    write_lock = tmp_path / "write.lock"
+    lockfile = tmp_path / "remote.lock"
     (tmp_path / "pyproject.toml").write_text(
         f"""
 [tool.datamodel-codegen]
@@ -2125,13 +2200,13 @@ input = "{source_input.as_posix()}"
 output = "{check_output.as_posix()}"
 check = true
 update-lock = true
-lockfile = "{check_lock.as_posix()}"
+lockfile = "{lockfile.as_posix()}"
 
 [tool.datamodel-codegen.jobs.write]
 input = "{source_input.as_posix()}"
 output = "{write_output.as_posix()}"
 update-lock = true
-lockfile = "{write_lock.as_posix()}"
+lockfile = "{lockfile.as_posix()}"
 """,
         encoding="utf-8",
     )
@@ -2142,8 +2217,7 @@ lockfile = "{write_lock.as_posix()}"
     expected_output = DATA_PATH / "expected" / "main" / "person.py"
     assert_output(check_output.read_text(encoding="utf-8"), expected_output)
     assert_output(write_output.read_text(encoding="utf-8"), expected_output)
-    _assert_file_does_not_exist(check_lock)
-    assert_http_e2e_file(write_lock, "remote_lock_empty.txt")
+    assert_http_e2e_file(lockfile, "remote_lock_empty.txt")
 
 
 @pytest.mark.allow_direct_assert
@@ -2803,10 +2877,8 @@ def test_cli_does_not_write_through_a_lock_parent_symlink_swap(
         assert (moved_parent / attacker_staging.name).is_symlink()
         assert not (moved_parent / ".datamodel-codegen-lock-owned").exists()
     finally:
-        if lock_parent.is_symlink():
-            lock_parent.unlink()
-        if moved_parent.exists():
-            moved_parent.rename(lock_parent)
+        lock_parent.unlink()
+        moved_parent.rename(lock_parent)
 
 
 def test_cli_rolls_back_stdout_metadata_and_lock_when_publication_fails(

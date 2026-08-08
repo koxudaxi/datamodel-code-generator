@@ -242,13 +242,10 @@ def test_staging_directory_handles_deleted_sources_closed_handles_and_cleanup_fa
     staging = publication_module.StagingDirectory.create(anchor, prefix=".stage-")
     file_fd, name = staging.create_file(prefix=".source-")
     os.close(file_fd)
-    original_unlink = publication_module._unlink
 
-    def fail_staged_unlink(path: str | Path, *args: object, **kwargs: object) -> None:
-        if Path(path).name == name:
-            msg = "staged file is busy"
-            raise OSError(msg)
-        original_unlink(path, *args, **kwargs)
+    def fail_staged_unlink(*_args: object, **_kwargs: object) -> None:
+        msg = "staged file is busy"
+        raise OSError(msg)
 
     monkeypatch.setattr(publication_module, "_unlink", fail_staged_unlink)
     with pytest.raises(OSError, match="staged file is busy"):
@@ -270,13 +267,10 @@ def test_staging_directory_fails_closed_for_unavailable_private_names(
     anchor = publication_module.publication_anchor(parent)
 
     monkeypatch.setattr(publication_module, "_private_name", lambda _prefix: ".stage")
-    original_open = publication_module.os.open
 
-    def fail_staging_open(path: str, *args: object, **kwargs: object) -> int:
-        if path == ".stage":
-            msg = "private staging open failed"
-            raise OSError(msg)
-        return original_open(path, *args, **kwargs)
+    def fail_staging_open(*_args: object, **_kwargs: object) -> int:
+        msg = "private staging open failed"
+        raise OSError(msg)
 
     monkeypatch.setattr(publication_module.os, "open", fail_staging_open)
     with pytest.raises(OSError, match="private staging open failed"):
@@ -287,10 +281,9 @@ def test_staging_directory_fails_closed_for_unavailable_private_names(
     staging = publication_module.StagingDirectory.create(anchor, prefix=".stage-")
     monkeypatch.setattr(publication_module, "_private_name", lambda _prefix: ".source")
 
-    def collide_with_reserved_name(path: str, *args: object, **kwargs: object) -> int:
-        if path == ".source":
-            raise FileExistsError(path)
-        return original_open(path, *args, **kwargs)
+    def collide_with_reserved_name(*_args: object, **_kwargs: object) -> int:
+        name = ".source"
+        raise FileExistsError(name)
 
     monkeypatch.setattr(publication_module.os, "open", collide_with_reserved_name)
     with pytest.raises(FileExistsError, match="could not reserve private staged file"):
@@ -307,6 +300,29 @@ def test_staging_directory_fails_closed_for_unavailable_private_names(
     with pytest.raises(FileExistsError, match="could not reserve private staging"):
         publication_module.StagingDirectory.create(anchor, prefix=".stage-")
     publication_module.close_anchor(anchor)
+
+
+@pytest.mark.allow_direct_assert
+def test_staging_directory_path_fallback_cleanup_does_not_require_descriptors(tmp_path: Path) -> None:
+    """The lexical staging fallback removes its private directory without attempting descriptor cleanup."""
+    parent = tmp_path / "parent"
+    path = parent / ".stage"
+    path.mkdir(parents=True)
+    path_stat = path.stat()
+    parent_stat = parent.stat()
+    staging = publication_module.StagingDirectory(
+        (None, None),
+        path.name,
+        path,
+        fallback=publication_module._StagingFallback(
+            (path_stat.st_dev, path_stat.st_ino),
+            (parent_stat.st_dev, parent_stat.st_ino),
+        ),
+    )
+
+    staging.cleanup()
+
+    assert not path.exists()
 
 
 @pytest.mark.skipif(os.name == "nt", reason="descriptor publication requires POSIX dir_fd support")
@@ -369,13 +385,9 @@ def test_descriptor_publication_error_and_rollback_primitives_preserve_private_e
     )
     assert not (parent / ".symlink.py.backup").exists()
 
-    original_unlink = publication_module._unlink
-
-    def fail_target_unlink(path: str, *args: object, **kwargs: object) -> None:
-        if path == target.name:
-            msg = "target is busy"
-            raise OSError(msg)
-        original_unlink(path, *args, **kwargs)
+    def fail_target_unlink(*_args: object, **_kwargs: object) -> None:
+        msg = "target is busy"
+        raise OSError(msg)
 
     monkeypatch.setattr(publication_module, "_unlink", fail_target_unlink)
     assert publication_module._rollback_bound_file(
@@ -416,7 +428,6 @@ def test_descriptor_publication_copy_and_journal_failure_paths_use_real_files(
     source = tmp_path / "source.py"
     source.write_text("source\n", encoding="utf-8")
     source_stat = source.stat()
-    backup = tmp_path / "backup.py"
     file_fd = publication_module._open_file_at(source, os.O_RDONLY, 0, None)
     os.close(file_fd)
 
@@ -425,7 +436,7 @@ def test_descriptor_publication_copy_and_journal_failure_paths_use_real_files(
         raise OSError(msg)
 
     monkeypatch.setattr(publication_module.os, "link", fail_hardlink)
-    publication_module._copy_target(source, backup, source_stat, directory_fd=None)
+    backup = publication_module._backup_existing_target(source)
     assert backup.read_text(encoding="utf-8") == "source\n"
     monkeypatch.undo()
 
@@ -456,6 +467,16 @@ def test_descriptor_publication_copy_and_journal_failure_paths_use_real_files(
             None,
         )
 
+    path_staged = tmp_path / "path-staged.py"
+    path_target = tmp_path / "path-target.py"
+    path_staged.write_text("path staged\n", encoding="utf-8")
+    publication_module._replace_source(
+        publication_module.StagedFile(path_staged, path_target, path_target),
+        path_target,
+        None,
+    )
+    assert path_target.read_text(encoding="utf-8") == "path staged\n"
+
     target_directory = tmp_path / "target-directory"
     target_directory.mkdir()
     with pytest.raises(IsADirectoryError):
@@ -466,20 +487,14 @@ def test_descriptor_publication_copy_and_journal_failure_paths_use_real_files(
     generated = tmp_path / "generated.py"
     generated.write_text("generated\n", encoding="utf-8")
     nested_target = tmp_path / "created" / "target.py"
-    original_replace = publication_module._replace
-    original_rmdir = publication_module._rmdir
 
-    def fail_replace(source_path: str | Path, *args: object, **kwargs: object) -> None:
-        if source_path == generated:
-            msg = "replacement interrupted"
-            raise OSError(msg)
-        original_replace(source_path, *args, **kwargs)
+    def fail_replace(*_args: object, **_kwargs: object) -> None:
+        msg = "replacement interrupted"
+        raise OSError(msg)
 
-    def fail_created_directory_removal(name: str | Path, *args: object, **kwargs: object) -> None:
-        if Path(name).name == "created":
-            msg = "directory is busy"
-            raise OSError(msg)
-        original_rmdir(name, *args, **kwargs)
+    def fail_created_directory_removal(*_args: object, **_kwargs: object) -> None:
+        msg = "directory is busy"
+        raise OSError(msg)
 
     monkeypatch.setattr(publication_module, "_replace", fail_replace)
     monkeypatch.setattr(publication_module, "_rmdir", fail_created_directory_removal)
@@ -505,8 +520,7 @@ def test_path_publication_helpers_preserve_modes_and_own_only_created_directorie
 
     publication_module._preserve_target_mode(staged, target)
 
-    if os.name != "nt":
-        assert staged.stat().st_mode & 0o777 == 0o640
+    assert bool(staged.stat().st_mode & stat.S_IWUSR) is bool(target.stat().st_mode & stat.S_IWUSR)
 
     created_directories: list[Path] = []
     nested_target = tmp_path / "created" / "nested" / "model.py"
@@ -529,6 +543,21 @@ def test_path_publication_helpers_preserve_modes_and_own_only_created_directorie
     monkeypatch.setattr(publication_module, "_backup_names", lambda _target_name: iter((collision.name,)))
     with pytest.raises(FileExistsError, match="could not reserve backup"):
         publication_module._backup_existing_target(target)
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX modes are not available on Windows")
+@pytest.mark.allow_direct_assert
+def test_path_publication_helpers_preserve_posix_modes(tmp_path: Path) -> None:
+    """Path publication copies every POSIX permission bit from an existing target."""
+    target = tmp_path / "target.py"
+    staged = tmp_path / "staged.py"
+    target.write_text("stale\n", encoding="utf-8")
+    staged.write_text("generated\n", encoding="utf-8")
+    target.chmod(0o640)
+
+    publication_module._preserve_target_mode(staged, target)
+
+    assert staged.stat().st_mode & 0o777 == 0o640
 
 
 @pytest.mark.allow_direct_assert

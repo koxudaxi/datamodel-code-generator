@@ -855,18 +855,6 @@ def _find_datamodel_codegen_project_config_with_path(source: Path) -> tuple[Path
     return None
 
 
-def _find_datamodel_codegen_project_config(source: Path) -> Mapping[str, Any] | None:
-    """Return the closest datamodel-codegen TOML table without resolving profiles or jobs."""
-    if project_config := _find_datamodel_codegen_project_config_with_path(source):
-        return project_config[1]
-    return None
-
-
-def _get_pyproject_toml_config(source: Path, profile: str | None = None) -> dict[str, Any]:
-    """Find and return the [tool.datamodel-codegen] section of the closest pyproject.toml if it exists."""
-    return _get_pyproject_toml_config_with_path(source, profile=profile)[0]
-
-
 def _get_pyproject_toml_config_with_path(
     source: Path,
     profile: str | None = None,
@@ -1140,8 +1128,7 @@ class _RemoteLockTransaction:
             for path, collector in self._collectors.items():
                 if path not in self._publishable_paths:
                     continue
-                if (staging_context := self._staging_contexts.get(path)) is None:
-                    continue
+                staging_context = self._staging_contexts[path]
                 staged_file = cast("_StagedFile", collector.stage(staging_context))
                 files.append(staged_file._replace(anchor=self._anchors[path]))
         except Exception as exc:
@@ -3139,25 +3126,6 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
     def cleanup_and_return(exit_code: Exit) -> Exit:
         if temp_context is not None:
             temp_context.cleanup()
-        if not remote_transaction_owner or remote_locks is None:
-            return finish_watch_remote_lock_intent(exit_code)
-        if exit_code is not Exit.OK or config.check:
-            with suppress(OSError):
-                remote_locks.discard()
-            return finish_watch_remote_lock_intent(exit_code)
-        try:
-            _publish_staged_files(remote_locks.staged_files())
-        except (Error, OSError) as exc:
-            with suppress(OSError):
-                remote_locks.discard()
-            print(f"Error: could not publish remote lock: {exc}", file=sys.stderr)  # noqa: T201
-            return finish_watch_remote_lock_intent(Exit.ERROR)
-        remote_locks.mark_committed()
-        try:
-            remote_locks.discard()
-        except OSError as exc:
-            print(f"Error: could not clean up remote lock transaction: {exc}", file=sys.stderr)  # noqa: T201
-            return finish_watch_remote_lock_intent(Exit.ERROR)
         return finish_watch_remote_lock_intent(exit_code)
 
     try:
