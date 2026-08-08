@@ -2726,7 +2726,7 @@ def test_pyproject_jobs_parent_and_rollback_helpers_handle_races(
 
     target = tmp_path / "target.py"
     target.write_text("generated\n", encoding="utf-8")
-    monkeypatch.setattr(Path, "unlink", lambda *_args: (_ for _ in ()).throw(OSError("unlink failed")))
+    monkeypatch.setattr(publication_module, "_unlink", lambda *_args: (_ for _ in ()).throw(OSError("unlink failed")))
     assert publication_module._rollback_published_file(publication_module._PublishedFile(target, None)) == [target]
 
 

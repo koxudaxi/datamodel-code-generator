@@ -22,6 +22,14 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Sequence
 
 
+# Keep filesystem failure seams local to this module.  In particular, pathlib
+# binds its Windows accessors at import time, so patching os does not exercise
+# path-based fallback operations consistently.
+_unlink = os.unlink
+_replace = os.replace
+_rmdir = os.rmdir
+
+
 class PublicationAnchor(NamedTuple):
     """The existing directory inode that anchored a planned publication path."""
 
@@ -173,7 +181,7 @@ class StagingDirectory:
                 )
             except BaseException:
                 with suppress(OSError):
-                    path.rmdir()
+                    _rmdir(path)
                 raise
         parent_fd: int | None = os.dup(anchor.directory_fd)
         try:
@@ -190,14 +198,14 @@ class StagingDirectory:
                     )
                 except BaseException:
                     with suppress(OSError):
-                        os.rmdir(name, dir_fd=parent_fd)
+                        _rmdir(name, dir_fd=parent_fd)
                     raise
                 try:
                     staging_directory = cls((parent_fd, directory_fd), name, anchor.path / name)
                 except BaseException:
                     os.close(directory_fd)
                     with suppress(OSError):
-                        os.rmdir(name, dir_fd=parent_fd)
+                        _rmdir(name, dir_fd=parent_fd)
                     raise
                 # From here cleanup() owns both descriptors, including its duplicated parent descriptor.
                 parent_fd = None
@@ -247,14 +255,14 @@ class StagingDirectory:
         if self.directory_fd is None:  # pragma: no cover - Windows lexical fallback
             self._validate_path_fallback()
             try:
-                (self.path / name).unlink()
+                _unlink(self.path / name)
             except FileNotFoundError:
                 self._files.discard(name)
             else:
                 self._files.discard(name)
             return
         try:
-            os.unlink(name, dir_fd=self.directory_fd)
+            _unlink(name, dir_fd=self.directory_fd)
         except FileNotFoundError:
             self._files.discard(name)
         else:
@@ -286,9 +294,9 @@ class StagingDirectory:
         for name in tuple(self._files):
             try:
                 if self.directory_fd is None:  # pragma: no cover - Windows lexical fallback
-                    (self.path / name).unlink()
+                    _unlink(self.path / name)
                 else:
-                    os.unlink(name, dir_fd=self.directory_fd)
+                    _unlink(name, dir_fd=self.directory_fd)
             except FileNotFoundError:
                 self._files.discard(name)
             except OSError as exc:
@@ -301,9 +309,9 @@ class StagingDirectory:
         """Remove the owned empty staging directory through its pinned parent when available."""
         try:
             if self.directory_fd is None:  # pragma: no cover - Windows lexical fallback
-                self.path.rmdir()
+                _rmdir(self.path)
             else:
-                os.rmdir(self.name, dir_fd=cast("int", self._parent_fd))
+                _rmdir(self.name, dir_fd=cast("int", self._parent_fd))
         except FileNotFoundError:
             return None
         except OSError as exc:
@@ -381,9 +389,9 @@ def _copy_target(
             backup_fd = None
             with suppress(OSError):
                 if directory_fd is None:
-                    Path(backup).unlink()
+                    _unlink(backup)
                 else:
-                    os.unlink(backup, dir_fd=directory_fd)
+                    _unlink(backup, dir_fd=directory_fd)
         raise
     finally:
         os.close(source_fd)
@@ -449,17 +457,17 @@ def _preserve_target_mode(staged_file: Path, target: Path) -> None:
 
 def _restore_backup(backup: Path, target: Path) -> None:
     if backup.is_symlink() and target.is_symlink() and backup.readlink() == target.readlink():
-        backup.unlink()
+        _unlink(backup)
         return
     try:
         if backup.samefile(target):
-            backup.unlink()
+            _unlink(backup)
             return
     except OSError:
         # The target may have disappeared, but replacement still restores the backup safely.
-        backup.replace(target)
+        _replace(backup, target)
         return
-    backup.replace(target)
+    _replace(backup, target)
 
 
 def _rollback_published_file(published_file: _PublishedFile) -> list[Path]:
@@ -469,7 +477,7 @@ def _rollback_published_file(published_file: _PublishedFile) -> list[Path]:
                 return [published_file.target, published_file.backup]
             _restore_backup(published_file.backup, published_file.target)
         elif published_file.target.exists():
-            published_file.target.unlink()
+            _unlink(published_file.target)
     except OSError:
         paths = [published_file.target]
         if published_file.backup is not None:
@@ -480,7 +488,7 @@ def _rollback_published_file(published_file: _PublishedFile) -> list[Path]:
 
 def _remove_created_directory(directory: Path) -> list[Path]:
     try:
-        directory.rmdir()
+        _rmdir(directory)
     except OSError:
         return [directory]
     return []
@@ -555,7 +563,7 @@ def _restore_backup_at(published_file: _BoundPublishedFile) -> None:
     except FileNotFoundError:
         target_stat = None
     if target_stat is not None and os.path.samestat(backup_stat, target_stat):
-        os.unlink(backup_name, dir_fd=published_file.directory_fd)
+        _unlink(backup_name, dir_fd=published_file.directory_fd)
         return
     if (
         stat.S_ISLNK(backup_stat.st_mode)
@@ -564,9 +572,9 @@ def _restore_backup_at(published_file: _BoundPublishedFile) -> None:
         and os.readlink(backup_name, dir_fd=published_file.directory_fd)
         == os.readlink(published_file.name, dir_fd=published_file.directory_fd)
     ):
-        os.unlink(backup_name, dir_fd=published_file.directory_fd)
+        _unlink(backup_name, dir_fd=published_file.directory_fd)
         return
-    os.replace(
+    _replace(
         backup_name, published_file.name, src_dir_fd=published_file.directory_fd, dst_dir_fd=published_file.directory_fd
     )
 
@@ -577,7 +585,7 @@ def _rollback_bound_file(published_file: _BoundPublishedFile) -> list[Path]:
             _restore_backup_at(published_file)
         else:
             with suppress(FileNotFoundError):
-                os.unlink(published_file.name, dir_fd=published_file.directory_fd)
+                _unlink(published_file.name, dir_fd=published_file.directory_fd)
     except OSError:
         return [published_file.target]
     return []
@@ -601,7 +609,7 @@ def _replace_source(file: StagedFile, destination_name: str | Path, destination_
     if (source_directory_fd := file.source_directory_fd) is not None:
         if destination_fd is None:
             raise OSError(f"descriptor-only staging requires a destination descriptor: {file.target}")
-        os.replace(
+        _replace(
             cast("str", file.source_name),
             cast("str", destination_name),
             src_dir_fd=source_directory_fd,
@@ -609,9 +617,9 @@ def _replace_source(file: StagedFile, destination_name: str | Path, destination_
         )
         return
     if destination_fd is None:
-        cast("Path", file.staged_file).replace(destination_name)
+        _replace(cast("Path", file.staged_file), destination_name)
         return
-    os.replace(cast("Path", file.staged_file), destination_name, dst_dir_fd=destination_fd)
+    _replace(cast("Path", file.staged_file), destination_name, dst_dir_fd=destination_fd)
 
 
 def _publish_staged_files_at(files: Sequence[StagedFile]) -> None:  # noqa: PLR0912
@@ -651,7 +659,7 @@ def _publish_staged_files_at(files: Sequence[StagedFile]) -> None:  # noqa: PLR0
             failures.extend(_rollback_bound_file(published_file))
         for directory in reversed(created_directories):
             try:
-                os.rmdir(directory.name, dir_fd=directory.parent_fd)
+                _rmdir(directory.name, dir_fd=directory.parent_fd)
             except OSError:
                 failures.append(directory.path)
         if failures:
@@ -662,7 +670,7 @@ def _publish_staged_files_at(files: Sequence[StagedFile]) -> None:  # noqa: PLR0
         for published_file in journal:
             if published_file.backup_name is not None:
                 with suppress(OSError):
-                    os.unlink(published_file.backup_name, dir_fd=published_file.directory_fd)
+                    _unlink(published_file.backup_name, dir_fd=published_file.directory_fd)
     finally:
         for published_file in journal:
             os.close(published_file.directory_fd)
@@ -704,7 +712,7 @@ def _publish_staged_files_by_path(files: Sequence[StagedFile]) -> None:  # pragm
     for published_file in journal:
         if published_file.backup is not None:
             with suppress(OSError):
-                published_file.backup.unlink()
+                _unlink(published_file.backup)
 
 
 def publish_staged_files(files: Iterable[tuple[Path, Path] | StagedFile]) -> None:

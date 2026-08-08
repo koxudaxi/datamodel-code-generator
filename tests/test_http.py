@@ -1295,7 +1295,7 @@ def test_remote_lock_transaction_attempts_all_cleanup_after_one_staged_source_un
     if failed_name is None:
         assert failed_file.staged_file is not None
         failed_name = failed_file.staged_file.name
-    original_unlink = publication_module.os.unlink
+    original_unlink = publication_module._unlink
     failed_once = False
 
     def fail_one_source_unlink(path: str | Path, *args: object, **kwargs: object) -> None:
@@ -1306,7 +1306,7 @@ def test_remote_lock_transaction_attempts_all_cleanup_after_one_staged_source_un
             raise OSError(msg)
         original_unlink(path, *args, **kwargs)
 
-    monkeypatch.setattr(publication_module.os, "unlink", fail_one_source_unlink)
+    monkeypatch.setattr(publication_module, "_unlink", fail_one_source_unlink)
 
     with pytest.raises(OSError, match="simulated staged cleanup failure"):
         transaction.discard()

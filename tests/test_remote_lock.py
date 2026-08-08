@@ -242,7 +242,7 @@ def test_staging_directory_handles_deleted_sources_closed_handles_and_cleanup_fa
     staging = publication_module.StagingDirectory.create(anchor, prefix=".stage-")
     file_fd, name = staging.create_file(prefix=".source-")
     os.close(file_fd)
-    original_unlink = publication_module.os.unlink
+    original_unlink = publication_module._unlink
 
     def fail_staged_unlink(path: str | Path, *args: object, **kwargs: object) -> None:
         if Path(path).name == name:
@@ -250,7 +250,7 @@ def test_staging_directory_handles_deleted_sources_closed_handles_and_cleanup_fa
             raise OSError(msg)
         original_unlink(path, *args, **kwargs)
 
-    monkeypatch.setattr(publication_module.os, "unlink", fail_staged_unlink)
+    monkeypatch.setattr(publication_module, "_unlink", fail_staged_unlink)
     with pytest.raises(OSError, match="staged file is busy"):
         staging.cleanup()
     monkeypatch.undo()
@@ -369,7 +369,7 @@ def test_descriptor_publication_error_and_rollback_primitives_preserve_private_e
     )
     assert not (parent / ".symlink.py.backup").exists()
 
-    original_unlink = publication_module.os.unlink
+    original_unlink = publication_module._unlink
 
     def fail_target_unlink(path: str, *args: object, **kwargs: object) -> None:
         if path == target.name:
@@ -377,7 +377,7 @@ def test_descriptor_publication_error_and_rollback_primitives_preserve_private_e
             raise OSError(msg)
         original_unlink(path, *args, **kwargs)
 
-    monkeypatch.setattr(publication_module.os, "unlink", fail_target_unlink)
+    monkeypatch.setattr(publication_module, "_unlink", fail_target_unlink)
     assert publication_module._rollback_bound_file(
         publication_module._BoundPublishedFile(target, directory_fd, target.name, None)
     ) == [target]
@@ -466,8 +466,8 @@ def test_descriptor_publication_copy_and_journal_failure_paths_use_real_files(
     generated = tmp_path / "generated.py"
     generated.write_text("generated\n", encoding="utf-8")
     nested_target = tmp_path / "created" / "target.py"
-    original_replace = publication_module.os.replace
-    original_rmdir = publication_module.os.rmdir
+    original_replace = publication_module._replace
+    original_rmdir = publication_module._rmdir
 
     def fail_replace(source_path: str | Path, *args: object, **kwargs: object) -> None:
         if source_path == generated:
@@ -481,8 +481,8 @@ def test_descriptor_publication_copy_and_journal_failure_paths_use_real_files(
             raise OSError(msg)
         original_rmdir(name, *args, **kwargs)
 
-    monkeypatch.setattr(publication_module.os, "replace", fail_replace)
-    monkeypatch.setattr(publication_module.os, "rmdir", fail_created_directory_removal)
+    monkeypatch.setattr(publication_module, "_replace", fail_replace)
+    monkeypatch.setattr(publication_module, "_rmdir", fail_created_directory_removal)
     with pytest.raises(OSError, match="failed to roll back batch output"):
         publication_module.publish_staged_files((
             publication_module.StagedFile(generated, nested_target, nested_target),
@@ -808,7 +808,7 @@ def test_remote_lock_cleans_up_after_atomic_write_failures(tmp_path: Path, monke
     updater = RemoteReferenceLock.open(lockfile, update=True, locked=False)
     updater.record_response("https://schemas.example/schema.json", None, None, b"schema")
     monkeypatch.undo()
-    monkeypatch.setattr(publication_module.os, "replace", raise_os_error)
+    monkeypatch.setattr(publication_module, "_replace", raise_os_error)
     with pytest.raises(RemoteLockError, match="Unable to update remote lock"):
         updater.commit()
     assert not lockfile.exists()
