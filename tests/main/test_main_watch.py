@@ -88,6 +88,8 @@ def _watch_cli_command(input_path: Path, output_path: Path, extra_args: list[str
             "--parallel-mode",
             "--source",
             str(PACKAGE_ROOT),
+            "--rcfile",
+            str(PROJECT_ROOT / "pyproject.toml"),
         ])
     command.extend([
         "-m",
@@ -297,6 +299,7 @@ def test_watch_cli_command_uses_coverage_for_coverage_env(tmp_path: Path, monkey
     command = _watch_cli_command(tmp_path / "schema.json", tmp_path / "output.py")
 
     assert command[1:8] == ["-m", "coverage", "run", "--branch", "--concurrency=thread", "--parallel-mode", "--source"]
+    assert command[8:11] == [str(PACKAGE_ROOT), "--rcfile", str(PROJECT_ROOT / "pyproject.toml")]
 
 
 @pytest.mark.allow_direct_assert
@@ -323,6 +326,7 @@ def test_watch_cli_resolves_relative_coverage_file_for_other_working_directory(
     working_directory = tmp_path / "working-directory"
     project_root.mkdir()
     working_directory.mkdir()
+    shutil.copyfile(PROJECT_ROOT / "pyproject.toml", project_root / "pyproject.toml")
     input_file = working_directory / "schema.json"
     output_file = working_directory / "output.py"
     input_file.write_text(WATCH_SCHEMA_INITIAL, encoding="utf-8")
@@ -1495,6 +1499,17 @@ def test_watch_formatter_refresh_handles_unavailable_source_and_parent_bindings(
         _restore_watch_package,
     )
 
+    source_error_message = "formatter source is unavailable"
+
+    def raise_source_error(_module_name: str) -> NoReturn:
+        raise OSError(source_error_message)
+
+    unavailable_source_package = ModuleType("watch_unavailable_source_package")
+    unavailable_source_package.__spec__ = ModuleSpec(
+        unavailable_source_package.__name__, SimpleNamespace(get_source=raise_source_error), is_package=True
+    )
+    assert _prepare_watch_module(unavailable_source_package) is None
+
     unavailable_package = ModuleType("watch_unavailable_package")
     unavailable_package.__spec__ = ModuleSpec(
         unavailable_package.__name__,
@@ -1535,6 +1550,60 @@ def test_watch_formatter_refresh_handles_unavailable_source_and_parent_bindings(
 
 
 @pytest.mark.allow_direct_assert
+def test_watch_source_loader_finder_handles_unavailable_and_non_source_children(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Source-first imports preserve unsupported children without inspecting unrelated imports."""
+    from datamodel_code_generator.format import _WatchSourceFinder, _WatchSourceLoader
+
+    fallback_module = ModuleType("watch_fallback_module")
+
+    def execute_fallback(module: ModuleType) -> None:
+        module.__dict__["used_fallback"] = True
+
+    loader = _WatchSourceLoader(
+        SimpleNamespace(get_source=lambda _module_name: None, exec_module=execute_fallback), None
+    )
+    loader.exec_module(fallback_module)
+    assert fallback_module.used_fallback
+
+    package_name = "watch_finder_package"
+    package = ModuleType(package_name)
+    package.__path__ = [str(tmp_path)]
+    monkeypatch.setitem(sys.modules, package_name, package)
+    (tmp_path / "namespace_child").mkdir()
+    finder = _WatchSourceFinder(package_name)
+
+    assert finder.find_spec("unrelated_module") is None
+    assert finder.find_spec(f"{package_name}.missing_child", []) is None
+    namespace_spec = finder.find_spec(f"{package_name}.namespace_child", [str(tmp_path)])
+    assert namespace_spec is not None
+    assert namespace_spec.loader is None
+
+
+@pytest.mark.allow_direct_assert
+def test_watch_formatter_cleanup_allows_a_package_to_remove_its_finder(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A formatter package may alter the import hooks while its source executes."""
+    from datamodel_code_generator.format import _fresh_watch_package
+
+    package_name = "watch_finder_cleanup_package"
+    formatter_directory = tmp_path / "formatters"
+    package_directory = formatter_directory / package_name
+    package_directory.mkdir(parents=True)
+    package_source = package_directory / "__init__.py"
+    package_source.write_text("pass\n", encoding="utf-8")
+    monkeypatch.syspath_prepend(str(formatter_directory))
+    package = import_module(package_name)
+    package_source.write_text("import sys\nsys.meta_path.pop(0)\n", encoding="utf-8")
+    try:
+        assert _fresh_watch_package(package) is not package
+    finally:
+        sys.modules.pop(package_name, None)
+
+
+@pytest.mark.allow_direct_assert
 def test_watch_dependencies_record_regular_yaml_loads_and_direct_files(tmp_path: Path) -> None:
     """Collector bridges capture regular YAML loads while direct additions stay available."""
     from datamodel_code_generator import load_yaml_dict_from_path
@@ -1560,13 +1629,10 @@ def test_watch_dependencies_continue_when_symlink_inspection_fails(
 
     input_file = tmp_path / "schema.json"
     input_file.write_text(WATCH_SCHEMA_INITIAL, encoding="utf-8")
-    original_is_symlink = Path.is_symlink
     error_message = "unavailable"
 
-    def raise_symlink_error(path: Path) -> bool:
-        if path == input_file:
-            raise OSError(error_message)
-        return original_is_symlink(path)
+    def raise_symlink_error(_path: Path) -> bool:
+        raise OSError(error_message)
 
     monkeypatch.setattr(Path, "is_symlink", raise_symlink_error)
     dependencies = WatchDependencies()
@@ -1705,12 +1771,21 @@ def test_watch_dependencies_publish_complete_generation_graphs(tmp_path: Path) -
 
 
 @pytest.mark.allow_direct_assert
-def test_watch_dependencies_do_not_watch_the_filesystem_root_for_system_symlink_ancestors() -> None:
+def test_watch_dependencies_do_not_watch_the_filesystem_root_for_system_symlink_ancestors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """A lexical path below ``/tmp`` never promotes the stable system link parent to ``/``."""
     from datamodel_code_generator.watch_dependencies import WatchDependencies
 
+    system_link = Path("/tmp")
+    original_is_symlink = Path.is_symlink
+
+    def is_system_link(path: Path) -> bool:
+        return path == system_link or original_is_symlink(path)
+
+    monkeypatch.setattr(Path, "is_symlink", is_system_link)
     dependencies = WatchDependencies()
-    dependencies.add_file(Path("/tmp/dcg-watch-root-protection/schema.json"))
+    dependencies.add_file(system_link / "dcg-watch-root-protection/schema.json")
 
     assert Path("/") not in dependencies.watch_roots()
 
@@ -2026,13 +2101,10 @@ def test_watch_dependencies_ignore_raw_paths_that_cannot_be_expanded(
     from datamodel_code_generator.watch_dependencies import WatchDependencies
 
     invalid_path = Path("unexpandable.json")
-    original_expanduser = Path.expanduser
     error_message = "unexpandable"
 
-    def raise_expansion_error(path: Path) -> Path:
-        if path == invalid_path:
-            raise OSError(error_message)
-        return original_expanduser(path)
+    def raise_expansion_error(_path: Path) -> Path:
+        raise OSError(error_message)
 
     monkeypatch.setattr(Path, "expanduser", raise_expansion_error)
     dependencies = WatchDependencies()
@@ -2667,15 +2739,10 @@ def test_watch_dependencies_handle_path_resolution_errors(monkeypatch: pytest.Mo
     from datamodel_code_generator.watch_dependencies import _logical_working_directory, _path_variants
 
     unresolved_path = tmp_path / "unresolved.json"
-    original_resolve = Path.resolve
-    original_samefile = Path.samefile
     resolution_error = "unresolvable"
-    unresolvable_paths = (unresolved_path, unresolved_path.parent)
 
-    def raise_resolution_error(path: Path, *args: object, **kwargs: object) -> Path:
-        if path in unresolvable_paths:
-            raise OSError(resolution_error)
-        return original_resolve(path, *args, **kwargs)
+    def raise_resolution_error(_path: Path, *_args: object, **_kwargs: object) -> Path:
+        raise OSError(resolution_error)
 
     monkeypatch.setattr(Path, "resolve", raise_resolution_error)
     assert _path_variants(unresolved_path) == frozenset({unresolved_path})
@@ -2685,7 +2752,6 @@ def test_watch_dependencies_handle_path_resolution_errors(monkeypatch: pytest.Mo
 
     monkeypatch.setattr(Path, "samefile", raise_samefile_error)
     assert _logical_working_directory() == Path.cwd()
-    monkeypatch.setattr(Path, "samefile", original_samefile)
 
 
 @pytest.mark.skipif(os.name == "nt", reason="requires POSIX symlinks")
