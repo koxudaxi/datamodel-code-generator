@@ -4852,7 +4852,7 @@ def test_output_format_json_check_missing_output_file(tmp_path: Path, capsys: py
         )
     captured = capsys.readouterr()
     assert_output(
-        captured.out.replace((tmp_path / output_path).as_posix(), OUTPUT_FILE_PLACEHOLDER),
+        captured.out.replace((tmp_path / output_path).resolve().as_posix(), OUTPUT_FILE_PLACEHOLDER),
         EXPECTED_OUTPUT_FORMAT_JSON_PATH / "check_missing_output_file.txt",
     )
     assert_output(captured.err, EXPECTED_EMPTY_OUTPUT_PATH)

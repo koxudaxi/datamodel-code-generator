@@ -13,6 +13,7 @@ from datamodel_code_generator.__main__ import (
     Exit,
     OutputComparisonOptions,
     _compare_generated_outputs,
+    _output_comparison_policy,
     _write_comparison_output,
 )
 from tests.conftest import assert_output, create_assert_file_content
@@ -42,6 +43,36 @@ LOCAL_INPUT_TYPE_CASES: tuple[tuple[InputFileTypeLiteral, Path, bool], ...] = (
 VIRTUAL_FILE_SENTINEL = INPUT_DIFF_EXPECTED_PATH / "virtual_file_sentinel.py"
 VIRTUAL_DIRECTORY_SENTINEL = INPUT_DIFF_EXPECTED_PATH / "virtual_directory_sentinel"
 assert_file_content = create_assert_file_content(INPUT_DIFF_EXPECTED_PATH)
+
+
+@pytest.mark.parametrize(
+    ("input_diff", "expected_policy"),
+    [
+        (
+            False,
+            (
+                "missing",
+                "should be generated",
+                "file does not exist but should be generated",
+                "extra",
+                "no longer generated",
+            ),
+        ),
+        (
+            True,
+            (
+                "added",
+                "generated only from new input",
+                "generated only from new input",
+                "removed",
+                "generated only from old input",
+            ),
+        ),
+    ],
+)
+def test_output_comparison_policy(input_diff: bool, expected_policy: tuple[str, str, str, str, str]) -> None:
+    """Return an explicit policy for both normal and two-input comparisons."""
+    assert _output_comparison_policy(input_diff=input_diff) == expected_policy
 
 
 def test_diff_against_identical_single_file_does_not_write_virtual_output(

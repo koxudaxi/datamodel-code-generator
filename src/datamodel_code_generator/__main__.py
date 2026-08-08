@@ -1403,24 +1403,22 @@ OutputComparisonPolicy: TypeAlias = tuple[
 
 def _output_comparison_policy(*, input_diff: bool) -> OutputComparisonPolicy:
     """Return shared missing and extra reporting values for one comparison."""
-    match input_diff:
-        case True:
-            missing_message_suffix = "generated only from new input"
-            return (
-                "added",
-                missing_message_suffix,
-                missing_message_suffix,
-                "removed",
-                "generated only from old input",
-            )
-        case False:
-            return (
-                "missing",
-                "should be generated",
-                "file does not exist but should be generated",
-                "extra",
-                "no longer generated",
-            )
+    if input_diff:
+        missing_message_suffix = "generated only from new input"
+        return (
+            "added",
+            missing_message_suffix,
+            missing_message_suffix,
+            "removed",
+            "generated only from old input",
+        )
+    return (
+        "missing",
+        "should be generated",
+        "file does not exist but should be generated",
+        "extra",
+        "no longer generated",
+    )
 
 
 def _compare_single_file(
@@ -3062,7 +3060,8 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
         temp_context: tempfile.TemporaryDirectory[str] | None = tempfile.TemporaryDirectory()
         temp_dir = Path(temp_context.name)
         if is_directory_output:
-            generate_output: Path | None = temp_dir / ("new" if config.diff_against else "") / config_output.name
+            generate_output_root = temp_dir / "new" if config.diff_against else temp_dir
+            generate_output: Path | None = generate_output_root / config_output.name
             compare_output = temp_dir / "old" / config_output.name if config.diff_against else None
         else:
             generate_output = temp_dir / ("new.py" if config.diff_against else "output.py")
