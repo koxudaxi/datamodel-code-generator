@@ -8,7 +8,7 @@ import stat
 import sys
 from argparse import Namespace
 from pathlib import Path
-from typing import TYPE_CHECKING, BinaryIO
+from typing import TYPE_CHECKING, BinaryIO, cast
 
 import black
 import jsonschema
@@ -1583,6 +1583,127 @@ def test_pyproject_jobs_report_batch_watch_startup_error(
     assert_file_content(jobs_project["strict"], "jobs/strict.py")
 
 
+@pytest.mark.allow_direct_assert
+def test_pyproject_jobs_watch_retains_failed_initial_generation_dependencies(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Retain a full batch graph when its initial watched generation cannot be staged."""
+    from datamodel_code_generator.watch_dependencies import WatchDependencies
+
+    input_path = tmp_path / "schema.json"
+    output_path = tmp_path / "output.py"
+    input_path.write_text((JSON_SCHEMA_DATA_PATH / "person.json").read_text(encoding="utf-8"), encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        f"""
+[tool.datamodel-codegen]
+disable-timestamp = true
+input-file-type = "jsonschema"
+watch = true
+
+[tool.datamodel-codegen.jobs.models]
+input = "{input_path.as_posix()}"
+output = "{output_path.as_posix()}"
+""",
+        encoding="utf-8",
+    )
+
+    def fail_staging(_plans: object) -> tuple[()]:
+        msg = "simulated watched staging failure"
+        raise OSError(msg)
+
+    monkeypatch.setattr(main_module, "_stage_job_plans", fail_staging)
+    dependencies = WatchDependencies()
+
+    with chdir(tmp_path):
+        assert main_module._main(["--all-jobs"], start_watch=False, dependencies=dependencies) is Exit.ERROR
+
+    assert_error_message(capsys, "could not prepare batch output staging: simulated watched staging failure")
+    assert dependencies.includes(input_path)
+    assert dependencies.includes(tmp_path / "pyproject.toml")
+    assert output_path in dependencies.outputs
+
+
+@pytest.mark.allow_direct_assert
+def test_pyproject_jobs_watch_records_raw_dependencies_after_invalid_plan(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Keep raw profile, JSON, and input paths observable when a batch plan is invalid."""
+    from datamodel_code_generator.watch_dependencies import WatchDependencies
+
+    pyproject_path = tmp_path / "pyproject.toml"
+    pyproject_path.write_text(
+        """
+[tool.datamodel-codegen]
+input-file-type = "jsonschema"
+aliases = "base-aliases.json"
+
+[tool.datamodel-codegen.profiles]
+invalid = "not a profile table"
+
+[tool.datamodel-codegen.profiles.base]
+extends = "root"
+aliases = "base-profile-aliases.json"
+
+[tool.datamodel-codegen.profiles.root]
+aliases = "root-profile-aliases.json"
+
+[tool.datamodel-codegen.profiles.child]
+extends = ["base", "child", "invalid"]
+default-values = "child-defaults.json"
+
+[tool.datamodel-codegen.jobs.models]
+profile = "child"
+input = "missing-schema.json"
+output = "output.py"
+aliases = []
+default-values = "job-defaults.json"
+""",
+        encoding="utf-8",
+    )
+    dependencies = WatchDependencies()
+
+    with chdir(tmp_path):
+        assert main_module._main(["--all-jobs"], start_watch=False, dependencies=dependencies) is Exit.ERROR
+
+    assert_error_message(capsys, "Profile 'child' cannot extend itself")
+    for dependency in (
+        pyproject_path,
+        tmp_path / "base-aliases.json",
+        tmp_path / "base-profile-aliases.json",
+        tmp_path / "root-profile-aliases.json",
+        tmp_path / "child-defaults.json",
+        tmp_path / "job-defaults.json",
+        tmp_path / "missing-schema.json",
+    ):
+        assert dependencies.includes(dependency)
+
+    find_project_config = main_module._find_datamodel_codegen_project_config_with_path
+
+    def fail_project_lookup(_path: Path) -> tuple[Path, dict[str, object]]:
+        msg = "simulated project lookup failure"
+        raise OSError(msg)
+
+    monkeypatch.setattr(main_module, "_find_datamodel_codegen_project_config_with_path", fail_project_lookup)
+    main_module._record_raw_batch_watch_dependencies(Namespace(all_jobs=True, job=None), dependencies)
+    monkeypatch.setattr(main_module, "_find_datamodel_codegen_project_config_with_path", find_project_config)
+
+    pyproject_path.write_text('[tool.datamodel-codegen]\njobs = "invalid"\n', encoding="utf-8")
+    invalid_jobs_dependencies = WatchDependencies()
+    with chdir(tmp_path):
+        assert (
+            main_module._main(["--all-jobs"], start_watch=False, dependencies=invalid_jobs_dependencies) is Exit.ERROR
+        )
+    assert_error_message(capsys, "No jobs found in [tool.datamodel-codegen.jobs]")
+    assert invalid_jobs_dependencies.includes(pyproject_path)
+
+    pyproject_path.write_text('[tool.datamodel-codegen.jobs]\nmodels = "invalid"\n', encoding="utf-8")
+    invalid_job_dependencies = WatchDependencies()
+    with chdir(tmp_path):
+        assert main_module._main(["--all-jobs"], start_watch=False, dependencies=invalid_job_dependencies) is Exit.ERROR
+    assert_error_message(capsys, "Job 'models' must be a table")
+    assert invalid_job_dependencies.includes(pyproject_path)
+
+
 @pytest.mark.parametrize(
     "command_option",
     ["list-deprecations", "list-experimental"],
@@ -2595,13 +2716,72 @@ def test_pyproject_jobs_publish_rejects_directory_file_target(tmp_path: Path) ->
 
 
 @pytest.mark.allow_direct_assert
-def test_pyproject_jobs_publication_helpers_handle_existing_directories(tmp_path: Path) -> None:
-    """Avoid recording an existing directory as transaction-owned and ignore check-only staging."""
+def test_pyproject_jobs_windows_fallback_publication_helpers(tmp_path: Path) -> None:
+    """Cover lexical fallback helpers that the POSIX descriptor publication path cannot execute."""
     existing_directory = tmp_path / "existing"
     existing_directory.mkdir()
 
     assert _create_directory(existing_directory) is False
+    created_directories: list[Path] = []
+    _create_target_parent(tmp_path / "created" / "nested" / "model.py", created_directories)
+    assert created_directories == [tmp_path / "created", tmp_path / "created" / "nested"]
+
+    target = tmp_path / "target.py"
+    target.write_text("stale\n", encoding="utf-8")
+    backup = _backup_existing_target(target)
+    _restore_backup(backup, target)
+    _assert_file_does_not_exist(backup)
+    assert target.read_text(encoding="utf-8") == "stale\n"
+
+    empty_directory = tmp_path / "empty"
+    empty_directory.mkdir()
+    assert _remove_created_directory(empty_directory) == []
     assert list(_staged_files(_StagedJobPlan(None, None, None, None, None, None, None, None, None, None, ()))) == []
+
+
+@pytest.mark.allow_direct_assert
+@pytest.mark.skipif(os.name == "nt", reason="POSIX permission modes are unsupported on Windows")
+def test_pyproject_jobs_publish_nested_output_and_preserve_mode(tmp_path: Path) -> None:
+    """Publish into new parent directories and preserve the mode on a later replacement."""
+    output_path = tmp_path / "created" / "nested" / "model.py"
+    (tmp_path / "pyproject.toml").write_text(
+        f"""
+[tool.datamodel-codegen]
+disable-timestamp = true
+input-file-type = "jsonschema"
+
+[tool.datamodel-codegen.jobs.models]
+input = "{(JSON_SCHEMA_DATA_PATH / "person.json").as_posix()}"
+output = "{output_path.as_posix()}"
+""",
+        encoding="utf-8",
+    )
+
+    with chdir(tmp_path):
+        run_main_with_args(["--all-jobs", "--formatters", "builtin"])
+
+    assert_output(output_path.read_text(encoding="utf-8"), DATA_PATH / "expected" / "main" / "person.py")
+    output_path.chmod(0o640)
+
+    with chdir(tmp_path):
+        run_main_with_args(["--all-jobs", "--formatters", "builtin"])
+
+    assert stat.S_IMODE(output_path.stat().st_mode) == 0o640
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX permission modes are unsupported on Windows")
+@pytest.mark.allow_direct_assert
+def test_pyproject_jobs_windows_fallback_preserves_target_mode(tmp_path: Path) -> None:
+    """Cover the Windows lexical fallback mode transfer outside POSIX descriptor publication."""
+    staged_file = tmp_path / "staged.py"
+    target = tmp_path / "target.py"
+    staged_file.write_text("generated\n", encoding="utf-8")
+    target.write_text("stale\n", encoding="utf-8")
+    target.chmod(0o640)
+
+    main_module._preserve_target_mode(staged_file, target)
+
+    assert stat.S_IMODE(staged_file.stat().st_mode) == 0o640
 
 
 def test_pyproject_jobs_staging_failure_removes_earlier_staging(
@@ -2695,8 +2875,7 @@ emit-model-metadata = "{metadata_output.as_posix()}"
 
     def record_anchor(path: Path) -> main_module._PublicationAnchor:
         anchor = publication_anchor(path)
-        if anchor.directory_fd is not None:
-            anchored_descriptors.add(anchor.directory_fd)
+        anchored_descriptors.add(cast("int", anchor.directory_fd))
         return anchor
 
     close = os.close
@@ -2973,15 +3152,16 @@ def test_pyproject_jobs_reject_invalid_definitions_before_writing(
     _assert_file_does_not_exist(output_path)
 
 
+@pytest.mark.allow_direct_assert
 def test_pyproject_jobs_require_project_configuration(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """Require a project configuration rather than silently falling back to stdin."""
+    from datamodel_code_generator.watch_dependencies import WatchDependencies
+
+    dependencies = WatchDependencies()
     with chdir(tmp_path):
-        run_main_with_args(
-            ["--job", "api"],
-            expected_exit=Exit.ERROR,
-            capsys=capsys,
-            expected_stderr_contains="No [tool.datamodel-codegen] section found",
-        )
+        assert main_module._main(["--job", "api"], start_watch=False, dependencies=dependencies) is Exit.ERROR
+
+    assert_error_message(capsys, "No [tool.datamodel-codegen] section found")
 
 
 def test_pyproject_jobs_normalize_project_path_errors(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

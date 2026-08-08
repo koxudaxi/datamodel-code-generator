@@ -2124,6 +2124,32 @@ def test_watch_dependencies_ignore_raw_paths_that_cannot_be_expanded(
     assert not dependencies.files
 
 
+@pytest.mark.allow_direct_assert
+def test_watch_dependencies_keep_explicit_metadata_outputs_when_raw_output_resolution_fails(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A malformed raw output does not hide an explicitly-file metadata recovery output."""
+    from datamodel_code_generator import watch_dependencies as dependency_module
+    from datamodel_code_generator.watch_dependencies import WatchDependencies
+
+    unreadable_output = tmp_path / "unreadable-output.py"
+    metadata_output = tmp_path / "metadata"
+    original_resolved_path = dependency_module._resolved_path
+
+    def fail_unreadable_output(path: Path) -> Path:
+        if path == unreadable_output:
+            msg = "simulated raw output resolution failure"
+            raise OSError(msg)
+        return original_resolved_path(path)
+
+    monkeypatch.setattr(dependency_module, "_resolved_path", fail_unreadable_output)
+    dependencies = WatchDependencies()
+    dependencies.stage_raw_config({"output": unreadable_output, "emit_model_metadata": metadata_output})
+
+    assert unreadable_output not in dependencies.outputs
+    assert metadata_output in dependencies.outputs
+
+
 @pytest.mark.skipif(find_spec("grpc_tools") is None, reason="requires the protobuf extra")
 def test_regular_generation_does_not_load_watch_dependency_collector(tmp_path: Path) -> None:
     """Non-watch protobuf and custom formatter execution skip all watch collector work."""

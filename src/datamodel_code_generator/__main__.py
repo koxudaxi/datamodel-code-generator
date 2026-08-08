@@ -1007,16 +1007,20 @@ def _get_job_config(  # noqa: PLR0913
     if any(source in normalized_config for source in ("input_model", "url")):
         msg = f"Job '{name}' only supports an 'input' file; use a separate job for each input source"
         raise Error(msg)
-    config = _create_config(normalized_config, cli_config_args)
-    _apply_preset(config, normalized_config, cli_config_args)
-    _validate_final_config(config)
     if any(
         "\0" in os.fspath(path)
-        for path in (config.input, config.output, config.emit_model_metadata)
-        if path is not None
+        for path in (
+            normalized_config.get("input"),
+            normalized_config.get("output"),
+            normalized_config.get("emit_model_metadata"),
+        )
+        if isinstance(path, str | Path)
     ):
         msg = f"Job '{name}' contains a null path character"
         raise ValueError(msg)
+    config = _create_config(normalized_config, cli_config_args)
+    _apply_preset(config, normalized_config, cli_config_args)
+    _validate_final_config(config)
     if command_only_fields := [
         field_name for field_name in sorted(BATCH_COMMAND_ONLY_CONFIG_FIELDS) if getattr(config, field_name)
     ]:

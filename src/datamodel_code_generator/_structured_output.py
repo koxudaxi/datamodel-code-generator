@@ -263,12 +263,6 @@ def check_output_json(
     return _dump_json(payload.model_dump(mode="json"))
 
 
-def batch_output_json(jobs: list[BatchJobPayload]) -> str:
-    """Serialize named batch generation results as one JSON document."""
-    payload = BatchOutputPayload(version=1, format="json", kind="batch", jobs=jobs)
-    return _dump_json(payload.model_dump(mode="json"))
-
-
 def generation_output_json_schema() -> str:
     return _dump_json(
         _schema_with_metadata(
