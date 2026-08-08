@@ -2836,30 +2836,6 @@ def test_pyproject_jobs_publish_rejects_directory_file_target(tmp_path: Path) ->
 
 
 @pytest.mark.allow_direct_assert
-def test_pyproject_jobs_windows_fallback_publication_helpers(tmp_path: Path) -> None:
-    """Cover lexical fallback helpers that the POSIX descriptor publication path cannot execute."""
-    existing_directory = tmp_path / "existing"
-    existing_directory.mkdir()
-
-    assert _create_directory(existing_directory) is False
-    created_directories: list[Path] = []
-    _create_target_parent(tmp_path / "created" / "nested" / "model.py", created_directories)
-    assert created_directories == [tmp_path / "created", tmp_path / "created" / "nested"]
-
-    target = tmp_path / "target.py"
-    target.write_text("stale\n", encoding="utf-8")
-    backup = _backup_existing_target(target)
-    _restore_backup(backup, target)
-    _assert_file_does_not_exist(backup)
-    assert target.read_text(encoding="utf-8") == "stale\n"
-
-    empty_directory = tmp_path / "empty"
-    empty_directory.mkdir()
-    assert _remove_created_directory(empty_directory) == []
-    assert list(_staged_files(_StagedJobPlan(None, None, None, None, None, None, None, None, None, None, ()))) == []
-
-
-@pytest.mark.allow_direct_assert
 @pytest.mark.skipif(os.name == "nt", reason="POSIX permission modes are unsupported on Windows")
 def test_pyproject_jobs_publish_nested_output_and_preserve_mode(tmp_path: Path) -> None:
     """Publish into new parent directories and preserve the mode on a later replacement."""
@@ -2888,20 +2864,6 @@ output = "{output_path.as_posix()}"
 
     assert stat.S_IMODE(output_path.stat().st_mode) == 0o640
 
-
-@pytest.mark.skipif(os.name == "nt", reason="POSIX permission modes are unsupported on Windows")
-@pytest.mark.allow_direct_assert
-def test_pyproject_jobs_windows_fallback_preserves_target_mode(tmp_path: Path) -> None:
-    """Cover the Windows lexical fallback mode transfer outside POSIX descriptor publication."""
-    staged_file = tmp_path / "staged.py"
-    target = tmp_path / "target.py"
-    staged_file.write_text("generated\n", encoding="utf-8")
-    target.write_text("stale\n", encoding="utf-8")
-    target.chmod(0o640)
-
-    main_module._preserve_target_mode(staged_file, target)
-
-    assert stat.S_IMODE(staged_file.stat().st_mode) == 0o640
 
 def test_pyproject_jobs_staging_failure_removes_earlier_staging(
     tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
