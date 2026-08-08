@@ -1010,6 +1010,13 @@ def _get_job_config(  # noqa: PLR0913
     config = _create_config(normalized_config, cli_config_args)
     _apply_preset(config, normalized_config, cli_config_args)
     _validate_final_config(config)
+    if any(
+        "\0" in os.fspath(path)
+        for path in (config.input, config.output, config.emit_model_metadata)
+        if path is not None
+    ):
+        msg = f"Job '{name}' contains a null path character"
+        raise ValueError(msg)
     if command_only_fields := [
         field_name for field_name in sorted(BATCH_COMMAND_ONLY_CONFIG_FIELDS) if getattr(config, field_name)
     ]:
