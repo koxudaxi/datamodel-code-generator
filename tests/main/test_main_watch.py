@@ -1750,6 +1750,24 @@ def test_watch_dependencies_collapse_nested_watch_roots(tmp_path: Path) -> None:
 
 
 @pytest.mark.allow_direct_assert
+def test_watch_dependencies_keep_configured_directory_watch_roots_at_the_parent(tmp_path: Path) -> None:
+    """Configured directories can be deleted and recreated without replacing the watcher."""
+    from datamodel_code_generator.watch_dependencies import WatchDependencies
+
+    external_directory = tmp_path / "external"
+    template_directory = external_directory / "templates"
+    external_directory.mkdir()
+    dependencies = WatchDependencies()
+    dependencies.add_directory(template_directory)
+
+    assert dependencies.watch_roots() == (external_directory,)
+    template_directory.mkdir()
+    with dependencies.generation():
+        pass
+    assert dependencies.watch_roots() == (external_directory,)
+
+
+@pytest.mark.allow_direct_assert
 def test_watch_dependencies_accepts_external_parent_events_only_while_polling(tmp_path: Path) -> None:
     """Polling can handle the directory event emitted for an external dependency replacement."""
     from datamodel_code_generator.watch_dependencies import WatchDependencies

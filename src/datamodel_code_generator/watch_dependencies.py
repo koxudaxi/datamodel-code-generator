@@ -191,7 +191,9 @@ class WatchDependencies(_Weakrefable):
             files | static_symlink_events | self._generation_symlink_events | failed_generation_symlink_events
         )
         roots = {_nearest_existing_directory(path.parent) for path in files}
-        roots.update(_nearest_existing_directory(path) for path in directories)
+        # Keep configured directory roots stable when the directory itself is
+        # removed and recreated. Its parent still receives the relevant event.
+        roots.update(_nearest_existing_directory(path.parent) for path in directories)
         roots.update(_nearest_existing_directory(path) for path in event_paths)
         watch_roots_list: list[Path] = []
         sorted_roots = sorted(

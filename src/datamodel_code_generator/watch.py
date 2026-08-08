@@ -125,7 +125,7 @@ def _watch_changes(
             recursive=True,
             rust_timeout=poll_delay_ms if force_polling else 5000,
             stop_event=stop_event,
-            watch_filter=_watch_filter(context.dependencies, accept_directory_events=force_polling),
+            watch_filter=_watch_filter(context.dependencies, accept_directory_events=True),
             yield_on_timeout=force_polling,
         ):
             if not changes:
