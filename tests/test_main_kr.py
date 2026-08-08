@@ -2409,15 +2409,17 @@ def test_pyproject_jobs_publish_rollback_restores_prior_files(tmp_path: Path, mo
     second_staged.write_text("second generated\n", encoding="utf-8")
     first_target.write_text("first stale\n", encoding="utf-8")
     second_target.write_text("second stale\n", encoding="utf-8")
-    original_replace_source = main_module._replace_source
+    original_replace_source = publication_module._replace_source
 
-    def fail_second_publication(source: Path, destination: str | Path, destination_fd: int | None) -> None:
-        if source == second_staged:
+    def fail_second_publication(
+        source: publication_module.StagedFile, destination: str | Path, destination_fd: int | None
+    ) -> None:
+        if source.staged_file == second_staged:
             msg = "simulated publish failure"
             raise OSError(msg)
         original_replace_source(source, destination, destination_fd)
 
-    monkeypatch.setattr(main_module, "_replace_source", fail_second_publication)
+    monkeypatch.setattr(publication_module, "_replace_source", fail_second_publication)
 
     with pytest.raises(OSError, match="simulated publish failure"):
         _publish_staged_files([(first_staged, first_target), (new_staged, new_target), (second_staged, second_target)])
@@ -2454,20 +2456,16 @@ def test_pyproject_jobs_publish_first_replacement_failure_removes_backup(
     target = tmp_path / "target.py"
     staged_file.write_text("generated\n", encoding="utf-8")
     target.write_text("stale\n", encoding="utf-8")
-    original_replace_source = main_module._replace_source
 
     def fail_first_replacement(
-        source: Path,
-        destination: str | Path,
-        destination_fd: int | None,
+        _source: publication_module.StagedFile,
+        _destination: str | Path,
+        _destination_fd: int | None,
     ) -> None:
-        if source == staged_file:
-            msg = "simulated first replacement failure"
-            raise OSError(msg)
-        original_replace_source(source, destination, destination_fd)
+        msg = "simulated first replacement failure"
+        raise OSError(msg)
 
-    monkeypatch.setattr(main_module, "_replace_source", fail_first_replacement)
-    fail_first_replacement(target, target, None)
+    monkeypatch.setattr(publication_module, "_replace_source", fail_first_replacement)
 
     with pytest.raises(OSError, match="simulated first replacement failure"):
         _publish_staged_files([(staged_file, target)])
@@ -2507,20 +2505,16 @@ def test_pyproject_jobs_failed_replacement_discards_unchanged_symlink_backup(
         (EXPECTED_MAIN_KR_PATH / "jobs" / "stale.py").read_text(encoding="utf-8"), encoding="utf-8"
     )
     output_link.symlink_to(original_target)
-    original_replace_source = main_module._replace_source
 
     def fail_staged_replace(
-        source: Path,
-        destination: str | Path,
-        destination_fd: int | None,
+        _source: publication_module.StagedFile,
+        _destination: str | Path,
+        _destination_fd: int | None,
     ) -> None:
-        if source == staged_file:
-            msg = "simulated symlink replacement failure"
-            raise OSError(msg)
-        original_replace_source(source, destination, destination_fd)
+        msg = "simulated symlink replacement failure"
+        raise OSError(msg)
 
-    monkeypatch.setattr(main_module, "_replace_source", fail_staged_replace)
-    fail_staged_replace(original_target, original_target, None)
+    monkeypatch.setattr(publication_module, "_replace_source", fail_staged_replace)
 
     with pytest.raises(OSError, match="simulated symlink replacement failure"):
         _publish_staged_files([(staged_file, output_link)])
@@ -2789,20 +2783,16 @@ def test_pyproject_jobs_publish_reports_failed_rollback(tmp_path: Path, monkeypa
     target = tmp_path / "target.py"
     staged_file.write_text("generated\n", encoding="utf-8")
     target.write_text("stale\n", encoding="utf-8")
-    original_replace_source = main_module._replace_source
 
     def fail_publication(
-        source: Path,
-        destination: str | Path,
-        destination_fd: int | None,
+        _source: publication_module.StagedFile,
+        _destination: str | Path,
+        _destination_fd: int | None,
     ) -> None:
-        if source == staged_file:
-            msg = "simulated publication failure"
-            raise OSError(msg)
-        original_replace_source(source, destination, destination_fd)
+        msg = "simulated publication failure"
+        raise OSError(msg)
 
-    monkeypatch.setattr(main_module, "_replace_source", fail_publication)
-    fail_publication(target, target, None)
+    monkeypatch.setattr(publication_module, "_replace_source", fail_publication)
     monkeypatch.setattr(
         publication_module,
         "_restore_backup_at",
