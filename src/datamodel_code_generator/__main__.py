@@ -2032,6 +2032,14 @@ def _validate_publication_anchor(file: _StagedFile) -> None:
         raise OSError(msg)
 
 
+def _replace_source(source: Path, destination: str | Path, destination_fd: int | None) -> None:
+    """Atomically move a staged source through a path or pinned destination directory."""
+    if destination_fd is None:
+        source.replace(destination)
+        return
+    os.replace(source, destination, dst_dir_fd=destination_fd)
+
+
 def _publish_staged_files_by_path(files: Sequence[_StagedFile]) -> None:  # pragma: no cover - Windows fallback
     """Publish after validating the non-reparse parent where directory-relative replacement is unavailable."""
     journal: list[_PublishedFile] = []
@@ -2049,7 +2057,7 @@ def _publish_staged_files_by_path(files: Sequence[_StagedFile]) -> None:  # prag
             if backup is not None:
                 _preserve_target_mode(file.staged_file, file.target)
             _validate_planned_target(file)
-            file.staged_file.replace(file.target)
+            _replace_source(file.staged_file, file.target, None)
             _validate_planned_target(file)
             _validate_publication_anchor(file)
     except OSError as publish_error:
@@ -2223,7 +2231,7 @@ def _publish_staged_files_at(files: Sequence[_StagedFile]) -> None:  # noqa: PLR
                 if target_stat is not None and stat.S_ISREG(target_stat.st_mode):
                     with suppress(OSError):
                         file.staged_file.chmod(stat.S_IMODE(target_stat.st_mode))
-                os.replace(file.staged_file, file.resolved_target.name, dst_dir_fd=directory_fd)
+                _replace_source(file.staged_file, file.resolved_target.name, directory_fd)
                 _validate_publication_anchor(file)
                 if not _directory_fd_matches_path(directory_fd, file.resolved_target.parent):
                     msg = f"batch output destination changed during publication: {file.target}"
