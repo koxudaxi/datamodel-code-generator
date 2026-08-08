@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import stat
 from pathlib import Path
 
 import pytest
@@ -386,6 +387,16 @@ def test_descriptor_publication_error_and_rollback_primitives_preserve_private_e
     staged.write_text("staged\n", encoding="utf-8")
     staged_file = publication_module.StagedFile(staged, target, target)
     publication_module._set_staged_mode(staged_file, 0o640)
+
+    descriptor_staged_file = publication_module.StagedFile(
+        None,
+        target,
+        target,
+        source_directory_fd=directory_fd,
+        source_name=staged.name,
+    )
+    publication_module._set_staged_mode(descriptor_staged_file, 0o640)
+    assert stat.S_IMODE(os.stat(staged.name, dir_fd=directory_fd).st_mode) == 0o640
 
     def fail_staged_chmod(*_args: object, **_kwargs: object) -> None:
         msg = "staged file is busy"
