@@ -622,6 +622,14 @@ General options:
                         generated code is committed.
   --debug               show debug message (require "debug". `$ pip install
                         'datamodel-code-generator[debug]'`)
+  --diff-against BASELINE_INPUT
+                        Generate BASELINE_INPUT and the current --input into
+                        temporary outputs, then show the generated-code diff
+                        from baseline to current. Requires --input and
+                        --output; --output is a virtual output path that
+                        selects file or directory layout and is never
+                        modified. Exits with code 1 when generated outputs
+                        differ.
   --disable-warnings    disable warnings
   --fail-on-multi-module-stdout
                         Return an error instead of concatenating multiple

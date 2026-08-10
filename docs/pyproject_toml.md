@@ -110,14 +110,15 @@ all selected jobs are validated: each must have an input and output, and output
 or model-metadata paths cannot overlap. `--job` and `--all-jobs` are mutually
 exclusive. Define job-specific input and output in TOML instead of combining
 job selection with `--input`, `--url`, `--input-model`, `--output`, `--profile`,
-or job-specific watch settings. `watch` and `watch-delay` may be set on the CLI
-or in the base `[tool.datamodel-codegen]` table, but cannot be set in a job table
-or in the selected profile. Batch watch observes the union of every selected
-job's local dependencies plus `pyproject.toml`. Each event reloads the project,
-replans the selection, and transactionally reruns the whole batch; it does not
-partially rebuild individual jobs. A failed cycle keeps the last published
-outputs and continues watching both prior and newly discovered dependencies for
-recovery.
+`--diff-against`, or job-specific watch settings. Input comparison is a
+single-profile/input operation and is rejected if it is inherited by any
+selected job. `watch` and `watch-delay` may be set on the CLI or in the base
+`[tool.datamodel-codegen]` table, but cannot be set in a job table or in the
+selected profile. Batch watch observes the union of every selected job's local
+dependencies plus `pyproject.toml`. Each event reloads the project, replans the
+selection, and transactionally reruns the whole batch; it does not partially
+rebuild individual jobs. A failed cycle keeps the last published outputs and
+continues watching both prior and newly discovered dependencies for recovery.
 
 ## 🎯 Configuration Priority
 

@@ -1062,7 +1062,7 @@ def test_run_generate_from_config_generate_kwargs_are_pinned() -> None:
         ("config", "cast('Any', generation_config)"),
     ])
     assert _run_generate_from_config_model_copy_updates() == snapshot([
-        ("input_filename", "None"),
+        ("input_filename", "input_filename"),
         ("output", "output"),
         ("preset", "None"),
         ("extra_template_data", "extra_template_data"),

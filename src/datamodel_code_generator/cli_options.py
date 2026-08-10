@@ -880,6 +880,36 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     # General Options
     # ==========================================================================
     "--check": CLIOptionMeta(name="--check", category=OptionCategory.GENERAL),
+    "--diff-against": CLIOptionMeta(
+        name="--diff-against",
+        category=OptionCategory.GENERAL,
+        requires=(
+            CLIOptionRelation(
+                option="--input",
+                message="`--diff-against` requires --input with the current local schema path.",
+            ),
+            CLIOptionRelation(
+                option="--output",
+                message="`--diff-against` requires --output to select file or directory output layout.",
+            ),
+        ),
+        conflicts=(
+            CLIOptionRelation(option="--check"),
+            CLIOptionRelation(option="--watch"),
+            CLIOptionRelation(option="--url"),
+            CLIOptionRelation(option="--input-model"),
+            CLIOptionRelation(option="--emit-model-metadata"),
+            CLIOptionRelation(option="--fail-on-multi-module-stdout"),
+            CLIOptionRelation(
+                option="--job",
+                message="`--diff-against` compares one profile or input and cannot run named jobs.",
+            ),
+            CLIOptionRelation(
+                option="--all-jobs",
+                message="`--diff-against` compares one profile or input and cannot run named jobs.",
+            ),
+        ),
+    ),
     "--fail-on-multi-module-stdout": CLIOptionMeta(
         name="--fail-on-multi-module-stdout", category=OptionCategory.GENERAL
     ),

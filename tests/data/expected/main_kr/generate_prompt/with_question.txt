@@ -192,6 +192,7 @@ How do I convert enums to Literal types?
 - `--allow-private-network`: Allow HTTP requests to private network schema endpoints.
 - `--allow-remote-refs`: Enable fetching of `$ref` targets over HTTP/HTTPS.
 - `--check`: Verify generated code matches existing output without modifying files.
+- `--diff-against`: Compare generated code from a baseline input with the current schema without writing files.
 - `--disable-warnings`: Suppress warning messages during code generation.
 - `--fail-on-multi-module-stdout`: Fail instead of concatenating multiple modules in text stdout.
 - `--generate-cli-command`: Generate CLI command from pyproject.toml configuration.
@@ -837,6 +838,14 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         generated code is committed.
   --debug               show debug message (require "debug". `$ pip install
                         'datamodel-code-generator[debug]'`)
+  --diff-against BASELINE_INPUT
+                        Generate BASELINE_INPUT and the current --input into
+                        temporary outputs, then show the generated-code diff
+                        from baseline to current. Requires --input and
+                        --output; --output is a virtual output path that
+                        selects file or directory layout and is never
+                        modified. Exits with code 1 when generated outputs
+                        differ.
   --disable-warnings    disable warnings
   --fail-on-multi-module-stdout
                         Return an error instead of concatenating multiple
@@ -920,7 +929,7 @@ Recommend a final CLI command for the user's schema and target runtime. Include:
 - `--openapi-include-paths` only has an effect when `--openapi-scopes paths` is included.
 - `--strict-types` requires one or more values: `str`, `int`, `float`, `bool`, or `bytes`.
 - `--use-specialized-enum` requires `--target-python-version >= 3.11`.
-- `--output-format json` is supported for generation, `--generate-prompt`, and `--check`; not for `--watch`.
+- `--output-format json` is supported for generation, `--generate-prompt`, `--check`, and `--diff-against`; not for `--watch`.
 - `--output-format-json-schema` accepts `config`, `generate-prompt`, `generation`, `model-metadata`, or `structured-output`; use `config` for JSON configuration schemas.
 - `--validation` is deprecated; use `--field-constraints` for generated Field constraints.
 

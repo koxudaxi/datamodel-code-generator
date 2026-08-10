@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import stat
 import sys
 from argparse import Namespace
@@ -1530,6 +1531,100 @@ def test_pyproject_jobs_reject_cli_command_only_modes(
 
     _assert_file_does_not_exist(jobs_project["plain"])
     _assert_file_does_not_exist(jobs_project["strict"])
+
+
+@pytest.mark.parametrize("provenance", ["cli", "base", "profile", "job"])
+def test_pyproject_jobs_reject_input_diff_from_every_configuration_layer_without_publication(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], provenance: str
+) -> None:
+    """Reject inherited or explicit input comparison before staging, publication, or watch startup."""
+    old_input = (JSON_SCHEMA_DATA_PATH / "person.json").resolve()
+    new_input = (JSON_SCHEMA_DATA_PATH / "person.json").resolve()
+    output_paths = (tmp_path / "api.py", tmp_path / "events.py")
+    metadata_paths = (tmp_path / "api.metadata.json", tmp_path / "events.metadata.json")
+    configurations = {
+        "cli": (["--job", "api", "--job", "events"], ["--diff-against", old_input.as_posix()], "", "", "", ""),
+        "base": (["--all-jobs"], [], f'diff-against = "{old_input.as_posix()}"', "", "", "watch = true"),
+        "profile": (["--job", "api"], [], "", f'diff-against = "{old_input.as_posix()}"', "", ""),
+        "job": (["--job", "api"], [], "", "", f'diff-against = "{old_input.as_posix()}"', ""),
+    }
+    selection, cli_diff, base_diff, profile_diff, job_diff, base_watch = configurations[provenance]
+
+    (tmp_path / "pyproject.toml").write_text(
+        f"""
+[tool.datamodel-codegen]
+disable-timestamp = true
+input-file-type = "jsonschema"
+{base_diff}
+{base_watch}
+
+[tool.datamodel-codegen.profiles.compare]
+{profile_diff}
+
+[tool.datamodel-codegen.jobs.api]
+profile = "compare"
+input = "{new_input.as_posix()}"
+output = "{output_paths[0].as_posix()}"
+emit-model-metadata = "{metadata_paths[0].as_posix()}"
+{job_diff}
+
+[tool.datamodel-codegen.jobs.events]
+input = "{new_input.as_posix()}"
+output = "{output_paths[1].as_posix()}"
+emit-model-metadata = "{metadata_paths[1].as_posix()}"
+""",
+        encoding="utf-8",
+    )
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            [*selection, *cli_diff, "--output-format", "json", "--formatters", "builtin"],
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stdout_path=EXPECTED_EMPTY_OUTPUT_PATH,
+            expected_stderr_contains="--diff-against cannot be used with --job or --all-jobs",
+        )
+
+    for path in (*output_paths, *metadata_paths):
+        _assert_file_does_not_exist(path)
+
+
+def test_pyproject_job_custom_formatter_resolves_relative_resources_from_original_output(
+    tmp_path: Path,
+) -> None:
+    """Keep formatter resource lookup at the logical output while publishing from staging."""
+    output_path = tmp_path / "generated" / "models.py"
+    output_path.parent.mkdir()
+    shutil.copyfile(
+        DATA_PATH / "python" / "custom_formatters" / "license_example.txt",
+        output_path.parent / "license.txt",
+    )
+    (tmp_path / "pyproject.toml").write_text(
+        f"""
+[tool.datamodel-codegen]
+disable-timestamp = true
+input-file-type = "jsonschema"
+
+[tool.datamodel-codegen.jobs.api]
+input = "{(JSON_SCHEMA_DATA_PATH / "person.json").resolve().as_posix()}"
+output = "{output_path.as_posix()}"
+""",
+        encoding="utf-8",
+    )
+
+    with chdir(tmp_path):
+        run_main_with_args([
+            "--job",
+            "api",
+            "--formatters",
+            "builtin",
+            "--custom-formatters",
+            "tests.data.python.custom_formatters.add_license",
+            "--custom-formatters-kwargs",
+            (DATA_PATH / "config" / "input_diff_relative_license.json").resolve().as_posix(),
+        ])
+
+    assert_file_content(output_path, "jobs/custom_formatter.py")
 
 
 @pytest.mark.parametrize(
@@ -4724,6 +4819,35 @@ def test_output_format_json_check_missing_output_directory(tmp_path: Path, capsy
             expected_stdout_path=EXPECTED_OUTPUT_FORMAT_JSON_PATH / "check_missing_output.txt",
             assert_no_stderr=True,
         )
+
+
+def test_output_format_json_check_missing_output_file(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --check reports a missing single-file output through structured JSON."""
+    with chdir(tmp_path):
+        output_path = Path("output.py")
+        run_main_with_args(
+            [
+                "--input",
+                str(JSON_SCHEMA_DATA_PATH / "person.json"),
+                "--input-file-type",
+                "jsonschema",
+                "--output",
+                output_path.as_posix(),
+                "--check",
+                "--output-format",
+                "json",
+                "--disable-timestamp",
+                "--formatters",
+                "builtin",
+            ],
+            expected_exit=Exit.DIFF,
+        )
+    captured = capsys.readouterr()
+    assert_output(
+        captured.out.replace((tmp_path / output_path).resolve().as_posix(), OUTPUT_FILE_PLACEHOLDER),
+        EXPECTED_OUTPUT_FORMAT_JSON_PATH / "check_missing_output_file.txt",
+    )
+    assert_output(captured.err, EXPECTED_EMPTY_OUTPUT_PATH)
 
 
 def test_output_format_json_check_output_file_difference(

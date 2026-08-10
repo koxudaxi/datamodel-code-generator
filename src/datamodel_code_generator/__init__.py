@@ -914,7 +914,7 @@ def _build_file_header_parts(custom_file_header: str | None, config: GenerateCon
 #   filename:  """
     header_suffix = ""
     if not config.disable_timestamp:
-        timestamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+        timestamp = config._generation_timestamp or datetime.now(timezone.utc).replace(microsecond=0).isoformat()  # noqa: SLF001
         header_suffix += f"\n#   timestamp: {timestamp}"
     if config.enable_version_header:
         header_suffix += f"\n#   version:   {get_version()}"
@@ -1679,7 +1679,8 @@ def _generate(  # noqa: PLR0912, PLR0914, PLR0915
     }
     if caller_path_updates:
         config = config.model_copy(update=caller_path_updates)
-    output_context_path = _output_context_path(config.output, caller_cwd)
+    logical_output = _absolute_generation_path(config._logical_output, caller_cwd)  # noqa: SLF001
+    output_context_path = _output_context_path(logical_output or config.output, caller_cwd)
     if (http_local_ref_path := _absolute_generation_path(config.http_local_ref_path, output_context_path)) is not (
         config.http_local_ref_path
     ):
@@ -1914,7 +1915,7 @@ def _generate(  # noqa: PLR0912, PLR0914, PLR0915
         data_model_types,
         active_python_type_expressions=python_type_expressions,
     )
-    with chdir(config.output if use_output_cwd else None):
+    with chdir(output_context_path if use_output_cwd else None):
         results = parse_with_disposal(parser, config)
         model_metadata = parser.model_metadata
         repair_modules = parser.invalid_dotted_stdout_repair_modules

@@ -122,24 +122,24 @@ class ExperimentalOutputPayload(BaseModel):
 
 
 class CheckDifferencePayload(BaseModel):
-    """One --check difference emitted by --output-format json."""
+    """One generated-output difference emitted by --check or --diff-against."""
 
     model_config = ConfigDict(extra="forbid")
 
-    kind: Literal["changed", "missing", "extra"]
+    kind: Literal["changed", "missing", "extra", "added", "removed"]
     path: str
     message: str | None = None
     diff: str | None = None
 
 
 class CheckOutputPayload(BaseModel):
-    """Structured JSON payload emitted by --check --output-format json."""
+    """Structured JSON payload emitted by generated-output comparison commands."""
 
     model_config = ConfigDict(extra="forbid")
 
     version: Literal[1]
     format: Literal["json"]
-    kind: Literal["check"]
+    kind: Literal["check", "input-diff"]
     success: bool
     content: str
     differences: list[CheckDifferencePayload]
@@ -251,11 +251,12 @@ def check_output_json(
     success: bool,
     content: str,
     differences: list[CheckDifferencePayload],
+    kind: Literal["check", "input-diff"] = "check",
 ) -> str:
     payload = CheckOutputPayload(
         version=1,
         format="json",
-        kind="check",
+        kind=kind,
         success=success,
         content=content,
         differences=differences,

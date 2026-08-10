@@ -1323,6 +1323,16 @@ general_options.add_argument(
     "Useful for CI to ensure generated code is committed.",
 )
 general_options.add_argument(
+    "--diff-against",
+    metavar="BASELINE_INPUT",
+    help=(
+        "Generate BASELINE_INPUT and the current --input into temporary outputs, then show the generated-code diff "
+        "from baseline to current. "
+        "Requires --input and --output; --output is a virtual output path that selects file or directory layout "
+        "and is never modified. Exits with code 1 when generated outputs differ."
+    ),
+)
+general_options.add_argument(
     "--debug",
     help="show debug message (require \"debug\". `$ pip install 'datamodel-code-generator[debug]'`)",
     action="store_true",

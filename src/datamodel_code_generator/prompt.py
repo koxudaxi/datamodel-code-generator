@@ -119,7 +119,8 @@ PROMPT_GUIDANCE_SECTIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
             "- `--strict-types` requires one or more values: `str`, `int`, `float`, `bool`, or `bytes`.",
             "- `--use-specialized-enum` requires `--target-python-version >= 3.11`.",
             (
-                "- `--output-format json` is supported for generation, `--generate-prompt`, and `--check`; "
+                "- `--output-format json` is supported for generation, `--generate-prompt`, `--check`, and "
+                "`--diff-against`; "
                 "not for `--watch`."
             ),
             (

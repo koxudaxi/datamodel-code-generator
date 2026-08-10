@@ -9,6 +9,7 @@
 | [`--allow-private-network`](#allow-private-network) | Allow HTTP requests to private network schema endpoints. |
 | [`--allow-remote-refs`](#allow-remote-refs) | Enable fetching of `$ref` targets over HTTP/HTTPS. |
 | [`--check`](#check) | Verify generated code matches existing output without modify... |
+| [`--diff-against`](#diff-against) | Compare generated code from a baseline input with the curren... |
 | [`--disable-warnings`](#disable-warnings) | Suppress warning messages during code generation. |
 | [`--fail-on-multi-module-stdout`](#fail-on-multi-module-stdout) | Fail instead of concatenating multiple modules in text stdou... |
 | [`--generate-cli-command`](#generate-cli-command) | Generate CLI command from pyproject.toml configuration. |
@@ -1412,6 +1413,68 @@ and generated code stay in sync. Works with both single files and directory outp
 
 ---
 
+## `--diff-against` {#diff-against}
+
+Compare generated code from a baseline input with the current schema without writing files.
+
+Pass the baseline input with `--diff-against` and the current schema with `--input`.
+The command generates both, then shows the generated-code diff from baseline to current.
+The required `--output` value is a virtual destination: it selects single-file or
+directory layout and formatter settings, but datamodel-code-generator never writes it.
+The command exits non-zero when the formatted generated outputs differ, making it useful
+for reviewing schema migrations in CI.
+
+**Related:** [`--check`](#check), [`--input`](base-options.md#input), [`--output`](base-options.md#output), `--output-format`
+
+**Option relationships:**
+
+- **Requires:** [`--input`](base-options.md#input) - `--diff-against` requires --input with the current local schema path.
+- **Requires:** [`--output`](base-options.md#output) - `--diff-against` requires --output to select file or directory output layout.
+- **Conflicts:** [`--check`](general-options.md#check)
+- **Conflicts:** [`--watch`](general-options.md#watch)
+- **Conflicts:** [`--url`](base-options.md#url)
+- **Conflicts:** [`--input-model`](base-options.md#input-model)
+- **Conflicts:** [`--emit-model-metadata`](base-options.md#emit-model-metadata)
+- **Conflicts:** [`--fail-on-multi-module-stdout`](general-options.md#fail-on-multi-module-stdout)
+- **Conflicts:** `--job` - `--diff-against` compares one profile or input and cannot run named jobs.
+- **Conflicts:** `--all-jobs` - `--diff-against` compares one profile or input and cannot run named jobs.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input tests/data/openapi/input_diff/new.yaml --diff-against tests/data/openapi/input_diff/old.yaml --output models --input-file-type openapi --disable-timestamp # (1)!
+    ```
+
+    1. :material-arrow-left: `--diff-against` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```yaml
+    openapi: 3.0.0
+    info:
+      title: Current models
+      version: "1.0"
+    paths: {}
+    components:
+      schemas:
+        collections.Current:
+          type: object
+          properties:
+            name:
+              type: string
+    ```
+
+    **Output:**
+
+    ```
+    ADDED: collections.py (generated only from current input)
+    REMOVED: models.py (generated only from baseline input)
+    ```
+
+---
+
 ## `--disable-warnings` {#disable-warnings}
 
 Suppress warning messages during code generation.
@@ -1656,7 +1719,7 @@ a working CLI command into a reusable configuration file.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --generate-pyproject-config --input schema.yaml --output model.py # (1)!
+    datamodel-codegen --generate-pyproject-config --input schema.yaml --output model.py # (1)!
     ```
 
     1. :material-arrow-left: `--generate-pyproject-config` - the option documented here
