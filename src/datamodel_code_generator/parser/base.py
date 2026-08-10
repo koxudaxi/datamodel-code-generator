@@ -5348,7 +5348,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
     def _report_parse_diagnostics(self) -> None:
         """Report diagnostics collected while parsing the input schema."""
 
-    def parse(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915, PLR0917
+    def parse(  # noqa: PLR0913, PLR0917
         self,
         with_import: bool | None = True,  # noqa: FBT001, FBT002
         format_: bool | None = True,  # noqa: FBT001, FBT002
@@ -5360,6 +5360,30 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         collect_model_metadata: bool = False,  # noqa: FBT001, FBT002
     ) -> str | dict[tuple[str, ...], Result]:
         """Parse schema and generate code, returning single file or module dict."""
+        return self.__prepare_parse(
+            with_import=with_import,
+            format_=format_,
+            settings_path=settings_path,
+            disable_future_imports=disable_future_imports,
+            all_exports_scope=all_exports_scope,
+            all_exports_collision_strategy=all_exports_collision_strategy,
+            module_split_mode=module_split_mode,
+            collect_model_metadata=collect_model_metadata,
+        )
+
+    def __prepare_parse(  # noqa: PLR0913
+        self,
+        *,
+        with_import: bool | None,
+        format_: bool | None,
+        settings_path: Path | None,
+        disable_future_imports: bool,
+        all_exports_scope: AllExportsScope | None,
+        all_exports_collision_strategy: AllExportsCollisionStrategy | None,
+        module_split_mode: ModuleSplitMode | None,
+        collect_model_metadata: bool,
+    ) -> str | dict[tuple[str, ...], Result]:
+        """Prepare parsed models and formatting before processing output modules."""
         if (custom_template_dir := self.custom_template_dir) is not None:
             _refresh_custom_template_paths(custom_template_dir)
         self._set_typed_extra_annotation_mode(
@@ -5417,6 +5441,34 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                         ),
                     )
 
+        return self.__process_modules(
+            module_models,
+            internal_modules=internal_modules,
+            forwarder_map=forwarder_map,
+            model_to_module_models=model_to_module_models,
+            model_path_to_module_name=model_path_to_module_name,
+            require_update_action_models=require_update_action_models,
+            sorted_data_models=sorted_data_models,
+            source_reference_paths=source_reference_paths,
+            config=config,
+            collect_model_metadata=collect_model_metadata,
+        )
+
+    def __process_modules(  # noqa: PLR0913
+        self,
+        module_models: ModuleModels,
+        *,
+        internal_modules: set[ModulePath],
+        forwarder_map: ForwarderMap,
+        model_to_module_models: dict[DataModel, tuple[ModulePath, list[DataModel]]],
+        model_path_to_module_name: dict[str, str],
+        require_update_action_models: list[str],
+        sorted_data_models: SortedDataModels,
+        source_reference_paths: Mapping[DataModel, str],
+        config: ParseConfig,
+        collect_model_metadata: bool,
+    ) -> str | dict[tuple[str, ...], Result]:
+        """Process every module into one shared result mapping before rendering."""
         results: dict[ModulePath, Result] = {}
         unused_models: list[DataModel] = []
         module_to_import: dict[ModulePath, Imports] = {}
@@ -5446,6 +5498,30 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             if len(top_level_dirs) > 1:
                 results[root_init] = Result(body="")
 
+        return self.__render_modules(
+            results,
+            contexts=contexts,
+            sorted_data_models=sorted_data_models,
+            source_reference_paths=source_reference_paths,
+            config=config,
+            forwarder_map=forwarder_map,
+            require_update_action_models=require_update_action_models,
+            collect_model_metadata=collect_model_metadata,
+        )
+
+    def __render_modules(  # noqa: PLR0913
+        self,
+        results: dict[ModulePath, Result],
+        *,
+        contexts: list[ModuleContext],
+        sorted_data_models: SortedDataModels,
+        source_reference_paths: Mapping[DataModel, str],
+        config: ParseConfig,
+        forwarder_map: ForwarderMap,
+        require_update_action_models: list[str],
+        collect_model_metadata: bool,
+    ) -> str | dict[tuple[str, ...], Result]:
+        """Render the shared result mapping and apply final output-only transformations."""
         future_imports = self.imports.extract_future()
         future_imports_str = str(future_imports)
 

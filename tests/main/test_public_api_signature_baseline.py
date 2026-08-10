@@ -54,6 +54,7 @@ if TYPE_CHECKING:
     from datamodel_code_generator.model.dataclass import DataclassArguments
     from datamodel_code_generator.model.pydantic_v2 import UnionMode
     from datamodel_code_generator.parser import DefaultPutDict, LiteralType
+    from datamodel_code_generator.parser.base import Result
     from datamodel_code_generator.preset_names import PresetName
     from datamodel_code_generator.types import StrictTypes
     from datamodel_code_generator.validators import ModelValidators
@@ -434,6 +435,20 @@ def _baseline_generate_runtime_signature(
     config: GenerateConfig | None = None,
     **options: Unpack[GenerateConfigDict],
 ) -> str | GeneratedModules | None:
+    raise NotImplementedError
+
+
+def _baseline_parser_parse_runtime_signature(
+    self,  # noqa: ANN001
+    with_import: bool | None = True,
+    format_: bool | None = True,
+    settings_path: Path | None = None,
+    disable_future_imports: bool = False,
+    all_exports_scope: AllExportsScope | None = None,
+    all_exports_collision_strategy: AllExportsCollisionStrategy | None = None,
+    module_split_mode: ModuleSplitMode | None = None,
+    collect_model_metadata: bool = False,
+) -> str | dict[tuple[str, ...], Result]:
     raise NotImplementedError
 
 
@@ -893,6 +908,14 @@ def test_generate_runtime_signature_matches_baseline() -> None:
     """Keep generate()'s introspected public callable shape stable."""
     assert generate.__module__ == "datamodel_code_generator"
     assert inspect.signature(generate) == inspect.signature(_baseline_generate_runtime_signature)
+
+
+def test_parser_parse_runtime_signature_matches_baseline() -> None:
+    """Keep Parser.parse()'s introspected public callable shape stable."""
+    from datamodel_code_generator.parser.base import Parser
+
+    assert Parser.parse.__module__ == "datamodel_code_generator.parser.base"
+    assert inspect.signature(Parser.parse) == inspect.signature(_baseline_parser_parse_runtime_signature)
 
 
 def test_parser_signature_matches_baseline() -> None:
