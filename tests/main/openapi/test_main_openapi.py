@@ -49,6 +49,7 @@ from tests.conftest import (
     MockHttpxResponse,
     assert_directory_content,
     assert_error_message,
+    assert_generated_file_matches_output,
     assert_generated_modules_output,
     assert_httpx_get_kwargs,
     assert_output,
@@ -1599,6 +1600,9 @@ def test_generate_invalid_dotted_retry_preserves_relative_ref_base(source_type: 
         generate(source, config=config)
 
     assert_file_content(output_file, "invalid_dotted_external_relative_ref.py")
+    with chdir(input_path.parent):
+        returned = generate(source, config=config.model_copy(update={"output": None}))
+    assert_generated_file_matches_output(returned, output_file)
 
 
 @pytest.mark.isolate_builtin_formatter_config
