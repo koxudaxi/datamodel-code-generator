@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import sys
 import warnings
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any, Literal
@@ -27,8 +28,17 @@ def _get_toml_loader() -> Callable[[Any], dict[str, Any]]:
 
 def load_toml(path: Path) -> dict[str, Any]:
     """Load and parse a TOML file."""
+    record_watch_dependency(path)
     with path.open("rb") as f:
         return _get_toml_loader()(f)
+
+
+def record_watch_dependency(path: Path) -> None:
+    """Record an active watch dependency without importing watch support on normal paths."""
+    if (watch_dependencies := sys.modules.get("datamodel_code_generator.watch_dependencies")) is not None and (
+        watch_dependencies.collector_is_active()
+    ):
+        watch_dependencies.record_local_dependency(path)
 
 
 _YAML_1_2_BOOL_PATTERN = re.compile(r"^(?:true|false|True|False|TRUE|FALSE)$")

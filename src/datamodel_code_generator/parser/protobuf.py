@@ -9,6 +9,7 @@ from __future__ import annotations
 import contextlib
 import io
 import re
+import sys
 import tempfile
 from copy import deepcopy
 from pathlib import Path
@@ -20,6 +21,7 @@ from typing_extensions import Unpack
 from datamodel_code_generator import Error, ProtobufVersion, SchemaParseError, VersionMode
 from datamodel_code_generator.parser._math_imports import apply_math_imports_to_parse_result
 from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+from datamodel_code_generator.util import record_watch_dependency
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -30,6 +32,7 @@ if TYPE_CHECKING:
 
 CUSTOM_OPTION_STATEMENT_PATTERN = re.compile(r"(?ms)^[ \t]*option\s+\([^)]+\)\s*=\s*.*?;")
 WEAK_IMPORT_PATTERN = re.compile(r'^\s*import\s+weak\s+"([^"]+)"\s*;', re.MULTILINE)
+IMPORT_PATTERN = re.compile(r'^\s*import\s+(?:public\s+|weak\s+)?"([^"]+)"\s*;', re.MULTILINE)
 
 LABEL_REQUIRED = 2
 LABEL_REPEATED = 3
@@ -89,6 +92,15 @@ SCALAR_SCHEMAS: dict[int, dict[str, Any]] = {
     TYPE_BYTES: {"type": "string", "format": "binary"},
 }
 SCALAR_OR_ENUM_TYPES = frozenset({*SCALAR_SCHEMAS, TYPE_ENUM})
+
+
+def _watch_dependency_collection_is_active() -> bool:
+    """Check the optional watch collector without importing it on regular generation."""
+    return (watch_dependencies := sys.modules.get("datamodel_code_generator.watch_dependencies")) is not None and (
+        watch_dependencies.collector_is_active()
+    )
+
+
 MAP_KEY_PYTHON_TYPES: dict[int, str] = {
     TYPE_INT32: "int",
     TYPE_INT64: "int",
@@ -350,6 +362,7 @@ class _ProtoInputPreparer:
         return input_files
 
     def _write_sanitized_file(self, source_path: Path, temp_path: Path, root: Path) -> Path:
+        record_watch_dependency(source_path)
         if source_path.is_relative_to(root):
             target = temp_path / source_path.relative_to(root)
         else:  # pragma: no cover
@@ -686,7 +699,13 @@ class ProtobufParser(JsonSchemaParser):
                 raise SchemaParseError(msg)
             with tempfile.NamedTemporaryFile(suffix=".pb", delete=False) as output_file:
                 output_path = Path(output_file.name)
+            collect_dependencies = _watch_dependency_collection_is_active()
+            persistent_include_paths: tuple[Path, ...] = ()
             try:
+                if collect_dependencies:
+                    lexical_sources = self._lexical_source_files()
+                    persistent_include_paths = self._persistent_include_paths(lexical_sources)
+                    self._record_lexical_import_candidates(lexical_sources, persistent_include_paths)
                 args = [
                     "grpc_tools.protoc",
                     *(f"-I{path}" for path in [*include_paths, well_known_include]),
@@ -704,10 +723,62 @@ class ProtobufParser(JsonSchemaParser):
                     raise SchemaParseError(msg)
                 descriptor_set = descriptor_pb2.FileDescriptorSet()
                 descriptor_set.ParseFromString(output_path.read_bytes())
+                if collect_dependencies:
+                    self._record_descriptor_dependencies(descriptor_set, persistent_include_paths)
                 return descriptor_set, input_file_names
             finally:
                 with contextlib.suppress(OSError):
                     output_path.unlink()
+
+    def _lexical_source_files(self) -> Sequence[Path]:
+        """Return persistent local sources without protoc's temporary sanitized copies."""
+        if isinstance(self.source, Path):
+            return sorted(self.source.rglob("*.proto")) if self.source.is_dir() else [self.source]
+        return self.source if isinstance(self.source, list) else ()
+
+    def _persistent_include_paths(self, input_files: Sequence[Path]) -> tuple[Path, ...]:
+        """Return lexical include roots that survive preparer cleanup."""
+        return tuple(dict.fromkeys((self.base_path, *(path.parent for path in input_files))))
+
+    def _record_lexical_import_candidates(self, input_files: Sequence[Path], include_paths: Sequence[Path]) -> None:
+        """Depth-first record source imports before ``protoc`` can reject a nested missing file."""
+        candidate_roots = tuple(dict.fromkeys(path.resolve(strict=False) for path in include_paths))
+        pending_files = [path.resolve(strict=False) for path in input_files]
+        visited_files: set[Path] = set()
+        while pending_files:
+            source_path = pending_files.pop()
+            if source_path in visited_files:
+                continue
+            visited_files.add(source_path)
+            try:
+                text = source_path.read_text(encoding=self.config.encoding)
+            except OSError:
+                continue
+            source_root = source_path.parent
+            source_candidate_roots = (
+                candidate_roots if source_root in candidate_roots else (source_root, *candidate_roots)
+            )
+            for import_path in IMPORT_PATTERN.findall(text):
+                candidates = tuple(
+                    (candidate_root / import_path).resolve(strict=False) for candidate_root in source_candidate_roots
+                )
+                existing_candidate = next((candidate for candidate in candidates if candidate.is_file()), None)
+                if existing_candidate is not None:
+                    record_watch_dependency(existing_candidate)
+                    pending_files.append(existing_candidate)
+                else:
+                    for candidate in candidates:
+                        record_watch_dependency(candidate)
+
+    @staticmethod
+    def _record_descriptor_dependencies(descriptor_set: Any, include_paths: Sequence[Path]) -> None:
+        """Record local ``protoc`` imports without retaining descriptor contents."""
+        for descriptor in descriptor_set.file:
+            for include_path in include_paths:
+                candidate = include_path / descriptor.name
+                if candidate.is_file():
+                    record_watch_dependency(candidate)
+                    break
 
     def convert_to_json_schema_data(self) -> dict[str, Any]:
         """Convert Protocol Buffers input sources into JSON Schema data."""

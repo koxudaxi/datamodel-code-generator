@@ -229,6 +229,9 @@ def load_yaml_dict_from_path(path: Path, encoding: str) -> dict[str, YamlValue]:
     Uses LRU cache with (path, mtime) as key for performance optimization.
     This avoids re-reading the same file multiple times during $ref resolution.
     """
+    from datamodel_code_generator.util import record_watch_dependency  # noqa: PLC0415
+
+    record_watch_dependency(path)
     return _load_yaml_dict_from_path_cached(path, path.stat().st_mtime, encoding)
 
 
@@ -319,6 +322,9 @@ def _load_parser_source_data_from_path(
 
 def _read_parser_source_data_from_path(path: Path, encoding: str) -> tuple[bytes, YamlValue]:
     resolved_path = path.resolve()
+    from datamodel_code_generator.util import record_watch_dependency  # noqa: PLC0415
+
+    record_watch_dependency(resolved_path)
     data = resolved_path.read_bytes()
     return data, _load_parser_source_data_from_path_bytes(resolved_path, data, encoding)
 
