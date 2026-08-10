@@ -886,7 +886,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
         requires=(
             CLIOptionRelation(
                 option="--input",
-                message="`--diff-against` requires --input with the new local schema path.",
+                message="`--diff-against` requires --input with the current local schema path.",
             ),
             CLIOptionRelation(
                 option="--output",

@@ -1383,13 +1383,13 @@ class OutputComparisonOptions(NamedTuple):
 
     @property
     def fromfile_suffix(self) -> str:
-        """Return the unified-diff label suffix for the previous output."""
-        return " (old input)" if self.input_diff else ""
+        """Return the unified-diff label suffix for the baseline output."""
+        return " (baseline input)" if self.input_diff else ""
 
     @property
     def tofile_suffix(self) -> str:
-        """Return the unified-diff label suffix for the generated output."""
-        return " (new input)" if self.input_diff else " (expected)"
+        """Return the unified-diff label suffix for the current output."""
+        return " (current input)" if self.input_diff else " (expected)"
 
 
 OutputComparisonPolicy: TypeAlias = tuple[
@@ -1404,13 +1404,13 @@ OutputComparisonPolicy: TypeAlias = tuple[
 def _output_comparison_policy(*, input_diff: bool) -> OutputComparisonPolicy:
     """Return shared missing and extra reporting values for one comparison."""
     if input_diff:
-        missing_message_suffix = "generated only from new input"
+        missing_message_suffix = "generated only from current input"
         return (
             "added",
             missing_message_suffix,
             missing_message_suffix,
             "removed",
-            "generated only from old input",
+            "generated only from baseline input",
         )
     return (
         "missing",
@@ -2683,7 +2683,7 @@ def _diff_against_validation_error(config: Config, namespace: Namespace) -> str 
             "Error: --diff-against cannot be used with --url; use local --input and --diff-against paths",
         ),
         (bool(config.input_model), "Error: --diff-against cannot be used with --input-model"),
-        (config.input is None, "Error: --diff-against requires --input with the new local schema path"),
+        (config.input is None, "Error: --diff-against requires --input with the current local schema path"),
         (
             config.output is None,
             "Error: --diff-against requires --output as a virtual output path to select file or directory layout",

@@ -225,7 +225,7 @@ General utility, HTTP, checking, and project integration options.
 - `--all-exports-collision-strategy`: Strategy for name collisions when using --all-exports-scope=recursive. 'error': raise an error (default). 'minimal-prefix': add module prefix only to colliding names. 'full-prefix': add full module path prefix to colliding names. Choices: `error`, `minimal-prefix`, `full-prefix`.
 - `--module-split-mode`: Split generated models into separate files. 'single': generate one file per model class. Choices: `single`.
 - `--check`: Verify generated files are up-to-date without modifying them. Exits with code 1 if differences found, 0 if up-to-date. Useful for CI to ensure generated code is committed.
-- `--diff-against`: Generate OLD_INPUT and --input into temporary outputs, then show their generated-code diff. Requires --input and --output; --output is a virtual output path that selects file or directory layout and is never modified. Exits with code 1 when generated outputs differ.
+- `--diff-against`: Generate BASELINE_INPUT and the current --input into temporary outputs, then show the generated-code diff from baseline to current. Requires --input and --output; --output is a virtual output path that selects file or directory layout and is never modified. Exits with code 1 when generated outputs differ.
 - `--debug`: show debug message (require "debug". `$ pip install 'datamodel-code-generator[debug]'`)
 - `--disable-warnings`: disable warnings
 - `--list-deprecations`: List registered deprecations and scheduled breaking changes, then exit. Choices: `table`, `json`, `markdown`.

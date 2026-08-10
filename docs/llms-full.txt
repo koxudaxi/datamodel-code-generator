@@ -9682,7 +9682,7 @@ These links are generated from CLI option metadata and summarize options that im
 | [`--custom-file-header`](template-customization.md#custom-file-header) | Conflicts | Always | [`--custom-file-header-path`](template-customization.md#custom-file-header-path) | `--custom-file-header` can not be used with `--custom-file-header-path`. |
 | [`--custom-file-header-path`](template-customization.md#custom-file-header-path) | Conflicts | Always | [`--custom-file-header`](template-customization.md#custom-file-header) | `--custom-file-header-path` can not be used with `--custom-file-header`. |
 | [`--all-exports-collision-strategy`](general-options.md#all-exports-collision-strategy) | Requires | Always | [`--all-exports-scope`](general-options.md#all-exports-scope) = `recursive` | `--all-exports-collision-strategy` can only be used with `--all-exports-scope=recursive`. |
-| [`--diff-against`](general-options.md#diff-against) | Requires | Always | [`--input`](base-options.md#input) | `--diff-against` requires --input with the new local schema path. |
+| [`--diff-against`](general-options.md#diff-against) | Requires | Always | [`--input`](base-options.md#input) | `--diff-against` requires --input with the current local schema path. |
 | [`--diff-against`](general-options.md#diff-against) | Requires | Always | [`--output`](base-options.md#output) | `--diff-against` requires --output to select file or directory output layout. |
 | [`--diff-against`](general-options.md#diff-against) | Conflicts | Always | [`--check`](general-options.md#check) | - |
 | [`--diff-against`](general-options.md#diff-against) | Conflicts | Always | [`--watch`](general-options.md#watch) | - |
@@ -34885,7 +34885,7 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/general-opti
 | [`--allow-private-network`](#allow-private-network) | Allow HTTP requests to private network schema endpoints. |
 | [`--allow-remote-refs`](#allow-remote-refs) | Enable fetching of `$ref` targets over HTTP/HTTPS. |
 | [`--check`](#check) | Verify generated code matches existing output without modify... |
-| [`--diff-against`](#diff-against) | Compare generated code from two local schema revisions witho... |
+| [`--diff-against`](#diff-against) | Compare generated code from a baseline input with the curren... |
 | [`--disable-warnings`](#disable-warnings) | Suppress warning messages during code generation. |
 | [`--fail-on-multi-module-stdout`](#fail-on-multi-module-stdout) | Fail instead of concatenating multiple modules in text stdou... |
 | [`--generate-cli-command`](#generate-cli-command) | Generate CLI command from pyproject.toml configuration. |
@@ -36291,9 +36291,10 @@ and generated code stay in sync. Works with both single files and directory outp
 
 ## `--diff-against` {#diff-against}
 
-Compare generated code from two local schema revisions without writing generated files.
+Compare generated code from a baseline input with the current schema without writing files.
 
-Pass the newer revision with `--input` and the older one with `--diff-against`.
+Pass the baseline input with `--diff-against` and the current schema with `--input`.
+The command generates both, then shows the generated-code diff from baseline to current.
 The required `--output` value is a virtual destination: it selects single-file or
 directory layout and formatter settings, but datamodel-code-generator never writes it.
 The command exits non-zero when the formatted generated outputs differ, making it useful
@@ -36303,7 +36304,7 @@ for reviewing schema migrations in CI.
 
 **Option relationships:**
 
-- **Requires:** [`--input`](base-options.md#input) - `--diff-against` requires --input with the new local schema path.
+- **Requires:** [`--input`](base-options.md#input) - `--diff-against` requires --input with the current local schema path.
 - **Requires:** [`--output`](base-options.md#output) - `--diff-against` requires --output to select file or directory output layout.
 - **Conflicts:** [`--check`](general-options.md#check)
 - **Conflicts:** [`--watch`](general-options.md#watch)
@@ -36344,8 +36345,8 @@ for reviewing schema migrations in CI.
     **Output:**
 
     ```
-    ADDED: collections.py (generated only from new input)
-    REMOVED: models.py (generated only from old input)
+    ADDED: collections.py (generated only from current input)
+    REMOVED: models.py (generated only from baseline input)
     ```
 
 ---
@@ -38316,7 +38317,7 @@ datamodel-codegen [OPTIONS]
 | [`--allow-private-network`](general-options.md#allow-private-network) | Allow HTTP requests to private network schema endpoints. |
 | [`--allow-remote-refs`](general-options.md#allow-remote-refs) | Enable fetching of `$ref` targets over HTTP/HTTPS. |
 | [`--check`](general-options.md#check) | Verify generated code matches existing output without modifying files. |
-| [`--diff-against`](general-options.md#diff-against) | Compare generated code from two local schema revisions without writing generated... |
+| [`--diff-against`](general-options.md#diff-against) | Compare generated code from a baseline input with the current schema without wri... |
 | [`--disable-warnings`](general-options.md#disable-warnings) | Suppress warning messages during code generation. |
 | [`--fail-on-multi-module-stdout`](general-options.md#fail-on-multi-module-stdout) | Fail instead of concatenating multiple modules in text stdout. |
 | [`--generate-cli-command`](general-options.md#generate-cli-command) | Generate CLI command from pyproject.toml configuration. |
@@ -38390,7 +38391,7 @@ All options sorted alphabetically:
 - [`--dataclass-arguments`](model-customization.md#dataclass-arguments) - Customize dataclass decorator arguments via JSON dictionary.
 - [`--debug`](utility-options.md#debug) - Show debug messages during code generation
 - [`--default-values`](field-customization.md#default-values) - Override field default values via inline JSON or a JSON file...
-- [`--diff-against`](general-options.md#diff-against) - Compare generated code from two local schema revisions witho...
+- [`--diff-against`](general-options.md#diff-against) - Compare generated code from a baseline input with the curren...
 - [`--disable-appending-item-suffix`](template-customization.md#disable-appending-item-suffix) - Disable appending 'Item' suffix to array item types.
 - [`--disable-future-imports`](typing-customization.md#disable-future-imports) - Prevent automatic addition of __future__ imports in generate...
 - [`--disable-timestamp`](template-customization.md#disable-timestamp) - Disable timestamp in generated file header for reproducible ...

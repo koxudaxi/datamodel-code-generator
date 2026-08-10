@@ -188,7 +188,7 @@
 - `--allow-private-network`: Allow HTTP requests to private network schema endpoints.
 - `--allow-remote-refs`: Enable fetching of `$ref` targets over HTTP/HTTPS.
 - `--check`: Verify generated code matches existing output without modifying files.
-- `--diff-against`: Compare generated code from two local schema revisions without writing generated files.
+- `--diff-against`: Compare generated code from a baseline input with the current schema without writing files.
 - `--disable-warnings`: Suppress warning messages during code generation.
 - `--fail-on-multi-module-stdout`: Fail instead of concatenating multiple modules in text stdout.
 - `--generate-cli-command`: Generate CLI command from pyproject.toml configuration.
@@ -834,10 +834,11 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         generated code is committed.
   --debug               show debug message (require "debug". `$ pip install
                         'datamodel-code-generator[debug]'`)
-  --diff-against OLD_INPUT
-                        Generate OLD_INPUT and --input into temporary outputs,
-                        then show their generated-code diff. Requires --input
-                        and --output; --output is a virtual output path that
+  --diff-against BASELINE_INPUT
+                        Generate BASELINE_INPUT and the current --input into
+                        temporary outputs, then show the generated-code diff
+                        from baseline to current. Requires --input and
+                        --output; --output is a virtual output path that
                         selects file or directory layout and is never
                         modified. Exits with code 1 when generated outputs
                         differ.

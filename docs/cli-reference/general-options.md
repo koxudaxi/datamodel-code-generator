@@ -9,7 +9,7 @@
 | [`--allow-private-network`](#allow-private-network) | Allow HTTP requests to private network schema endpoints. |
 | [`--allow-remote-refs`](#allow-remote-refs) | Enable fetching of `$ref` targets over HTTP/HTTPS. |
 | [`--check`](#check) | Verify generated code matches existing output without modify... |
-| [`--diff-against`](#diff-against) | Compare generated code from two local schema revisions witho... |
+| [`--diff-against`](#diff-against) | Compare generated code from a baseline input with the curren... |
 | [`--disable-warnings`](#disable-warnings) | Suppress warning messages during code generation. |
 | [`--fail-on-multi-module-stdout`](#fail-on-multi-module-stdout) | Fail instead of concatenating multiple modules in text stdou... |
 | [`--generate-cli-command`](#generate-cli-command) | Generate CLI command from pyproject.toml configuration. |
@@ -1415,9 +1415,10 @@ and generated code stay in sync. Works with both single files and directory outp
 
 ## `--diff-against` {#diff-against}
 
-Compare generated code from two local schema revisions without writing generated files.
+Compare generated code from a baseline input with the current schema without writing files.
 
-Pass the newer revision with `--input` and the older one with `--diff-against`.
+Pass the baseline input with `--diff-against` and the current schema with `--input`.
+The command generates both, then shows the generated-code diff from baseline to current.
 The required `--output` value is a virtual destination: it selects single-file or
 directory layout and formatter settings, but datamodel-code-generator never writes it.
 The command exits non-zero when the formatted generated outputs differ, making it useful
@@ -1427,7 +1428,7 @@ for reviewing schema migrations in CI.
 
 **Option relationships:**
 
-- **Requires:** [`--input`](base-options.md#input) - `--diff-against` requires --input with the new local schema path.
+- **Requires:** [`--input`](base-options.md#input) - `--diff-against` requires --input with the current local schema path.
 - **Requires:** [`--output`](base-options.md#output) - `--diff-against` requires --output to select file or directory output layout.
 - **Conflicts:** [`--check`](general-options.md#check)
 - **Conflicts:** [`--watch`](general-options.md#watch)
@@ -1468,8 +1469,8 @@ for reviewing schema migrations in CI.
     **Output:**
 
     ```
-    ADDED: collections.py (generated only from new input)
-    REMOVED: models.py (generated only from old input)
+    ADDED: collections.py (generated only from current input)
+    REMOVED: models.py (generated only from baseline input)
     ```
 
 ---

@@ -62,10 +62,10 @@ assert_file_content = create_assert_file_content(INPUT_DIFF_EXPECTED_PATH)
             True,
             (
                 "added",
-                "generated only from new input",
-                "generated only from new input",
+                "generated only from current input",
+                "generated only from current input",
                 "removed",
-                "generated only from old input",
+                "generated only from baseline input",
             ),
         ),
     ],
@@ -212,13 +212,15 @@ def test_diff_against_single_file_comparison_reports_added_when_old_output_is_mi
 
 @pytest.mark.cli_doc(
     options=["--diff-against"],
-    option_description="""Compare generated code from two local schema revisions without writing generated files.
-
-Pass the newer revision with `--input` and the older one with `--diff-against`.
-The required `--output` value is a virtual destination: it selects single-file or
-directory layout and formatter settings, but datamodel-code-generator never writes it.
-The command exits non-zero when the formatted generated outputs differ, making it useful
-for reviewing schema migrations in CI.""",
+    option_description=(
+        "Compare generated code from a baseline input with the current schema without writing files.\n\n"
+        "Pass the baseline input with `--diff-against` and the current schema with `--input`.\n"
+        "The command generates both, then shows the generated-code diff from baseline to current.\n"
+        "The required `--output` value is a virtual destination: it selects single-file or\n"
+        "directory layout and formatter settings, but datamodel-code-generator never writes it.\n"
+        "The command exits non-zero when the formatted generated outputs differ, making it useful\n"
+        "for reviewing schema migrations in CI."
+    ),
     input_schema="openapi/input_diff/new.yaml",
     cli_args=[
         "--input",
