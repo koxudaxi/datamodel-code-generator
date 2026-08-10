@@ -25,3 +25,4 @@ def test_build_experimental_docs_release_notes() -> None:
 
     assert "## Experimental Features" in result.stdout
     assert "[tool.datamodel-codegen.jobs], --job, --all-jobs" in result.stdout
+    assert "datamodel-codegen.lock, --lockfile, --update-lock, and --locked" in result.stdout

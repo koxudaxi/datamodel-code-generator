@@ -21,7 +21,7 @@
 | [`--http-timeout`](#http-timeout) | Set timeout for HTTP requests to remote hosts. |
 | [`--ignore-pyproject`](#ignore-pyproject) | Ignore pyproject.toml configuration file. |
 | [`--locked`](#locked) | Require an existing remote lock and validate each fetched re... |
-| [`--lockfile`](#lockfile) | Select the remote reference integrity lock file. |
+| [`--lockfile`](#lockfile) | Select the remote reference integrity lock file (experimenta... |
 | [`--module-split-mode`](#module-split-mode) | Split generated models into separate files, one per model cl... |
 | [`--shared-module-name`](#shared-module-name) | Customize the name of the shared module for deduplicated mod... |
 | [`--strict-refs`](#strict-refs) | Treat unresolved local `$ref` JSON pointers as errors. |
@@ -2101,10 +2101,12 @@ testing without project configuration.
 
 ## `--locked` {#locked}
 
-Require an existing remote lock and validate each fetched resource against it.
+Require an existing remote lock and validate each fetched resource against it (experimental).
 
 `--locked` fails if the selected lock is missing, a resource is unrecorded, or its body differs. It conflicts with
 `--update-lock`.
+
+Remote reference lock support is experimental: its lock document schema and request-identity compatibility may evolve. It remains fail-closed on integrity mismatches, and it never persists credentials.
 
 The lock stores opaque SHA-256 request-identity digests and SHA-256 body digests,
 never response bodies or request values directly. Each saved display origin contains only the scheme, host, and
@@ -2171,13 +2173,15 @@ path and query-name identity, it fails closed rather than sharing a lock entry.
 
 ## `--lockfile` {#lockfile}
 
-Select the remote reference integrity lock file.
+Select the remote reference integrity lock file (experimental).
 
 An existing selected lock is verified automatically; a missing selected lock is ignored unless `--locked` requires it.
 Without `--lockfile`, the CLI uses `datamodel-codegen.lock` beside the discovered `pyproject.toml`, or in the invocation
 working directory when no project is found. Explicit relative `--lockfile` paths resolve from the invocation working
 directory, not the project root or output directory. The public API uses the caller's working directory for both its
 default lock and relative `lockfile` paths.
+
+Remote reference lock support is experimental: its lock document schema and request-identity compatibility may evolve. It remains fail-closed on integrity mismatches, and it never persists credentials.
 
 The lock stores opaque SHA-256 request-identity digests and SHA-256 body digests,
 never response bodies or request values directly. Each saved display origin contains only the scheme, host, and
@@ -2464,10 +2468,12 @@ generation instead. Existing empty schemas remain valid references.
 
 ## `--update-lock` {#update-lock}
 
-Create or atomically update the selected remote lock after generation.
+Create or atomically update the selected remote lock after generation (experimental).
 
 `--update-lock` creates or refreshes the selected `--lockfile` from every remote resource reached during this run.
 It conflicts with `--locked`.
+
+Remote reference lock support is experimental: its lock document schema and request-identity compatibility may evolve. It remains fail-closed on integrity mismatches, and it never persists credentials.
 
 The lock stores opaque SHA-256 request-identity digests and SHA-256 body digests,
 never response bodies or request values directly. Each saved display origin contains only the scheme, host, and

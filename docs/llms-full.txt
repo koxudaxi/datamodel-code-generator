@@ -34902,7 +34902,7 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/general-opti
 | [`--http-timeout`](#http-timeout) | Set timeout for HTTP requests to remote hosts. |
 | [`--ignore-pyproject`](#ignore-pyproject) | Ignore pyproject.toml configuration file. |
 | [`--locked`](#locked) | Require an existing remote lock and validate each fetched re... |
-| [`--lockfile`](#lockfile) | Select the remote reference integrity lock file. |
+| [`--lockfile`](#lockfile) | Select the remote reference integrity lock file (experimenta... |
 | [`--module-split-mode`](#module-split-mode) | Split generated models into separate files, one per model cl... |
 | [`--shared-module-name`](#shared-module-name) | Customize the name of the shared module for deduplicated mod... |
 | [`--strict-refs`](#strict-refs) | Treat unresolved local `$ref` JSON pointers as errors. |
@@ -36982,10 +36982,12 @@ testing without project configuration.
 
 ## `--locked` {#locked}
 
-Require an existing remote lock and validate each fetched resource against it.
+Require an existing remote lock and validate each fetched resource against it (experimental).
 
 `--locked` fails if the selected lock is missing, a resource is unrecorded, or its body differs. It conflicts with
 `--update-lock`.
+
+Remote reference lock support is experimental: its lock document schema and request-identity compatibility may evolve. It remains fail-closed on integrity mismatches, and it never persists credentials.
 
 The lock stores opaque SHA-256 request-identity digests and SHA-256 body digests,
 never response bodies or request values directly. Each saved display origin contains only the scheme, host, and
@@ -37052,13 +37054,15 @@ path and query-name identity, it fails closed rather than sharing a lock entry.
 
 ## `--lockfile` {#lockfile}
 
-Select the remote reference integrity lock file.
+Select the remote reference integrity lock file (experimental).
 
 An existing selected lock is verified automatically; a missing selected lock is ignored unless `--locked` requires it.
 Without `--lockfile`, the CLI uses `datamodel-codegen.lock` beside the discovered `pyproject.toml`, or in the invocation
 working directory when no project is found. Explicit relative `--lockfile` paths resolve from the invocation working
 directory, not the project root or output directory. The public API uses the caller's working directory for both its
 default lock and relative `lockfile` paths.
+
+Remote reference lock support is experimental: its lock document schema and request-identity compatibility may evolve. It remains fail-closed on integrity mismatches, and it never persists credentials.
 
 The lock stores opaque SHA-256 request-identity digests and SHA-256 body digests,
 never response bodies or request values directly. Each saved display origin contains only the scheme, host, and
@@ -37345,10 +37349,12 @@ generation instead. Existing empty schemas remain valid references.
 
 ## `--update-lock` {#update-lock}
 
-Create or atomically update the selected remote lock after generation.
+Create or atomically update the selected remote lock after generation (experimental).
 
 `--update-lock` creates or refreshes the selected `--lockfile` from every remote resource reached during this run.
 It conflicts with `--locked`.
+
+Remote reference lock support is experimental: its lock document schema and request-identity compatibility may evolve. It remains fail-closed on integrity mismatches, and it never persists credentials.
 
 The lock stores opaque SHA-256 request-identity digests and SHA-256 body digests,
 never response bodies or request values directly. Each saved display origin contains only the scheme, host, and
@@ -38545,12 +38551,12 @@ datamodel-codegen [OPTIONS]
 | [`--http-query-parameters`](general-options.md#http-query-parameters) | Add query parameters to HTTP requests for remote schemas. |
 | [`--http-timeout`](general-options.md#http-timeout) | Set timeout for HTTP requests to remote hosts. |
 | [`--ignore-pyproject`](general-options.md#ignore-pyproject) | Ignore pyproject.toml configuration file. |
-| [`--locked`](general-options.md#locked) | Require an existing remote lock and validate each fetched resource against it. |
-| [`--lockfile`](general-options.md#lockfile) | Select the remote reference integrity lock file. |
+| [`--locked`](general-options.md#locked) | Require an existing remote lock and validate each fetched resource against it (e... |
+| [`--lockfile`](general-options.md#lockfile) | Select the remote reference integrity lock file (experimental). |
 | [`--module-split-mode`](general-options.md#module-split-mode) | Split generated models into separate files, one per model class. |
 | [`--shared-module-name`](general-options.md#shared-module-name) | Customize the name of the shared module for deduplicated models. |
 | [`--strict-refs`](general-options.md#strict-refs) | Treat unresolved local `$ref` JSON pointers as errors. |
-| [`--update-lock`](general-options.md#update-lock) | Create or atomically update the selected remote lock after generation. |
+| [`--update-lock`](general-options.md#update-lock) | Create or atomically update the selected remote lock after generation (experimen... |
 | [`--watch`](general-options.md#watch) | Watch input file(s) for changes and regenerate output automatically. |
 | [`--watch-delay`](general-options.md#watch-delay) | Set debounce delay in seconds for watch mode. |
 
@@ -38665,7 +38671,7 @@ All options sorted alphabetically:
 - [`--list-deprecations`](utility-options.md#list-deprecations) - List registered deprecations and scheduled breaking changes
 - [`--list-experimental`](utility-options.md#list-experimental) - List registered experimental features
 - [`--locked`](general-options.md#locked) - Require an existing remote lock and validate each fetched re...
-- [`--lockfile`](general-options.md#lockfile) - Select the remote reference integrity lock file.
+- [`--lockfile`](general-options.md#lockfile) - Select the remote reference integrity lock file (experimenta...
 - [`--model-extra-keys`](model-customization.md#model-extra-keys) - Add model-level schema extensions to ConfigDict json_schema_...
 - [`--model-extra-keys-without-x-prefix`](model-customization.md#model-extra-keys-without-x-prefix) - Strip x- prefix from model-level schema extensions and add t...
 - [`--model-name-map`](model-customization.md#model-name-map) - Rename generated model classes from a JSON mapping.
@@ -39432,6 +39438,7 @@ This page lists features that are available but still experimental.
 | ID | Kind | Target | Since | Tracking |
 |----|------|--------|-------|----------|
 | `behavior.batch-generation-jobs` | behavior | `[tool.datamodel-codegen.jobs], --job, --all-jobs` | 0.72.3 | - |
+| `behavior.remote-reference-lock` | behavior | `datamodel-codegen.lock, --lockfile, --update-lock, and --locked` | 0.72.3 | - |
 | `cli-option.generate-schema-validators` | cli-option | `--generate-schema-validators` | 0.66.1 | - |
 | `cli-option.schema-validator-type` | cli-option | `--schema-validator-type` | 0.66.1 | - |
 | `cli-option.use-missing-sentinel` | cli-option | `--use-missing-sentinel` | 0.66.1 | - |
@@ -39456,6 +39463,16 @@ This page lists features that are available but still experimental.
 Named batch jobs are experimental; their configuration schema, batch output, and transactional/watch execution contracts may change.
 
 Define named generation jobs in [tool.datamodel-codegen.jobs] and select them with --job or --all-jobs. Each selected job has its own input and output, and the full selection is validated before generation begins.
+
+### `behavior.remote-reference-lock`
+
+- **Kind:** behavior
+- **Target:** `datamodel-codegen.lock, --lockfile, --update-lock, and --locked`
+- **Since:** 0.72.3
+
+Remote reference integrity locking is experimental: the lock document schema and request-identity compatibility may evolve, but integrity mismatches remain fail-closed and credentials are never persisted.
+
+The lock stores opaque SHA-256 request-identity digests and SHA-256 body digests, never response bodies or request values directly. Each saved display origin contains only the scheme, host, and explicit port—never a path, query, or request headers.
 
 ### `cli-option.generate-schema-validators`
 

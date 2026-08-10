@@ -4098,6 +4098,11 @@ def test_http_timeout(mock_httpx_get: HttpxGetMockFactory, output_file: Path) ->
     assert_httpx_get_kwargs(mock_get, timeout=60.0)
 
 
+REMOTE_LOCK_EXPERIMENTAL_NOTE = (
+    "Remote reference lock support is experimental: its lock document schema and request-identity compatibility may "
+    "evolve. It remains fail-closed on integrity mismatches, and it never persists credentials.\n\n"
+)
+
 REMOTE_LOCK_OPTION_DESCRIPTION = """The lock stores opaque SHA-256 request-identity digests and SHA-256 body digests,
 never response bodies or request values directly. Each saved display origin contains only the scheme, host, and
 explicit port—never a path, query, or request headers. A request identity includes its scheme, host, explicit port,
@@ -4105,7 +4110,7 @@ path, header names, and ordered query parameter names only. If one generation re
 path and query-name identity, it fails closed rather than sharing a lock entry."""
 
 REMOTE_LOCKFILE_OPTION_DESCRIPTION = (
-    """Select the remote reference integrity lock file.
+    """Select the remote reference integrity lock file (experimental).
 
 An existing selected lock is verified automatically; a missing selected lock is ignored unless `--locked` requires it.
 Without `--lockfile`, the CLI uses `datamodel-codegen.lock` beside the discovered `pyproject.toml`, or in the invocation
@@ -4114,26 +4119,29 @@ directory, not the project root or output directory. The public API uses the cal
 default lock and relative `lockfile` paths.
 
 """
+    + REMOTE_LOCK_EXPERIMENTAL_NOTE
     + REMOTE_LOCK_OPTION_DESCRIPTION
 )
 
 REMOTE_LOCK_UPDATE_OPTION_DESCRIPTION = (
-    """Create or atomically update the selected remote lock after generation.
+    """Create or atomically update the selected remote lock after generation (experimental).
 
 `--update-lock` creates or refreshes the selected `--lockfile` from every remote resource reached during this run.
 It conflicts with `--locked`.
 
 """
+    + REMOTE_LOCK_EXPERIMENTAL_NOTE
     + REMOTE_LOCK_OPTION_DESCRIPTION
 )
 
 REMOTE_LOCKED_OPTION_DESCRIPTION = (
-    """Require an existing remote lock and validate each fetched resource against it.
+    """Require an existing remote lock and validate each fetched resource against it (experimental).
 
 `--locked` fails if the selected lock is missing, a resource is unrecorded, or its body differs. It conflicts with
 `--update-lock`.
 
 """
+    + REMOTE_LOCK_EXPERIMENTAL_NOTE
     + REMOTE_LOCK_OPTION_DESCRIPTION
 )
 

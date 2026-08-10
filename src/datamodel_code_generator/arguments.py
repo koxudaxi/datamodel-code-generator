@@ -249,7 +249,8 @@ base_options.add_argument(
 base_options.add_argument(
     "--lockfile",
     help=(
-        "Select the remote reference integrity lock file. An existing selected lock is verified automatically; "
+        "Select the remote reference integrity lock file (experimental). "
+        "An existing selected lock is verified automatically; "
         "a missing selected lock is ignored unless --locked is used. "
         "The default is datamodel-codegen.lock beside the discovered pyproject.toml, or in the invocation working "
         "directory when no project is found. Explicit relative paths resolve from the invocation working directory."
@@ -260,13 +261,13 @@ remote_lock_options.add_argument(
     "--update-lock",
     action="store_true",
     default=None,
-    help="Create or atomically update the selected remote lock after generation.",
+    help="Create or atomically update the selected remote lock after generation (experimental).",
 )
 remote_lock_options.add_argument(
     "--locked",
     action="store_true",
     default=None,
-    help="Require an existing remote lock and validate each fetched resource against it.",
+    help="Require an existing remote lock and validate each fetched resource against it (experimental).",
 )
 base_options.add_argument(
     "--input",
