@@ -832,7 +832,7 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
 
 [36;1mGeneral options[0m:
   --all-jobs            Run every named job from pyproject.toml in declaration
-                        order.
+                        order (experimental).
   --check               Verify generated files are up-to-date without
                         modifying them. Exits with code 1 if differences
                         found, 0 if up-to-date. Useful for CI to ensure
@@ -858,7 +858,7 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         provided CLI arguments and exit
   --ignore-pyproject    Ignore pyproject.toml configuration
   --job NAME            Run a named job from pyproject.toml [tool.datamodel-
-                        codegen.jobs.<name>]. Can be repeated.
+                        codegen.jobs.<name>] (experimental). Can be repeated.
   --list-deprecations [{table,json,markdown}]
                         List registered deprecations and scheduled breaking
                         changes, then exit.

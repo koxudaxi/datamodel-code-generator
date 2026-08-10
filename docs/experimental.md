@@ -6,6 +6,7 @@ This page lists features that are available but still experimental.
 
 | ID | Kind | Target | Since | Tracking |
 |----|------|--------|-------|----------|
+| `behavior.batch-generation-jobs` | behavior | `[tool.datamodel-codegen.jobs], --job, --all-jobs` | 0.72.3 | - |
 | `cli-option.generate-schema-validators` | cli-option | `--generate-schema-validators` | 0.66.1 | - |
 | `cli-option.schema-validator-type` | cli-option | `--schema-validator-type` | 0.66.1 | - |
 | `cli-option.use-missing-sentinel` | cli-option | `--use-missing-sentinel` | 0.66.1 | - |
@@ -20,6 +21,16 @@ This page lists features that are available but still experimental.
 | `input-format.xmlschema` | input-format | `--input-file-type xmlschema` | 0.59.0 | - |
 
 ## Details
+
+### `behavior.batch-generation-jobs`
+
+- **Kind:** behavior
+- **Target:** `[tool.datamodel-codegen.jobs], --job, --all-jobs`
+- **Since:** 0.72.3
+
+Named batch jobs are experimental; their configuration schema, batch output, and transactional/watch execution contracts may change.
+
+Define named generation jobs in [tool.datamodel-codegen.jobs] and select them with --job or --all-jobs. Each selected job has its own input and output, and the full selection is validated before generation begins.
 
 ### `cli-option.generate-schema-validators`
 

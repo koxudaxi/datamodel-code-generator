@@ -11,6 +11,7 @@ from datamodel_code_generator._registry_render import _render_registry_json, _re
 ExperimentalFeatureKind = Literal["input-format", "formatter", "cli-option", "python-api", "behavior", "extra"]
 ExperimentalFeatureFormat = Literal["table", "json", "markdown"]
 ExperimentalFeatureId = Literal[
+    "behavior.batch-generation-jobs",
     "cli-option.generate-schema-validators",
     "cli-option.schema-validator-type",
     "cli-option.use-missing-sentinel",
@@ -40,6 +41,21 @@ class ExperimentalFeature:
 
 
 EXPERIMENTAL_FEATURES: dict[ExperimentalFeatureId, ExperimentalFeature] = {
+    "behavior.batch-generation-jobs": ExperimentalFeature(
+        id="behavior.batch-generation-jobs",
+        kind="behavior",
+        target="[tool.datamodel-codegen.jobs], --job, --all-jobs",
+        message=(
+            "Named batch jobs are experimental; their configuration schema, batch output, and transactional/watch "
+            "execution contracts may change."
+        ),
+        since_version="0.72.3",
+        note=(
+            "Define named generation jobs in [tool.datamodel-codegen.jobs] and select them with --job or "
+            "--all-jobs. Each selected job has its own input and output, and the full selection is validated "
+            "before generation begins."
+        ),
+    ),
     "extra.httpx2": ExperimentalFeature(
         id="extra.httpx2",
         kind="extra",

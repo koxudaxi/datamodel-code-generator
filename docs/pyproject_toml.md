@@ -74,7 +74,12 @@ datamodel-codegen --input schemas/api.yaml --output src/models/api.py --profile 
 datamodel-codegen --input schemas/db.json --output src/models/db.py --profile py311
 ```
 
-## 🏃 Named Jobs
+## 🏃 Named Jobs (Experimental)
+
+!!! warning "Experimental"
+
+    Named batch jobs are experimental; their configuration schema, batch output,
+    and transactional/watch execution contracts may change.
 
 Profiles are reusable configuration fragments. A job is a runnable generation
 that supplies its own `input` and `output` and can select one profile.

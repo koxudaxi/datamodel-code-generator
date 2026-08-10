@@ -1,8 +1,13 @@
 ## `--job` {#job}
 
-Run one or more named generation jobs declared in `pyproject.toml`. Jobs are
+Run one or more named generation jobs declared in `pyproject.toml` (experimental). Jobs are
 executed sequentially in TOML declaration order, even when `--job` is supplied
 in a different order.
+
+!!! warning "Experimental"
+
+    Named batch jobs are experimental; their configuration schema, batch output,
+    and transactional/watch execution contracts may change.
 
 **Related:** [pyproject.toml Configuration](../../pyproject_toml.md), [`--all-jobs`](all-jobs.md#all-jobs)
 

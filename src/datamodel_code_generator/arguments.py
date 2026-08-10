@@ -1428,13 +1428,13 @@ job_selection_options.add_argument(
     action="append",
     default=None,
     metavar="NAME",
-    help="Run a named job from pyproject.toml [tool.datamodel-codegen.jobs.<name>]. Can be repeated.",
+    help="Run a named job from pyproject.toml [tool.datamodel-codegen.jobs.<name>] (experimental). Can be repeated.",
 )
 job_selection_options.add_argument(
     "--all-jobs",
     action="store_true",
     default=None,
-    help="Run every named job from pyproject.toml in declaration order.",
+    help="Run every named job from pyproject.toml in declaration order (experimental).",
 )
 general_options.add_argument(
     "--watch",

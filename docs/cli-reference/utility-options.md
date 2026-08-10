@@ -4,11 +4,11 @@
 
 | Option | Description |
 |--------|-------------|
-| [`--all-jobs`](#all-jobs) | Run every named generation job from pyproject.toml |
+| [`--all-jobs`](#all-jobs) | Run every named generation job from pyproject.toml (experimental) |
 | [`--debug`](#debug) | Show debug messages during code generation |
 | [`--generate-prompt`](#generate-prompt) | Generate a prompt for consulting LLMs about CLI options |
 | [`--help`](#help) | Show help message and exit |
-| [`--job`](#job) | Run a named generation job from pyproject.toml |
+| [`--job`](#job) | Run a named generation job from pyproject.toml (experimental) |
 | [`--list-deprecations`](#list-deprecations) | List registered deprecations and scheduled breaking changes |
 | [`--list-experimental`](#list-experimental) | List registered experimental features |
 | [`--no-color`](#no-color) | Disable colorized output |
@@ -21,8 +21,13 @@
 
 ## `--all-jobs` {#all-jobs}
 
-Run every named generation job from `[tool.datamodel-codegen.jobs]` in
-declaration order.
+Run every named generation job from `[tool.datamodel-codegen.jobs]` in declaration
+order (experimental).
+
+!!! warning "Experimental"
+
+    Named batch jobs are experimental; their configuration schema, batch output,
+    and transactional/watch execution contracts may change.
 
 **Related:** [`--job`](#job), [pyproject.toml Configuration](../pyproject_toml.md)
 
@@ -179,9 +184,14 @@ Displays all available command-line options with their descriptions and default 
 
 ## `--job` {#job}
 
-Run one or more named generation jobs declared in `pyproject.toml`. Jobs are
+Run one or more named generation jobs declared in `pyproject.toml` (experimental). Jobs are
 executed sequentially in TOML declaration order, even when `--job` is supplied
 in a different order.
+
+!!! warning "Experimental"
+
+    Named batch jobs are experimental; their configuration schema, batch output,
+    and transactional/watch execution contracts may change.
 
 **Related:** [pyproject.toml Configuration](../pyproject_toml.md), [`--all-jobs`](#all-jobs)
 

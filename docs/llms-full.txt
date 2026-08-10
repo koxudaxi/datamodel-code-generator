@@ -8671,7 +8671,12 @@ datamodel-codegen --input schemas/api.yaml --output src/models/api.py --profile 
 datamodel-codegen --input schemas/db.json --output src/models/db.py --profile py311
 ```
 
-## 🏃 Named Jobs
+## 🏃 Named Jobs (Experimental)
+
+!!! warning "Experimental"
+
+    Named batch jobs are experimental; their configuration schema, batch output,
+    and transactional/watch execution contracts may change.
 
 Profiles are reusable configuration fragments. A job is a runnable generation
 that supplies its own `input` and `output` and can select one profile.
@@ -37264,11 +37269,11 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/utility-opti
 
 | Option | Description |
 |--------|-------------|
-| [`--all-jobs`](#all-jobs) | Run every named generation job from pyproject.toml |
+| [`--all-jobs`](#all-jobs) | Run every named generation job from pyproject.toml (experimental) |
 | [`--debug`](#debug) | Show debug messages during code generation |
 | [`--generate-prompt`](#generate-prompt) | Generate a prompt for consulting LLMs about CLI options |
 | [`--help`](#help) | Show help message and exit |
-| [`--job`](#job) | Run a named generation job from pyproject.toml |
+| [`--job`](#job) | Run a named generation job from pyproject.toml (experimental) |
 | [`--list-deprecations`](#list-deprecations) | List registered deprecations and scheduled breaking changes |
 | [`--list-experimental`](#list-experimental) | List registered experimental features |
 | [`--no-color`](#no-color) | Disable colorized output |
@@ -37281,8 +37286,13 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/utility-opti
 
 ## `--all-jobs` {#all-jobs}
 
-Run every named generation job from `[tool.datamodel-codegen.jobs]` in
-declaration order.
+Run every named generation job from `[tool.datamodel-codegen.jobs]` in declaration
+order (experimental).
+
+!!! warning "Experimental"
+
+    Named batch jobs are experimental; their configuration schema, batch output,
+    and transactional/watch execution contracts may change.
 
 **Related:** [`--job`](#job), [pyproject.toml Configuration](../pyproject_toml.md)
 
@@ -37439,9 +37449,14 @@ Displays all available command-line options with their descriptions and default 
 
 ## `--job` {#job}
 
-Run one or more named generation jobs declared in `pyproject.toml`. Jobs are
+Run one or more named generation jobs declared in `pyproject.toml` (experimental). Jobs are
 executed sequentially in TOML declaration order, even when `--job` is supplied
 in a different order.
+
+!!! warning "Experimental"
+
+    Named batch jobs are experimental; their configuration schema, batch output,
+    and transactional/watch execution contracts may change.
 
 **Related:** [pyproject.toml Configuration](../pyproject_toml.md), [`--all-jobs`](#all-jobs)
 
@@ -38239,11 +38254,11 @@ datamodel-codegen [OPTIONS]
 
 | Option | Description |
 |--------|-------------|
-| [`--all-jobs`](utility-options.md#all-jobs) | Run every named generation job from pyproject.toml |
+| [`--all-jobs`](utility-options.md#all-jobs) | Run every named generation job from pyproject.toml (experimental) |
 | [`--debug`](utility-options.md#debug) | Show debug messages during code generation |
 | [`--generate-prompt`](utility-options.md#generate-prompt) | Generate a prompt for consulting LLMs about CLI options |
 | [`--help`](utility-options.md#help) | Show help message and exit |
-| [`--job`](utility-options.md#job) | Run a named generation job from pyproject.toml |
+| [`--job`](utility-options.md#job) | Run a named generation job from pyproject.toml (experimental) |
 | [`--list-deprecations`](utility-options.md#list-deprecations) | List registered deprecations and scheduled breaking changes |
 | [`--list-experimental`](utility-options.md#list-experimental) | List registered experimental features |
 | [`--no-color`](utility-options.md#no-color) | Disable colorized output |
@@ -38263,7 +38278,7 @@ All options sorted alphabetically:
 - [`--aliases`](field-customization.md#aliases) - Apply custom field and class name aliases via inline JSON or...
 - [`--all-exports-collision-strategy`](general-options.md#all-exports-collision-strategy) - Handle name collisions when exporting recursive module hiera...
 - [`--all-exports-scope`](general-options.md#all-exports-scope) - Generate __all__ exports for child modules in __init__.py fi...
-- [`--all-jobs`](utility-options.md#all-jobs) - Run every named generation job from pyproject.toml
+- [`--all-jobs`](utility-options.md#all-jobs) - Run every named generation job from pyproject.toml (experimental)
 - [`--allof-class-hierarchy`](typing-customization.md#allof-class-hierarchy) - Controls how allOf schemas are represented in the generated ...
 - [`--allof-merge-mode`](typing-customization.md#allof-merge-mode) - Merge constraints from root model references in allOf schema...
 - [`--allow-extra-fields`](model-customization.md#allow-extra-fields) - Allow extra fields in generated Pydantic models (extra='allo...
@@ -38339,7 +38354,7 @@ All options sorted alphabetically:
 - [`--input-file-type`](base-options.md#input-file-type) - Specify the input file type for code generation.
 - [`--input-model`](base-options.md#input-model) - Import a Python type or dict schema from a module or Python ...
 - [`--input-model-ref-strategy`](base-options.md#input-model-ref-strategy) - Strategy for referenced types when using --input-model.
-- [`--job`](utility-options.md#job) - Run a named generation job from pyproject.toml
+- [`--job`](utility-options.md#job) - Run a named generation job from pyproject.toml (experimental)
 - [`--keep-model-order`](model-customization.md#keep-model-order) - Keep generated model order deterministic while respecting de...
 - [`--keyword-only`](model-customization.md#keyword-only) - Generate dataclasses with keyword-only fields (Python 3.10+)...
 - [`--list-deprecations`](utility-options.md#list-deprecations) - List registered deprecations and scheduled breaking changes
@@ -39108,6 +39123,7 @@ This page lists features that are available but still experimental.
 
 | ID | Kind | Target | Since | Tracking |
 |----|------|--------|-------|----------|
+| `behavior.batch-generation-jobs` | behavior | `[tool.datamodel-codegen.jobs], --job, --all-jobs` | 0.72.3 | - |
 | `cli-option.generate-schema-validators` | cli-option | `--generate-schema-validators` | 0.66.1 | - |
 | `cli-option.schema-validator-type` | cli-option | `--schema-validator-type` | 0.66.1 | - |
 | `cli-option.use-missing-sentinel` | cli-option | `--use-missing-sentinel` | 0.66.1 | - |
@@ -39122,6 +39138,16 @@ This page lists features that are available but still experimental.
 | `input-format.xmlschema` | input-format | `--input-file-type xmlschema` | 0.59.0 | - |
 
 ## Details
+
+### `behavior.batch-generation-jobs`
+
+- **Kind:** behavior
+- **Target:** `[tool.datamodel-codegen.jobs], --job, --all-jobs`
+- **Since:** 0.72.3
+
+Named batch jobs are experimental; their configuration schema, batch output, and transactional/watch execution contracts may change.
+
+Define named generation jobs in [tool.datamodel-codegen.jobs] and select them with --job or --all-jobs. Each selected job has its own input and output, and the full selection is validated before generation begins.
 
 ### `cli-option.generate-schema-validators`
 

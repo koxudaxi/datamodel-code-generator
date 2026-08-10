@@ -1,7 +1,12 @@
 ## `--all-jobs` {#all-jobs}
 
-Run every named generation job from `[tool.datamodel-codegen.jobs]` in
-declaration order.
+Run every named generation job from `[tool.datamodel-codegen.jobs]` in declaration
+order (experimental).
+
+!!! warning "Experimental"
+
+    Named batch jobs are experimental; their configuration schema, batch output,
+    and transactional/watch execution contracts may change.
 
 **Related:** [`--job`](job.md#job), [pyproject.toml Configuration](../../pyproject_toml.md)
 
