@@ -1,5 +1,5 @@
---- virtual.py (old input)
-+++ virtual.py (new input)
+--- virtual.py (baseline input)
++++ virtual.py (current input)
 @@ -7,7 +7,7 @@
 
 
