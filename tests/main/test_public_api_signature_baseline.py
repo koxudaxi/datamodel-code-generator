@@ -54,7 +54,7 @@ if TYPE_CHECKING:
     from datamodel_code_generator.model.dataclass import DataclassArguments
     from datamodel_code_generator.model.pydantic_v2 import UnionMode
     from datamodel_code_generator.parser import DefaultPutDict, LiteralType
-    from datamodel_code_generator.parser.base import Result
+    from datamodel_code_generator.parser.base import ModuleContext, ModulePath, ParseConfig, Result
     from datamodel_code_generator.preset_names import PresetName
     from datamodel_code_generator.types import StrictTypes
     from datamodel_code_generator.validators import ModelValidators
@@ -449,6 +449,20 @@ def _baseline_parser_parse_runtime_signature(
     module_split_mode: ModuleSplitMode | None = None,
     collect_model_metadata: bool = False,
 ) -> str | dict[tuple[str, ...], Result]:
+    raise NotImplementedError
+
+
+def _baseline_process_single_module_runtime_signature(
+    self,  # noqa: ANN001
+    module_: ModulePath,
+    models: list[DataModel],
+    results: dict[ModulePath, Result],
+    config: ParseConfig,
+    internal_modules: set[ModulePath],
+    model_path_to_module_name: dict[str, str],
+    require_update_action_models: list[str],
+    unused_models: list[DataModel],
+) -> ModuleContext:
     raise NotImplementedError
 
 
@@ -916,6 +930,16 @@ def test_parser_parse_runtime_signature_matches_baseline() -> None:
 
     assert Parser.parse.__module__ == "datamodel_code_generator.parser.base"
     assert inspect.signature(Parser.parse) == inspect.signature(_baseline_parser_parse_runtime_signature)
+
+
+def test_parser_process_single_module_runtime_signature_matches_baseline() -> None:
+    """Keep Parser._process_single_module()'s extension hook stable."""
+    from datamodel_code_generator.parser.base import Parser
+
+    assert Parser._process_single_module.__module__ == "datamodel_code_generator.parser.base"
+    assert inspect.signature(Parser._process_single_module) == inspect.signature(
+        _baseline_process_single_module_runtime_signature
+    )
 
 
 def test_parser_signature_matches_baseline() -> None:
