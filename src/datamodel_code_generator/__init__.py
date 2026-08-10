@@ -1532,68 +1532,49 @@ def _build_parser(  # noqa: PLR0911, PLR0913
     raise Error(msg)
 
 
-def _emit_results(  # noqa: PLR0912, PLR0913, PLR0915
+def _emit_stdout_results(
     results: str | dict[tuple[str, ...], Any],
-    input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
     input_filename: str | None,
-    custom_file_header: str | None,
+    header_prefix: str,
+    header_suffix: str | None,
+    *,
+    has_custom_file_header: bool,
+) -> str | GeneratedModules:
+    """Render generated results for callers that do not provide an output path."""
+    if isinstance(results, str):
+        effective_header = _format_file_header(header_prefix, header_suffix, input_filename)
+        return _build_module_content(
+            results,
+            effective_header,
+            has_custom_file_header=has_custom_file_header,
+        )
+
+    generated: GeneratedModules = {}
+    for name, result in sorted(results.items()):
+        source_filename = str(result.source.as_posix() if result.source else input_filename)
+        effective_header = _format_file_header(header_prefix, header_suffix, source_filename)
+        generated[name] = _build_module_content(
+            result.body,
+            effective_header,
+            has_custom_file_header=has_custom_file_header,
+            future_imports=result.future_imports,
+        )
+    return generated
+
+
+def _write_results_to_output(  # noqa: PLR0913
+    results: str | dict[tuple[str, ...], Any],
+    output: Path,
     config: GenerateConfig,
     *,
-    defer_formatting: bool,
-    data_model_types: Any,
-    settings_path: Path,
-) -> str | GeneratedModules | None:
-    if not input_filename:  # pragma: no cover
-        match input_:
-            case str():
-                input_filename = "<stdin>"
-            case ParseResult():
-                input_filename = input_.geturl()
-            case Path():
-                input_filename = input_.name
-            case _:
-                # input_ might be a dict object provided directly, and missing a name field
-                input_filename = getattr(input_, "name", "<dict>")
-    if not results:
-        msg = "Models not found in the input data"
-        raise Error(msg)
-
-    if custom_file_header is None and (custom_file_header_path := config.custom_file_header_path):
-        custom_file_header = custom_file_header_path.read_text(encoding=config.encoding)
-
-    has_custom_file_header = bool(custom_file_header)
-    header_prefix, header_suffix = _build_file_header_parts(custom_file_header, config)
-
-    # When output is None, return generated code as string(s) instead of writing to files
-    if config.output is None:
-        if isinstance(results, str):
-            # Single-file output: return str
-            effective_header = _format_file_header(header_prefix, header_suffix, input_filename)
-            return _build_module_content(
-                results,
-                effective_header,
-                has_custom_file_header=has_custom_file_header,
-            )
-        # Multiple modules: return GeneratedModules dict
-        generated: GeneratedModules = {}
-        for name, result in sorted(results.items()):
-            source_filename = str(result.source.as_posix() if result.source else input_filename)
-            effective_header = _format_file_header(header_prefix, header_suffix, source_filename)
-            generated[name] = _build_module_content(
-                result.body,
-                effective_header,
-                has_custom_file_header=has_custom_file_header,
-                future_imports=result.future_imports,
-            )
-        return generated
-
-    # When output is a Path, write to file system
-    output = config.output
+    input_filename: str | None,
+    header_prefix: str,
+    header_suffix: str | None,
+    has_custom_file_header: bool,
+) -> None:
+    """Write one file or a sorted collection of generated modules to disk."""
     if isinstance(results, str):
-        # Single-file output: body already contains future imports
-        body = results
-        future_imports = ""
-        modules: dict[Path, tuple[str, str, str | None]] = {output: (body, future_imports, input_filename)}
+        modules: dict[Path, tuple[str, str, str | None]] = {output: (results, "", input_filename)}
     else:
         if output.suffix:
             msg = "Modular references require an output directory, not a file"
@@ -1630,39 +1611,99 @@ def _emit_results(  # noqa: PLR0912, PLR0913, PLR0915
                     file.write(body.rstrip())
                 file.write("\n")
 
-    if defer_formatting and config.formatters:
-        from datamodel_code_generator._format_types import Formatter  # noqa: PLC0415
-        from datamodel_code_generator.format import (  # noqa: PLC0415
-            CodeFormatter,
-            resolve_use_type_checking_imports,
+
+def _format_deferred_output(
+    output: Path,
+    config: GenerateConfig,
+    data_model_types: Any,
+    settings_path: Path,
+) -> None:
+    """Apply deferred Ruff formatting only when a Ruff formatter is configured."""
+    if not config.formatters:
+        return
+
+    from datamodel_code_generator._format_types import Formatter  # noqa: PLC0415
+    from datamodel_code_generator.format import CodeFormatter, resolve_use_type_checking_imports  # noqa: PLC0415
+
+    if Formatter.RUFF_CHECK not in config.formatters and Formatter.RUFF_FORMAT not in config.formatters:
+        return
+
+    effective_use_type_checking_imports = resolve_use_type_checking_imports(
+        config.use_type_checking_imports,
+        is_multi_module_output=True,
+        formatters=config.formatters,
+        requires_runtime_imports_with_ruff_check=(data_model_types.data_model.REQUIRES_RUNTIME_IMPORTS_WITH_RUFF_CHECK),
+    )
+    code_formatter = CodeFormatter(
+        config.target_python_version,
+        settings_path,
+        config.wrap_string_literal,
+        skip_string_normalization=not config.use_double_quotes,
+        known_third_party=data_model_types.known_third_party,
+        custom_formatters=config.custom_formatters,
+        custom_formatters_kwargs=config.custom_formatters_kwargs,
+        encoding=config.encoding,
+        formatters=config.formatters,
+        builtin_format_line_length=config.builtin_format_line_length,
+        use_type_checking_imports=effective_use_type_checking_imports,
+        defer_formatting=True,
+    )
+    code_formatter.format_directory(output)
+
+
+def _emit_results(  # noqa: PLR0913
+    results: str | dict[tuple[str, ...], Any],
+    input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
+    input_filename: str | None,
+    custom_file_header: str | None,
+    config: GenerateConfig,
+    *,
+    defer_formatting: bool,
+    data_model_types: Any,
+    settings_path: Path,
+) -> str | GeneratedModules | None:
+    if not input_filename:  # pragma: no cover
+        match input_:
+            case str():
+                input_filename = "<stdin>"
+            case ParseResult():
+                input_filename = input_.geturl()
+            case Path():
+                input_filename = input_.name
+            case _:
+                # input_ might be a dict object provided directly, and missing a name field
+                input_filename = getattr(input_, "name", "<dict>")
+    if not results:
+        msg = "Models not found in the input data"
+        raise Error(msg)
+
+    if custom_file_header is None and (custom_file_header_path := config.custom_file_header_path):
+        custom_file_header = custom_file_header_path.read_text(encoding=config.encoding)
+
+    has_custom_file_header = bool(custom_file_header)
+    header_prefix, header_suffix = _build_file_header_parts(custom_file_header, config)
+
+    output = config.output
+    if output is None:
+        return _emit_stdout_results(
+            results,
+            input_filename,
+            header_prefix,
+            header_suffix,
+            has_custom_file_header=has_custom_file_header,
         )
 
-        if Formatter.RUFF_CHECK not in config.formatters and Formatter.RUFF_FORMAT not in config.formatters:
-            return None
-
-        effective_use_type_checking_imports = resolve_use_type_checking_imports(
-            config.use_type_checking_imports,
-            is_multi_module_output=True,
-            formatters=config.formatters,
-            requires_runtime_imports_with_ruff_check=(
-                data_model_types.data_model.REQUIRES_RUNTIME_IMPORTS_WITH_RUFF_CHECK
-            ),
-        )
-        code_formatter = CodeFormatter(
-            config.target_python_version,
-            settings_path,
-            config.wrap_string_literal,
-            skip_string_normalization=not config.use_double_quotes,
-            known_third_party=data_model_types.known_third_party,
-            custom_formatters=config.custom_formatters,
-            custom_formatters_kwargs=config.custom_formatters_kwargs,
-            encoding=config.encoding,
-            formatters=config.formatters,
-            builtin_format_line_length=config.builtin_format_line_length,
-            use_type_checking_imports=effective_use_type_checking_imports,
-            defer_formatting=True,
-        )
-        code_formatter.format_directory(output)
+    _write_results_to_output(
+        results,
+        output,
+        config,
+        input_filename=input_filename,
+        header_prefix=header_prefix,
+        header_suffix=header_suffix,
+        has_custom_file_header=has_custom_file_header,
+    )
+    if defer_formatting:
+        _format_deferred_output(output, config, data_model_types, settings_path)
 
     return None
 

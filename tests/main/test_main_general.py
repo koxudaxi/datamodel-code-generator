@@ -3970,6 +3970,34 @@ def test_generate_returns_dict_for_multiple_modules(tmp_path: Path) -> None:
     )
 
 
+def test_generate_modular_stdout_and_directory_match_fixture(output_dir: Path) -> None:
+    """Keep API stdout and directory emission aligned with the modular fixture."""
+    generate_options = {
+        "input_file_type": InputFileType.OpenAPI,
+    }
+    expected_directory = EXPECTED_MAIN_PATH / "openapi" / "modular"
+
+    with freeze_time(TIMESTAMP):
+        generated = generate(OPEN_API_DATA_PATH / "modular.yaml", **generate_options)
+        assert_generated_modules_output(generated, expected_directory, transform=lambda output: f"{output}\n")
+
+        generate(OPEN_API_DATA_PATH / "modular.yaml", output=output_dir, **generate_options)
+    assert_directory_content(output_dir, expected_directory)
+
+
+def test_generate_multimodule_builtin_directory_matches_fixture(output_dir: Path) -> None:
+    """Keep deferred non-Ruff directory output on its existing write-only path."""
+    generate(
+        JSON_SCHEMA_DATA_PATH / "all_exports_multi_file",
+        input_file_type=InputFileType.JsonSchema,
+        output=output_dir,
+        formatters=[Formatter.BUILTIN],
+        disable_timestamp=True,
+        all_exports_scope=AllExportsScope.Recursive,
+    )
+    assert_directory_content(output_dir, EXPECTED_MAIN_PATH / "jsonschema" / "all_exports_multi_file")
+
+
 @pytest.mark.allow_direct_assert
 def test_generated_modules_type_alias_is_exported() -> None:
     """Test that GeneratedModules is exported from the module."""
