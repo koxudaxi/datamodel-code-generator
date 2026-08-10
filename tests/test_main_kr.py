@@ -19,23 +19,16 @@ from packaging import version
 
 from datamodel_code_generator import MIN_VERSION, Error, chdir, inferred_message
 from datamodel_code_generator import __main__ as main_module
+from datamodel_code_generator import _publication as publication_module
 from datamodel_code_generator.__main__ import (
     Exit,
     JobPlan,
-    _backup_existing_target,
-    _create_directory,
-    _create_target_parent,
     _generated_files_from_result,
     _generation_output_json,
     _json_ready,
     _plan_jobs,
     _publish_staged_files,
-    _PublishedFile,
-    _remove_created_directory,
-    _restore_backup,
-    _rollback_published_file,
     _selected_jobs,
-    _staged_files,
     _StagedJobPlan,
     _write_generated_result,
     generate_pyproject_config,
@@ -1922,9 +1915,9 @@ def test_pyproject_job_plan_preserves_watch_provenance(jobs_project: dict[str, P
         plan = batch_plan.jobs[0]
 
     assert batch_plan.watch
-    assert batch_plan.watch_delay == 0.25
+    assert batch_plan.watch_delay == pytest.approx(0.25)
     assert not plan.config.watch
-    assert plan.config.watch_delay == 0.5
+    assert plan.config.watch_delay == pytest.approx(0.5)
     assert plan.raw_config["input"] == (JSON_SCHEMA_DATA_PATH / "person.json").as_posix()
     assert plan.raw_config["output"] == jobs_project["plain"].as_posix()
     assert plan.cli_config_args["formatters"] == ["builtin"]
@@ -1946,8 +1939,8 @@ def test_pyproject_job_plan_uses_base_watch_scheduler(jobs_project: dict[str, Pa
         batch_plan = _plan_jobs(arg_parser.parse_args(["--all-jobs"]))
 
     assert batch_plan.watch
-    assert batch_plan.watch_delay == 0.75
-    assert all(not plan.config.watch and plan.config.watch_delay == 0.5 for plan in batch_plan.jobs)
+    assert batch_plan.watch_delay == pytest.approx(0.75)
+    assert all(not plan.config.watch and plan.config.watch_delay == pytest.approx(0.5) for plan in batch_plan.jobs)
     _assert_file_does_not_exist(jobs_project["plain"])
     _assert_file_does_not_exist(jobs_project["strict"])
 
@@ -2416,15 +2409,17 @@ def test_pyproject_jobs_publish_rollback_restores_prior_files(tmp_path: Path, mo
     second_staged.write_text("second generated\n", encoding="utf-8")
     first_target.write_text("first stale\n", encoding="utf-8")
     second_target.write_text("second stale\n", encoding="utf-8")
-    original_replace_source = main_module._replace_source
+    original_replace_source = publication_module._replace_source
 
-    def fail_second_publication(source: Path, destination: str | Path, destination_fd: int | None) -> None:
-        if source == second_staged:
+    def fail_second_publication(
+        source: publication_module.StagedFile, destination: str | Path, destination_fd: int | None
+    ) -> None:
+        if source.staged_file == second_staged:
             msg = "simulated publish failure"
             raise OSError(msg)
         original_replace_source(source, destination, destination_fd)
 
-    monkeypatch.setattr(main_module, "_replace_source", fail_second_publication)
+    monkeypatch.setattr(publication_module, "_replace_source", fail_second_publication)
 
     with pytest.raises(OSError, match="simulated publish failure"):
         _publish_staged_files([(first_staged, first_target), (new_staged, new_target), (second_staged, second_target)])
@@ -2436,6 +2431,23 @@ def test_pyproject_jobs_publish_rollback_restores_prior_files(tmp_path: Path, mo
 
 
 @pytest.mark.allow_direct_assert
+def test_pyproject_jobs_reject_duplicate_publication_targets_before_mutating_files(tmp_path: Path) -> None:
+    """A common publication journal refuses duplicate immutable destinations before its first write."""
+    first_staged = tmp_path / "first.staged.py"
+    second_staged = tmp_path / "second.staged.py"
+    target = tmp_path / "target.py"
+    first_staged.write_text("first generated\n", encoding="utf-8")
+    second_staged.write_text("second generated\n", encoding="utf-8")
+
+    with pytest.raises(OSError, match="duplicate staged publication target"):
+        _publish_staged_files(((first_staged, target), (second_staged, target)))
+
+    _assert_file_does_not_exist(target)
+    assert first_staged.is_file()
+    assert second_staged.is_file()
+
+
+@pytest.mark.allow_direct_assert
 def test_pyproject_jobs_publish_first_replacement_failure_removes_backup(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -2444,20 +2456,16 @@ def test_pyproject_jobs_publish_first_replacement_failure_removes_backup(
     target = tmp_path / "target.py"
     staged_file.write_text("generated\n", encoding="utf-8")
     target.write_text("stale\n", encoding="utf-8")
-    original_replace_source = main_module._replace_source
 
     def fail_first_replacement(
-        source: Path,
-        destination: str | Path,
-        destination_fd: int | None,
+        _source: publication_module.StagedFile,
+        _destination: str | Path,
+        _destination_fd: int | None,
     ) -> None:
-        if source == staged_file:
-            msg = "simulated first replacement failure"
-            raise OSError(msg)
-        original_replace_source(source, destination, destination_fd)
+        msg = "simulated first replacement failure"
+        raise OSError(msg)
 
-    monkeypatch.setattr(main_module, "_replace_source", fail_first_replacement)
-    fail_first_replacement(target, target, None)
+    monkeypatch.setattr(publication_module, "_replace_source", fail_first_replacement)
 
     with pytest.raises(OSError, match="simulated first replacement failure"):
         _publish_staged_files([(staged_file, target)])
@@ -2497,20 +2505,16 @@ def test_pyproject_jobs_failed_replacement_discards_unchanged_symlink_backup(
         (EXPECTED_MAIN_KR_PATH / "jobs" / "stale.py").read_text(encoding="utf-8"), encoding="utf-8"
     )
     output_link.symlink_to(original_target)
-    original_replace_source = main_module._replace_source
 
     def fail_staged_replace(
-        source: Path,
-        destination: str | Path,
-        destination_fd: int | None,
+        _source: publication_module.StagedFile,
+        _destination: str | Path,
+        _destination_fd: int | None,
     ) -> None:
-        if source == staged_file:
-            msg = "simulated symlink replacement failure"
-            raise OSError(msg)
-        original_replace_source(source, destination, destination_fd)
+        msg = "simulated symlink replacement failure"
+        raise OSError(msg)
 
-    monkeypatch.setattr(main_module, "_replace_source", fail_staged_replace)
-    fail_staged_replace(original_target, original_target, None)
+    monkeypatch.setattr(publication_module, "_replace_source", fail_staged_replace)
 
     with pytest.raises(OSError, match="simulated symlink replacement failure"):
         _publish_staged_files([(staged_file, output_link)])
@@ -2555,7 +2559,7 @@ def test_backup_existing_target_retries_collisions_without_overwriting(
     os.utime(target, ns=(timestamp_ns, timestamp_ns))
     colliding_backup.write_text("unrelated\n", encoding="utf-8")
     candidate_names = iter((colliding_backup.name, expected_backup.name))
-    monkeypatch.setattr(main_module, "_backup_name", lambda _target_name: next(candidate_names))
+    monkeypatch.setattr(publication_module, "_backup_name", lambda _target_name: next(candidate_names))
 
     if copy_backup:
         monkeypatch.setattr(
@@ -2564,7 +2568,7 @@ def test_backup_existing_target_retries_collisions_without_overwriting(
             lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("simulated hardlink failure")),
         )
 
-    backup = _backup_existing_target(target)
+    backup = publication_module._backup_existing_target(target)
     backup_stat = backup.stat()
 
     assert backup == expected_backup
@@ -2591,9 +2595,9 @@ def test_backup_existing_symlink_retries_collision_without_overwriting(
         pytest.skip("this platform cannot create symlinks")
     colliding_backup.write_text("unrelated\n", encoding="utf-8")
     candidate_names = iter((colliding_backup.name, expected_backup.name))
-    monkeypatch.setattr(main_module, "_backup_name", lambda _target_name: next(candidate_names))
+    monkeypatch.setattr(publication_module, "_backup_name", lambda _target_name: next(candidate_names))
 
-    backup = _backup_existing_target(target)
+    backup = publication_module._backup_existing_target(target)
 
     assert backup == expected_backup
     assert backup.is_symlink()
@@ -2608,7 +2612,7 @@ def test_copy_backup_without_fchmod(tmp_path: Path, monkeypatch: pytest.MonkeyPa
     monkeypatch.setattr(os, "link", lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("no hardlink")))
     monkeypatch.delattr(os, "fchmod", raising=False)
 
-    backup = _backup_existing_target(target)
+    backup = publication_module._backup_existing_target(target)
 
     assert_output(backup.read_text(encoding="utf-8"), EXPECTED_MAIN_KR_PATH / "jobs" / "stale.py")
 
@@ -2631,7 +2635,7 @@ def test_pyproject_jobs_partial_copy_backup_failure_removes_backup(
     monkeypatch.setattr(main_module.shutil, "copyfileobj", fail_partial_copy)
 
     with pytest.raises(OSError, match="simulated partial copy failure"):
-        _backup_existing_target(target)
+        publication_module._backup_existing_target(target)
 
     assert_output(target.read_text(encoding="utf-8"), EXPECTED_MAIN_KR_PATH / "jobs" / "stale.py")
     assert list(tmp_path.glob(".target.py.*.bak")) == []
@@ -2659,13 +2663,13 @@ def test_pyproject_jobs_post_publish_check_does_not_recreate_missing_parent(
     target_parent.mkdir()
     staged_file.write_text("generated\n", encoding="utf-8")
     target.write_text("stale\n", encoding="utf-8")
-    original_matches = main_module._directory_fd_matches_path
+    original_matches = publication_module._directory_fd_matches_path
 
     def detach_before_postcheck(directory_fd: int, path: Path) -> bool:
         path.rename(detached_parent)
         return original_matches(directory_fd, path)
 
-    monkeypatch.setattr(main_module, "_directory_fd_matches_path", detach_before_postcheck)
+    monkeypatch.setattr(publication_module, "_directory_fd_matches_path", detach_before_postcheck)
 
     with pytest.raises(OSError, match="destination changed during publication"):
         _publish_staged_files([(staged_file, target)])
@@ -2685,18 +2689,29 @@ def test_pyproject_jobs_rollback_helpers_report_unrecoverable_paths(
     target = tmp_path / "target.py"
     missing_backup = tmp_path / "missing.bak"
     target.write_text("generated\n", encoding="utf-8")
-    assert _rollback_published_file(_PublishedFile(target, missing_backup)) == [target, missing_backup]
-    assert _rollback_published_file(_PublishedFile(tmp_path / "missing.py", None)) == []
+    assert publication_module._rollback_published_file(publication_module._PublishedFile(target, missing_backup)) == [
+        target,
+        missing_backup,
+    ]
+    assert (
+        publication_module._rollback_published_file(publication_module._PublishedFile(tmp_path / "missing.py", None))
+        == []
+    )
 
     backup = tmp_path / "backup.py"
     backup.write_text("stale\n", encoding="utf-8")
-    monkeypatch.setattr(main_module, "_restore_backup", lambda *_args: (_ for _ in ()).throw(OSError("restore failed")))
-    assert _rollback_published_file(_PublishedFile(target, backup)) == [target, backup]
+    monkeypatch.setattr(
+        publication_module, "_restore_backup", lambda *_args: (_ for _ in ()).throw(OSError("restore failed"))
+    )
+    assert publication_module._rollback_published_file(publication_module._PublishedFile(target, backup)) == [
+        target,
+        backup,
+    ]
 
     nonempty_directory = tmp_path / "generated"
     nonempty_directory.mkdir()
     (nonempty_directory / "file.py").write_text("generated\n", encoding="utf-8")
-    assert _remove_created_directory(nonempty_directory) == [nonempty_directory]
+    assert publication_module._remove_created_directory(nonempty_directory) == [nonempty_directory]
 
 
 @pytest.mark.allow_direct_assert
@@ -2705,14 +2720,14 @@ def test_pyproject_jobs_parent_and_rollback_helpers_handle_races(
 ) -> None:
     """Keep transaction journals accurate when competing filesystem changes win a race."""
     created_directories: list[Path] = []
-    monkeypatch.setattr(main_module, "_create_directory", lambda _directory: False)
-    _create_target_parent(tmp_path / "generated" / "model.py", created_directories)
+    monkeypatch.setattr(publication_module, "_create_directory", lambda _directory: False)
+    publication_module._create_target_parent(tmp_path / "generated" / "model.py", created_directories)
     assert created_directories == []
 
     target = tmp_path / "target.py"
     target.write_text("generated\n", encoding="utf-8")
-    monkeypatch.setattr(Path, "unlink", lambda *_args: (_ for _ in ()).throw(OSError("unlink failed")))
-    assert _rollback_published_file(_PublishedFile(target, None)) == [target]
+    monkeypatch.setattr(publication_module, "_unlink", lambda *_args: (_ for _ in ()).throw(OSError("unlink failed")))
+    assert publication_module._rollback_published_file(publication_module._PublishedFile(target, None)) == [target]
 
 
 @pytest.mark.allow_direct_assert
@@ -2731,9 +2746,16 @@ def test_pyproject_jobs_restore_backup_replaces_when_samefile_is_unavailable(
 
     monkeypatch.setattr(Path, "samefile", fail_samefile)
 
-    _restore_backup(backup, target)
+    publication_module._restore_backup(backup, target)
 
     assert target.read_text(encoding="utf-8") == "stale\n"
+
+    monkeypatch.undo()
+    backup.write_text("stale again\n", encoding="utf-8")
+    target.write_text("generated again\n", encoding="utf-8")
+    publication_module._restore_backup(backup, target)
+
+    assert target.read_text(encoding="utf-8") == "stale again\n"
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="symlink creation requires elevated privileges")
@@ -2747,7 +2769,7 @@ def test_pyproject_jobs_restore_backup_discards_unchanged_symlink_backup(tmp_pat
     backup.symlink_to(original)
     target.symlink_to(original)
 
-    _restore_backup(backup, target)
+    publication_module._restore_backup(backup, target)
 
     _assert_file_does_not_exist(backup)
     assert target.is_symlink()
@@ -2761,22 +2783,18 @@ def test_pyproject_jobs_publish_reports_failed_rollback(tmp_path: Path, monkeypa
     target = tmp_path / "target.py"
     staged_file.write_text("generated\n", encoding="utf-8")
     target.write_text("stale\n", encoding="utf-8")
-    original_replace_source = main_module._replace_source
 
     def fail_publication(
-        source: Path,
-        destination: str | Path,
-        destination_fd: int | None,
+        _source: publication_module.StagedFile,
+        _destination: str | Path,
+        _destination_fd: int | None,
     ) -> None:
-        if source == staged_file:
-            msg = "simulated publication failure"
-            raise OSError(msg)
-        original_replace_source(source, destination, destination_fd)
+        msg = "simulated publication failure"
+        raise OSError(msg)
 
-    monkeypatch.setattr(main_module, "_replace_source", fail_publication)
-    fail_publication(target, target, None)
+    monkeypatch.setattr(publication_module, "_replace_source", fail_publication)
     monkeypatch.setattr(
-        main_module,
+        publication_module,
         "_restore_backup_at",
         lambda *_args: (_ for _ in ()).throw(OSError("rollback failed")),
     )
@@ -2818,30 +2836,6 @@ def test_pyproject_jobs_publish_rejects_directory_file_target(tmp_path: Path) ->
 
 
 @pytest.mark.allow_direct_assert
-def test_pyproject_jobs_windows_fallback_publication_helpers(tmp_path: Path) -> None:
-    """Cover lexical fallback helpers that the POSIX descriptor publication path cannot execute."""
-    existing_directory = tmp_path / "existing"
-    existing_directory.mkdir()
-
-    assert _create_directory(existing_directory) is False
-    created_directories: list[Path] = []
-    _create_target_parent(tmp_path / "created" / "nested" / "model.py", created_directories)
-    assert created_directories == [tmp_path / "created", tmp_path / "created" / "nested"]
-
-    target = tmp_path / "target.py"
-    target.write_text("stale\n", encoding="utf-8")
-    backup = _backup_existing_target(target)
-    _restore_backup(backup, target)
-    _assert_file_does_not_exist(backup)
-    assert target.read_text(encoding="utf-8") == "stale\n"
-
-    empty_directory = tmp_path / "empty"
-    empty_directory.mkdir()
-    assert _remove_created_directory(empty_directory) == []
-    assert list(_staged_files(_StagedJobPlan(None, None, None, None, None, None, None, None, None, None, ()))) == []
-
-
-@pytest.mark.allow_direct_assert
 @pytest.mark.skipif(os.name == "nt", reason="POSIX permission modes are unsupported on Windows")
 def test_pyproject_jobs_publish_nested_output_and_preserve_mode(tmp_path: Path) -> None:
     """Publish into new parent directories and preserve the mode on a later replacement."""
@@ -2871,21 +2865,6 @@ output = "{output_path.as_posix()}"
     assert stat.S_IMODE(output_path.stat().st_mode) == 0o640
 
 
-@pytest.mark.skipif(os.name == "nt", reason="POSIX permission modes are unsupported on Windows")
-@pytest.mark.allow_direct_assert
-def test_pyproject_jobs_windows_fallback_preserves_target_mode(tmp_path: Path) -> None:
-    """Cover the Windows lexical fallback mode transfer outside POSIX descriptor publication."""
-    staged_file = tmp_path / "staged.py"
-    target = tmp_path / "target.py"
-    staged_file.write_text("generated\n", encoding="utf-8")
-    target.write_text("stale\n", encoding="utf-8")
-    target.chmod(0o640)
-
-    main_module._preserve_target_mode(staged_file, target)
-
-    assert stat.S_IMODE(staged_file.stat().st_mode) == 0o640
-
-
 def test_pyproject_jobs_staging_failure_removes_earlier_staging(
     tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -2893,11 +2872,14 @@ def test_pyproject_jobs_staging_failure_removes_earlier_staging(
     first_output = tmp_path / "first.py"
     second_output = tmp_path / "second.py"
     metadata_output = tmp_path / "second.metadata.json"
+    lockfile = tmp_path / "remote.lock"
     (tmp_path / "pyproject.toml").write_text(
         f"""
 [tool.datamodel-codegen]
 disable-timestamp = true
 input-file-type = "jsonschema"
+update-lock = true
+lockfile = "{lockfile.as_posix()}"
 
 [tool.datamodel-codegen.jobs.first]
 input = "{(JSON_SCHEMA_DATA_PATH / "person.json").as_posix()}"
@@ -2934,6 +2916,7 @@ emit-model-metadata = "{metadata_output.as_posix()}"
     _assert_file_does_not_exist(first_output)
     _assert_file_does_not_exist(second_output)
     _assert_file_does_not_exist(metadata_output)
+    _assert_file_does_not_exist(lockfile)
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="batch publication anchors use directory descriptors on POSIX")
@@ -2972,7 +2955,7 @@ emit-model-metadata = "{metadata_output.as_posix()}"
             raise OSError(msg)
         return staging_directory_for(target)
 
-    publication_anchor = main_module._publication_anchor
+    publication_anchor = publication_module.publication_anchor
     anchored_descriptors: set[int] = set()
 
     def record_anchor(path: Path) -> main_module._PublicationAnchor:
@@ -2991,7 +2974,7 @@ emit-model-metadata = "{metadata_output.as_posix()}"
         close(descriptor)
 
     monkeypatch.setattr(main_module, "_staging_directory_for", fail_metadata_staging)
-    monkeypatch.setattr(main_module, "_publication_anchor", record_anchor)
+    monkeypatch.setattr(publication_module, "publication_anchor", record_anchor)
     monkeypatch.setattr(main_module.os, "close", fail_anchor_cleanup)
 
     with chdir(tmp_path):
@@ -4113,6 +4096,173 @@ def test_http_timeout(mock_httpx_get: HttpxGetMockFactory, output_file: Path) ->
         extra_args=["--http-timeout", "60"],
     )
     assert_httpx_get_kwargs(mock_get, timeout=60.0)
+
+
+REMOTE_LOCK_EXPERIMENTAL_NOTE = (
+    "Remote reference lock support is experimental: its lock document schema and request-identity compatibility may "
+    "evolve. It remains fail-closed on integrity mismatches, and it never persists credentials.\n\n"
+)
+
+REMOTE_LOCK_OPTION_DESCRIPTION = """The lock stores opaque SHA-256 request-identity digests and SHA-256 body digests,
+never response bodies or request values directly. Each saved display origin contains only the scheme, host, and
+explicit port—never a path, query, or request headers. A request identity includes its scheme, host, explicit port,
+path, header names, and ordered query parameter names only. If one generation receives different bodies for the same
+path and query-name identity, it fails closed rather than sharing a lock entry."""
+
+REMOTE_LOCKFILE_OPTION_DESCRIPTION = (
+    """Select the remote reference integrity lock file (experimental).
+
+An existing selected lock is verified automatically; a missing selected lock is ignored unless `--locked` requires it.
+Without `--lockfile`, the CLI uses `datamodel-codegen.lock` beside the discovered `pyproject.toml`, or in the invocation
+working directory when no project is found. Explicit relative `--lockfile` paths resolve from the invocation working
+directory, not the project root or output directory. The public API uses the caller's working directory for both its
+default lock and relative `lockfile` paths.
+
+"""
+    + REMOTE_LOCK_EXPERIMENTAL_NOTE
+    + REMOTE_LOCK_OPTION_DESCRIPTION
+)
+
+REMOTE_LOCK_UPDATE_OPTION_DESCRIPTION = (
+    """Create or atomically update the selected remote lock after generation (experimental).
+
+`--update-lock` creates or refreshes the selected `--lockfile` from every remote resource reached during this run.
+It conflicts with `--locked`.
+
+"""
+    + REMOTE_LOCK_EXPERIMENTAL_NOTE
+    + REMOTE_LOCK_OPTION_DESCRIPTION
+)
+
+REMOTE_LOCKED_OPTION_DESCRIPTION = (
+    """Require an existing remote lock and validate each fetched resource against it (experimental).
+
+`--locked` fails if the selected lock is missing, a resource is unrecorded, or its body differs. It conflicts with
+`--update-lock`.
+
+"""
+    + REMOTE_LOCK_EXPERIMENTAL_NOTE
+    + REMOTE_LOCK_OPTION_DESCRIPTION
+)
+
+
+@pytest.mark.cli_doc(
+    options=["--lockfile"],
+    option_description=REMOTE_LOCKFILE_OPTION_DESCRIPTION,
+    input_schema="jsonschema/pet_simple.json",
+    cli_args=[
+        "--url",
+        "https://api.example.com/schema.json",
+        "--update-lock",
+        "--lockfile",
+        "datamodel-codegen.lock",
+    ],
+    golden_output="main_kr/url_with_headers/output.py",
+    related_options=["--url", "--http-local-ref-path", "--update-lock", "--locked"],
+)
+@freeze_time("2019-07-26")
+@pytest.mark.allow_direct_assert
+def test_lockfile_remote_lock_cli_doc(
+    mock_httpx_get: HttpxGetMockFactory,
+    output_file: Path,
+    tmp_path: Path,
+) -> None:
+    """Create a usable lock for the remote URL shown in the generated docs."""
+    schema_url = "https://api.example.com/schema.json"
+    mock_httpx_get(MockHttpxResponse(schema_url, JSON_SCHEMA_DATA_PATH / "pet_simple.json"))
+    lockfile = tmp_path / "datamodel-codegen.lock"
+
+    run_main_url_and_assert(
+        url=schema_url,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "url_with_headers" / "output.py",
+        extra_args=["--update-lock", "--lockfile", str(lockfile)],
+    )
+    assert len(json.loads(lockfile.read_text(encoding="utf-8"))["resources"]) == 1
+
+
+@pytest.mark.cli_doc(
+    options=["--update-lock"],
+    option_description=REMOTE_LOCK_UPDATE_OPTION_DESCRIPTION,
+    input_schema="jsonschema/pet_simple.json",
+    cli_args=[
+        "--url",
+        "https://api.example.com/schema.json",
+        "--update-lock",
+        "--lockfile",
+        "datamodel-codegen.lock",
+    ],
+    golden_output="main_kr/url_with_headers/output.py",
+    related_options=["--url", "--http-local-ref-path", "--lockfile"],
+)
+@freeze_time("2019-07-26")
+@pytest.mark.allow_direct_assert
+def test_update_remote_lock_cli_doc(
+    mock_httpx_get: HttpxGetMockFactory,
+    output_file: Path,
+    tmp_path: Path,
+) -> None:
+    """Create a usable lock for the remote URL shown in the generated docs."""
+    schema_url = "https://api.example.com/schema.json"
+    mock_httpx_get(MockHttpxResponse(schema_url, JSON_SCHEMA_DATA_PATH / "pet_simple.json"))
+    lockfile = tmp_path / "datamodel-codegen.lock"
+
+    run_main_url_and_assert(
+        url=schema_url,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "url_with_headers" / "output.py",
+        extra_args=["--update-lock", "--lockfile", str(lockfile)],
+    )
+    assert len(json.loads(lockfile.read_text(encoding="utf-8"))["resources"]) == 1
+
+
+@pytest.mark.cli_doc(
+    options=["--locked"],
+    option_description=REMOTE_LOCKED_OPTION_DESCRIPTION,
+    input_schema="jsonschema/pet_simple.json",
+    cli_args=[
+        "--url",
+        "https://api.example.com/schema.json",
+        "--locked",
+        "--lockfile",
+        "datamodel-codegen.lock",
+    ],
+    golden_output="main_kr/url_with_headers/output.py",
+    related_options=["--url", "--http-local-ref-path", "--lockfile"],
+)
+@freeze_time("2019-07-26")
+def test_locked_remote_lock_cli_doc(
+    mock_httpx_get: HttpxGetMockFactory,
+    output_file: Path,
+    tmp_path: Path,
+) -> None:
+    """Verify the remote URL shown in the docs against an existing lock."""
+    schema_url = "https://api.example.com/schema.json"
+    response = MockHttpxResponse(schema_url, JSON_SCHEMA_DATA_PATH / "pet_simple.json")
+    mock_httpx_get(response, response)
+    lockfile = tmp_path / "datamodel-codegen.lock"
+    common_args = ["--lockfile", str(lockfile)]
+
+    run_main_url_and_assert(
+        url=schema_url,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "url_with_headers" / "output.py",
+        extra_args=[*common_args, "--update-lock"],
+    )
+    run_main_url_and_assert(
+        url=schema_url,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "url_with_headers" / "output.py",
+        extra_args=[*common_args, "--locked"],
+    )
 
 
 @pytest.mark.cli_doc(

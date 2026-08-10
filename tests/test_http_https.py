@@ -180,6 +180,59 @@ def test_cli_https_ignore_tls_generates_model(
     )
 
 
+@pytest.mark.allow_direct_assert
+def test_cli_https_updates_and_verifies_remote_lock(
+    local_https_server: tuple[str, Path],
+    tmp_path: Path,
+) -> None:
+    """Lock a real TLS response through the same selected backend as normal generation."""
+    server_url, _ = local_https_server
+    schema_url = f"{server_url}/pet.json"
+    lockfile = tmp_path / "remote.lock"
+    update_args = [
+        "--allow-private-network",
+        "--http-ignore-tls",
+        "--disable-timestamp",
+        "--update-lock",
+        "--lockfile",
+        str(lockfile),
+        *_selected_http_backend_cli_args(),
+    ]
+    verify_args = [
+        "--allow-private-network",
+        "--http-ignore-tls",
+        "--disable-timestamp",
+        "--locked",
+        "--lockfile",
+        str(lockfile),
+        *_selected_http_backend_cli_args(),
+    ]
+
+    run_main_url_and_assert(
+        url=schema_url,
+        output_path=tmp_path / "output.py",
+        input_file_type="jsonschema",
+        assert_func=assert_https_generated_file,
+        expected_file="backend.py",
+        extra_args=update_args,
+        transform=lambda output: output.replace(schema_url, "http://localhost/schema.json"),
+    )
+    lock_content = lockfile.read_text(encoding="utf-8")
+    assert f'"url": "{server_url}"' in lock_content
+    assert "/pet.json" not in lock_content
+
+    run_main_url_and_assert(
+        url=schema_url,
+        output_path=tmp_path / "verified.py",
+        input_file_type="jsonschema",
+        assert_func=assert_https_generated_file,
+        expected_file="backend.py",
+        extra_args=verify_args,
+        transform=lambda output: output.replace(schema_url, "http://localhost/schema.json"),
+    )
+    assert lockfile.read_text(encoding="utf-8") == lock_content
+
+
 def test_https_trusted_ca_verifies_and_generates_model(
     local_https_server: tuple[str, Path],
     monkeypatch: MonkeyPatch,

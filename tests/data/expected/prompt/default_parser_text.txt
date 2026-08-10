@@ -199,11 +199,14 @@
 - `--http-query-parameters`: Add query parameters to HTTP requests for remote schemas.
 - `--http-timeout`: Set timeout for HTTP requests to remote hosts.
 - `--ignore-pyproject`: Ignore pyproject.toml configuration file.
+- `--locked`: Require an existing remote lock and validate each fetched resource against it (experimental).
+- `--lockfile`: Select the remote reference integrity lock file (experimental).
 - `--module-split-mode`: Split generated models into separate files, one per model class.
 - `--no-allow-private-network`
 - `--no-allow-remote-refs`
 - `--shared-module-name`: Customize the name of the shared module for deduplicated models.
 - `--strict-refs`: Treat unresolved local `$ref` JSON pointers as errors.
+- `--update-lock`: Create or atomically update the selected remote lock after generation (experimental).
 - `--watch`: Watch input file(s) for changes and regenerate output automatically.
 - `--watch-delay`: Set debounce delay in seconds for watch mode.
 

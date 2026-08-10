@@ -24,6 +24,7 @@ from typing import (
     TextIO,
     TypeAlias,
     TypeVar,
+    cast,
 )
 from urllib.parse import ParseResult
 
@@ -96,6 +97,7 @@ if TYPE_CHECKING:
     from datamodel_code_generator._types.generate_config_dict import GenerateConfigDict
     from datamodel_code_generator.config import GenerateConfig
     from datamodel_code_generator.model_metadata import ModelMetadata
+    from datamodel_code_generator.remote_lock import RemoteReferenceLock
 
 T = TypeVar("T")
 
@@ -590,26 +592,56 @@ def _normalized_absolute_path(path: Path, *, resolve_aliases: bool = False) -> P
     return Path(os.path.abspath(expanded_path))  # noqa: PTH100
 
 
-def _validate_generation_path_conflicts(
+def _validate_generation_path_conflicts(  # noqa: PLR0912
     input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
     output: Path | None,
     model_metadata: Path | None,
+    lockfile: Path | None = None,
 ) -> None:
-    if output is None and model_metadata is None:
+    if output is None and model_metadata is None and lockfile is None:
         return
 
-    absolute_output: Path | None = None
-    absolute_metadata: Path | None = None
-    if output is not None and model_metadata is not None:
-        absolute_output = _normalized_absolute_path(output)
-        if absolute_output == (absolute_metadata := _normalized_absolute_path(model_metadata)):
-            msg = f"Output and model metadata paths must be different: {absolute_output}"
-            raise Error(msg)
-        if _normalized_absolute_path(output, resolve_aliases=True) == _normalized_absolute_path(
-            model_metadata, resolve_aliases=True
-        ) or (absolute_output.exists() and absolute_metadata.exists() and absolute_output.samefile(absolute_metadata)):
-            msg = f"Output and model metadata paths must be different: {absolute_output}"
-            raise Error(msg)
+    targets = [
+        (
+            label,
+            path,
+            _normalized_absolute_path(path),
+            _normalized_absolute_path(path, resolve_aliases=True),
+        )
+        for label, path in (
+            ("Output", output),
+            ("Model metadata", model_metadata),
+            ("Remote lock", lockfile),
+        )
+        if path is not None
+    ]
+
+    for target_index, (label, _, absolute_path, resolved_path) in enumerate(targets):
+        for other_label, _, other_absolute_path, resolved_other_path in targets[target_index + 1 :]:
+            same_path = absolute_path == other_absolute_path
+            if not same_path:
+                same_path = resolved_path == resolved_other_path or (
+                    absolute_path.exists()
+                    and other_absolute_path.exists()
+                    and absolute_path.samefile(other_absolute_path)
+                )
+            if same_path:
+                if (label, other_label) == ("Output", "Model metadata"):
+                    msg = f"Output and model metadata paths must be different: {absolute_path}"
+                else:
+                    msg = f"{label} and {other_label} paths must be different: {absolute_path}"
+                raise Error(msg)
+            if "Remote lock" not in {label, other_label}:
+                continue
+            paths_overlap = (
+                absolute_path.is_relative_to(other_absolute_path)
+                or other_absolute_path.is_relative_to(absolute_path)
+                or resolved_path.is_relative_to(resolved_other_path)
+                or resolved_other_path.is_relative_to(resolved_path)
+            )
+            if paths_overlap:
+                msg = f"{label} and {other_label} paths must not overlap: {absolute_path}"
+                raise Error(msg)
 
     match input_:
         case Path() as input_path:
@@ -619,19 +651,19 @@ def _validate_generation_path_conflicts(
         case _:
             return
 
-    targets = tuple(
-        (label, target := absolute or _normalized_absolute_path(path), target.exists())
-        for label, path, absolute in (
-            ("Output", output, absolute_output),
-            ("Model metadata", model_metadata, absolute_metadata),
-        )
-        if path is not None
-    )
     for input_path in input_paths:
         absolute_input = _normalized_absolute_path(input_path)
-        if input_path.is_dir():
-            continue
-        for label, target, target_exists in targets:
+        resolved_input = _normalized_absolute_path(input_path, resolve_aliases=True)
+        input_is_directory = absolute_input.is_dir() or resolved_input.is_dir()
+        for label, _, target, resolved_target in targets:
+            if input_is_directory:
+                if label == "Remote lock" and (
+                    target.is_relative_to(absolute_input) or resolved_target.is_relative_to(resolved_input)
+                ):
+                    msg = f"{label} path must not be inside an input directory: {target}"
+                    raise Error(msg)
+                continue
+            target_exists = target.exists()
             if target == absolute_input and input_path.exists():
                 msg = f"{label} path must not overwrite an input path: {target}"
                 raise Error(msg)
@@ -1023,6 +1055,8 @@ def _generate_config_values(generate_config: GenerateConfig) -> dict[str, Any]:
     values.update({
         field_name: getattr(generate_config, field_name) for field_name in fields if field_name not in values
     })
+    if (remote_lock := generate_config.remote_lock) is not None:
+        values["remote_lock"] = remote_lock
     return values
 
 
@@ -1655,12 +1689,163 @@ def generate(
     config = _apply_generate_config_preset(config)
     config = _apply_missing_sentinel_config(config)
 
+    if (
+        config.update_lock
+        and not config.remote_lock_resolved
+        and (config.output is not None or config.emit_model_metadata is not None)
+    ):
+        if config.output is not None and _uses_legacy_process_state(config):
+            with PROCESS_STATE_LOCK:
+                return _generate_with_atomic_remote_update(input_, config, Path.cwd(), use_output_cwd=True)
+        with PROCESS_STATE_LOCK:
+            caller_cwd = Path.cwd()
+        return _generate_with_atomic_remote_update(input_, config, caller_cwd, use_output_cwd=False)
+
     if config.output is not None and _uses_legacy_process_state(config):
         with PROCESS_STATE_LOCK:
             return _generate(input_, config, Path.cwd(), use_output_cwd=config.output is not None)
     with PROCESS_STATE_LOCK:
         caller_cwd = Path.cwd()
     return _generate(input_, config, caller_cwd, use_output_cwd=False)
+
+
+def _generate_with_atomic_remote_update(  # noqa: PLR0912, PLR0914, PLR0915
+    input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
+    config: GenerateConfig,
+    caller_cwd: Path,
+    *,
+    use_output_cwd: bool,
+) -> str | GeneratedModules | None:
+    """Generate into private staging and publish output, metadata, and update lock together."""
+    import tempfile  # noqa: PLC0415
+
+    from datamodel_code_generator._publication import (  # noqa: PLC0415
+        StagedFile,
+        StagingDirectory,
+        close_anchor,
+        publication_anchor,
+        publish_staged_files,
+    )
+    from datamodel_code_generator.remote_lock import RemoteReferenceLock  # noqa: PLC0415
+
+    path_updates = {
+        field: absolute_path
+        for field in ("output", "emit_model_metadata")
+        if (absolute_path := _absolute_generation_path(getattr(config, field), caller_cwd))
+        is not getattr(config, field)
+    }
+    if path_updates:
+        config = config.model_copy(update=path_updates)
+    lockfile = config.lockfile.expanduser() if config.lockfile is not None else caller_cwd / "datamodel-codegen.lock"
+    if not lockfile.is_absolute():
+        lockfile = caller_cwd / lockfile
+    canonical_lockfile = lockfile.resolve(strict=False)
+    _validate_generation_path_conflicts(input_, config.output, config.emit_model_metadata, canonical_lockfile)
+    remote_lock = RemoteReferenceLock.open(canonical_lockfile, update=True, locked=False)
+    contexts: list[tempfile.TemporaryDirectory[str]] = []
+    anchors = []
+    lock_anchor = None
+    lock_staging = None
+    try:
+        staged_updates: dict[str, Path] = {}
+        staged_artifacts: list[tuple[Path, Path, Any, Path, Path]] = []
+        if (output := config.output) is not None:
+            output_parent = Path(os.path.abspath(output.expanduser())).parent  # noqa: PTH100
+            while not output_parent.exists():
+                output_parent = output_parent.parent
+            output_context = tempfile.TemporaryDirectory(prefix=".datamodel-codegen-", dir=output_parent)
+            contexts.append(output_context)
+            staged_output = Path(output_context.name) / (output.name or "output")
+            if output.is_dir():
+                staged_output.mkdir()
+            staged_updates["output"] = staged_output
+            resolved_output_root = output.expanduser().resolve(strict=False)
+            resolved_output_parent = output.parent.expanduser().resolve(strict=False)
+            output_anchor = publication_anchor(resolved_output_root if output.is_dir() else resolved_output_parent)
+            anchors.append(output_anchor)
+            staged_artifacts.append((
+                staged_output,
+                output,
+                output_anchor,
+                resolved_output_root,
+                resolved_output_parent,
+            ))
+        if (metadata := config.emit_model_metadata) is not None:
+            metadata_parent = Path(os.path.abspath(metadata.expanduser())).parent  # noqa: PTH100
+            while not metadata_parent.exists():
+                metadata_parent = metadata_parent.parent
+            metadata_context = tempfile.TemporaryDirectory(prefix=".datamodel-codegen-", dir=metadata_parent)
+            contexts.append(metadata_context)
+            staged_metadata = Path(metadata_context.name) / (metadata.name or "model-metadata.json")
+            staged_updates["emit_model_metadata"] = staged_metadata
+            resolved_metadata_parent = metadata.parent.expanduser().resolve(strict=False)
+            metadata_anchor = publication_anchor(resolved_metadata_parent)
+            anchors.append(metadata_anchor)
+            staged_artifacts.append((
+                staged_metadata,
+                metadata,
+                metadata_anchor,
+                resolved_metadata_parent,
+                resolved_metadata_parent,
+            ))
+        lock_anchor = publication_anchor(canonical_lockfile.parent)
+        lock_staging = StagingDirectory.create(lock_anchor, prefix=".datamodel-codegen-lock-")
+        staged_config = config.model_copy(update=staged_updates)
+        staged_config._logical_output = config.output  # noqa: SLF001
+        staged_config.resolve_remote_lock(remote_lock)
+        generated = _generate(input_, staged_config, caller_cwd, use_output_cwd=use_output_cwd)
+        publication_files: list[StagedFile] = []
+        for (
+            staged_artifact,
+            target_artifact,
+            anchor,
+            resolved_artifact_root,
+            resolved_artifact_parent,
+        ) in staged_artifacts:
+            if staged_artifact.is_file():
+                publication_files.append(
+                    StagedFile(
+                        staged_artifact,
+                        target_artifact,
+                        resolved_artifact_parent / target_artifact.name,
+                        anchor,
+                    )
+                )
+            elif staged_artifact.exists():
+                for staged_file in filter(Path.is_file, sorted(staged_artifact.rglob("*"))):
+                    relative_path = staged_file.relative_to(staged_artifact)
+                    target_file = target_artifact / relative_path
+                    publication_files.append(
+                        StagedFile(
+                            staged_file,
+                            target_file,
+                            resolved_artifact_root / relative_path,
+                            anchor,
+                        )
+                    )
+        staged_lock = cast("StagedFile", remote_lock.stage(lock_staging))
+        publication_files.append(staged_lock._replace(anchor=lock_anchor))
+        publish_staged_files(publication_files)
+        remote_lock.mark_committed()
+    except BaseException:
+        with contextlib.suppress(OSError):
+            remote_lock.discard_stage()
+        raise
+    else:
+        return generated
+    finally:
+        if lock_staging is not None:
+            with contextlib.suppress(OSError):
+                lock_staging.cleanup()
+        if lock_anchor is not None:
+            with contextlib.suppress(OSError):
+                close_anchor(lock_anchor)
+        for anchor in anchors:
+            with contextlib.suppress(OSError):
+                close_anchor(anchor)
+        for context in contexts:
+            with contextlib.suppress(OSError):
+                context.cleanup()
 
 
 def _generate(  # noqa: PLR0912, PLR0914, PLR0915
@@ -1727,9 +1912,40 @@ def _generate(  # noqa: PLR0912, PLR0914, PLR0915
                     path if path.is_absolute() else (caller_cwd / path.expanduser()).resolve() for path in input_paths
                 ]
 
-    _validate_generation_path_conflicts(input_, config.output, config.emit_model_metadata)
-
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
+    remote_lock = config.remote_lock
+    owned_remote_lock: RemoteReferenceLock | None = None
+    if config.remote_lock_resolved:
+        _validate_generation_path_conflicts(
+            input_,
+            config.output,
+            config.emit_model_metadata,
+            getattr(remote_lock, "path", None),
+        )
+    else:
+        default_lockfile = caller_cwd / "datamodel-codegen.lock"
+        lockfile = config.lockfile.expanduser() if config.lockfile is not None else default_lockfile
+        if not lockfile.is_absolute():
+            lockfile = (caller_cwd / lockfile).resolve()
+        use_remote_lock = config.update_lock or config.locked or lockfile.is_file()
+        _validate_generation_path_conflicts(
+            input_,
+            config.output,
+            config.emit_model_metadata,
+            lockfile if use_remote_lock else None,
+        )
+        if use_remote_lock:
+            config = config.model_copy()
+            from datamodel_code_generator.remote_lock import RemoteReferenceLock  # noqa: PLC0415
+
+            owned_remote_lock = RemoteReferenceLock.open(
+                lockfile,
+                update=config.update_lock,
+                locked=config.locked,
+            )
+            remote_lock = owned_remote_lock
+            config.resolve_remote_lock(remote_lock)
+    response_observer = remote_lock.record_response if remote_lock is not None else None
     match input_:
         case str():
             input_text: str | None = input_
@@ -1747,6 +1963,8 @@ def _generate(  # noqa: PLR0912, PLR0914, PLR0915
                     timeout,
                     allow_private_network=config.allow_private_network,
                     http_backend=config.http_backend,
+                    response_observer=response_observer,
+                    encoding=config.encoding,
                 ),
             )
         case _:
@@ -2015,6 +2233,8 @@ def _generate(  # noqa: PLR0912, PLR0914, PLR0915
     )
     if config.emit_model_metadata is not None:
         _write_model_metadata(config.emit_model_metadata, model_metadata, config.encoding)
+    if owned_remote_lock is not None:
+        owned_remote_lock.commit()
     return generated
 
 

@@ -1107,6 +1107,7 @@ def mock_httpx_get(mocker: Any) -> HttpxGetMockFactory:
                 if isinstance(response_config.content, Path)
                 else response_config.content
             )
+            response.content = response.text.encode("utf-8")
             return response
 
         def _response_for_validated_url(

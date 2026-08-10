@@ -104,7 +104,6 @@ import os
 import shlex
 import shutil
 import signal
-import stat
 import tempfile
 import warnings
 from collections.abc import Iterable, Iterator, Mapping, Sequence
@@ -140,10 +139,28 @@ from datamodel_code_generator.deprecations import render_deprecations, warn_depr
 from datamodel_code_generator.enums import StrictTypes
 from datamodel_code_generator.util import load_toml
 
+
+def __getattr__(name: str) -> Any:
+    """Load the deferred config model without adding it to no-lock imports."""
+    if name == "Config":
+        return _get_config_class()
+    msg = f"module {__name__!r} has no attribute {name!r}"
+    raise AttributeError(msg)
+
+
 if TYPE_CHECKING:
     from argparse import Namespace
     from collections import defaultdict
 
+    from datamodel_code_generator._publication import (
+        PublicationAnchor as _PublicationAnchor,
+    )
+    from datamodel_code_generator._publication import (
+        StagedFile as _StagedFile,
+    )
+    from datamodel_code_generator._publication import (
+        StagingDirectory as _StagingDirectory,
+    )
     from datamodel_code_generator._structured_output import (
         CheckDifferencePayload,
         CommandOutputKind,
@@ -646,19 +663,20 @@ def _get_config_class() -> type[Config]:
                     setattr(self, field_name, None)
 
             parsed_args = Config.model_validate(set_args)
+            # These switches are mutually exclusive at the command line, but a
+            # pyproject value has already been applied to ``self``. An explicit
+            # CLI mode must replace (rather than combine with) that lower
+            # precedence mode.
+            if "update_lock" in set_args:
+                self.locked = False
+            elif "locked" in set_args:
+                self.update_lock = False
             for field_name in set_args:
                 setattr(self, field_name, getattr(parsed_args, field_name))
 
     Config.__qualname__ = "Config"
     globals()["Config"] = Config
     return Config
-
-
-def __getattr__(name: str) -> Any:
-    if name == "Config":
-        return _get_config_class()
-    msg = f"module {__name__!r} has no attribute {name!r}"
-    raise AttributeError(msg)
 
 
 def _explicit_config_args(args: Namespace) -> dict[str, _RawConfigValue]:
@@ -837,16 +855,13 @@ def _find_datamodel_codegen_project_config_with_path(source: Path) -> tuple[Path
     return None
 
 
-def _find_datamodel_codegen_project_config(source: Path) -> Mapping[str, Any] | None:
-    """Return the closest datamodel-codegen TOML table without resolving profiles or jobs."""
-    if project_config := _find_datamodel_codegen_project_config_with_path(source):
-        return project_config[1]
-    return None
-
-
-def _get_pyproject_toml_config(source: Path, profile: str | None = None) -> dict[str, Any]:
-    """Find and return the [tool.datamodel-codegen] section of the closest pyproject.toml if it exists."""
-    if (tool_config := _find_datamodel_codegen_project_config(source)) is not None:
+def _get_pyproject_toml_config_with_path(
+    source: Path,
+    profile: str | None = None,
+) -> tuple[dict[str, Any], Path | None]:
+    """Return resolved project config together with the project file that supplied it."""
+    if (project_config := _find_datamodel_codegen_project_config_with_path(source)) is not None:
+        pyproject_path, tool_config = project_config
         base_config: dict[str, Any] = {
             key: value for key, value in tool_config.items() if key not in {"jobs", "profiles"}
         }
@@ -863,13 +878,13 @@ def _get_pyproject_toml_config(source: Path, profile: str | None = None) -> dict
             resolved_profile = _resolve_profile_extends(profiles, profile)
             base_config.update(resolved_profile)
 
-        return _normalize_pyproject_config(base_config)
+        return _normalize_pyproject_config(base_config), pyproject_path
 
     if profile:
         msg = f"Profile '{profile}' requested but no [tool.datamodel-codegen] section found in pyproject.toml"
         raise Error(msg)
 
-    return {}
+    return {}, None
 
 
 class JobPlan(NamedTuple):
@@ -881,8 +896,8 @@ class JobPlan(NamedTuple):
     raw_config: dict[str, Any]
     cli_config_args: dict[str, _RawConfigValue]
     pyproject_path: Path
-    resolved_output_root: Path
-    resolved_output_parent: Path
+    resolved_output_root: Path | None
+    resolved_output_parent: Path | None
     resolved_model_metadata_root: Path | None
     resolved_model_metadata_parent: Path | None
 
@@ -894,14 +909,6 @@ class BatchPlan(NamedTuple):
     watch: bool
     watch_delay: float
     pyproject_path: Path
-
-
-class _PublicationAnchor(NamedTuple):
-    """The existing directory inode that anchored a planned publication path."""
-
-    path: Path
-    identity: tuple[int, int]
-    directory_fd: int | None
 
 
 class _StagedJobPlan(NamedTuple):
@@ -920,37 +927,263 @@ class _StagedJobPlan(NamedTuple):
     staging_contexts: tuple[tempfile.TemporaryDirectory[str], ...]
 
 
-class _PublishedFile(NamedTuple):
-    """One target file and the optional backup retained until batch publication succeeds."""
+class _RemoteLockPlan(NamedTuple):
+    """The effective remote-lock policy for one resolved generation config."""
 
-    target: Path
-    backup: Path | None
-
-
-class _StagedFile(NamedTuple):
-    """One staged file and its immutable concrete publication destination."""
-
-    staged_file: Path
-    target: Path
-    resolved_target: Path
-    anchor: _PublicationAnchor | None = None
-
-
-class _BoundPublishedFile(NamedTuple):
-    """One publication journal entry bound to an open destination directory."""
-
-    target: Path
-    directory_fd: int
-    name: str
-    backup_name: str | None
-
-
-class _CreatedDirectoryAt(NamedTuple):
-    """A transaction-created directory bound to its open parent directory."""
-
-    parent_fd: int
-    name: str
     path: Path
+    canonical_path: Path
+    literal_path: Path
+    policy: Literal["inactive", "verify", "locked", "update"]
+
+    @property
+    def active(self) -> bool:
+        return self.policy != "inactive"
+
+
+def _remote_lock_plan(config: Config, pyproject_path: Path | None) -> _RemoteLockPlan:
+    """Resolve the project-relative default lock path without importing lock machinery."""
+    default_parent = pyproject_path.parent if pyproject_path is not None else Path.cwd()
+    path = config.lockfile or default_parent / "datamodel-codegen.lock"
+    literal_path = Path(os.path.abspath(path.expanduser()))  # noqa: PTH100
+    canonical_path = literal_path.resolve(strict=False)
+    policy: Literal["inactive", "verify", "locked", "update"]
+    if config.update_lock:
+        policy = "update"
+    elif config.locked:
+        policy = "locked"
+    elif canonical_path.is_file():
+        policy = "verify"
+    else:
+        policy = "inactive"
+    return _RemoteLockPlan(canonical_path, canonical_path, literal_path, policy)
+
+
+def _paths_alias_or_overlap(first: Path, second: Path) -> bool:
+    """Treat hard links and parent/child artifacts as one unsafe publication target."""
+    return _paths_overlap_or_samefile(first, second)
+
+
+def _is_read_only_remote_lock_policy(policy: _RemoteLockPlan) -> bool:
+    """Return whether a lock policy never replaces the lock artifact."""
+    return policy.policy in {"verify", "locked"}
+
+
+def _validate_remote_lock_policies(
+    planned_entries: Sequence[tuple[tuple[str, Config, Path | None], _RemoteLockPlan]],
+) -> None:
+    """Reject ambiguous aliases and incompatible shared lock policies."""
+    for index, ((first_name, _, _), first_plan) in enumerate(planned_entries):
+        for (second_name, _, _), second_plan in planned_entries[index + 1 :]:
+            if first_plan.canonical_path == second_plan.canonical_path:
+                if not first_plan.active and not second_plan.active:
+                    continue
+                both_read_only = _is_read_only_remote_lock_policy(first_plan) and _is_read_only_remote_lock_policy(
+                    second_plan
+                )
+                if first_plan.literal_path != second_plan.literal_path and not both_read_only:
+                    msg = (
+                        f"Remote lock paths for '{first_name}' and '{second_name}' are aliases with ambiguous "
+                        f"replacement semantics: {first_plan.literal_path} and {second_plan.literal_path}"
+                    )
+                    raise Error(msg)
+                if first_plan.policy != second_plan.policy and not both_read_only:
+                    msg = (
+                        f"Remote lock policy conflict for {first_plan.canonical_path}: "
+                        f"'{first_name}' uses {first_plan.policy} and '{second_name}' uses {second_plan.policy}"
+                    )
+                    raise Error(msg)
+                continue
+            if _paths_alias_or_overlap(first_plan.canonical_path, second_plan.canonical_path):
+                msg = (
+                    f"Remote lock paths for '{first_name}' and '{second_name}' overlap: "
+                    f"{first_plan.canonical_path} and {second_plan.canonical_path}"
+                )
+                raise Error(msg)
+
+
+def _validate_remote_lock_artifacts(
+    planned_entries: Sequence[tuple[tuple[str, Config, Path | None], _RemoteLockPlan]],
+) -> None:
+    """Reject locks that overlap any source or generated artifact."""
+    artifacts: list[tuple[str, str, Path]] = []
+    for (name, config, _), _plan in planned_entries:
+        for kind, path in (
+            ("input", config.input if isinstance(config.input, Path) else None),
+            ("diff input", config.diff_against),
+            ("output", config.output),
+            ("model metadata", config.emit_model_metadata),
+        ):
+            if path is not None:
+                artifacts.append((name, kind, path.expanduser().resolve(strict=False)))
+    for (name, _, _), plan in planned_entries:
+        if not plan.active:
+            continue
+        for artifact_name, artifact_kind, artifact_path in artifacts:
+            if not _paths_alias_or_overlap(plan.canonical_path, artifact_path):
+                continue
+            if (
+                artifact_kind == "input"
+                and artifact_path.is_dir()
+                and plan.canonical_path.is_relative_to(artifact_path)
+            ):
+                msg = f"Remote lock path must not be inside an input directory: {plan.canonical_path}"
+                raise Error(msg)
+            msg = (
+                f"Remote lock for '{name}' ({plan.canonical_path}) overlaps {artifact_kind} "
+                f"for '{artifact_name}': {artifact_path}"
+            )
+            raise Error(msg)
+
+
+def _validate_remote_lock_preflight(
+    entries: Sequence[tuple[str, Config, Path | None]],
+    plans: Sequence[_RemoteLockPlan],
+) -> None:
+    """Reject all lock/artifact aliases before opening a lock or fetching a schema."""
+    planned_entries = tuple(zip(entries, plans, strict=True))
+    _validate_remote_lock_policies(planned_entries)
+    _validate_remote_lock_artifacts(planned_entries)
+
+
+class _RemoteLockTransaction:
+    """One command or one watch-cycle set of shared remote lock collectors."""
+
+    def __init__(
+        self,
+        collectors: Mapping[Path, Any],
+        anchors: Mapping[Path, _PublicationAnchor],
+        staging_contexts: Mapping[Path, _StagingDirectory],
+        publishable_paths: set[Path],
+    ) -> None:
+        self._collectors = dict(collectors)
+        self._anchors = dict(anchors)
+        self._staging_contexts = dict(staging_contexts)
+        self._publishable_paths = publishable_paths
+
+    @classmethod
+    def open(
+        cls,
+        entries: Sequence[tuple[str, Config, Path | None]],
+        plans: Sequence[_RemoteLockPlan],
+    ) -> _RemoteLockTransaction | None:
+        """Preflight and lazily open one collector per canonical effective lock path."""
+        plans = tuple(plans)
+        if len(entries) != len(plans):  # pragma: no cover - all callers create plans from entries
+            msg = "Remote lock plan count does not match its generation entries"
+            raise Error(msg)
+        if not any(plan.active for plan in plans):
+            return None
+        _validate_remote_lock_preflight(entries, plans)
+        from datamodel_code_generator.remote_lock import RemoteLockError, RemoteReferenceLock  # noqa: PLC0415
+
+        collectors: dict[Path, Any] = {}
+        anchors: dict[Path, _PublicationAnchor] = {}
+        staging_contexts: dict[Path, _StagingDirectory] = {}
+        publishable_paths = {
+            plan.canonical_path
+            for (_, config, _), plan in zip(entries, plans, strict=True)
+            if plan.policy == "update" and not config.check
+        }
+        try:
+            for plan in plans:
+                if not plan.active or plan.canonical_path in collectors:
+                    continue
+                collectors[plan.canonical_path] = RemoteReferenceLock.open(
+                    plan.path,
+                    update=plan.policy == "update",
+                    locked=plan.policy in {"verify", "locked"},
+                )
+                if plan.canonical_path in publishable_paths:
+                    from datamodel_code_generator._publication import (  # noqa: PLC0415
+                        StagingDirectory,
+                        publication_anchor,
+                    )
+
+                    anchor = publication_anchor(plan.canonical_path.parent)
+                    anchors[plan.canonical_path] = anchor
+                    staging_contexts[plan.canonical_path] = StagingDirectory.create(
+                        anchor,
+                        prefix=".datamodel-codegen-lock-",
+                    )
+        except (OSError, RemoteLockError) as exc:
+            from datamodel_code_generator._publication import close_anchor  # noqa: PLC0415
+
+            for context in staging_contexts.values():
+                with suppress(OSError):
+                    context.cleanup()
+            for anchor in anchors.values():
+                with suppress(OSError):
+                    close_anchor(anchor)
+            raise Error(str(exc)) from exc
+        return cls(collectors, anchors, staging_contexts, publishable_paths)
+
+    def collector_for(self, plan: _RemoteLockPlan) -> Any | None:
+        """Return the collector selected by an immutable preflight plan."""
+        return self._collectors.get(plan.canonical_path)
+
+    def staged_files(self) -> tuple[_StagedFile, ...]:
+        """Stage each updating lock once for the common publication journal."""
+        files: list[_StagedFile] = []
+        try:
+            for path, collector in self._collectors.items():
+                if path not in self._publishable_paths:
+                    continue
+                staging_context = self._staging_contexts[path]
+                staged_file = cast("_StagedFile", collector.stage(staging_context))
+                files.append(staged_file._replace(anchor=self._anchors[path]))
+        except Exception as exc:
+            with suppress(OSError):
+                self.discard()
+            msg = f"Unable to stage remote lock update: {exc}"
+            raise Error(msg) from exc
+        return tuple(files)
+
+    def mark_committed(self) -> None:
+        """Commit collector state after publication; final cleanup remains owned by the caller."""
+        for collector in self._collectors.values():
+            collector.mark_committed()
+
+    def discard(self) -> None:
+        """Discard pending lock staging and release every transaction resource."""
+        cleanup_error: OSError | None = None
+        for collector in self._collectors.values():
+            try:
+                collector.discard_stage()
+            except OSError as exc:  # noqa: PERF203 - every collector must get its cleanup opportunity
+                cleanup_error = cleanup_error or exc
+        try:
+            self._close_anchors()
+        except OSError as exc:
+            cleanup_error = cleanup_error or exc
+        if cleanup_error is not None:
+            raise cleanup_error
+
+    def _close_anchors(self) -> None:
+        """Release private staging and update-only destination handles exactly once."""
+        from datamodel_code_generator._publication import close_anchor  # noqa: PLC0415
+
+        cleanup_error: OSError | None = None
+        for context in self._staging_contexts.values():
+            try:
+                context.cleanup()
+            except OSError as exc:  # noqa: PERF203 - every staged lock must be cleaned before reporting failure
+                cleanup_error = cleanup_error or exc
+        self._staging_contexts.clear()
+        for anchor in self._anchors.values():
+            try:
+                close_anchor(anchor)
+            except OSError as exc:  # noqa: PERF203 - every anchor must be released before reporting failure
+                cleanup_error = cleanup_error or exc
+        self._anchors.clear()
+        if cleanup_error is not None:
+            raise cleanup_error
+
+
+class _UnresolvedRemoteLocks:
+    """Private marker that lets nested batch calls preserve a no-lock snapshot."""
+
+
+_UNRESOLVED_REMOTE_LOCKS = _UnresolvedRemoteLocks()
 
 
 def _normalize_pyproject_config(config: Mapping[str, Any]) -> dict[str, Any]:
@@ -1084,7 +1317,7 @@ def _preflight_job_plans(plans: Sequence[JobPlan]) -> None:
             raise Error(msg)
         _validate_generation_path_conflicts(config.input, config.output, config.emit_model_metadata)
         inputs.append((plan.name, config.input.expanduser().resolve()))
-        artifacts.append((plan.name, "output", plan.resolved_output_root))
+        artifacts.append((plan.name, "output", cast("Path", plan.resolved_output_root)))
         if (model_metadata := config.emit_model_metadata) is not None:
             if plan.resolved_model_metadata_root is None:  # pragma: no cover - set when metadata is configured
                 msg = f"Job '{plan.name}' cannot resolve model metadata output: {model_metadata}"
@@ -1822,43 +2055,40 @@ def _staging_directory_for(target: Path) -> tempfile.TemporaryDirectory[str]:
     return tempfile.TemporaryDirectory(prefix=".datamodel-codegen-", dir=staging_parent)
 
 
-def _publication_anchor(path: Path) -> _PublicationAnchor:
-    """Snapshot and, on POSIX, hold open the deepest existing concrete directory for *path*."""
-    while not path.is_dir():
-        path = path.parent
-    if os.name == "nt":  # pragma: no cover - exercised by Windows CI
-        path_stat = path.stat()
-        return _PublicationAnchor(path, (path_stat.st_dev, path_stat.st_ino), None)
-    directory_fd = _open_target_directory(path, [], create_missing=False)
-    path_stat = os.fstat(directory_fd)
-    return _PublicationAnchor(path, (path_stat.st_dev, path_stat.st_ino), directory_fd)
-
-
 def _stage_job_plan(plan: JobPlan) -> _StagedJobPlan:
     """Redirect a write-mode job's artifacts to private, same-filesystem staging paths."""
     if plan.config.check:
         return _StagedJobPlan(plan, plan.config, None, None, None, None, None, None, None, None, ())
 
-    output = cast("Path", plan.config.output)
-    output_context = _staging_directory_for(output)
-    contexts = [output_context]
+    output = plan.config.output
+    from datamodel_code_generator._publication import publication_anchor  # noqa: PLC0415
+
+    contexts: list[tempfile.TemporaryDirectory[str]] = []
     anchors: list[_PublicationAnchor] = []
     try:
-        staged_output = Path(output_context.name) / (output.name or "output")
-        updates: dict[str, Path] = {"output": staged_output}
+        staged_output: Path | None = None
+        output_anchor: _PublicationAnchor | None = None
+        updates: dict[str, Path] = {}
+        if output is not None:
+            output_context = _staging_directory_for(output)
+            contexts.append(output_context)
+            staged_output = Path(output_context.name) / (output.name or "output")
+            updates["output"] = staged_output
+            output_anchor = publication_anchor(
+                cast("Path", plan.resolved_output_root)
+                if output.is_dir()
+                else cast("Path", plan.resolved_output_parent)
+            )
+            anchors.append(output_anchor)
         model_metadata = plan.config.emit_model_metadata
         staged_model_metadata: Path | None = None
-        output_anchor = _publication_anchor(
-            plan.resolved_output_root if output.is_dir() else plan.resolved_output_parent
-        )
-        anchors.append(output_anchor)
         model_metadata_anchor: _PublicationAnchor | None = None
         if model_metadata is not None:
             metadata_context = _staging_directory_for(model_metadata)
             contexts.append(metadata_context)
             staged_model_metadata = Path(metadata_context.name) / (model_metadata.name or "model-metadata.json")
             updates["emit_model_metadata"] = staged_model_metadata
-            model_metadata_anchor = _publication_anchor(cast("Path", plan.resolved_model_metadata_parent))
+            model_metadata_anchor = publication_anchor(cast("Path", plan.resolved_model_metadata_parent))
             anchors.append(model_metadata_anchor)
 
         return _StagedJobPlan(
@@ -1953,30 +2183,44 @@ def _cleanup_staged_job_plans(staged_plans: Sequence[_StagedJobPlan]) -> tuple[O
     )
 
 
+def _cleanup_job_transaction(
+    staged_plans: Sequence[_StagedJobPlan], remote_locks: _RemoteLockTransaction | None
+) -> tuple[OSError, ...]:
+    """Release every output and lock resource after a batch result is known."""
+    cleanup_errors = _cleanup_staged_job_plans(staged_plans)
+    if remote_locks is None:
+        return cleanup_errors
+    try:
+        remote_locks.discard()
+    except OSError as exc:
+        return (*cleanup_errors, exc)
+    return cleanup_errors
+
+
 def _staged_files(staged_plan: _StagedJobPlan) -> Iterator[_StagedFile]:
     """Return staged files paired with their final targets without removing directory extras."""
-    if staged_plan.staged_output is None or staged_plan.output is None:
-        return
+    from datamodel_code_generator._publication import StagedFile  # noqa: PLC0415
 
-    if staged_plan.staged_output.is_file():
-        yield _StagedFile(
-            staged_plan.staged_output,
-            staged_plan.output,
-            staged_plan.plan.resolved_output_parent / staged_plan.output.name,
-            staged_plan.output_anchor,
-        )
-    else:
-        for generated_file in sorted(staged_plan.staged_output.rglob("*")):
-            if generated_file.is_file():
-                relative_path = generated_file.relative_to(staged_plan.staged_output)
-                yield _StagedFile(
-                    generated_file,
-                    staged_plan.output / relative_path,
-                    cast("Path", staged_plan.resolved_output_root) / relative_path,
-                    staged_plan.output_anchor,
-                )
+    if staged_plan.staged_output is not None and staged_plan.output is not None:
+        if staged_plan.staged_output.is_file():
+            yield StagedFile(
+                staged_plan.staged_output,
+                staged_plan.output,
+                cast("Path", staged_plan.plan.resolved_output_parent) / staged_plan.output.name,
+                staged_plan.output_anchor,
+            )
+        else:
+            for generated_file in sorted(staged_plan.staged_output.rglob("*")):
+                if generated_file.is_file():
+                    relative_path = generated_file.relative_to(staged_plan.staged_output)
+                    yield StagedFile(
+                        generated_file,
+                        staged_plan.output / relative_path,
+                        cast("Path", staged_plan.resolved_output_root) / relative_path,
+                        staged_plan.output_anchor,
+                    )
     if staged_plan.staged_model_metadata is not None and staged_plan.model_metadata is not None:
-        yield _StagedFile(
+        yield StagedFile(
             staged_plan.staged_model_metadata,
             staged_plan.model_metadata,
             cast("Path", staged_plan.plan.resolved_model_metadata_parent) / staged_plan.model_metadata.name,
@@ -1984,473 +2228,11 @@ def _staged_files(staged_plan: _StagedJobPlan) -> Iterator[_StagedFile]:
         )
 
 
-def _backup_name(target_name: str) -> str:
-    """Return an unpredictable sibling backup name."""
-    from secrets import token_hex  # noqa: PLC0415
-
-    return f".{target_name}.{token_hex(8)}.bak"
-
-
-def _backup_names(target_name: str) -> Iterator[str]:
-    """Yield a bounded sequence of candidate sibling backup names."""
-    for _ in range(100):  # pragma: no branch - cryptographic name collisions are not realistic
-        yield _backup_name(target_name)
-
-
-def _open_file_at(path: str | Path, flags: int, mode: int, directory_fd: int | None) -> int:
-    """Open *path*, optionally relative to an already-bound directory."""
-    if directory_fd is None:
-        return os.open(path, flags, mode)
-    return os.open(path, flags, mode, dir_fd=directory_fd)
-
-
-def _unlink_file_at(path: str | Path, directory_fd: int | None) -> None:
-    """Unlink *path*, optionally relative to an already-bound directory."""
-    if directory_fd is None:
-        Path(path).unlink()
-    else:
-        os.unlink(path, dir_fd=directory_fd)
-
-
-def _chmod_backup_at(backup: str | Path, backup_fd: int, mode: int, directory_fd: int | None) -> None:
-    """Apply destination mode bits through the safest handle supported by this platform."""
-    if (fchmod := getattr(os, "fchmod", None)) is not None:
-        fchmod(backup_fd, mode)
-    elif os.chmod in os.supports_fd:  # pragma: no cover - platform-specific fallback
-        os.chmod(backup_fd, mode)
-    elif directory_fd is not None:  # pragma: no cover - POSIX exposes fchmod
-        os.chmod(backup, mode, dir_fd=directory_fd, follow_symlinks=False)
-    elif os.chmod in os.supports_follow_symlinks:  # pragma: no cover - platform-specific fallback
-        Path(backup).chmod(mode, follow_symlinks=False)
-    else:  # pragma: no cover - Windows lacks fd/no-follow chmod
-        Path(backup).chmod(mode)
-
-
-def _set_backup_times_at(
-    backup: str | Path,
-    backup_fd: int,
-    target_stat: os.stat_result,
-    directory_fd: int | None,
-) -> None:
-    """Preserve destination timestamps through a descriptor or no-follow path operation."""
-    timestamps = (target_stat.st_atime_ns, target_stat.st_mtime_ns)
-    if os.utime in os.supports_fd:
-        os.utime(backup_fd, ns=timestamps)
-    elif directory_fd is not None:  # pragma: no cover - POSIX exposes fd-based utime
-        os.utime(backup, ns=timestamps, dir_fd=directory_fd, follow_symlinks=False)
-    elif os.utime in os.supports_follow_symlinks:  # pragma: no cover - platform-specific fallback
-        os.utime(backup, ns=timestamps, follow_symlinks=False)
-    else:  # pragma: no cover - legacy Windows Python fallback
-        os.utime(backup, ns=timestamps)
-
-
-def _copy_target(
-    source: str | Path,
-    backup: str | Path,
-    target_stat: os.stat_result,
-    *,
-    directory_fd: int | None = None,
-) -> None:
-    """Copy a regular destination to an exclusively created sibling backup."""
-    no_follow = getattr(os, "O_NOFOLLOW", 0)
-    binary = getattr(os, "O_BINARY", 0)
-    source_fd = _open_file_at(source, os.O_RDONLY | no_follow | binary, 0, directory_fd)
-    backup_fd: int | None = None
-    try:
-        backup_fd = _open_file_at(
-            backup,
-            os.O_WRONLY | os.O_CREAT | os.O_EXCL | no_follow | binary,
-            stat.S_IMODE(target_stat.st_mode),
-            directory_fd,
-        )
-        with os.fdopen(os.dup(source_fd), "rb") as source_file, os.fdopen(os.dup(backup_fd), "wb") as backup_file:
-            shutil.copyfileobj(source_file, backup_file)
-        _chmod_backup_at(backup, backup_fd, stat.S_IMODE(target_stat.st_mode), directory_fd)
-        _set_backup_times_at(backup, backup_fd, target_stat, directory_fd)
-    except BaseException:
-        if backup_fd is not None:
-            with suppress(OSError):
-                os.close(backup_fd)
-            backup_fd = None
-            with suppress(OSError):
-                _unlink_file_at(backup, directory_fd)
-        raise
-    finally:
-        os.close(source_fd)
-        if backup_fd is not None:  # pragma: no branch - absent only while propagating backup-open failure
-            os.close(backup_fd)
-
-
-def _backup_existing_target(target: Path) -> Path:
-    """Create a same-filesystem backup while retaining the target until replacement."""
-    target_stat = target.lstat()
-    for backup_name in _backup_names(target.name):
-        backup = target.parent / backup_name
-        try:
-            if stat.S_ISLNK(target_stat.st_mode):  # pragma: no cover - exercised by the Windows path fallback
-                backup.symlink_to(target.readlink(), target_is_directory=target.is_dir())
-            else:
-                try:
-                    os.link(target, backup, follow_symlinks=False)
-                except FileExistsError:  # pragma: no cover - cryptographic backup-name collision
-                    continue
-                except OSError:
-                    _copy_target(target, backup, target_stat)
-        except FileExistsError:  # pragma: no cover - cryptographic backup-name collision
-            continue
-        else:
-            return backup
-    msg = f"could not reserve backup for {target}"  # pragma: no cover
-    raise FileExistsError(msg)  # pragma: no cover
-
-
-def _create_directory(directory: Path) -> bool:
-    """Create one directory and return whether this process created it."""
-    try:
-        directory.mkdir()
-    except FileExistsError:
-        if not directory.is_dir():
-            raise
-        return False
-    return True
-
-
-def _create_target_parent(target: Path, created_directories: list[Path]) -> None:
-    """Create a target parent while recording only directories made by this publication."""
-    missing_directories: list[Path] = []
-    parent = target.parent
-    while not parent.exists():
-        missing_directories.append(parent)
-        parent = parent.parent
-    for directory in reversed(missing_directories):
-        if _create_directory(directory):
-            created_directories.append(directory)  # noqa: PERF401
-
-
-def _preserve_target_mode(staged_file: Path, target: Path) -> None:
-    """Apply an existing target's permission mode before atomically replacing it."""
-    with suppress(OSError):
-        staged_file.chmod(stat.S_IMODE(target.stat().st_mode))
-
-
-def _restore_backup(backup: Path, target: Path) -> None:
-    """Restore a backup unless it already aliases the unchanged target."""
-    if backup.is_symlink() and target.is_symlink() and backup.readlink() == target.readlink():
-        backup.unlink()
-        return
-    with suppress(OSError):
-        if backup.samefile(target):
-            backup.unlink()
-            return
-    backup.replace(target)
-
-
-def _rollback_published_file(published_file: _PublishedFile) -> list[Path]:
-    """Restore one published target, returning every path that could not be recovered."""
-    try:
-        if published_file.backup is not None:
-            if not (published_file.backup.exists() or published_file.backup.is_symlink()):
-                return [published_file.target, published_file.backup]
-            _restore_backup(published_file.backup, published_file.target)
-        elif published_file.target.exists():
-            published_file.target.unlink()
-    except OSError:
-        paths = [published_file.target]
-        if published_file.backup is not None:
-            paths.append(published_file.backup)
-        return paths
-    return []
-
-
-def _remove_created_directory(directory: Path) -> list[Path]:
-    """Remove one transaction-owned directory if it is still empty."""
-    try:
-        directory.rmdir()
-    except OSError:
-        return [directory]
-    return []
-
-
-def _planned_staged_file(file: tuple[Path, Path] | _StagedFile) -> _StagedFile:
-    """Normalize direct helper calls to a concrete parent-bound destination."""
-    if isinstance(file, _StagedFile):
-        return file
-    staged_file, target = file
-    resolved_target = target.expanduser().parent.resolve(strict=False) / target.name
-    return _StagedFile(staged_file, target, resolved_target)
-
-
-def _validate_planned_target(file: _StagedFile) -> None:  # pragma: no cover - Windows path fallback
-    """Fail if the lexical target no longer reaches its planned concrete parent."""
-    concrete_target = file.target.expanduser().parent.resolve(strict=False) / file.target.name
-    if concrete_target != file.resolved_target:
-        msg = f"batch output target changed before publication: {file.target}"
-        raise OSError(msg)
-
-
-def _validate_publication_anchor(file: _StagedFile) -> None:
-    """Fail if the pre-generation destination anchor no longer names the same directory."""
-    if file.anchor is None:
-        return
-    if file.anchor.directory_fd is not None:
-        anchor_stat = os.fstat(file.anchor.directory_fd)
-        matches = (anchor_stat.st_dev, anchor_stat.st_ino) == file.anchor.identity and _directory_fd_matches_path(
-            file.anchor.directory_fd, file.anchor.path
-        )
-    else:  # pragma: no cover - exercised by Windows CI
-        try:
-            path_stat = file.anchor.path.stat()
-        except OSError:
-            matches = False
-        else:
-            matches = (path_stat.st_dev, path_stat.st_ino) == file.anchor.identity
-    if not matches:
-        msg = f"batch output destination anchor changed before publication: {file.target}"
-        raise OSError(msg)
-
-
-def _replace_source(source: Path, destination: str | Path, destination_fd: int | None) -> None:
-    """Atomically move a staged source through a path or pinned destination directory."""
-    if destination_fd is None:
-        source.replace(destination)
-        return
-    os.replace(source, destination, dst_dir_fd=destination_fd)
-
-
-def _publish_staged_files_by_path(files: Sequence[_StagedFile]) -> None:  # pragma: no cover - Windows fallback
-    """Publish after validating the non-reparse parent where directory-relative replacement is unavailable."""
-    journal: list[_PublishedFile] = []
-    created_directories: list[Path] = []
-    try:
-        for file in files:
-            _validate_publication_anchor(file)
-            _validate_planned_target(file)
-            _create_target_parent(file.target, created_directories)
-            if file.target.is_dir():
-                msg = f"[Errno 21] Is a directory: '{file.target}'"
-                raise IsADirectoryError(msg)
-            backup = _backup_existing_target(file.target) if file.target.exists() or file.target.is_symlink() else None
-            journal.append(_PublishedFile(file.target, backup))
-            if backup is not None:
-                _preserve_target_mode(file.staged_file, file.target)
-            _validate_planned_target(file)
-            _replace_source(file.staged_file, file.target, None)
-            _validate_planned_target(file)
-            _validate_publication_anchor(file)
-    except OSError as publish_error:
-        rollback_failures: list[Path] = []
-        for published_file in reversed(journal):
-            rollback_failures.extend(_rollback_published_file(published_file))
-        for directory in reversed(created_directories):
-            rollback_failures.extend(_remove_created_directory(directory))
-        if rollback_failures:
-            paths = ", ".join(path.as_posix() for path in rollback_failures)
-            msg = f"{publish_error}; failed to roll back batch output: {paths}"
-            raise OSError(msg) from publish_error
-        raise
-
-    for published_file in journal:
-        if published_file.backup is not None:
-            with suppress(OSError):  # pragma: no cover - an unlinked backup is harmless if cleanup races
-                published_file.backup.unlink()
-
-
-def _directory_open_flags() -> int:
-    return os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0)
-
-
-def _open_target_directory(
-    path: Path, created_directories: list[_CreatedDirectoryAt], *, create_missing: bool = True
-) -> int:
-    """Open a concrete directory without following any component symlinks, creating missing components safely."""
-    if not path.is_absolute():  # pragma: no cover - planned destinations are always absolute
-        msg = f"batch output destination is not absolute: {path}"
-        raise OSError(msg)
-    flags = _directory_open_flags()
-    directory_fd = os.open(path.anchor, flags)
-    current_path = Path(path.anchor)
-    try:
-        for part in path.parts[1:]:
-            current_path /= part
-            try:
-                next_fd = os.open(part, flags, dir_fd=directory_fd)
-            except FileNotFoundError:
-                if not create_missing:
-                    raise
-                try:
-                    os.mkdir(part, dir_fd=directory_fd)
-                except FileExistsError:  # pragma: no cover - a concurrent creator is reopened and verified below
-                    pass
-                else:
-                    created_directories.append(_CreatedDirectoryAt(os.dup(directory_fd), part, current_path))
-                next_fd = os.open(part, flags, dir_fd=directory_fd)
-            os.close(directory_fd)
-            directory_fd = next_fd
-    except BaseException:
-        os.close(directory_fd)
-        raise
-    return directory_fd
-
-
-def _directory_fd_matches_path(directory_fd: int, path: Path) -> bool:
-    """Return whether a concrete path still names the directory held open by *directory_fd*."""
-    try:
-        check_fd = _open_target_directory(path, [], create_missing=False)
-    except OSError:
-        return False
-    try:
-        return os.path.samestat(os.fstat(directory_fd), os.fstat(check_fd))
-    finally:
-        os.close(check_fd)
-
-
-def _copy_target_at(directory_fd: int, target_name: str, backup_name: str, target_stat: os.stat_result) -> None:
-    """Copy a regular destination to a sibling backup through an open directory."""
-    _copy_target(target_name, backup_name, target_stat, directory_fd=directory_fd)
-
-
-def _backup_existing_target_at(directory_fd: int, target_name: str, target_stat: os.stat_result) -> str:
-    """Back up an existing target within its already-bound destination directory."""
-    for backup_name in _backup_names(target_name):
-        try:
-            if stat.S_ISLNK(target_stat.st_mode):
-                os.symlink(os.readlink(target_name, dir_fd=directory_fd), backup_name, dir_fd=directory_fd)
-            else:
-                try:
-                    os.link(
-                        target_name,
-                        backup_name,
-                        src_dir_fd=directory_fd,
-                        dst_dir_fd=directory_fd,
-                        follow_symlinks=False,
-                    )
-                except FileExistsError:  # pragma: no cover - cryptographic backup-name collision
-                    continue
-                except OSError:
-                    _copy_target_at(directory_fd, target_name, backup_name, target_stat)
-        except FileExistsError:  # pragma: no cover - cryptographic backup-name collision
-            continue
-        else:
-            return backup_name
-    msg = f"could not reserve backup for {target_name}"  # pragma: no cover
-    raise FileExistsError(msg)  # pragma: no cover
-
-
-def _restore_backup_at(published_file: _BoundPublishedFile) -> None:
-    """Restore or discard a destination backup through its pinned directory."""
-    backup_name = cast("str", published_file.backup_name)
-    try:
-        backup_stat = os.stat(backup_name, dir_fd=published_file.directory_fd, follow_symlinks=False)
-    except FileNotFoundError:  # pragma: no cover - reported as an unrecoverable concurrent backup removal
-        msg = f"missing batch output backup: {published_file.target}"
-        raise OSError(msg) from None
-    try:
-        target_stat = os.stat(published_file.name, dir_fd=published_file.directory_fd, follow_symlinks=False)
-    except FileNotFoundError:  # pragma: no cover - concurrent target removal is restored from the backup
-        target_stat = None
-    if target_stat is not None and os.path.samestat(backup_stat, target_stat):
-        os.unlink(backup_name, dir_fd=published_file.directory_fd)
-        return
-    if (
-        stat.S_ISLNK(backup_stat.st_mode)
-        and target_stat is not None
-        and stat.S_ISLNK(target_stat.st_mode)
-        and os.readlink(backup_name, dir_fd=published_file.directory_fd)
-        == os.readlink(published_file.name, dir_fd=published_file.directory_fd)
-    ):
-        os.unlink(backup_name, dir_fd=published_file.directory_fd)
-        return
-    os.replace(
-        backup_name,
-        published_file.name,
-        src_dir_fd=published_file.directory_fd,
-        dst_dir_fd=published_file.directory_fd,
-    )
-
-
-def _rollback_bound_file(published_file: _BoundPublishedFile) -> list[Path]:
-    """Roll back one file through its pinned directory, reporting unrecovered paths."""
-    try:
-        if published_file.backup_name is not None:
-            _restore_backup_at(published_file)
-        else:
-            with suppress(FileNotFoundError):
-                os.unlink(published_file.name, dir_fd=published_file.directory_fd)
-    except OSError:
-        return [published_file.target]
-    return []
-
-
-def _publish_staged_files_at(files: Sequence[_StagedFile]) -> None:  # noqa: PLR0912
-    """Publish through no-follow directory descriptors and roll back through the same pinned directories."""
-    journal: list[_BoundPublishedFile] = []
-    created_directories: list[_CreatedDirectoryAt] = []
-    try:
-        for file in files:
-            _validate_publication_anchor(file)
-            directory_fd = _open_target_directory(file.resolved_target.parent, created_directories)
-            journaled = False
-            try:
-                try:
-                    target_stat = os.stat(file.resolved_target.name, dir_fd=directory_fd, follow_symlinks=False)
-                except FileNotFoundError:
-                    target_stat = None
-                if target_stat is not None and stat.S_ISDIR(target_stat.st_mode):
-                    msg = f"[Errno 21] Is a directory: '{file.target}'"
-                    raise IsADirectoryError(msg)
-                backup_name = (
-                    _backup_existing_target_at(directory_fd, file.resolved_target.name, target_stat)
-                    if target_stat is not None
-                    else None
-                )
-                journal.append(_BoundPublishedFile(file.target, directory_fd, file.resolved_target.name, backup_name))
-                journaled = True
-                if target_stat is not None and stat.S_ISREG(target_stat.st_mode):
-                    with suppress(OSError):
-                        file.staged_file.chmod(stat.S_IMODE(target_stat.st_mode))
-                _replace_source(file.staged_file, file.resolved_target.name, directory_fd)
-                _validate_publication_anchor(file)
-                if not _directory_fd_matches_path(directory_fd, file.resolved_target.parent):
-                    msg = f"batch output destination changed during publication: {file.target}"
-                    raise OSError(msg)
-            finally:
-                if not journaled:
-                    os.close(directory_fd)
-    except OSError as publish_error:
-        rollback_failures: list[Path] = []
-        for published_file in reversed(journal):
-            rollback_failures.extend(_rollback_bound_file(published_file))
-        for directory in reversed(created_directories):
-            try:
-                os.rmdir(directory.name, dir_fd=directory.parent_fd)
-            except OSError:  # pragma: no cover  # noqa: PERF203 - failure is reported with the retained path
-                rollback_failures.append(directory.path)
-        if rollback_failures:
-            paths = ", ".join(path.as_posix() for path in rollback_failures)
-            msg = f"{publish_error}; failed to roll back batch output: {paths}"
-            raise OSError(msg) from publish_error
-        raise
-    else:
-        for published_file in journal:
-            if published_file.backup_name is not None:
-                with suppress(OSError):  # pragma: no cover - an unlinked backup is harmless if cleanup races
-                    os.unlink(published_file.backup_name, dir_fd=published_file.directory_fd)
-    finally:
-        for published_file in journal:
-            os.close(published_file.directory_fd)
-        for directory in created_directories:
-            os.close(directory.parent_fd)
-
-
 def _publish_staged_files(files: Iterable[tuple[Path, Path] | _StagedFile]) -> None:
-    """Atomically publish staged files, binding destinations to their planned concrete parents."""
-    planned_files = tuple(_planned_staged_file(file) for file in files)
-    if os.name == "nt":  # pragma: no cover - exercised by Windows CI
-        # Windows has no stdlib dir-fd replace. Repeat concrete-parent and inode checks around the atomic replace;
-        # detectable reparse/ancestor swaps fail closed, without claiming the POSIX binding guarantee.
-        _publish_staged_files_by_path(planned_files)
-    else:
-        _publish_staged_files_at(planned_files)
+    """Load the publication journal only when an artifact must be published."""
+    from datamodel_code_generator._publication import publish_staged_files  # noqa: PLC0415
+
+    publish_staged_files(files)
 
 
 def _publish_staged_job_plans(staged_plans: Sequence[_StagedJobPlan]) -> None:
@@ -2461,8 +2243,6 @@ def _publish_staged_job_plans(staged_plans: Sequence[_StagedJobPlan]) -> None:
 def _validate_staged_job_plans(staged_plans: Sequence[_StagedJobPlan]) -> None:
     """Reject generated files whose concrete paths escape their preflighted output roots."""
     for staged_plan in staged_plans:
-        if staged_plan.resolved_output_root is None:
-            continue
         for file in _staged_files(staged_plan):
             concrete_target = file.target.expanduser().resolve(strict=False)
             artifact_root = (
@@ -2480,26 +2260,45 @@ def _validate_staged_job_plans(staged_plans: Sequence[_StagedJobPlan]) -> None:
                 raise Error(msg)
 
 
-def _run_jobs(args: Sequence[str], plans: Sequence[JobPlan]) -> Exit:
+def _run_jobs(
+    args: Sequence[str],
+    plans: Sequence[JobPlan],
+    *,
+    remote_lock_plans: Sequence[_RemoteLockPlan] | None = None,
+) -> Exit:
     """Run batch jobs transactionally while retaining the direct --check fast path."""
+    try:
+        entries = tuple((plan.name, plan.config, plan.pyproject_path) for plan in plans)
+        remote_lock_plans = (
+            tuple(remote_lock_plans)
+            if remote_lock_plans is not None
+            else tuple(_remote_lock_plan(config, pyproject_path) for _, config, pyproject_path in entries)
+        )
+        remote_locks = _RemoteLockTransaction.open(entries, remote_lock_plans)
+    except Error as exc:
+        print(str(exc), file=sys.stderr)  # noqa: T201
+        return Exit.ERROR
     try:
         staged_plans = _stage_job_plans(plans)
     except OSError as exc:
+        if remote_locks is not None:
+            with suppress(OSError):
+                remote_locks.discard()
         print(f"Error: could not prepare batch output staging: {exc}", file=sys.stderr)  # noqa: T201
         return Exit.ERROR
 
     try:
         match namespace.output_format:
             case "json":
-                result = _run_jobs_json(args, staged_plans)
+                result = _run_jobs_json(args, staged_plans, remote_locks, remote_lock_plans)
             case _:
-                result = _run_jobs_text(args, staged_plans)
+                result = _run_jobs_text(args, staged_plans, remote_locks, remote_lock_plans)
     except BaseException:
-        if cleanup_error := _staging_cleanup_error(None, _cleanup_staged_job_plans(staged_plans)):
+        if cleanup_error := _staging_cleanup_error(None, _cleanup_job_transaction(staged_plans, remote_locks)):
             print(f"Error: {cleanup_error}", file=sys.stderr)  # noqa: T201
         raise
 
-    if cleanup_error := _staging_cleanup_error(None, _cleanup_staged_job_plans(staged_plans)):
+    if cleanup_error := _staging_cleanup_error(None, _cleanup_job_transaction(staged_plans, remote_locks)):
         print(f"Error: {cleanup_error}", file=sys.stderr)  # noqa: T201
         return Exit.ERROR
     return result
@@ -2519,40 +2318,71 @@ def _run_watched_jobs(
         )
         for plan in batch_plan.jobs
     )
+    remote_lock_plans, remote_lock_intent = dependencies._apply_remote_lock_plans(  # noqa: SLF001
+        _remote_lock_plan(job.config, job.pyproject_path) for job in batch_plan.jobs
+    )
+    for plan in remote_lock_plans:
+        dependencies.add_file(plan.canonical_path)
+        if plan.policy == "update":
+            dependencies.exclude_file(plan.canonical_path)
     with dependencies.generation() as generation:
-        result = _run_jobs(args, batch_plan.jobs)
+        result = _run_jobs(args, batch_plan.jobs, remote_lock_plans=remote_lock_plans)
         generation.failed = result is not Exit.OK
+    if result is Exit.OK:
+        dependencies._commit_remote_lock_intent(remote_lock_intent)  # noqa: SLF001
+    else:
+        dependencies._merge_remote_lock_intent(remote_lock_intent)  # noqa: SLF001
     return result
 
 
-def _publish_or_error(staged_plans: Sequence[_StagedJobPlan]) -> Exit | None:
+def _publish_or_error(
+    staged_plans: Sequence[_StagedJobPlan],
+    remote_locks: _RemoteLockTransaction | None = None,
+) -> Exit | None:
     """Publish staged batch output, reporting an unrecoverable filesystem failure."""
     try:
         _validate_staged_job_plans(staged_plans)
-        _publish_staged_job_plans(staged_plans)
+        if remote_locks is None:
+            _publish_staged_job_plans(staged_plans)
+        else:
+            lock_files = remote_locks.staged_files()
+            if lock_files:
+                output_files = tuple(file for staged_plan in staged_plans for file in _staged_files(staged_plan))
+                _publish_staged_files((*output_files, *lock_files))
+                remote_locks.mark_committed()
+            else:
+                _publish_staged_job_plans(staged_plans)
     except (Error, OSError) as exc:
         print(f"Error: could not publish batch output: {exc}", file=sys.stderr)  # noqa: T201
         return Exit.ERROR
     return None
 
 
-def _run_jobs_text(args: Sequence[str], staged_plans: Sequence[_StagedJobPlan]) -> Exit:
+def _run_jobs_text(
+    args: Sequence[str],
+    staged_plans: Sequence[_StagedJobPlan],
+    remote_locks: _RemoteLockTransaction | None,
+    remote_lock_plans: Sequence[_RemoteLockPlan],
+) -> Exit:
     """Run text-mode jobs without buffering their regular CLI output."""
     exit_code = Exit.OK
-    for staged_plan in staged_plans:
+    for staged_plan, remote_lock_plan in zip(staged_plans, remote_lock_plans, strict=True):
         result = _main(
             args,
             start_watch=False,
             _batch_config=staged_plan.config,
             _batch_pyproject_context=staged_plan.plan.pyproject_context,
+            _batch_pyproject_path=staged_plan.plan.pyproject_path,
             _batch_original_output=staged_plan.output,
             _batch_output_is_staged=staged_plan.staged_output is not None,
+            _remote_locks=remote_locks,
+            _bound_remote_lock_plan=remote_lock_plan,
         )
         if result is Exit.ERROR:
             return result
         if result is Exit.DIFF:
             exit_code = Exit.DIFF
-    if exit_code is Exit.OK and (publish_error := _publish_or_error(staged_plans)) is not None:
+    if exit_code is Exit.OK and (publish_error := _publish_or_error(staged_plans, remote_locks)) is not None:
         return publish_error
     return exit_code
 
@@ -2569,7 +2399,12 @@ def _write_batch_json_spool(spool: Any) -> None:
     sys.stdout.write("\n  ]\n}\n")
 
 
-def _run_jobs_json(args: Sequence[str], staged_plans: Sequence[_StagedJobPlan]) -> Exit:
+def _run_jobs_json(
+    args: Sequence[str],
+    staged_plans: Sequence[_StagedJobPlan],
+    remote_locks: _RemoteLockTransaction | None,
+    remote_lock_plans: Sequence[_RemoteLockPlan],
+) -> Exit:
     """Spool validated job payloads until generation and publication both succeed."""
     from pydantic import ValidationError  # noqa: PLC0415
 
@@ -2578,7 +2413,7 @@ def _run_jobs_json(args: Sequence[str], staged_plans: Sequence[_StagedJobPlan]) 
     try:
         with tempfile.TemporaryFile(mode="w+", encoding="utf-8") as batch_spool:
             exit_code = Exit.OK
-            for staged_plan in staged_plans:
+            for staged_plan, remote_lock_plan in zip(staged_plans, remote_lock_plans, strict=True):
                 with tempfile.TemporaryFile(mode="w+", encoding="utf-8") as output:
                     with redirect_stdout(output):
                         result = _main(
@@ -2586,8 +2421,11 @@ def _run_jobs_json(args: Sequence[str], staged_plans: Sequence[_StagedJobPlan]) 
                             start_watch=False,
                             _batch_config=staged_plan.config,
                             _batch_pyproject_context=staged_plan.plan.pyproject_context,
+                            _batch_pyproject_path=staged_plan.plan.pyproject_path,
                             _batch_original_output=staged_plan.output,
                             _batch_output_is_staged=staged_plan.staged_output is not None,
+                            _remote_locks=remote_locks,
+                            _bound_remote_lock_plan=remote_lock_plan,
                         )
                     if result is Exit.ERROR:
                         return result
@@ -2623,7 +2461,7 @@ def _run_jobs_json(args: Sequence[str], staged_plans: Sequence[_StagedJobPlan]) 
                     )
                     batch_spool.write("\n")
 
-            if exit_code is Exit.OK and (publish_error := _publish_or_error(staged_plans)) is not None:
+            if exit_code is Exit.OK and (publish_error := _publish_or_error(staged_plans, remote_locks)) is not None:
                 return publish_error
             batch_spool.seek(0)
             _write_batch_json_spool(batch_spool)
@@ -2631,6 +2469,110 @@ def _run_jobs_json(args: Sequence[str], staged_plans: Sequence[_StagedJobPlan]) 
     except OSError as exc:
         print(f"Error: could not spool batch JSON output: {exc}", file=sys.stderr)  # noqa: T201
         return Exit.ERROR
+
+
+def _single_job_plan(config: Config, pyproject_path: Path | None) -> JobPlan:
+    """Adapt one command config to the existing staged-publication machinery."""
+    output = config.output
+    return JobPlan(
+        name="command",
+        config=config,
+        pyproject_context={},
+        raw_config={},
+        cli_config_args={},
+        pyproject_path=pyproject_path or Path.cwd() / "pyproject.toml",
+        resolved_output_root=output.expanduser().resolve(strict=False) if output is not None else None,
+        resolved_output_parent=output.expanduser().parent.resolve(strict=False) if output is not None else None,
+        resolved_model_metadata_root=(
+            config.emit_model_metadata.expanduser().resolve(strict=False)
+            if config.emit_model_metadata is not None
+            else None
+        ),
+        resolved_model_metadata_parent=(
+            config.emit_model_metadata.expanduser().parent.resolve(strict=False)
+            if config.emit_model_metadata is not None
+            else None
+        ),
+    )
+
+
+def _run_single_remote_transaction(  # noqa: PLR0913, PLR0917
+    args: Sequence[str],
+    config: Config,
+    pyproject_config: Mapping[str, Any],
+    pyproject_path: Path | None,
+    remote_locks: _RemoteLockTransaction,
+    remote_lock_plan: _RemoteLockPlan,
+    *,
+    dependencies: WatchDependencies | None,
+) -> Exit:
+    """Generate one command through staging so lock and output publication share one journal."""
+    staged_plans: tuple[_StagedJobPlan, ...] = ()
+    exit_code = Exit.ERROR
+    try:
+        with tempfile.TemporaryFile(mode="w+", encoding="utf-8") as stdout_spool:
+            with redirect_stdout(stdout_spool):
+                if config.output is not None or config.emit_model_metadata is not None:
+                    staged_plans = _stage_job_plans((_single_job_plan(config, pyproject_path),))
+                    staged_plan = staged_plans[0]
+                    result = _main(
+                        args,
+                        start_watch=False,
+                        dependencies=dependencies,
+                        _batch_config=staged_plan.config,
+                        _batch_pyproject_context=pyproject_config,
+                        _batch_pyproject_path=pyproject_path,
+                        _batch_original_output=staged_plan.output,
+                        _batch_output_is_staged=staged_plan.staged_output is not None,
+                        _remote_locks=remote_locks,
+                        _bound_remote_lock_plan=remote_lock_plan,
+                    )
+                else:
+                    result = _main(
+                        args,
+                        start_watch=False,
+                        dependencies=dependencies,
+                        _batch_config=config,
+                        _batch_pyproject_context=pyproject_config,
+                        _batch_pyproject_path=pyproject_path,
+                        _remote_locks=remote_locks,
+                        _bound_remote_lock_plan=remote_lock_plan,
+                    )
+            match result:
+                case Exit.ERROR:
+                    exit_code = result
+                case Exit.DIFF:
+                    stdout_spool.seek(0)
+                    shutil.copyfileobj(stdout_spool, sys.stdout)
+                    exit_code = result
+                case _ if config.check:
+                    stdout_spool.seek(0)
+                    shutil.copyfileobj(stdout_spool, sys.stdout)
+                    exit_code = Exit.OK
+                case _:
+                    if (publish_error := _publish_or_error(staged_plans, remote_locks)) is not None:
+                        exit_code = publish_error
+                    else:
+                        stdout_spool.seek(0)
+                        shutil.copyfileobj(stdout_spool, sys.stdout)
+                        exit_code = Exit.OK
+    except OSError as exc:
+        print(f"Error: could not prepare command output staging: {exc}", file=sys.stderr)  # noqa: T201
+        exit_code = Exit.ERROR
+    finally:
+        cleanup_errors = _cleanup_staged_job_plans(staged_plans)
+        try:
+            remote_locks.discard()
+        except OSError as exc:
+            cleanup_errors += (exc,)
+        if cleanup_errors:
+            cleanup_message = "; ".join(str(error) for error in cleanup_errors)
+            print(  # noqa: T201
+                f"Error: could not clean up command transaction: {cleanup_message}",
+                file=sys.stderr,
+            )
+            exit_code = Exit.ERROR
+    return exit_code
 
 
 class GenerationRunContext(NamedTuple):
@@ -2709,8 +2651,11 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
     dependencies: WatchDependencies | None = None,
     _batch_config: Config | None = None,
     _batch_pyproject_context: Mapping[str, Any] | None = None,
+    _batch_pyproject_path: Path | None = None,
     _batch_original_output: Path | None = None,
     _batch_output_is_staged: bool = False,
+    _remote_locks: _RemoteLockTransaction | _UnresolvedRemoteLocks | None = _UNRESOLVED_REMOTE_LOCKS,
+    _bound_remote_lock_plan: _RemoteLockPlan | None = None,
 ) -> Exit:
     """Execute datamodel code generation from command-line arguments."""
     vars(namespace).clear()
@@ -2819,11 +2764,15 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
     # Handle --ignore-pyproject and --profile options
     if _batch_config is not None:
         pyproject_config = dict(_batch_pyproject_context or {})
+        pyproject_path = _batch_pyproject_path
     elif namespace.ignore_pyproject:
         pyproject_config: dict[str, Any] = {}
+        pyproject_path = None
     else:
         try:
-            pyproject_config = _get_pyproject_toml_config(Path.cwd(), profile=namespace.profile)
+            pyproject_config, pyproject_path = _get_pyproject_toml_config_with_path(
+                Path.cwd(), profile=namespace.profile
+            )
         except Error as e:
             print(e.message, file=sys.stderr)  # noqa: T201
             return Exit.ERROR
@@ -2849,6 +2798,7 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
             print(command_output)  # noqa: T201
         return Exit.OK
 
+    cli_config_args: dict[str, _RawConfigValue] = {}
     if _batch_config is not None:
         # Generation adjusts a few Config fields while resolving templates and
         # stdout behaviour. Each batch job therefore receives a fresh copy.
@@ -2970,6 +2920,88 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
         )
         return Exit.ERROR
 
+    lock_plan = _bound_remote_lock_plan or _remote_lock_plan(config, pyproject_path)
+    remote_lock_intent: set[Path] | None = None
+    if config.watch and watch_dependencies is not None and _bound_remote_lock_plan is None:
+        (lock_plan,), remote_lock_intent = watch_dependencies._apply_remote_lock_plans((lock_plan,))  # noqa: SLF001
+    active_lockfile = lock_plan.canonical_path if lock_plan.active else None
+    if config.watch and watch_dependencies is not None:
+        watch_dependencies.add_file(lock_plan.canonical_path)
+        if lock_plan.policy == "update":
+            watch_dependencies.exclude_file(lock_plan.canonical_path)
+    remote_transaction_owner = False
+    if _remote_locks is _UNRESOLVED_REMOTE_LOCKS:
+        try:
+            _remote_locks = _RemoteLockTransaction.open((("command", config, pyproject_path),), (lock_plan,))
+        except Error as e:
+            if remote_lock_intent is not None and watch_dependencies is not None:
+                watch_dependencies._merge_remote_lock_intent(remote_lock_intent)  # noqa: SLF001
+            print(str(e), file=sys.stderr)  # noqa: T201
+            return Exit.ERROR
+        remote_transaction_owner = _remote_locks is not None
+    remote_locks = cast("_RemoteLockTransaction | None", _remote_locks)
+
+    def finish_watch_remote_lock_intent(result: Exit) -> Exit:
+        """Commit successful lock intent, retaining failed verified candidates for recovery."""
+        if remote_lock_intent is None or watch_dependencies is None:
+            return result
+        if result is Exit.OK:
+            watch_dependencies._commit_remote_lock_intent(remote_lock_intent)  # noqa: SLF001
+        else:
+            watch_dependencies._merge_remote_lock_intent(remote_lock_intent)  # noqa: SLF001
+        return result
+
+    try:
+        _validate_generation_path_conflicts(
+            config.input or config.url or {},
+            config.output,
+            config.emit_model_metadata,
+            active_lockfile,
+        )
+    except Error as e:
+        if remote_transaction_owner and remote_locks is not None:
+            with suppress(OSError):
+                remote_locks.discard()
+        if remote_lock_intent is not None and watch_dependencies is not None:
+            watch_dependencies._merge_remote_lock_intent(remote_lock_intent)  # noqa: SLF001
+        print(str(e), file=sys.stderr)  # noqa: T201
+        return Exit.ERROR
+    if remote_transaction_owner and remote_locks is not None:
+        if config.watch and start_watch:
+            result = _run_single_remote_transaction(
+                args,
+                config,
+                pyproject_config,
+                pyproject_path,
+                remote_locks,
+                lock_plan,
+                dependencies=watch_dependencies,
+            )
+            if result is not Exit.OK:
+                return finish_watch_remote_lock_intent(result)
+            finish_watch_remote_lock_intent(result)
+            try:
+                from datamodel_code_generator.watch import watch_and_regenerate  # noqa: PLC0415
+
+                return watch_and_regenerate(
+                    config,
+                    dependencies=watch_dependencies,
+                    regenerate=lambda: _main(args, start_watch=False, dependencies=watch_dependencies),
+                )
+            except Exception as e:  # noqa: BLE001
+                print(str(e), file=sys.stderr)  # noqa: T201
+                return Exit.ERROR
+        result = _run_single_remote_transaction(
+            args,
+            config,
+            pyproject_config,
+            pyproject_path,
+            remote_locks,
+            lock_plan,
+            dependencies=watch_dependencies,
+        )
+        return finish_watch_remote_lock_intent(result)
+    config.resolve_remote_lock(None if remote_locks is None else remote_locks.collector_for(lock_plan))
     uses_black_formatter = config.formatters is None or Formatter.BLACK in config.formatters
     if uses_black_formatter and not is_supported_in_black(config.target_python_version):  # pragma: no cover
         print(  # noqa: T201
@@ -3094,7 +3126,7 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
     def cleanup_and_return(exit_code: Exit) -> Exit:
         if temp_context is not None:
             temp_context.cleanup()
-        return exit_code
+        return finish_watch_remote_lock_intent(exit_code)
 
     try:
         input_: Path | str | ParseResult | Mapping[str, Any]
@@ -3119,7 +3151,12 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
             input_ = config.url or config.input or sys.stdin.read()
 
         if writes_json_output_file:
-            _validate_generation_path_conflicts(input_, config.output, config.emit_model_metadata)
+            _validate_generation_path_conflicts(
+                input_,
+                config.output,
+                config.emit_model_metadata,
+                active_lockfile,
+            )
 
         if compare_output is not None:
             comparison_context = GenerationRunContext(
@@ -3173,7 +3210,12 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
     except Error as e:
         print(str(e), file=sys.stderr)  # noqa: T201
         return cleanup_and_return(Exit.ERROR)
-    except Exception:  # noqa: BLE001
+    except Exception as e:  # noqa: BLE001
+        from datamodel_code_generator.remote_lock import RemoteLockError  # noqa: PLC0415
+
+        if isinstance(e, RemoteLockError):
+            print(str(e), file=sys.stderr)  # noqa: T201
+            return cleanup_and_return(Exit.ERROR)
         import traceback  # noqa: PLC0415
 
         print(traceback.format_exc(), file=sys.stderr)  # noqa: T201

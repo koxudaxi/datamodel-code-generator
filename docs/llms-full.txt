@@ -9646,7 +9646,7 @@ This documentation is auto-generated from test cases.
 | 🎨 [Template Customization](template-customization.md) | 27 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 8 | OpenAPI-specific features |
 | 📋 [GraphQL-only Options](graphql-only-options.md) | 1 |  |
-| ⚙️ [General Options](general-options.md) | 21 | Utilities and meta options |
+| ⚙️ [General Options](general-options.md) | 24 | Utilities and meta options |
 | 📝 [Utility Options](utility-options.md) | 12 | Help, version, debug options |
 
 ## 🎯 Focused Topics
@@ -9692,6 +9692,8 @@ These links are generated from CLI option metadata and summarize options that im
 | [`--diff-against`](general-options.md#diff-against) | Conflicts | Always | [`--fail-on-multi-module-stdout`](general-options.md#fail-on-multi-module-stdout) | - |
 | [`--diff-against`](general-options.md#diff-against) | Conflicts | Always | `--job` | `--diff-against` compares one profile or input and cannot run named jobs. |
 | [`--diff-against`](general-options.md#diff-against) | Conflicts | Always | `--all-jobs` | `--diff-against` compares one profile or input and cannot run named jobs. |
+| [`--locked`](general-options.md#locked) | Conflicts | Always | [`--update-lock`](general-options.md#update-lock) | - |
+| [`--update-lock`](general-options.md#update-lock) | Conflicts | Always | [`--locked`](general-options.md#locked) | - |
 
 ## All Options
 
@@ -9820,6 +9822,8 @@ These links are generated from CLI option metadata and summarize options that im
 
 - [`--list-deprecations`](utility-options.md#list-deprecations)
 - [`--list-experimental`](utility-options.md#list-experimental)
+- [`--locked`](general-options.md#locked)
+- [`--lockfile`](general-options.md#lockfile)
 
 ### M {#m}
 
@@ -9895,6 +9899,7 @@ These links are generated from CLI option metadata and summarize options that im
 ### U {#u}
 
 - [`--union-mode`](model-customization.md#union-mode)
+- [`--update-lock`](general-options.md#update-lock)
 - [`--url`](base-options.md#url)
 - [`--use-annotated`](typing-customization.md#use-annotated)
 - [`--use-attribute-docstrings`](field-customization.md#use-attribute-docstrings)
@@ -10977,7 +10982,7 @@ a local file. The `--http-headers` flag adds request headers in
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --url https://api.example.com/schema.json --http-headers "Authorization:Bearer token" # (1)!
+    datamodel-codegen --url https://api.example.com/schema.json --http-headers "Authorization:Bearer token" # (1)!
     ```
 
     1. :material-arrow-left: `--url` - the option documented here
@@ -34896,9 +34901,12 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/general-opti
 | [`--http-query-parameters`](#http-query-parameters) | Add query parameters to HTTP requests for remote schemas. |
 | [`--http-timeout`](#http-timeout) | Set timeout for HTTP requests to remote hosts. |
 | [`--ignore-pyproject`](#ignore-pyproject) | Ignore pyproject.toml configuration file. |
+| [`--locked`](#locked) | Require an existing remote lock and validate each fetched re... |
+| [`--lockfile`](#lockfile) | Select the remote reference integrity lock file (experimenta... |
 | [`--module-split-mode`](#module-split-mode) | Split generated models into separate files, one per model cl... |
 | [`--shared-module-name`](#shared-module-name) | Customize the name of the shared module for deduplicated mod... |
 | [`--strict-refs`](#strict-refs) | Treat unresolved local `$ref` JSON pointers as errors. |
+| [`--update-lock`](#update-lock) | Create or atomically update the selected remote lock after g... |
 | [`--watch`](#watch) | Watch input file(s) for changes and regenerate output automa... |
 | [`--watch-delay`](#watch-delay) | Set debounce delay in seconds for watch mode. |
 
@@ -36077,7 +36085,7 @@ or public endpoint.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --url http://127.0.0.1/schema.json --allow-private-network # (1)!
+    datamodel-codegen --url http://127.0.0.1/schema.json --allow-private-network # (1)!
     ```
 
     1. :material-arrow-left: `--allow-private-network` - the option documented here
@@ -36623,7 +36631,7 @@ a local file. The `--http-headers` flag adds request headers in
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --url https://api.example.com/schema.json --http-headers "Authorization:Bearer token" # (1)!
+    datamodel-codegen --url https://api.example.com/schema.json --http-headers "Authorization:Bearer token" # (1)!
     ```
 
     1. :material-arrow-left: `--http-headers` - the option documented here
@@ -36682,7 +36690,7 @@ environments with self-signed certificates. Not recommended for production.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --url https://api.example.com/schema.json --http-ignore-tls # (1)!
+    datamodel-codegen --url https://api.example.com/schema.json --http-ignore-tls # (1)!
     ```
 
     1. :material-arrow-left: `--http-ignore-tls` - the option documented here
@@ -36743,7 +36751,7 @@ URL path are used as the relative path under the schema store. For example,
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --url https://api.example.com/schema.json --http-local-ref-path schemas # (1)!
+    datamodel-codegen --url https://api.example.com/schema.json --http-local-ref-path schemas # (1)!
     ```
 
     1. :material-arrow-left: `--http-local-ref-path` - the option documented here
@@ -36795,7 +36803,7 @@ specified: `--http-query-parameters version=v2 format=json`.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --url https://api.example.com/schema.json --http-query-parameters version=v2 format=json # (1)!
+    datamodel-codegen --url https://api.example.com/schema.json --http-query-parameters version=v2 format=json # (1)!
     ```
 
     1. :material-arrow-left: `--http-query-parameters` - the option documented here
@@ -36854,7 +36862,7 @@ Default is 30 seconds.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --url https://api.example.com/schema.json --http-timeout 60 # (1)!
+    datamodel-codegen --url https://api.example.com/schema.json --http-timeout 60 # (1)!
     ```
 
     1. :material-arrow-left: `--http-timeout` - the option documented here
@@ -36969,6 +36977,149 @@ testing without project configuration.
             first_name: str | None = Field(None, alias='firstName')
             last_name: str | None = Field(None, alias='lastName')
         ```
+
+---
+
+## `--locked` {#locked}
+
+Require an existing remote lock and validate each fetched resource against it (experimental).
+
+`--locked` fails if the selected lock is missing, a resource is unrecorded, or its body differs. It conflicts with
+`--update-lock`.
+
+Remote reference lock support is experimental: its lock document schema and request-identity compatibility may evolve. It remains fail-closed on integrity mismatches, and it never persists credentials.
+
+The lock stores opaque SHA-256 request-identity digests and SHA-256 body digests,
+never response bodies or request values directly. Each saved display origin contains only the scheme, host, and
+explicit port—never a path, query, or request headers. A request identity includes its scheme, host, explicit port,
+path, header names, and ordered query parameter names only. If one generation receives different bodies for the same
+path and query-name identity, it fails closed rather than sharing a lock entry.
+
+**Related:** [`--http-local-ref-path`](#http-local-ref-path), [`--lockfile`](#lockfile), [`--url`](base-options.md#url)
+
+**Option relationships:**
+
+- **Conflicts:** [`--update-lock`](general-options.md#update-lock)
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --url https://api.example.com/schema.json --locked --lockfile datamodel-codegen.lock # (1)!
+    ```
+
+    1. :material-arrow-left: `--locked` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Pet",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "tag": {
+          "type": "string"
+        }
+      }
+    }
+    ```
+
+    **Output:**
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  https://api.example.com/schema.json
+    #   timestamp: 2019-07-26T00:00:00+00:00
+
+    from __future__ import annotations
+
+    from pydantic import BaseModel
+
+
+    class Pet(BaseModel):
+        id: int | None = None
+        name: str | None = None
+        tag: str | None = None
+    ```
+
+---
+
+## `--lockfile` {#lockfile}
+
+Select the remote reference integrity lock file (experimental).
+
+An existing selected lock is verified automatically; a missing selected lock is ignored unless `--locked` requires it.
+Without `--lockfile`, the CLI uses `datamodel-codegen.lock` beside the discovered `pyproject.toml`, or in the invocation
+working directory when no project is found. Explicit relative `--lockfile` paths resolve from the invocation working
+directory, not the project root or output directory. The public API uses the caller's working directory for both its
+default lock and relative `lockfile` paths.
+
+Remote reference lock support is experimental: its lock document schema and request-identity compatibility may evolve. It remains fail-closed on integrity mismatches, and it never persists credentials.
+
+The lock stores opaque SHA-256 request-identity digests and SHA-256 body digests,
+never response bodies or request values directly. Each saved display origin contains only the scheme, host, and
+explicit port—never a path, query, or request headers. A request identity includes its scheme, host, explicit port,
+path, header names, and ordered query parameter names only. If one generation receives different bodies for the same
+path and query-name identity, it fails closed rather than sharing a lock entry.
+
+**Related:** [`--http-local-ref-path`](#http-local-ref-path), [`--locked`](#locked), [`--update-lock`](#update-lock), [`--url`](base-options.md#url)
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --url https://api.example.com/schema.json --update-lock --lockfile datamodel-codegen.lock # (1)!
+    ```
+
+    1. :material-arrow-left: `--lockfile` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Pet",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "tag": {
+          "type": "string"
+        }
+      }
+    }
+    ```
+
+    **Output:**
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  https://api.example.com/schema.json
+    #   timestamp: 2019-07-26T00:00:00+00:00
+
+    from __future__ import annotations
+
+    from pydantic import BaseModel
+
+
+    class Pet(BaseModel):
+        id: int | None = None
+        name: str | None = None
+        tag: str | None = None
+    ```
 
 ---
 
@@ -37192,6 +37343,78 @@ generation instead. Existing empty schemas remain valid references.
 
     class Model(RootModel[Empty]):
         root: Empty
+    ```
+
+---
+
+## `--update-lock` {#update-lock}
+
+Create or atomically update the selected remote lock after generation (experimental).
+
+`--update-lock` creates or refreshes the selected `--lockfile` from every remote resource reached during this run.
+It conflicts with `--locked`.
+
+Remote reference lock support is experimental: its lock document schema and request-identity compatibility may evolve. It remains fail-closed on integrity mismatches, and it never persists credentials.
+
+The lock stores opaque SHA-256 request-identity digests and SHA-256 body digests,
+never response bodies or request values directly. Each saved display origin contains only the scheme, host, and
+explicit port—never a path, query, or request headers. A request identity includes its scheme, host, explicit port,
+path, header names, and ordered query parameter names only. If one generation receives different bodies for the same
+path and query-name identity, it fails closed rather than sharing a lock entry.
+
+**Related:** [`--http-local-ref-path`](#http-local-ref-path), [`--lockfile`](#lockfile), [`--url`](base-options.md#url)
+
+**Option relationships:**
+
+- **Conflicts:** [`--locked`](general-options.md#locked)
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --url https://api.example.com/schema.json --update-lock --lockfile datamodel-codegen.lock # (1)!
+    ```
+
+    1. :material-arrow-left: `--update-lock` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Pet",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "tag": {
+          "type": "string"
+        }
+      }
+    }
+    ```
+
+    **Output:**
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  https://api.example.com/schema.json
+    #   timestamp: 2019-07-26T00:00:00+00:00
+
+    from __future__ import annotations
+
+    from pydantic import BaseModel
+
+
+    class Pet(BaseModel):
+        id: int | None = None
+        name: str | None = None
+        tag: str | None = None
     ```
 
 ---
@@ -38328,9 +38551,12 @@ datamodel-codegen [OPTIONS]
 | [`--http-query-parameters`](general-options.md#http-query-parameters) | Add query parameters to HTTP requests for remote schemas. |
 | [`--http-timeout`](general-options.md#http-timeout) | Set timeout for HTTP requests to remote hosts. |
 | [`--ignore-pyproject`](general-options.md#ignore-pyproject) | Ignore pyproject.toml configuration file. |
+| [`--locked`](general-options.md#locked) | Require an existing remote lock and validate each fetched resource against it (e... |
+| [`--lockfile`](general-options.md#lockfile) | Select the remote reference integrity lock file (experimental). |
 | [`--module-split-mode`](general-options.md#module-split-mode) | Split generated models into separate files, one per model class. |
 | [`--shared-module-name`](general-options.md#shared-module-name) | Customize the name of the shared module for deduplicated models. |
 | [`--strict-refs`](general-options.md#strict-refs) | Treat unresolved local `$ref` JSON pointers as errors. |
+| [`--update-lock`](general-options.md#update-lock) | Create or atomically update the selected remote lock after generation (experimen... |
 | [`--watch`](general-options.md#watch) | Watch input file(s) for changes and regenerate output automatically. |
 | [`--watch-delay`](general-options.md#watch-delay) | Set debounce delay in seconds for watch mode. |
 
@@ -38444,6 +38670,8 @@ All options sorted alphabetically:
 - [`--keyword-only`](model-customization.md#keyword-only) - Generate dataclasses with keyword-only fields (Python 3.10+)...
 - [`--list-deprecations`](utility-options.md#list-deprecations) - List registered deprecations and scheduled breaking changes
 - [`--list-experimental`](utility-options.md#list-experimental) - List registered experimental features
+- [`--locked`](general-options.md#locked) - Require an existing remote lock and validate each fetched re...
+- [`--lockfile`](general-options.md#lockfile) - Select the remote reference integrity lock file (experimenta...
 - [`--model-extra-keys`](model-customization.md#model-extra-keys) - Add model-level schema extensions to ConfigDict json_schema_...
 - [`--model-extra-keys-without-x-prefix`](model-customization.md#model-extra-keys-without-x-prefix) - Strip x- prefix from model-level schema extensions and add t...
 - [`--model-name-map`](model-customization.md#model-name-map) - Rename generated model classes from a JSON mapping.
@@ -38495,6 +38723,7 @@ All options sorted alphabetically:
 - [`--type-mappings`](typing-customization.md#type-mappings) - Override default type mappings for schema formats.
 - [`--type-overrides`](typing-customization.md#type-overrides) - Replace schema model types with custom Python types via JSON...
 - [`--union-mode`](model-customization.md#union-mode) - Union mode for combining anyOf/oneOf schemas (smart or left_...
+- [`--update-lock`](general-options.md#update-lock) - Create or atomically update the selected remote lock after g...
 - [`--url`](base-options.md#url) - Fetch a schema from a URL with custom HTTP headers.
 - [`--use-annotated`](typing-customization.md#use-annotated) - Use typing.Annotated for Field() with constraints.
 - [`--use-attribute-docstrings`](field-customization.md#use-attribute-docstrings) - Generate field descriptions as attribute docstrings instead ...
@@ -39209,6 +39438,7 @@ This page lists features that are available but still experimental.
 | ID | Kind | Target | Since | Tracking |
 |----|------|--------|-------|----------|
 | `behavior.batch-generation-jobs` | behavior | `[tool.datamodel-codegen.jobs], --job, --all-jobs` | 0.72.3 | - |
+| `behavior.remote-reference-lock` | behavior | `datamodel-codegen.lock, --lockfile, --update-lock, and --locked` | 0.72.3 | - |
 | `cli-option.generate-schema-validators` | cli-option | `--generate-schema-validators` | 0.66.1 | - |
 | `cli-option.schema-validator-type` | cli-option | `--schema-validator-type` | 0.66.1 | - |
 | `cli-option.use-missing-sentinel` | cli-option | `--use-missing-sentinel` | 0.66.1 | - |
@@ -39233,6 +39463,16 @@ This page lists features that are available but still experimental.
 Named batch jobs are experimental; their configuration schema, batch output, and transactional/watch execution contracts may change.
 
 Define named generation jobs in [tool.datamodel-codegen.jobs] and select them with --job or --all-jobs. Each selected job has its own input and output, and the full selection is validated before generation begins.
+
+### `behavior.remote-reference-lock`
+
+- **Kind:** behavior
+- **Target:** `datamodel-codegen.lock, --lockfile, --update-lock, and --locked`
+- **Since:** 0.72.3
+
+Remote reference integrity locking is experimental: the lock document schema and request-identity compatibility may evolve, but integrity mismatches remain fail-closed and credentials are never persisted.
+
+The lock stores opaque SHA-256 request-identity digests and SHA-256 body digests, never response bodies or request values directly. Each saved display origin contains only the scheme, host, and explicit port—never a path, query, or request headers.
 
 ### `cli-option.generate-schema-validators`
 
@@ -39884,8 +40124,8 @@ classDiagram
 
 | Config model | Field count | Purpose |
 | --- | ---: | --- |
-| `BaseGenerateConfig` | 147 | Shared generation options. |
-| `GenerateConfig` | 162 | Public `generate()` configuration. |
+| `BaseGenerateConfig` | 150 | Shared generation options. |
+| `GenerateConfig` | 165 | Public `generate()` configuration. |
 | `ParserConfig` | 141 | Base parser dependency injection and parser options. |
 | `JSONSchemaParserConfig` | 143 | JSON Schema parser options. |
 | `OpenAPIParserConfig` | 149 | OpenAPI-specific parser options. |

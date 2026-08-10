@@ -137,7 +137,7 @@ def _watch_changes(
             yield_on_timeout=force_polling,
         ):
             if not changes:
-                if not context.dependencies.polling_dependencies_changed():
+                if not context.dependencies._polling_dependencies_changed():  # noqa: SLF001
                     pending_polling_fallback = False
                     continue
                 if not pending_polling_fallback:
@@ -150,7 +150,7 @@ def _watch_changes(
                 changes
                 and force_polling
                 and all(Path(path).is_dir() for _change, path in changes)
-                and not context.dependencies.polling_dependencies_changed()
+                and not context.dependencies._polling_dependencies_changed()  # noqa: SLF001
             ):
                 continue
             with condition:
@@ -201,7 +201,7 @@ def _watch_once(
                 return True
 
         while (changes := _wait_for_changes(condition, state)) is not None:
-            if not changes and not context.dependencies.polling_dependencies_changed():
+            if not changes and not context.dependencies._polling_dependencies_changed():  # noqa: SLF001
                 continue
             _regenerate_after_change(changes, context.regenerate)
             if context.dependencies.watch_roots() != watch_roots:

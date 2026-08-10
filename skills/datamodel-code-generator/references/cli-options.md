@@ -220,6 +220,9 @@ General utility, HTTP, checking, and project integration options.
 - `--http-ignore-tls`: Disable verification of the remote host's TLS certificate
 - `--http-timeout`: Timeout in seconds for HTTP requests to remote hosts (default: 30)
 - `--http-local-ref-path`: Resolve HTTP(S) JSON Schema $ref URLs from a local directory instead of fetching them. URLs are mapped under the directory by host and path; extensionless refs also try '.json'.
+- `--lockfile`: Select the remote reference integrity lock file (experimental). An existing selected lock is verified automatically; a missing selected lock is ignored unless --locked is used. The default is datamodel-codegen.lock beside the discovered pyproject.toml, or in the invocation working directory when no project is found. Explicit relative paths resolve from the invocation working directory.
+- `--update-lock`: Create or atomically update the selected remote lock after generation (experimental).
+- `--locked`: Require an existing remote lock and validate each fetched resource against it (experimental).
 - `--shared-module-name`: Name of the shared module for --reuse-scope=tree (default: "shared"). Use this option if your schema has a file named "shared".
 - `--all-exports-scope`: Generate __all__ in __init__.py with re-exports. 'children': export from direct child modules only. 'recursive': export from all descendant modules. Choices: `children`, `recursive`.
 - `--all-exports-collision-strategy`: Strategy for name collisions when using --all-exports-scope=recursive. 'error': raise an error (default). 'minimal-prefix': add module prefix only to colliding names. 'full-prefix': add full module path prefix to colliding names. Choices: `error`, `minimal-prefix`, `full-prefix`.

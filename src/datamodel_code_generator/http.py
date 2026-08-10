@@ -18,7 +18,7 @@ import socket
 import ssl
 from _thread import allocate_lock  # noqa: PLC2701
 from collections import OrderedDict
-from collections.abc import Sequence  # noqa: TC003  # Runtime public annotation introspection
+from collections.abc import Callable, Sequence  # noqa: TC003  # Runtime public annotation introspection
 from dataclasses import dataclass, field
 from ipaddress import IPv4Address, IPv6Address, IPv6Network, ip_address
 from types import MappingProxyType
@@ -31,7 +31,7 @@ from datamodel_code_generator import SchemaFetchError
 from datamodel_code_generator.enums import HTTPBackend
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Mapping
+    from collections.abc import Iterable, Mapping
     from types import TracebackType
     from typing import Protocol, overload
 
@@ -46,6 +46,7 @@ if TYPE_CHECKING:
         status_code: int
         headers: _ResponseHeaders
         text: str
+        content: bytes
 
 
 _HTTPTransportT_co = TypeVar("_HTTPTransportT_co", bound="_HTTPTransport", covariant=True)
@@ -770,9 +771,18 @@ class _HTTPFetchSession:
     across distinct remote references without sharing network state globally.
     """
 
-    def __init__(self, http_backend: HTTPBackend = HTTPBackend.AUTO) -> None:
+    def __init__(
+        self,
+        http_backend: HTTPBackend = HTTPBackend.AUTO,
+        *,
+        response_observer: Callable[
+            [str, Sequence[tuple[str, str]] | None, Sequence[tuple[str, str]] | None, bytes], None
+        ]
+        | None = None,
+    ) -> None:
         """Initialize empty size- and parser-lifetime-bounded caches."""
         self._http_backend = http_backend
+        self._response_observer = response_observer
         self.http_stack = _get_http_stack(http_backend)
         self._dns_cache: OrderedDict[str, tuple[IPv4Address | IPv6Address, ...]] = OrderedDict()
         self._clients: OrderedDict[
@@ -865,6 +875,7 @@ class _HTTPFetchSession:
         timeout: float = DEFAULT_HTTP_TIMEOUT,
         *,
         allow_private_network: bool = False,
+        encoding: str = "utf-8",
     ) -> str:
         """Fetch one URL while reusing this parser run's validated resources."""
         return _get_body(
@@ -876,6 +887,8 @@ class _HTTPFetchSession:
             allow_private_network=allow_private_network,
             http_backend=self._http_backend,
             session=self,
+            response_observer=self._response_observer,
+            encoding=encoding,
         )
 
     def close(self) -> None:
@@ -1083,6 +1096,9 @@ def get_body(  # noqa: PLR0913
     *,
     allow_private_network: bool = False,
     http_backend: HTTPBackend = HTTPBackend.AUTO,
+    response_observer: Callable[[str, Sequence[tuple[str, str]] | None, Sequence[tuple[str, str]] | None, bytes], None]
+    | None = None,
+    encoding: str = "utf-8",
 ) -> str:
     """Fetch schema content from a URL with redirect validation and DNS pinning.
 
@@ -1107,10 +1123,12 @@ def get_body(  # noqa: PLR0913
         timeout,
         allow_private_network=allow_private_network,
         http_backend=http_backend,
+        response_observer=response_observer,
+        encoding=encoding,
     )
 
 
-def _get_body(  # noqa: PLR0913
+def _get_body(  # noqa: PLR0913, PLR0914
     url: str,
     headers: Sequence[tuple[str, str]] | None,
     ignore_tls: bool,  # noqa: FBT001
@@ -1120,6 +1138,9 @@ def _get_body(  # noqa: PLR0913
     allow_private_network: bool,
     http_backend: HTTPBackend,
     session: _HTTPFetchSession | None = None,
+    response_observer: Callable[[str, Sequence[tuple[str, str]] | None, Sequence[tuple[str, str]] | None, bytes], None]
+    | None = None,
+    encoding: str = "utf-8",
 ) -> str:
     """Fetch one schema body, optionally reusing parser-scoped network state."""
     http_stack = session.http_stack if session is not None else _get_http_stack(http_backend)
@@ -1132,6 +1153,8 @@ def _get_body(  # noqa: PLR0913
         resolve_host = session.get_ips_from_host
         get_response = session.get_response
 
+    original_url = url
+    original_headers = headers
     current_url = url
     current_headers = headers
     for redirect_count in range(MAX_HTTP_REDIRECTS + 1):
@@ -1141,6 +1164,7 @@ def _get_body(  # noqa: PLR0913
             resolve_host=resolve_host,
         )
         pinned_host, pinned_ips = validated_host if validated_host is not None else (None, ())
+        request_query_parameters = query_parameters if redirect_count == 0 else None
         try:
             response = get_response(
                 http_stack,
@@ -1148,7 +1172,7 @@ def _get_body(  # noqa: PLR0913
                 headers=current_headers,
                 verify=not ignore_tls,
                 follow_redirects=False,
-                query_parameters=query_parameters if redirect_count == 0 else None,
+                query_parameters=request_query_parameters,
                 timeout=timeout,
                 pinned_host=pinned_host,
                 pinned_ips=pinned_ips,
@@ -1174,7 +1198,21 @@ def _get_body(  # noqa: PLR0913
             f"(Content-Type: {content_type}). Expected JSON or YAML schema content."
         )
         raise SchemaFetchError(msg)
-    return response.text
+    # Decode the raw entity explicitly. HTTP client charset heuristics must not
+    # change how the same locked bytes are interpreted between runs.
+    body = response.content
+    if not isinstance(body, bytes):  # pragma: no cover - compatibility for text-only HTTP client test doubles
+        body = response.text.encode(encoding)
+    if response_observer is not None:
+        # Redirects are transport details. The lock identity remains the
+        # caller's original logical request while the digest covers only the
+        # final successful entity body.
+        response_observer(original_url, original_headers, query_parameters, body)
+    try:
+        return body.decode(encoding)
+    except UnicodeDecodeError as exc:
+        msg = f"Unable to decode response from {current_url} using {encoding}: {exc}"
+        raise SchemaFetchError(msg) from exc
 
 
 def join_url(  # noqa: PLR0912

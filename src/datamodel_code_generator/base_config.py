@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence  # noqa: TC003 - used at runtime by Pydantic
 from pathlib import Path  # noqa: TC003 - used at runtime by Pydantic
-from typing import TYPE_CHECKING, TypeAlias
+from typing import TYPE_CHECKING, Any, TypeAlias
 
 from pydantic import BaseModel, ConfigDict, PrivateAttr, model_validator
 from typing_extensions import Self
@@ -157,6 +157,27 @@ class BaseGenerateConfig(BaseModel):
     http_local_ref_path: Path | None = None
     http_ignore_tls: bool = False
     http_timeout: float | None = None
+    lockfile: Path | None = None
+    update_lock: bool = False
+    locked: bool = False
+    _remote_lock: Any | None = PrivateAttr(default=None)
+    _remote_lock_resolved: bool = PrivateAttr(default=False)
+
+    @property
+    def remote_lock(self) -> Any | None:
+        """Return the generation-scoped remote lock collector, if resolved."""
+        return self._remote_lock
+
+    @property
+    def remote_lock_resolved(self) -> bool:
+        """Return whether the CLI or API has resolved remote lock policy."""
+        return self._remote_lock_resolved
+
+    def resolve_remote_lock(self, remote_lock: Any | None) -> None:
+        """Record a generation-scoped remote lock decision on this config instance."""
+        self._remote_lock = remote_lock
+        self._remote_lock_resolved = True
+
     use_annotated: bool = False
     use_serialize_as_any: bool = False
     use_non_positive_negative_number_constrained_types: bool = False
@@ -224,6 +245,14 @@ class BaseGenerateConfig(BaseModel):
             self.schema_validator_type = SchemaValidatorType.PydanticV2
         if self.schema_validator_type is not None:
             self.generate_schema_validators = True
+        return self
+
+    @model_validator(mode="after")
+    def validate_remote_lock_mode(self) -> Self:
+        """Keep lock update and verification modes mutually exclusive."""
+        if self.update_lock and self.locked:
+            msg = "--update-lock and --locked cannot be used together"
+            raise ValueError(msg)
         return self
 
     @model_validator(mode="after")

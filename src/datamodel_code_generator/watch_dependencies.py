@@ -180,6 +180,7 @@ class WatchDependencies(_Weakrefable):
     _generation_files: set[Path] = field(default_factory=set)
     _generation_symlink_events: set[Path] = field(default_factory=set)
     _outputs: dict[Path, bool] = field(default_factory=dict)
+    _verified_remote_locks: set[Path] = field(default_factory=set)
     _pending_static: _StaticDependencies | None = None
     _failed_static: _StaticDependencies | None = None
     _failed_generation_files: set[Path] = field(default_factory=set)
@@ -201,10 +202,8 @@ class WatchDependencies(_Weakrefable):
             static_files |= candidate.files
             static_directories |= candidate.directories
             static_symlink_events |= candidate.symlink_events
-        failed_generation_files = self._failed_generation_files if self._pending_static is None else set()
-        failed_generation_symlink_events = (
-            self._failed_generation_symlink_events if self._pending_static is None else set()
-        )
+        failed_generation_files = self._failed_generation_files
+        failed_generation_symlink_events = self._failed_generation_symlink_events
         files = frozenset(static_files | self._generation_files | failed_generation_files)
         directories = frozenset(static_directories)
         event_paths = frozenset(
@@ -401,12 +400,41 @@ class WatchDependencies(_Weakrefable):
         finally:
             _current_collector.reset(token)
 
+    def _apply_remote_lock_plans(self, plans: Iterable[Any]) -> tuple[tuple[Any, ...], set[Path]]:
+        """Return effective lock plans and intent for the current generation attempt."""
+        plans = tuple(plans)
+        with self._lock:
+            current_paths = {plan.canonical_path for plan in plans}
+            candidate_intent = self._verified_remote_locks.intersection(current_paths)
+        effective_plans: list[Any] = []
+        for plan in plans:
+            effective_plan = plan
+            if plan.policy == "verify":
+                candidate_intent.add(plan.canonical_path)
+            elif plan.policy == "inactive" and plan.canonical_path in candidate_intent:
+                effective_plan = plan._replace(policy="locked")
+            effective_plans.append(effective_plan)
+        return tuple(effective_plans), candidate_intent
+
+    def _commit_remote_lock_intent(self, intent: set[Path]) -> None:
+        """Persist implicit lock verification only after a successful attempt."""
+        with self._lock:
+            self._verified_remote_locks = intent.copy()
+
+    def _merge_remote_lock_intent(self, intent: set[Path]) -> None:
+        """Retain lock paths verified by a failed candidate for fail-closed recovery."""
+        with self._lock:
+            self._verified_remote_locks.update(intent)
+
     def add_file(self, path: Path | None) -> None:
         """Add one static local file dependency."""
         if path is None:
             return
         with self._lock:
-            self._add_path(path, self._static_files, self._static_symlink_events)
+            if self._pending_static is None:
+                self._add_path(path, self._static_files, self._static_symlink_events)
+            else:
+                self._add_path(path, self._pending_static.files, self._pending_static.symlink_events)
             self._publish()
 
     def add_directory(self, path: Path | None) -> None:
@@ -415,6 +443,13 @@ class WatchDependencies(_Weakrefable):
             return
         with self._lock:
             self._add_path(path, self._static_directories, self._static_symlink_events)
+            self._publish()
+
+    def exclude_file(self, path: Path) -> None:
+        """Exclude one exact generated file from watch events."""
+        with self._lock:
+            outputs = self._outputs if self._pending_static is None else self._pending_static.outputs
+            self._add_output(path, outputs, is_directory=False)
             self._publish()
 
     def record_file(self, path: Path) -> None:
@@ -461,7 +496,7 @@ class WatchDependencies(_Weakrefable):
         )
 
     @staticmethod
-    def _polling_dependencies_changed(
+    def _snapshot_polling_dependencies_changed(
         snapshot: _DependencySnapshot, path_variants: frozenset[Path] | None = None
     ) -> bool:
         return any(
@@ -470,9 +505,9 @@ class WatchDependencies(_Weakrefable):
             if path_variants is None or any(dependency.is_relative_to(path_variant) for path_variant in path_variants)
         )
 
-    def polling_dependencies_changed(self) -> bool:
+    def _polling_dependencies_changed(self) -> bool:
         """Return whether a polling watcher missed an exact dependency event."""
-        return self._polling_dependencies_changed(self._snapshot)
+        return self._snapshot_polling_dependencies_changed(self._snapshot)
 
     def includes(self, path: Path) -> bool:
         """Return whether an event belongs to the immutable current dependency graph."""
@@ -512,7 +547,7 @@ class WatchDependencies(_Weakrefable):
         has_output_below = any(
             output.is_relative_to(path_variant) for path_variant in path_variants for output in snapshot.outputs
         )
-        return not has_output_below or self._polling_dependencies_changed(snapshot, path_variants)
+        return not has_output_below or self._snapshot_polling_dependencies_changed(snapshot, path_variants)
 
 
 def collector_is_active() -> bool:

@@ -7,6 +7,7 @@ This page lists features that are available but still experimental.
 | ID | Kind | Target | Since | Tracking |
 |----|------|--------|-------|----------|
 | `behavior.batch-generation-jobs` | behavior | `[tool.datamodel-codegen.jobs], --job, --all-jobs` | 0.72.3 | - |
+| `behavior.remote-reference-lock` | behavior | `datamodel-codegen.lock, --lockfile, --update-lock, and --locked` | 0.72.3 | - |
 | `cli-option.generate-schema-validators` | cli-option | `--generate-schema-validators` | 0.66.1 | - |
 | `cli-option.schema-validator-type` | cli-option | `--schema-validator-type` | 0.66.1 | - |
 | `cli-option.use-missing-sentinel` | cli-option | `--use-missing-sentinel` | 0.66.1 | - |
@@ -31,6 +32,16 @@ This page lists features that are available but still experimental.
 Named batch jobs are experimental; their configuration schema, batch output, and transactional/watch execution contracts may change.
 
 Define named generation jobs in [tool.datamodel-codegen.jobs] and select them with --job or --all-jobs. Each selected job has its own input and output, and the full selection is validated before generation begins.
+
+### `behavior.remote-reference-lock`
+
+- **Kind:** behavior
+- **Target:** `datamodel-codegen.lock, --lockfile, --update-lock, and --locked`
+- **Since:** 0.72.3
+
+Remote reference integrity locking is experimental: the lock document schema and request-identity compatibility may evolve, but integrity mismatches remain fail-closed and credentials are never persisted.
+
+The lock stores opaque SHA-256 request-identity digests and SHA-256 body digests, never response bodies or request values directly. Each saved display origin contains only the scheme, host, and explicit port—never a path, query, or request headers.
 
 ### `cli-option.generate-schema-validators`
 
