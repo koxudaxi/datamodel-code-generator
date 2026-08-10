@@ -8595,7 +8595,7 @@ assert all(r is results[0] for r in results)
 
 Source: https://datamodel-code-generator.koxudaxi.dev/pyproject_toml/
 
-<!-- related-cli-options: --ignore-pyproject, --generate-pyproject-config, --generate-cli-command, --profile, --preset -->
+<!-- related-cli-options: --all-jobs, --ignore-pyproject, --generate-pyproject-config, --generate-cli-command, --job, --profile, --preset, --watch -->
 
 # ⚙️ pyproject.toml Configuration
 
@@ -8653,17 +8653,13 @@ You can define multiple named profiles for different use cases within a single p
 ```toml
 [tool.datamodel-codegen]
 target-python-version = "3.10"
+
+[tool.datamodel-codegen.profiles.strict]
 snake-case-field = true
+use-annotated = true
 
-[tool.datamodel-codegen.profiles.api]
-input = "schemas/api.yaml"
-output = "src/models/api.py"
+[tool.datamodel-codegen.profiles.py311]
 target-python-version = "3.11"
-
-[tool.datamodel-codegen.profiles.database]
-input = "schemas/db.json"
-output = "src/models/db.py"
-input-file-type = "jsonschema"
 ```
 
 Base settings in `[tool.datamodel-codegen]` are used when no profile is specified, and also serve as defaults for profiles.
@@ -8671,18 +8667,65 @@ Base settings in `[tool.datamodel-codegen]` are used when no profile is specifie
 Use a profile with the `--profile` option:
 
 ```bash
-datamodel-codegen --profile api
-datamodel-codegen --profile database
+datamodel-codegen --input schemas/api.yaml --output src/models/api.py --profile strict
+datamodel-codegen --input schemas/db.json --output src/models/db.py --profile py311
 ```
+
+## 🏃 Named Jobs (Experimental)
+
+!!! warning "Experimental"
+
+    Named batch jobs are experimental; their configuration schema, batch output,
+    and transactional/watch execution contracts may change.
+
+Profiles are reusable configuration fragments. A job is a runnable generation
+that supplies its own `input` and `output` and can select one profile.
+
+```toml
+[tool.datamodel-codegen.jobs.api]
+profile = "strict"
+input = "schemas/api.yaml"
+output = "src/models/api.py"
+
+[tool.datamodel-codegen.jobs.database]
+profile = "py311"
+input = "schemas/db.json"
+output = "src/models/db.py"
+input-file-type = "jsonschema"
+```
+
+Run selected jobs or every job:
+
+```bash
+datamodel-codegen --job api
+datamodel-codegen --job api --job database --check
+datamodel-codegen --all-jobs
+```
+
+Jobs always run sequentially in their TOML declaration order. Before generation,
+all selected jobs are validated: each must have an input and output, and output
+or model-metadata paths cannot overlap. `--job` and `--all-jobs` are mutually
+exclusive. Define job-specific input and output in TOML instead of combining
+job selection with `--input`, `--url`, `--input-model`, `--output`, `--profile`,
+`--diff-against`, or job-specific watch settings. Input comparison is a
+single-profile/input operation and is rejected if it is inherited by any
+selected job. `watch` and `watch-delay` may be set on the CLI or in the base
+`[tool.datamodel-codegen]` table, but cannot be set in a job table or in the
+selected profile. Batch watch observes the union of every selected job's local
+dependencies plus `pyproject.toml`. Each event reloads the project, replans the
+selection, and transactionally reruns the whole batch; it does not partially
+rebuild individual jobs. A failed cycle keeps the last published outputs and
+continues watching both prior and newly discovered dependencies for recovery.
 
 ## 🎯 Configuration Priority
 
 Settings are applied in the following priority order (highest to lowest):
 
 1. **🖥️ CLI arguments** - Always take precedence
-2. **📋 Profile settings** - From `[tool.datamodel-codegen.profiles.<name>]`
-3. **⚙️ Base settings** - From `[tool.datamodel-codegen]`
-4. **🔧 Default values** - Built-in defaults
+2. **🏃 Job settings** - From `[tool.datamodel-codegen.jobs.<name>]`
+3. **📋 Profile settings** - From `[tool.datamodel-codegen.profiles.<name>]`
+4. **⚙️ Base settings** - From `[tool.datamodel-codegen]`
+5. **🔧 Default values** - Built-in defaults
 
 ## 🔀 Merge Rules
 
@@ -9603,8 +9646,8 @@ This documentation is auto-generated from test cases.
 | 🎨 [Template Customization](template-customization.md) | 27 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 8 | OpenAPI-specific features |
 | 📋 [GraphQL-only Options](graphql-only-options.md) | 1 |  |
-| ⚙️ [General Options](general-options.md) | 20 | Utilities and meta options |
-| 📝 [Utility Options](utility-options.md) | 10 | Help, version, debug options |
+| ⚙️ [General Options](general-options.md) | 24 | Utilities and meta options |
+| 📝 [Utility Options](utility-options.md) | 12 | Help, version, debug options |
 
 ## 🎯 Focused Topics
 
@@ -9639,10 +9682,22 @@ These links are generated from CLI option metadata and summarize options that im
 | [`--custom-file-header`](template-customization.md#custom-file-header) | Conflicts | Always | [`--custom-file-header-path`](template-customization.md#custom-file-header-path) | `--custom-file-header` can not be used with `--custom-file-header-path`. |
 | [`--custom-file-header-path`](template-customization.md#custom-file-header-path) | Conflicts | Always | [`--custom-file-header`](template-customization.md#custom-file-header) | `--custom-file-header-path` can not be used with `--custom-file-header`. |
 | [`--all-exports-collision-strategy`](general-options.md#all-exports-collision-strategy) | Requires | Always | [`--all-exports-scope`](general-options.md#all-exports-scope) = `recursive` | `--all-exports-collision-strategy` can only be used with `--all-exports-scope=recursive`. |
+| [`--diff-against`](general-options.md#diff-against) | Requires | Always | [`--input`](base-options.md#input) | `--diff-against` requires --input with the current local schema path. |
+| [`--diff-against`](general-options.md#diff-against) | Requires | Always | [`--output`](base-options.md#output) | `--diff-against` requires --output to select file or directory output layout. |
+| [`--diff-against`](general-options.md#diff-against) | Conflicts | Always | [`--check`](general-options.md#check) | - |
+| [`--diff-against`](general-options.md#diff-against) | Conflicts | Always | [`--watch`](general-options.md#watch) | - |
+| [`--diff-against`](general-options.md#diff-against) | Conflicts | Always | [`--url`](base-options.md#url) | - |
+| [`--diff-against`](general-options.md#diff-against) | Conflicts | Always | [`--input-model`](base-options.md#input-model) | - |
+| [`--diff-against`](general-options.md#diff-against) | Conflicts | Always | [`--emit-model-metadata`](base-options.md#emit-model-metadata) | - |
+| [`--diff-against`](general-options.md#diff-against) | Conflicts | Always | [`--fail-on-multi-module-stdout`](general-options.md#fail-on-multi-module-stdout) | - |
+| [`--diff-against`](general-options.md#diff-against) | Conflicts | Always | `--job` | `--diff-against` compares one profile or input and cannot run named jobs. |
+| [`--diff-against`](general-options.md#diff-against) | Conflicts | Always | `--all-jobs` | `--diff-against` compares one profile or input and cannot run named jobs. |
+| [`--locked`](general-options.md#locked) | Conflicts | Always | [`--update-lock`](general-options.md#update-lock) | - |
+| [`--update-lock`](general-options.md#update-lock) | Conflicts | Always | [`--locked`](general-options.md#locked) | - |
 
 ## All Options
 
-**Jump to:** [A](#a) · [B](#b) · [C](#c) · [D](#d) · [E](#e) · [F](#f) · [G](#g) · [H](#h) · [I](#i) · [K](#k) · [L](#l) · [M](#m) · [N](#n) · [O](#o) · [P](#p) · [R](#r) · [S](#s) · [T](#t) · [U](#u) · [V](#v) · [W](#w)
+**Jump to:** [A](#a) · [B](#b) · [C](#c) · [D](#d) · [E](#e) · [F](#f) · [G](#g) · [H](#h) · [I](#i) · [J](#j) · [K](#k) · [L](#l) · [M](#m) · [N](#n) · [O](#o) · [P](#p) · [R](#r) · [S](#s) · [T](#t) · [U](#u) · [V](#v) · [W](#w)
 
 
 ### A {#a}
@@ -9652,6 +9707,7 @@ These links are generated from CLI option metadata and summarize options that im
 - [`--aliases`](field-customization.md#aliases)
 - [`--all-exports-collision-strategy`](general-options.md#all-exports-collision-strategy)
 - [`--all-exports-scope`](general-options.md#all-exports-scope)
+- [`--all-jobs`](utility-options.md#all-jobs)
 - [`--allof-class-hierarchy`](typing-customization.md#allof-class-hierarchy)
 - [`--allof-merge-mode`](typing-customization.md#allof-merge-mode)
 - [`--allow-extra-fields`](model-customization.md#allow-extra-fields)
@@ -9689,6 +9745,7 @@ These links are generated from CLI option metadata and summarize options that im
 - [`--dataclass-arguments`](model-customization.md#dataclass-arguments)
 - [`--debug`](utility-options.md#debug)
 - [`--default-values`](field-customization.md#default-values)
+- [`--diff-against`](general-options.md#diff-against)
 - [`--disable-appending-item-suffix`](template-customization.md#disable-appending-item-suffix)
 - [`--disable-future-imports`](typing-customization.md#disable-future-imports)
 - [`--disable-timestamp`](template-customization.md#disable-timestamp)
@@ -9752,6 +9809,10 @@ These links are generated from CLI option metadata and summarize options that im
 - [`--input-model`](base-options.md#input-model)
 - [`--input-model-ref-strategy`](base-options.md#input-model-ref-strategy)
 
+### J {#j}
+
+- [`--job`](utility-options.md#job)
+
 ### K {#k}
 
 - [`--keep-model-order`](model-customization.md#keep-model-order)
@@ -9761,6 +9822,8 @@ These links are generated from CLI option metadata and summarize options that im
 
 - [`--list-deprecations`](utility-options.md#list-deprecations)
 - [`--list-experimental`](utility-options.md#list-experimental)
+- [`--locked`](general-options.md#locked)
+- [`--lockfile`](general-options.md#lockfile)
 
 ### M {#m}
 
@@ -9836,6 +9899,7 @@ These links are generated from CLI option metadata and summarize options that im
 ### U {#u}
 
 - [`--union-mode`](model-customization.md#union-mode)
+- [`--update-lock`](general-options.md#update-lock)
 - [`--url`](base-options.md#url)
 - [`--use-annotated`](typing-customization.md#use-annotated)
 - [`--use-attribute-docstrings`](field-customization.md#use-attribute-docstrings)
@@ -10258,7 +10322,7 @@ schemas. Required unless using `--url` to fetch schema from a URL.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --input pet_simple.json --output output.py # (1)!
+    datamodel-codegen --input pet_simple.json --output output.py # (1)!
     ```
 
     1. :material-arrow-left: `--input` - the option documented here
@@ -10487,7 +10551,7 @@ is written to stdout.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --input pet_simple.json --output output.py # (1)!
+    datamodel-codegen --input pet_simple.json --output output.py # (1)!
     ```
 
     1. :material-arrow-left: `--output` - the option documented here
@@ -10918,7 +10982,7 @@ a local file. The `--http-headers` flag adds request headers in
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --url https://api.example.com/schema.json --http-headers "Authorization:Bearer token" # (1)!
+    datamodel-codegen --url https://api.example.com/schema.json --http-headers "Authorization:Bearer token" # (1)!
     ```
 
     1. :material-arrow-left: `--url` - the option documented here
@@ -34826,6 +34890,7 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/general-opti
 | [`--allow-private-network`](#allow-private-network) | Allow HTTP requests to private network schema endpoints. |
 | [`--allow-remote-refs`](#allow-remote-refs) | Enable fetching of `$ref` targets over HTTP/HTTPS. |
 | [`--check`](#check) | Verify generated code matches existing output without modify... |
+| [`--diff-against`](#diff-against) | Compare generated code from a baseline input with the curren... |
 | [`--disable-warnings`](#disable-warnings) | Suppress warning messages during code generation. |
 | [`--fail-on-multi-module-stdout`](#fail-on-multi-module-stdout) | Fail instead of concatenating multiple modules in text stdou... |
 | [`--generate-cli-command`](#generate-cli-command) | Generate CLI command from pyproject.toml configuration. |
@@ -34836,9 +34901,12 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/general-opti
 | [`--http-query-parameters`](#http-query-parameters) | Add query parameters to HTTP requests for remote schemas. |
 | [`--http-timeout`](#http-timeout) | Set timeout for HTTP requests to remote hosts. |
 | [`--ignore-pyproject`](#ignore-pyproject) | Ignore pyproject.toml configuration file. |
+| [`--locked`](#locked) | Require an existing remote lock and validate each fetched re... |
+| [`--lockfile`](#lockfile) | Select the remote reference integrity lock file (experimenta... |
 | [`--module-split-mode`](#module-split-mode) | Split generated models into separate files, one per model cl... |
 | [`--shared-module-name`](#shared-module-name) | Customize the name of the shared module for deduplicated mod... |
 | [`--strict-refs`](#strict-refs) | Treat unresolved local `$ref` JSON pointers as errors. |
+| [`--update-lock`](#update-lock) | Create or atomically update the selected remote lock after g... |
 | [`--watch`](#watch) | Watch input file(s) for changes and regenerate output automa... |
 | [`--watch-delay`](#watch-delay) | Set debounce delay in seconds for watch mode. |
 
@@ -36017,7 +36085,7 @@ or public endpoint.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --url http://127.0.0.1/schema.json --allow-private-network # (1)!
+    datamodel-codegen --url http://127.0.0.1/schema.json --allow-private-network # (1)!
     ```
 
     1. :material-arrow-left: `--allow-private-network` - the option documented here
@@ -36225,6 +36293,68 @@ and generated code stay in sync. Works with both single files and directory outp
         )
         friends: list[Any] | None = None
         comment: None = Field(None)
+    ```
+
+---
+
+## `--diff-against` {#diff-against}
+
+Compare generated code from a baseline input with the current schema without writing files.
+
+Pass the baseline input with `--diff-against` and the current schema with `--input`.
+The command generates both, then shows the generated-code diff from baseline to current.
+The required `--output` value is a virtual destination: it selects single-file or
+directory layout and formatter settings, but datamodel-code-generator never writes it.
+The command exits non-zero when the formatted generated outputs differ, making it useful
+for reviewing schema migrations in CI.
+
+**Related:** [`--check`](#check), [`--input`](base-options.md#input), [`--output`](base-options.md#output), `--output-format`
+
+**Option relationships:**
+
+- **Requires:** [`--input`](base-options.md#input) - `--diff-against` requires --input with the current local schema path.
+- **Requires:** [`--output`](base-options.md#output) - `--diff-against` requires --output to select file or directory output layout.
+- **Conflicts:** [`--check`](general-options.md#check)
+- **Conflicts:** [`--watch`](general-options.md#watch)
+- **Conflicts:** [`--url`](base-options.md#url)
+- **Conflicts:** [`--input-model`](base-options.md#input-model)
+- **Conflicts:** [`--emit-model-metadata`](base-options.md#emit-model-metadata)
+- **Conflicts:** [`--fail-on-multi-module-stdout`](general-options.md#fail-on-multi-module-stdout)
+- **Conflicts:** `--job` - `--diff-against` compares one profile or input and cannot run named jobs.
+- **Conflicts:** `--all-jobs` - `--diff-against` compares one profile or input and cannot run named jobs.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input tests/data/openapi/input_diff/new.yaml --diff-against tests/data/openapi/input_diff/old.yaml --output models --input-file-type openapi --disable-timestamp # (1)!
+    ```
+
+    1. :material-arrow-left: `--diff-against` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```yaml
+    openapi: 3.0.0
+    info:
+      title: Current models
+      version: "1.0"
+    paths: {}
+    components:
+      schemas:
+        collections.Current:
+          type: object
+          properties:
+            name:
+              type: string
+    ```
+
+    **Output:**
+
+    ```
+    ADDED: collections.py (generated only from current input)
+    REMOVED: models.py (generated only from baseline input)
     ```
 
 ---
@@ -36473,7 +36603,7 @@ a working CLI command into a reusable configuration file.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --generate-pyproject-config --input schema.yaml --output model.py # (1)!
+    datamodel-codegen --generate-pyproject-config --input schema.yaml --output model.py # (1)!
     ```
 
     1. :material-arrow-left: `--generate-pyproject-config` - the option documented here
@@ -36501,7 +36631,7 @@ a local file. The `--http-headers` flag adds request headers in
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --url https://api.example.com/schema.json --http-headers "Authorization:Bearer token" # (1)!
+    datamodel-codegen --url https://api.example.com/schema.json --http-headers "Authorization:Bearer token" # (1)!
     ```
 
     1. :material-arrow-left: `--http-headers` - the option documented here
@@ -36560,7 +36690,7 @@ environments with self-signed certificates. Not recommended for production.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --url https://api.example.com/schema.json --http-ignore-tls # (1)!
+    datamodel-codegen --url https://api.example.com/schema.json --http-ignore-tls # (1)!
     ```
 
     1. :material-arrow-left: `--http-ignore-tls` - the option documented here
@@ -36621,7 +36751,7 @@ URL path are used as the relative path under the schema store. For example,
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --url https://api.example.com/schema.json --http-local-ref-path schemas # (1)!
+    datamodel-codegen --url https://api.example.com/schema.json --http-local-ref-path schemas # (1)!
     ```
 
     1. :material-arrow-left: `--http-local-ref-path` - the option documented here
@@ -36673,7 +36803,7 @@ specified: `--http-query-parameters version=v2 format=json`.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --url https://api.example.com/schema.json --http-query-parameters version=v2 format=json # (1)!
+    datamodel-codegen --url https://api.example.com/schema.json --http-query-parameters version=v2 format=json # (1)!
     ```
 
     1. :material-arrow-left: `--http-query-parameters` - the option documented here
@@ -36732,7 +36862,7 @@ Default is 30 seconds.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --url https://api.example.com/schema.json --http-timeout 60 # (1)!
+    datamodel-codegen --url https://api.example.com/schema.json --http-timeout 60 # (1)!
     ```
 
     1. :material-arrow-left: `--http-timeout` - the option documented here
@@ -36847,6 +36977,149 @@ testing without project configuration.
             first_name: str | None = Field(None, alias='firstName')
             last_name: str | None = Field(None, alias='lastName')
         ```
+
+---
+
+## `--locked` {#locked}
+
+Require an existing remote lock and validate each fetched resource against it (experimental).
+
+`--locked` fails if the selected lock is missing, a resource is unrecorded, or its body differs. It conflicts with
+`--update-lock`.
+
+Remote reference lock support is experimental: its lock document schema and request-identity compatibility may evolve. It remains fail-closed on integrity mismatches, and it never persists credentials.
+
+The lock stores opaque SHA-256 request-identity digests and SHA-256 body digests,
+never response bodies or request values directly. Each saved display origin contains only the scheme, host, and
+explicit port—never a path, query, or request headers. A request identity includes its scheme, host, explicit port,
+path, header names, and ordered query parameter names only. If one generation receives different bodies for the same
+path and query-name identity, it fails closed rather than sharing a lock entry.
+
+**Related:** [`--http-local-ref-path`](#http-local-ref-path), [`--lockfile`](#lockfile), [`--url`](base-options.md#url)
+
+**Option relationships:**
+
+- **Conflicts:** [`--update-lock`](general-options.md#update-lock)
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --url https://api.example.com/schema.json --locked --lockfile datamodel-codegen.lock # (1)!
+    ```
+
+    1. :material-arrow-left: `--locked` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Pet",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "tag": {
+          "type": "string"
+        }
+      }
+    }
+    ```
+
+    **Output:**
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  https://api.example.com/schema.json
+    #   timestamp: 2019-07-26T00:00:00+00:00
+
+    from __future__ import annotations
+
+    from pydantic import BaseModel
+
+
+    class Pet(BaseModel):
+        id: int | None = None
+        name: str | None = None
+        tag: str | None = None
+    ```
+
+---
+
+## `--lockfile` {#lockfile}
+
+Select the remote reference integrity lock file (experimental).
+
+An existing selected lock is verified automatically; a missing selected lock is ignored unless `--locked` requires it.
+Without `--lockfile`, the CLI uses `datamodel-codegen.lock` beside the discovered `pyproject.toml`, or in the invocation
+working directory when no project is found. Explicit relative `--lockfile` paths resolve from the invocation working
+directory, not the project root or output directory. The public API uses the caller's working directory for both its
+default lock and relative `lockfile` paths.
+
+Remote reference lock support is experimental: its lock document schema and request-identity compatibility may evolve. It remains fail-closed on integrity mismatches, and it never persists credentials.
+
+The lock stores opaque SHA-256 request-identity digests and SHA-256 body digests,
+never response bodies or request values directly. Each saved display origin contains only the scheme, host, and
+explicit port—never a path, query, or request headers. A request identity includes its scheme, host, explicit port,
+path, header names, and ordered query parameter names only. If one generation receives different bodies for the same
+path and query-name identity, it fails closed rather than sharing a lock entry.
+
+**Related:** [`--http-local-ref-path`](#http-local-ref-path), [`--locked`](#locked), [`--update-lock`](#update-lock), [`--url`](base-options.md#url)
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --url https://api.example.com/schema.json --update-lock --lockfile datamodel-codegen.lock # (1)!
+    ```
+
+    1. :material-arrow-left: `--lockfile` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Pet",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "tag": {
+          "type": "string"
+        }
+      }
+    }
+    ```
+
+    **Output:**
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  https://api.example.com/schema.json
+    #   timestamp: 2019-07-26T00:00:00+00:00
+
+    from __future__ import annotations
+
+    from pydantic import BaseModel
+
+
+    class Pet(BaseModel):
+        id: int | None = None
+        name: str | None = None
+        tag: str | None = None
+    ```
 
 ---
 
@@ -37074,6 +37347,78 @@ generation instead. Existing empty schemas remain valid references.
 
 ---
 
+## `--update-lock` {#update-lock}
+
+Create or atomically update the selected remote lock after generation (experimental).
+
+`--update-lock` creates or refreshes the selected `--lockfile` from every remote resource reached during this run.
+It conflicts with `--locked`.
+
+Remote reference lock support is experimental: its lock document schema and request-identity compatibility may evolve. It remains fail-closed on integrity mismatches, and it never persists credentials.
+
+The lock stores opaque SHA-256 request-identity digests and SHA-256 body digests,
+never response bodies or request values directly. Each saved display origin contains only the scheme, host, and
+explicit port—never a path, query, or request headers. A request identity includes its scheme, host, explicit port,
+path, header names, and ordered query parameter names only. If one generation receives different bodies for the same
+path and query-name identity, it fails closed rather than sharing a lock entry.
+
+**Related:** [`--http-local-ref-path`](#http-local-ref-path), [`--lockfile`](#lockfile), [`--url`](base-options.md#url)
+
+**Option relationships:**
+
+- **Conflicts:** [`--locked`](general-options.md#locked)
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --url https://api.example.com/schema.json --update-lock --lockfile datamodel-codegen.lock # (1)!
+    ```
+
+    1. :material-arrow-left: `--update-lock` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Pet",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "tag": {
+          "type": "string"
+        }
+      }
+    }
+    ```
+
+    **Output:**
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  https://api.example.com/schema.json
+    #   timestamp: 2019-07-26T00:00:00+00:00
+
+    from __future__ import annotations
+
+    from pydantic import BaseModel
+
+
+    class Pet(BaseModel):
+        id: int | None = None
+        name: str | None = None
+        tag: str | None = None
+    ```
+
+---
+
 ## `--watch` {#watch}
 
 Watch input file(s) for changes and regenerate output automatically.
@@ -37082,6 +37427,8 @@ The `--watch` flag enables continuous file monitoring mode. When enabled,
 datamodel-codegen watches the input file or directory for changes and
 automatically regenerates the output whenever changes are detected.
 Press Ctrl+C to stop watching.
+
+**See also:** [pyproject.toml Configuration](../pyproject_toml.md)
 
 !!! tip "Usage"
 
@@ -37220,9 +37567,11 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/utility-opti
 
 | Option | Description |
 |--------|-------------|
+| [`--all-jobs`](#all-jobs) | Run every named generation job from pyproject.toml (experimental) |
 | [`--debug`](#debug) | Show debug messages during code generation |
 | [`--generate-prompt`](#generate-prompt) | Generate a prompt for consulting LLMs about CLI options |
 | [`--help`](#help) | Show help message and exit |
+| [`--job`](#job) | Run a named generation job from pyproject.toml (experimental) |
 | [`--list-deprecations`](#list-deprecations) | List registered deprecations and scheduled breaking changes |
 | [`--list-experimental`](#list-experimental) | List registered experimental features |
 | [`--no-color`](#no-color) | Disable colorized output |
@@ -37230,6 +37579,45 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/utility-opti
 | [`--output-format-json-schema`](#output-format-json-schema) | Output JSON Schema for structured command output or JSON configuration |
 | [`--profile`](#profile) | Use a named profile from pyproject.toml |
 | [`--version`](#version) | Show program version and exit |
+
+---
+
+## `--all-jobs` {#all-jobs}
+
+Run every named generation job from `[tool.datamodel-codegen.jobs]` in declaration
+order (experimental).
+
+!!! warning "Experimental"
+
+    Named batch jobs are experimental; their configuration schema, batch output,
+    and transactional/watch execution contracts may change.
+
+**Related:** [`--job`](#job), [`--diff-against`](general-options.md#diff-against),
+[pyproject.toml Configuration](../pyproject_toml.md)
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --all-jobs
+    datamodel-codegen --all-jobs --check
+    datamodel-codegen --all-jobs --output-format json
+    datamodel-codegen --all-jobs --watch
+    ```
+
+All selected jobs are validated before generation starts. Jobs that write to
+stdout, or whose output or model-metadata paths overlap, are rejected before
+any generated file is written. With `--output-format json`, one `batch`
+payload contains the result of every job.
+
+`--diff-against` is intentionally unavailable for every named-job execution,
+including a single selected job. Keeping one contract across `--job` and
+`--all-jobs` avoids ambiguous partial support when the selection grows. Run the
+comparison for one profile or input instead.
+
+With `--watch`, changes to `pyproject.toml` replan the complete job membership.
+All selected local dependencies are watched as one graph, and every event reruns
+and publishes the whole batch transactionally rather than rebuilding only one
+job.
 
 ---
 
@@ -37360,6 +37748,55 @@ Displays all available command-line options with their descriptions and default 
       --input INPUT         Input file path (default: stdin)
       ...
     ```
+
+---
+
+## `--job` {#job}
+
+Run one or more named generation jobs declared in `pyproject.toml` (experimental). Jobs are
+executed sequentially in TOML declaration order, even when `--job` is supplied
+in a different order.
+
+!!! warning "Experimental"
+
+    Named batch jobs are experimental; their configuration schema, batch output,
+    and transactional/watch execution contracts may change.
+
+**Related:** [pyproject.toml Configuration](../pyproject_toml.md),
+[`--all-jobs`](#all-jobs), [`--diff-against`](general-options.md#diff-against)
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --job api
+    datamodel-codegen --job api --job events --check
+    ```
+
+??? example "Configuration (pyproject.toml)"
+
+    ```toml
+    [tool.datamodel-codegen.profiles.strict]
+    use-annotated = true
+
+    [tool.datamodel-codegen.jobs.api]
+    profile = "strict"
+    input = "schemas/openapi.yaml"
+    output = "src/models/api.py"
+
+    [tool.datamodel-codegen.jobs.events]
+    input = "schemas/events.json"
+    output = "src/models/events.py"
+    ```
+
+Jobs require their own `input` and `output`. A job can select one reusable
+profile using `profile = "name"`. Settings are resolved as base configuration,
+job profile, job settings, then safe batch-wide CLI overrides. `--input`,
+`--url`, `--input-model`, `--output`, and `--profile` cannot be combined with
+job selection. `--diff-against` also cannot be combined with named jobs: compare
+one profile or input at a time. With `--watch`, one outer scheduler watches the
+selected jobs' combined dependency graph and `pyproject.toml`. Every event replans and
+transactionally reruns the complete selection; failures retain the published
+outputs and continue watching for recovery.
 
 ---
 
@@ -38103,6 +38540,7 @@ datamodel-codegen [OPTIONS]
 | [`--allow-private-network`](general-options.md#allow-private-network) | Allow HTTP requests to private network schema endpoints. |
 | [`--allow-remote-refs`](general-options.md#allow-remote-refs) | Enable fetching of `$ref` targets over HTTP/HTTPS. |
 | [`--check`](general-options.md#check) | Verify generated code matches existing output without modifying files. |
+| [`--diff-against`](general-options.md#diff-against) | Compare generated code from a baseline input with the current schema without wri... |
 | [`--disable-warnings`](general-options.md#disable-warnings) | Suppress warning messages during code generation. |
 | [`--fail-on-multi-module-stdout`](general-options.md#fail-on-multi-module-stdout) | Fail instead of concatenating multiple modules in text stdout. |
 | [`--generate-cli-command`](general-options.md#generate-cli-command) | Generate CLI command from pyproject.toml configuration. |
@@ -38113,9 +38551,12 @@ datamodel-codegen [OPTIONS]
 | [`--http-query-parameters`](general-options.md#http-query-parameters) | Add query parameters to HTTP requests for remote schemas. |
 | [`--http-timeout`](general-options.md#http-timeout) | Set timeout for HTTP requests to remote hosts. |
 | [`--ignore-pyproject`](general-options.md#ignore-pyproject) | Ignore pyproject.toml configuration file. |
+| [`--locked`](general-options.md#locked) | Require an existing remote lock and validate each fetched resource against it (e... |
+| [`--lockfile`](general-options.md#lockfile) | Select the remote reference integrity lock file (experimental). |
 | [`--module-split-mode`](general-options.md#module-split-mode) | Split generated models into separate files, one per model class. |
 | [`--shared-module-name`](general-options.md#shared-module-name) | Customize the name of the shared module for deduplicated models. |
 | [`--strict-refs`](general-options.md#strict-refs) | Treat unresolved local `$ref` JSON pointers as errors. |
+| [`--update-lock`](general-options.md#update-lock) | Create or atomically update the selected remote lock after generation (experimen... |
 | [`--watch`](general-options.md#watch) | Watch input file(s) for changes and regenerate output automatically. |
 | [`--watch-delay`](general-options.md#watch-delay) | Set debounce delay in seconds for watch mode. |
 
@@ -38123,9 +38564,11 @@ datamodel-codegen [OPTIONS]
 
 | Option | Description |
 |--------|-------------|
+| [`--all-jobs`](utility-options.md#all-jobs) | Run every named generation job from pyproject.toml (experimental) |
 | [`--debug`](utility-options.md#debug) | Show debug messages during code generation |
 | [`--generate-prompt`](utility-options.md#generate-prompt) | Generate a prompt for consulting LLMs about CLI options |
 | [`--help`](utility-options.md#help) | Show help message and exit |
+| [`--job`](utility-options.md#job) | Run a named generation job from pyproject.toml (experimental) |
 | [`--list-deprecations`](utility-options.md#list-deprecations) | List registered deprecations and scheduled breaking changes |
 | [`--list-experimental`](utility-options.md#list-experimental) | List registered experimental features |
 | [`--no-color`](utility-options.md#no-color) | Disable colorized output |
@@ -38145,6 +38588,7 @@ All options sorted alphabetically:
 - [`--aliases`](field-customization.md#aliases) - Apply custom field and class name aliases via inline JSON or...
 - [`--all-exports-collision-strategy`](general-options.md#all-exports-collision-strategy) - Handle name collisions when exporting recursive module hiera...
 - [`--all-exports-scope`](general-options.md#all-exports-scope) - Generate __all__ exports for child modules in __init__.py fi...
+- [`--all-jobs`](utility-options.md#all-jobs) - Run every named generation job from pyproject.toml (experimental)
 - [`--allof-class-hierarchy`](typing-customization.md#allof-class-hierarchy) - Controls how allOf schemas are represented in the generated ...
 - [`--allof-merge-mode`](typing-customization.md#allof-merge-mode) - Merge constraints from root model references in allOf schema...
 - [`--allow-extra-fields`](model-customization.md#allow-extra-fields) - Allow extra fields in generated Pydantic models (extra='allo...
@@ -38173,6 +38617,7 @@ All options sorted alphabetically:
 - [`--dataclass-arguments`](model-customization.md#dataclass-arguments) - Customize dataclass decorator arguments via JSON dictionary.
 - [`--debug`](utility-options.md#debug) - Show debug messages during code generation
 - [`--default-values`](field-customization.md#default-values) - Override field default values via inline JSON or a JSON file...
+- [`--diff-against`](general-options.md#diff-against) - Compare generated code from a baseline input with the curren...
 - [`--disable-appending-item-suffix`](template-customization.md#disable-appending-item-suffix) - Disable appending 'Item' suffix to array item types.
 - [`--disable-future-imports`](typing-customization.md#disable-future-imports) - Prevent automatic addition of __future__ imports in generate...
 - [`--disable-timestamp`](template-customization.md#disable-timestamp) - Disable timestamp in generated file header for reproducible ...
@@ -38220,10 +38665,13 @@ All options sorted alphabetically:
 - [`--input-file-type`](base-options.md#input-file-type) - Specify the input file type for code generation.
 - [`--input-model`](base-options.md#input-model) - Import a Python type or dict schema from a module or Python ...
 - [`--input-model-ref-strategy`](base-options.md#input-model-ref-strategy) - Strategy for referenced types when using --input-model.
+- [`--job`](utility-options.md#job) - Run a named generation job from pyproject.toml (experimental)
 - [`--keep-model-order`](model-customization.md#keep-model-order) - Keep generated model order deterministic while respecting de...
 - [`--keyword-only`](model-customization.md#keyword-only) - Generate dataclasses with keyword-only fields (Python 3.10+)...
 - [`--list-deprecations`](utility-options.md#list-deprecations) - List registered deprecations and scheduled breaking changes
 - [`--list-experimental`](utility-options.md#list-experimental) - List registered experimental features
+- [`--locked`](general-options.md#locked) - Require an existing remote lock and validate each fetched re...
+- [`--lockfile`](general-options.md#lockfile) - Select the remote reference integrity lock file (experimenta...
 - [`--model-extra-keys`](model-customization.md#model-extra-keys) - Add model-level schema extensions to ConfigDict json_schema_...
 - [`--model-extra-keys-without-x-prefix`](model-customization.md#model-extra-keys-without-x-prefix) - Strip x- prefix from model-level schema extensions and add t...
 - [`--model-name-map`](model-customization.md#model-name-map) - Rename generated model classes from a JSON mapping.
@@ -38275,6 +38723,7 @@ All options sorted alphabetically:
 - [`--type-mappings`](typing-customization.md#type-mappings) - Override default type mappings for schema formats.
 - [`--type-overrides`](typing-customization.md#type-overrides) - Replace schema model types with custom Python types via JSON...
 - [`--union-mode`](model-customization.md#union-mode) - Union mode for combining anyOf/oneOf schemas (smart or left_...
+- [`--update-lock`](general-options.md#update-lock) - Create or atomically update the selected remote lock after g...
 - [`--url`](base-options.md#url) - Fetch a schema from a URL with custom HTTP headers.
 - [`--use-annotated`](typing-customization.md#use-annotated) - Use typing.Annotated for Field() with constraints.
 - [`--use-attribute-docstrings`](field-customization.md#use-attribute-docstrings) - Generate field descriptions as attribute docstrings instead ...
@@ -38988,6 +39437,8 @@ This page lists features that are available but still experimental.
 
 | ID | Kind | Target | Since | Tracking |
 |----|------|--------|-------|----------|
+| `behavior.batch-generation-jobs` | behavior | `[tool.datamodel-codegen.jobs], --job, --all-jobs` | 0.72.3 | - |
+| `behavior.remote-reference-lock` | behavior | `datamodel-codegen.lock, --lockfile, --update-lock, and --locked` | 0.72.3 | - |
 | `cli-option.generate-schema-validators` | cli-option | `--generate-schema-validators` | 0.66.1 | - |
 | `cli-option.schema-validator-type` | cli-option | `--schema-validator-type` | 0.66.1 | - |
 | `cli-option.use-missing-sentinel` | cli-option | `--use-missing-sentinel` | 0.66.1 | - |
@@ -39002,6 +39453,26 @@ This page lists features that are available but still experimental.
 | `input-format.xmlschema` | input-format | `--input-file-type xmlschema` | 0.59.0 | - |
 
 ## Details
+
+### `behavior.batch-generation-jobs`
+
+- **Kind:** behavior
+- **Target:** `[tool.datamodel-codegen.jobs], --job, --all-jobs`
+- **Since:** 0.72.3
+
+Named batch jobs are experimental; their configuration schema, batch output, and transactional/watch execution contracts may change.
+
+Define named generation jobs in [tool.datamodel-codegen.jobs] and select them with --job or --all-jobs. Each selected job has its own input and output, and the full selection is validated before generation begins.
+
+### `behavior.remote-reference-lock`
+
+- **Kind:** behavior
+- **Target:** `datamodel-codegen.lock, --lockfile, --update-lock, and --locked`
+- **Since:** 0.72.3
+
+Remote reference integrity locking is experimental: the lock document schema and request-identity compatibility may evolve, but integrity mismatches remain fail-closed and credentials are never persisted.
+
+The lock stores opaque SHA-256 request-identity digests and SHA-256 body digests, never response bodies or request values directly. Each saved display origin contains only the scheme, host, and explicit port—never a path, query, or request headers.
 
 ### `cli-option.generate-schema-validators`
 
@@ -39653,8 +40124,8 @@ classDiagram
 
 | Config model | Field count | Purpose |
 | --- | ---: | --- |
-| `BaseGenerateConfig` | 147 | Shared generation options. |
-| `GenerateConfig` | 162 | Public `generate()` configuration. |
+| `BaseGenerateConfig` | 150 | Shared generation options. |
+| `GenerateConfig` | 165 | Public `generate()` configuration. |
 | `ParserConfig` | 141 | Base parser dependency injection and parser options. |
 | `JSONSchemaParserConfig` | 143 | JSON Schema parser options. |
 | `OpenAPIParserConfig` | 149 | OpenAPI-specific parser options. |

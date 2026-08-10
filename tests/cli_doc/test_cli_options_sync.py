@@ -136,6 +136,21 @@ def test_cli_option_doc_path_links_to_generated_cli_reference() -> None:
     assert get_cli_option_doc_path("--unknown-option") is None
 
 
+def test_manual_doc_links_are_rebased_for_the_generated_utility_page() -> None:
+    """Manual sibling and parent links remain valid when embedded one level higher."""
+    generated = build_cli_docs.generate_manual_docs_section({
+        "--job": "[Sibling](../general-options.md#diff-against) [Parent](../../pyproject_toml.md)"
+    })
+
+    _fail_if_missing(
+        "[Sibling](general-options.md#diff-against)",
+        generated,
+        "manual sibling link",
+    )
+    _fail_if_missing("[Parent](../pyproject_toml.md)", generated, "manual parent link")
+    _fail_if_present("](../general-options.md", generated, "unrebased manual sibling link")
+
+
 def test_cli_option_doc_name_preserves_boolean_variants_and_canonicalizes_aliases() -> None:
     """Boolean option variants have distinct sections, but regular aliases share one section."""
     assert get_cli_option_doc_name("--treat-dot-as-module") == "--treat-dot-as-module"
@@ -170,6 +185,31 @@ def test_generate_option_section_uses_canonical_anchor_for_aliases() -> None:
         section,
         "--capitalise-enum-members raw alias anchor",
     )
+
+
+def test_generate_option_section_preserves_an_explicit_input() -> None:
+    """Usage commands do not prepend the generic input to an explicit schema path."""
+    section = generate_option_section(
+        "--diff-against",
+        CLIDocOption(
+            option_name="--diff-against",
+            examples=[
+                CLIDocExample(
+                    node_id="tests/main/test_main_input_diff.py::test_diff",
+                    option_description="Compare two generated inputs.",
+                    cli_args=["--input", "new.yaml", "--diff-against", "old.yaml"],
+                    is_primary=True,
+                ),
+            ],
+        ),
+    )
+
+    _fail_if_missing(
+        "datamodel-codegen --input new.yaml --diff-against old.yaml",
+        section,
+        "explicit input usage",
+    )
+    _fail_if_present("--input schema.json --input", section, "duplicate placeholder input")
 
 
 def test_documented_related_option_prefers_existing_generated_section() -> None:
@@ -496,6 +536,19 @@ def test_cli_docs_preserve_injected_doc_example_sections() -> None:
     )
     _fail_if_missing("datamodel-codegen --input-model tests.data:User", preserved, "preserved docs example content")
     _fail_if_present("    **Output:**\n\n---", preserved, "replaced generated fallback example")
+
+
+def test_manual_docs_aggregate_rewrites_sibling_links_to_local_anchors() -> None:
+    """Keep manual fragments cross-page-safe while aggregating them onto the utility page."""
+    generated = build_cli_docs.generate_manual_docs_section({
+        "--all-jobs": "## `--all-jobs` {#all-jobs}\n\n[`--job`](job.md#job)\n",
+        "--job": "## `--job` {#job}\n\n[`--all-jobs`](all-jobs.md#all-jobs)\n",
+    })
+
+    _fail_if_missing("[`--job`](#job)", generated, "aggregated job link")
+    _fail_if_missing("[`--all-jobs`](#all-jobs)", generated, "aggregated all-jobs link")
+    _fail_if_present("job.md#job", generated, "manual sibling path")
+    _fail_if_present("all-jobs.md#all-jobs", generated, "manual sibling path")
 
 
 def test_option_section_renders_implies_and_requires_metadata() -> None:

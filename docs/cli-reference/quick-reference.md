@@ -210,6 +210,7 @@ datamodel-codegen [OPTIONS]
 | [`--allow-private-network`](general-options.md#allow-private-network) | Allow HTTP requests to private network schema endpoints. |
 | [`--allow-remote-refs`](general-options.md#allow-remote-refs) | Enable fetching of `$ref` targets over HTTP/HTTPS. |
 | [`--check`](general-options.md#check) | Verify generated code matches existing output without modifying files. |
+| [`--diff-against`](general-options.md#diff-against) | Compare generated code from a baseline input with the current schema without wri... |
 | [`--disable-warnings`](general-options.md#disable-warnings) | Suppress warning messages during code generation. |
 | [`--fail-on-multi-module-stdout`](general-options.md#fail-on-multi-module-stdout) | Fail instead of concatenating multiple modules in text stdout. |
 | [`--generate-cli-command`](general-options.md#generate-cli-command) | Generate CLI command from pyproject.toml configuration. |
@@ -220,9 +221,12 @@ datamodel-codegen [OPTIONS]
 | [`--http-query-parameters`](general-options.md#http-query-parameters) | Add query parameters to HTTP requests for remote schemas. |
 | [`--http-timeout`](general-options.md#http-timeout) | Set timeout for HTTP requests to remote hosts. |
 | [`--ignore-pyproject`](general-options.md#ignore-pyproject) | Ignore pyproject.toml configuration file. |
+| [`--locked`](general-options.md#locked) | Require an existing remote lock and validate each fetched resource against it (e... |
+| [`--lockfile`](general-options.md#lockfile) | Select the remote reference integrity lock file (experimental). |
 | [`--module-split-mode`](general-options.md#module-split-mode) | Split generated models into separate files, one per model class. |
 | [`--shared-module-name`](general-options.md#shared-module-name) | Customize the name of the shared module for deduplicated models. |
 | [`--strict-refs`](general-options.md#strict-refs) | Treat unresolved local `$ref` JSON pointers as errors. |
+| [`--update-lock`](general-options.md#update-lock) | Create or atomically update the selected remote lock after generation (experimen... |
 | [`--watch`](general-options.md#watch) | Watch input file(s) for changes and regenerate output automatically. |
 | [`--watch-delay`](general-options.md#watch-delay) | Set debounce delay in seconds for watch mode. |
 
@@ -230,9 +234,11 @@ datamodel-codegen [OPTIONS]
 
 | Option | Description |
 |--------|-------------|
+| [`--all-jobs`](utility-options.md#all-jobs) | Run every named generation job from pyproject.toml (experimental) |
 | [`--debug`](utility-options.md#debug) | Show debug messages during code generation |
 | [`--generate-prompt`](utility-options.md#generate-prompt) | Generate a prompt for consulting LLMs about CLI options |
 | [`--help`](utility-options.md#help) | Show help message and exit |
+| [`--job`](utility-options.md#job) | Run a named generation job from pyproject.toml (experimental) |
 | [`--list-deprecations`](utility-options.md#list-deprecations) | List registered deprecations and scheduled breaking changes |
 | [`--list-experimental`](utility-options.md#list-experimental) | List registered experimental features |
 | [`--no-color`](utility-options.md#no-color) | Disable colorized output |
@@ -252,6 +258,7 @@ All options sorted alphabetically:
 - [`--aliases`](field-customization.md#aliases) - Apply custom field and class name aliases via inline JSON or...
 - [`--all-exports-collision-strategy`](general-options.md#all-exports-collision-strategy) - Handle name collisions when exporting recursive module hiera...
 - [`--all-exports-scope`](general-options.md#all-exports-scope) - Generate __all__ exports for child modules in __init__.py fi...
+- [`--all-jobs`](utility-options.md#all-jobs) - Run every named generation job from pyproject.toml (experimental)
 - [`--allof-class-hierarchy`](typing-customization.md#allof-class-hierarchy) - Controls how allOf schemas are represented in the generated ...
 - [`--allof-merge-mode`](typing-customization.md#allof-merge-mode) - Merge constraints from root model references in allOf schema...
 - [`--allow-extra-fields`](model-customization.md#allow-extra-fields) - Allow extra fields in generated Pydantic models (extra='allo...
@@ -280,6 +287,7 @@ All options sorted alphabetically:
 - [`--dataclass-arguments`](model-customization.md#dataclass-arguments) - Customize dataclass decorator arguments via JSON dictionary.
 - [`--debug`](utility-options.md#debug) - Show debug messages during code generation
 - [`--default-values`](field-customization.md#default-values) - Override field default values via inline JSON or a JSON file...
+- [`--diff-against`](general-options.md#diff-against) - Compare generated code from a baseline input with the curren...
 - [`--disable-appending-item-suffix`](template-customization.md#disable-appending-item-suffix) - Disable appending 'Item' suffix to array item types.
 - [`--disable-future-imports`](typing-customization.md#disable-future-imports) - Prevent automatic addition of __future__ imports in generate...
 - [`--disable-timestamp`](template-customization.md#disable-timestamp) - Disable timestamp in generated file header for reproducible ...
@@ -327,10 +335,13 @@ All options sorted alphabetically:
 - [`--input-file-type`](base-options.md#input-file-type) - Specify the input file type for code generation.
 - [`--input-model`](base-options.md#input-model) - Import a Python type or dict schema from a module or Python ...
 - [`--input-model-ref-strategy`](base-options.md#input-model-ref-strategy) - Strategy for referenced types when using --input-model.
+- [`--job`](utility-options.md#job) - Run a named generation job from pyproject.toml (experimental)
 - [`--keep-model-order`](model-customization.md#keep-model-order) - Keep generated model order deterministic while respecting de...
 - [`--keyword-only`](model-customization.md#keyword-only) - Generate dataclasses with keyword-only fields (Python 3.10+)...
 - [`--list-deprecations`](utility-options.md#list-deprecations) - List registered deprecations and scheduled breaking changes
 - [`--list-experimental`](utility-options.md#list-experimental) - List registered experimental features
+- [`--locked`](general-options.md#locked) - Require an existing remote lock and validate each fetched re...
+- [`--lockfile`](general-options.md#lockfile) - Select the remote reference integrity lock file (experimenta...
 - [`--model-extra-keys`](model-customization.md#model-extra-keys) - Add model-level schema extensions to ConfigDict json_schema_...
 - [`--model-extra-keys-without-x-prefix`](model-customization.md#model-extra-keys-without-x-prefix) - Strip x- prefix from model-level schema extensions and add t...
 - [`--model-name-map`](model-customization.md#model-name-map) - Rename generated model classes from a JSON mapping.
@@ -382,6 +393,7 @@ All options sorted alphabetically:
 - [`--type-mappings`](typing-customization.md#type-mappings) - Override default type mappings for schema formats.
 - [`--type-overrides`](typing-customization.md#type-overrides) - Replace schema model types with custom Python types via JSON...
 - [`--union-mode`](model-customization.md#union-mode) - Union mode for combining anyOf/oneOf schemas (smart or left_...
+- [`--update-lock`](general-options.md#update-lock) - Create or atomically update the selected remote lock after g...
 - [`--url`](base-options.md#url) - Fetch a schema from a URL with custom HTTP headers.
 - [`--use-annotated`](typing-customization.md#use-annotated) - Use typing.Annotated for Field() with constraints.
 - [`--use-attribute-docstrings`](field-customization.md#use-attribute-docstrings) - Generate field descriptions as attribute docstrings instead ...

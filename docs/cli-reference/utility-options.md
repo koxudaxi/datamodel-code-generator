@@ -4,9 +4,11 @@
 
 | Option | Description |
 |--------|-------------|
+| [`--all-jobs`](#all-jobs) | Run every named generation job from pyproject.toml (experimental) |
 | [`--debug`](#debug) | Show debug messages during code generation |
 | [`--generate-prompt`](#generate-prompt) | Generate a prompt for consulting LLMs about CLI options |
 | [`--help`](#help) | Show help message and exit |
+| [`--job`](#job) | Run a named generation job from pyproject.toml (experimental) |
 | [`--list-deprecations`](#list-deprecations) | List registered deprecations and scheduled breaking changes |
 | [`--list-experimental`](#list-experimental) | List registered experimental features |
 | [`--no-color`](#no-color) | Disable colorized output |
@@ -14,6 +16,45 @@
 | [`--output-format-json-schema`](#output-format-json-schema) | Output JSON Schema for structured command output or JSON configuration |
 | [`--profile`](#profile) | Use a named profile from pyproject.toml |
 | [`--version`](#version) | Show program version and exit |
+
+---
+
+## `--all-jobs` {#all-jobs}
+
+Run every named generation job from `[tool.datamodel-codegen.jobs]` in declaration
+order (experimental).
+
+!!! warning "Experimental"
+
+    Named batch jobs are experimental; their configuration schema, batch output,
+    and transactional/watch execution contracts may change.
+
+**Related:** [`--job`](#job), [`--diff-against`](general-options.md#diff-against),
+[pyproject.toml Configuration](../pyproject_toml.md)
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --all-jobs
+    datamodel-codegen --all-jobs --check
+    datamodel-codegen --all-jobs --output-format json
+    datamodel-codegen --all-jobs --watch
+    ```
+
+All selected jobs are validated before generation starts. Jobs that write to
+stdout, or whose output or model-metadata paths overlap, are rejected before
+any generated file is written. With `--output-format json`, one `batch`
+payload contains the result of every job.
+
+`--diff-against` is intentionally unavailable for every named-job execution,
+including a single selected job. Keeping one contract across `--job` and
+`--all-jobs` avoids ambiguous partial support when the selection grows. Run the
+comparison for one profile or input instead.
+
+With `--watch`, changes to `pyproject.toml` replan the complete job membership.
+All selected local dependencies are watched as one graph, and every event reruns
+and publishes the whole batch transactionally rather than rebuilding only one
+job.
 
 ---
 
@@ -144,6 +185,55 @@ Displays all available command-line options with their descriptions and default 
       --input INPUT         Input file path (default: stdin)
       ...
     ```
+
+---
+
+## `--job` {#job}
+
+Run one or more named generation jobs declared in `pyproject.toml` (experimental). Jobs are
+executed sequentially in TOML declaration order, even when `--job` is supplied
+in a different order.
+
+!!! warning "Experimental"
+
+    Named batch jobs are experimental; their configuration schema, batch output,
+    and transactional/watch execution contracts may change.
+
+**Related:** [pyproject.toml Configuration](../pyproject_toml.md),
+[`--all-jobs`](#all-jobs), [`--diff-against`](general-options.md#diff-against)
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --job api
+    datamodel-codegen --job api --job events --check
+    ```
+
+??? example "Configuration (pyproject.toml)"
+
+    ```toml
+    [tool.datamodel-codegen.profiles.strict]
+    use-annotated = true
+
+    [tool.datamodel-codegen.jobs.api]
+    profile = "strict"
+    input = "schemas/openapi.yaml"
+    output = "src/models/api.py"
+
+    [tool.datamodel-codegen.jobs.events]
+    input = "schemas/events.json"
+    output = "src/models/events.py"
+    ```
+
+Jobs require their own `input` and `output`. A job can select one reusable
+profile using `profile = "name"`. Settings are resolved as base configuration,
+job profile, job settings, then safe batch-wide CLI overrides. `--input`,
+`--url`, `--input-model`, `--output`, and `--profile` cannot be combined with
+job selection. `--diff-against` also cannot be combined with named jobs: compare
+one profile or input at a time. With `--watch`, one outer scheduler watches the
+selected jobs' combined dependency graph and `pyproject.toml`. Every event replans and
+transactionally reruns the complete selection; failures retain the published
+outputs and continue watching for recovery.
 
 ---
 

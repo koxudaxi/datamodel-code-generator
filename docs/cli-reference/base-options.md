@@ -360,7 +360,7 @@ schemas. Required unless using `--url` to fetch schema from a URL.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --input pet_simple.json --output output.py # (1)!
+    datamodel-codegen --input pet_simple.json --output output.py # (1)!
     ```
 
     1. :material-arrow-left: `--input` - the option documented here
@@ -589,7 +589,7 @@ is written to stdout.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --input pet_simple.json --output output.py # (1)!
+    datamodel-codegen --input pet_simple.json --output output.py # (1)!
     ```
 
     1. :material-arrow-left: `--output` - the option documented here
@@ -1020,7 +1020,7 @@ a local file. The `--http-headers` flag adds request headers in
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --url https://api.example.com/schema.json --http-headers "Authorization:Bearer token" # (1)!
+    datamodel-codegen --url https://api.example.com/schema.json --http-headers "Authorization:Bearer token" # (1)!
     ```
 
     1. :material-arrow-left: `--url` - the option documented here

@@ -228,6 +228,12 @@ def test_output_path_can_write_inside_input_directory(
     )
 
 
+def test_remote_lock_modes_are_mutually_exclusive_in_public_config() -> None:
+    """The public config model preserves the parser's remote lock policy guard."""
+    with pytest.raises(ValueError, match="--update-lock and --locked cannot be used together"):
+        GenerateConfig(update_lock=True, locked=True)
+
+
 def test_missing_input_conflict_preserves_missing_file_error(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
@@ -260,6 +266,200 @@ def test_output_and_model_metadata_paths_must_differ(
         expected_stderr_contains="Output and model metadata paths must be different",
         output_should_not_exist=True,
     )
+
+
+@pytest.mark.parametrize("target", ["input", "output", "metadata"])
+@pytest.mark.allow_direct_assert
+def test_lockfile_path_conflicts_are_rejected_before_writing(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    target: str,
+) -> None:
+    """The CLI refuses a lock path that aliases any generated or source artifact."""
+    source = tmp_path / "schema.json"
+    source.write_text('{"title":"Schema","type":"object"}', encoding="utf-8")
+    lockfile = source if target == "input" else tmp_path / "remote.lock"
+    output = lockfile if target == "output" else tmp_path / "output.py"
+    extra_args = ["--update-lock", "--lockfile", str(lockfile)]
+    if target == "metadata":
+        extra_args.extend(["--emit-model-metadata", str(lockfile)])
+
+    run_main_and_assert(
+        input_path=source,
+        output_path=output,
+        input_file_type="jsonschema",
+        extra_args=extra_args,
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="Remote lock",
+        output_should_not_exist=target != "input",
+    )
+    assert source.read_text(encoding="utf-8") == '{"title":"Schema","type":"object"}'
+    assert not (tmp_path / "remote.lock").exists()
+
+
+@pytest.mark.allow_direct_assert
+def test_public_api_rejects_lockfile_output_conflicts_before_writing(tmp_path: Path) -> None:
+    """Public generation shares the CLI's lockfile preflight protection."""
+    source = tmp_path / "schema.json"
+    source.write_text('{"title":"Schema","type":"object"}', encoding="utf-8")
+    lockfile = tmp_path / "remote.lock"
+
+    with pytest.raises(Error, match="Output and Remote lock paths must be different"):
+        generate(
+            source,
+            input_file_type=InputFileType.JsonSchema,
+            output=lockfile,
+            lockfile=lockfile,
+            update_lock=True,
+        )
+
+    assert not lockfile.exists()
+
+
+@pytest.mark.allow_direct_assert
+def test_cli_rejects_lockfile_inside_directory_input(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A directory input cannot contain the lock that generation may replace."""
+    input_directory = tmp_path / "schemas"
+    input_directory.mkdir()
+    (input_directory / "schema.json").write_text('{"title":"Schema","type":"object"}', encoding="utf-8")
+    lockfile = input_directory / "remote.lock"
+
+    run_main_and_assert(
+        input_path=input_directory,
+        output_path=tmp_path / "output",
+        input_file_type="jsonschema",
+        extra_args=["--update-lock", "--lockfile", str(lockfile)],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="Remote lock path must not be inside an input directory",
+        output_should_not_exist=True,
+    )
+    assert not lockfile.exists()
+
+
+@pytest.mark.allow_direct_assert
+def test_cli_rejects_default_project_lock_inside_root_directory_input(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The project-root default lock is unsafe when the project root is the input."""
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "pyproject.toml").write_text("[tool.datamodel-codegen]\n", encoding="utf-8")
+    (project / "schema.json").write_text('{"title":"Schema","type":"object"}', encoding="utf-8")
+    monkeypatch.chdir(project)
+
+    run_main_and_assert(
+        input_path=project,
+        output_path=tmp_path / "output",
+        input_file_type="jsonschema",
+        extra_args=["--update-lock"],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="Remote lock path must not be inside an input directory",
+        output_should_not_exist=True,
+    )
+    assert not (project / "datamodel-codegen.lock").exists()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="symlink creation requires elevated privileges")
+@pytest.mark.allow_direct_assert
+def test_cli_rejects_resolved_lockfile_alias_inside_directory_input(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Containment checks resolve an existing symlinked parent of the lock path."""
+    input_directory = tmp_path / "schemas"
+    input_directory.mkdir()
+    (input_directory / "schema.json").write_text('{"title":"Schema","type":"object"}', encoding="utf-8")
+    alias_directory = tmp_path / "schema-alias"
+    alias_directory.symlink_to(input_directory, target_is_directory=True)
+    lockfile = alias_directory / "remote.lock"
+
+    run_main_and_assert(
+        input_path=input_directory,
+        output_path=tmp_path / "output",
+        input_file_type="jsonschema",
+        extra_args=["--update-lock", "--lockfile", str(lockfile)],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="Remote lock path must not be inside an input directory",
+        output_should_not_exist=True,
+    )
+    assert not lockfile.exists()
+
+
+@pytest.mark.allow_direct_assert
+def test_public_api_rejects_lockfile_inside_any_listed_directory_input(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """List input preflight covers every directory, not only the first one."""
+    input_directories = [tmp_path / "first", tmp_path / "second"]
+    for index, directory in enumerate(input_directories):
+        directory.mkdir()
+        (directory / f"schema{index}.json").write_text(
+            json.dumps({"title": f"Schema{index}", "type": "object"}),
+            encoding="utf-8",
+        )
+    lockfile = input_directories[1] / "remote.lock"
+    monkeypatch.chdir(tmp_path)
+
+    with pytest.raises(Error, match="Remote lock path must not be inside an input directory"):
+        generate(
+            [directory.relative_to(tmp_path) for directory in input_directories],
+            input_file_type=InputFileType.JsonSchema,
+            lockfile=lockfile,
+            update_lock=True,
+        )
+
+    assert not lockfile.exists()
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="symlink creation requires elevated privileges")
+@pytest.mark.allow_direct_assert
+def test_public_api_rejects_lockfile_inside_resolved_directory_input_alias(tmp_path: Path) -> None:
+    """A symlink-spelled directory input protects its resolved contents too."""
+    input_directory = tmp_path / "schemas"
+    input_directory.mkdir()
+    (input_directory / "schema.json").write_text('{"title":"Schema","type":"object"}', encoding="utf-8")
+    input_alias = tmp_path / "schema-alias"
+    input_alias.symlink_to(input_directory, target_is_directory=True)
+    lockfile = input_directory / "remote.lock"
+
+    with pytest.raises(Error, match="Remote lock path must not be inside an input directory"):
+        generate(
+            input_alias,
+            input_file_type=InputFileType.JsonSchema,
+            lockfile=lockfile,
+            update_lock=True,
+        )
+
+    assert not lockfile.exists()
+
+
+@pytest.mark.allow_direct_assert
+def test_public_api_rejects_default_lock_inside_root_directory_input(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The public API default lock is relative to the caller's working directory."""
+    (tmp_path / "schema.json").write_text('{"title":"Schema","type":"object"}', encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    with pytest.raises(Error, match="Remote lock path must not be inside an input directory"):
+        generate(
+            tmp_path,
+            input_file_type=InputFileType.JsonSchema,
+            update_lock=True,
+        )
+
+    assert not (tmp_path / "datamodel-codegen.lock").exists()
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="symlink creation requires elevated privileges")

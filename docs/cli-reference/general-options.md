@@ -9,6 +9,7 @@
 | [`--allow-private-network`](#allow-private-network) | Allow HTTP requests to private network schema endpoints. |
 | [`--allow-remote-refs`](#allow-remote-refs) | Enable fetching of `$ref` targets over HTTP/HTTPS. |
 | [`--check`](#check) | Verify generated code matches existing output without modify... |
+| [`--diff-against`](#diff-against) | Compare generated code from a baseline input with the curren... |
 | [`--disable-warnings`](#disable-warnings) | Suppress warning messages during code generation. |
 | [`--fail-on-multi-module-stdout`](#fail-on-multi-module-stdout) | Fail instead of concatenating multiple modules in text stdou... |
 | [`--generate-cli-command`](#generate-cli-command) | Generate CLI command from pyproject.toml configuration. |
@@ -19,9 +20,12 @@
 | [`--http-query-parameters`](#http-query-parameters) | Add query parameters to HTTP requests for remote schemas. |
 | [`--http-timeout`](#http-timeout) | Set timeout for HTTP requests to remote hosts. |
 | [`--ignore-pyproject`](#ignore-pyproject) | Ignore pyproject.toml configuration file. |
+| [`--locked`](#locked) | Require an existing remote lock and validate each fetched re... |
+| [`--lockfile`](#lockfile) | Select the remote reference integrity lock file (experimenta... |
 | [`--module-split-mode`](#module-split-mode) | Split generated models into separate files, one per model cl... |
 | [`--shared-module-name`](#shared-module-name) | Customize the name of the shared module for deduplicated mod... |
 | [`--strict-refs`](#strict-refs) | Treat unresolved local `$ref` JSON pointers as errors. |
+| [`--update-lock`](#update-lock) | Create or atomically update the selected remote lock after g... |
 | [`--watch`](#watch) | Watch input file(s) for changes and regenerate output automa... |
 | [`--watch-delay`](#watch-delay) | Set debounce delay in seconds for watch mode. |
 
@@ -1200,7 +1204,7 @@ or public endpoint.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --url http://127.0.0.1/schema.json --allow-private-network # (1)!
+    datamodel-codegen --url http://127.0.0.1/schema.json --allow-private-network # (1)!
     ```
 
     1. :material-arrow-left: `--allow-private-network` - the option documented here
@@ -1408,6 +1412,68 @@ and generated code stay in sync. Works with both single files and directory outp
         )
         friends: list[Any] | None = None
         comment: None = Field(None)
+    ```
+
+---
+
+## `--diff-against` {#diff-against}
+
+Compare generated code from a baseline input with the current schema without writing files.
+
+Pass the baseline input with `--diff-against` and the current schema with `--input`.
+The command generates both, then shows the generated-code diff from baseline to current.
+The required `--output` value is a virtual destination: it selects single-file or
+directory layout and formatter settings, but datamodel-code-generator never writes it.
+The command exits non-zero when the formatted generated outputs differ, making it useful
+for reviewing schema migrations in CI.
+
+**Related:** [`--check`](#check), [`--input`](base-options.md#input), [`--output`](base-options.md#output), `--output-format`
+
+**Option relationships:**
+
+- **Requires:** [`--input`](base-options.md#input) - `--diff-against` requires --input with the current local schema path.
+- **Requires:** [`--output`](base-options.md#output) - `--diff-against` requires --output to select file or directory output layout.
+- **Conflicts:** [`--check`](general-options.md#check)
+- **Conflicts:** [`--watch`](general-options.md#watch)
+- **Conflicts:** [`--url`](base-options.md#url)
+- **Conflicts:** [`--input-model`](base-options.md#input-model)
+- **Conflicts:** [`--emit-model-metadata`](base-options.md#emit-model-metadata)
+- **Conflicts:** [`--fail-on-multi-module-stdout`](general-options.md#fail-on-multi-module-stdout)
+- **Conflicts:** `--job` - `--diff-against` compares one profile or input and cannot run named jobs.
+- **Conflicts:** `--all-jobs` - `--diff-against` compares one profile or input and cannot run named jobs.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input tests/data/openapi/input_diff/new.yaml --diff-against tests/data/openapi/input_diff/old.yaml --output models --input-file-type openapi --disable-timestamp # (1)!
+    ```
+
+    1. :material-arrow-left: `--diff-against` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```yaml
+    openapi: 3.0.0
+    info:
+      title: Current models
+      version: "1.0"
+    paths: {}
+    components:
+      schemas:
+        collections.Current:
+          type: object
+          properties:
+            name:
+              type: string
+    ```
+
+    **Output:**
+
+    ```
+    ADDED: collections.py (generated only from current input)
+    REMOVED: models.py (generated only from baseline input)
     ```
 
 ---
@@ -1656,7 +1722,7 @@ a working CLI command into a reusable configuration file.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --generate-pyproject-config --input schema.yaml --output model.py # (1)!
+    datamodel-codegen --generate-pyproject-config --input schema.yaml --output model.py # (1)!
     ```
 
     1. :material-arrow-left: `--generate-pyproject-config` - the option documented here
@@ -1684,7 +1750,7 @@ a local file. The `--http-headers` flag adds request headers in
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --url https://api.example.com/schema.json --http-headers "Authorization:Bearer token" # (1)!
+    datamodel-codegen --url https://api.example.com/schema.json --http-headers "Authorization:Bearer token" # (1)!
     ```
 
     1. :material-arrow-left: `--http-headers` - the option documented here
@@ -1743,7 +1809,7 @@ environments with self-signed certificates. Not recommended for production.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --url https://api.example.com/schema.json --http-ignore-tls # (1)!
+    datamodel-codegen --url https://api.example.com/schema.json --http-ignore-tls # (1)!
     ```
 
     1. :material-arrow-left: `--http-ignore-tls` - the option documented here
@@ -1804,7 +1870,7 @@ URL path are used as the relative path under the schema store. For example,
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --url https://api.example.com/schema.json --http-local-ref-path schemas # (1)!
+    datamodel-codegen --url https://api.example.com/schema.json --http-local-ref-path schemas # (1)!
     ```
 
     1. :material-arrow-left: `--http-local-ref-path` - the option documented here
@@ -1856,7 +1922,7 @@ specified: `--http-query-parameters version=v2 format=json`.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --url https://api.example.com/schema.json --http-query-parameters version=v2 format=json # (1)!
+    datamodel-codegen --url https://api.example.com/schema.json --http-query-parameters version=v2 format=json # (1)!
     ```
 
     1. :material-arrow-left: `--http-query-parameters` - the option documented here
@@ -1915,7 +1981,7 @@ Default is 30 seconds.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --url https://api.example.com/schema.json --http-timeout 60 # (1)!
+    datamodel-codegen --url https://api.example.com/schema.json --http-timeout 60 # (1)!
     ```
 
     1. :material-arrow-left: `--http-timeout` - the option documented here
@@ -2030,6 +2096,149 @@ testing without project configuration.
             first_name: str | None = Field(None, alias='firstName')
             last_name: str | None = Field(None, alias='lastName')
         ```
+
+---
+
+## `--locked` {#locked}
+
+Require an existing remote lock and validate each fetched resource against it (experimental).
+
+`--locked` fails if the selected lock is missing, a resource is unrecorded, or its body differs. It conflicts with
+`--update-lock`.
+
+Remote reference lock support is experimental: its lock document schema and request-identity compatibility may evolve. It remains fail-closed on integrity mismatches, and it never persists credentials.
+
+The lock stores opaque SHA-256 request-identity digests and SHA-256 body digests,
+never response bodies or request values directly. Each saved display origin contains only the scheme, host, and
+explicit port—never a path, query, or request headers. A request identity includes its scheme, host, explicit port,
+path, header names, and ordered query parameter names only. If one generation receives different bodies for the same
+path and query-name identity, it fails closed rather than sharing a lock entry.
+
+**Related:** [`--http-local-ref-path`](#http-local-ref-path), [`--lockfile`](#lockfile), [`--url`](base-options.md#url)
+
+**Option relationships:**
+
+- **Conflicts:** [`--update-lock`](general-options.md#update-lock)
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --url https://api.example.com/schema.json --locked --lockfile datamodel-codegen.lock # (1)!
+    ```
+
+    1. :material-arrow-left: `--locked` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Pet",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "tag": {
+          "type": "string"
+        }
+      }
+    }
+    ```
+
+    **Output:**
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  https://api.example.com/schema.json
+    #   timestamp: 2019-07-26T00:00:00+00:00
+
+    from __future__ import annotations
+
+    from pydantic import BaseModel
+
+
+    class Pet(BaseModel):
+        id: int | None = None
+        name: str | None = None
+        tag: str | None = None
+    ```
+
+---
+
+## `--lockfile` {#lockfile}
+
+Select the remote reference integrity lock file (experimental).
+
+An existing selected lock is verified automatically; a missing selected lock is ignored unless `--locked` requires it.
+Without `--lockfile`, the CLI uses `datamodel-codegen.lock` beside the discovered `pyproject.toml`, or in the invocation
+working directory when no project is found. Explicit relative `--lockfile` paths resolve from the invocation working
+directory, not the project root or output directory. The public API uses the caller's working directory for both its
+default lock and relative `lockfile` paths.
+
+Remote reference lock support is experimental: its lock document schema and request-identity compatibility may evolve. It remains fail-closed on integrity mismatches, and it never persists credentials.
+
+The lock stores opaque SHA-256 request-identity digests and SHA-256 body digests,
+never response bodies or request values directly. Each saved display origin contains only the scheme, host, and
+explicit port—never a path, query, or request headers. A request identity includes its scheme, host, explicit port,
+path, header names, and ordered query parameter names only. If one generation receives different bodies for the same
+path and query-name identity, it fails closed rather than sharing a lock entry.
+
+**Related:** [`--http-local-ref-path`](#http-local-ref-path), [`--locked`](#locked), [`--update-lock`](#update-lock), [`--url`](base-options.md#url)
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --url https://api.example.com/schema.json --update-lock --lockfile datamodel-codegen.lock # (1)!
+    ```
+
+    1. :material-arrow-left: `--lockfile` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Pet",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "tag": {
+          "type": "string"
+        }
+      }
+    }
+    ```
+
+    **Output:**
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  https://api.example.com/schema.json
+    #   timestamp: 2019-07-26T00:00:00+00:00
+
+    from __future__ import annotations
+
+    from pydantic import BaseModel
+
+
+    class Pet(BaseModel):
+        id: int | None = None
+        name: str | None = None
+        tag: str | None = None
+    ```
 
 ---
 
@@ -2257,6 +2466,78 @@ generation instead. Existing empty schemas remain valid references.
 
 ---
 
+## `--update-lock` {#update-lock}
+
+Create or atomically update the selected remote lock after generation (experimental).
+
+`--update-lock` creates or refreshes the selected `--lockfile` from every remote resource reached during this run.
+It conflicts with `--locked`.
+
+Remote reference lock support is experimental: its lock document schema and request-identity compatibility may evolve. It remains fail-closed on integrity mismatches, and it never persists credentials.
+
+The lock stores opaque SHA-256 request-identity digests and SHA-256 body digests,
+never response bodies or request values directly. Each saved display origin contains only the scheme, host, and
+explicit port—never a path, query, or request headers. A request identity includes its scheme, host, explicit port,
+path, header names, and ordered query parameter names only. If one generation receives different bodies for the same
+path and query-name identity, it fails closed rather than sharing a lock entry.
+
+**Related:** [`--http-local-ref-path`](#http-local-ref-path), [`--lockfile`](#lockfile), [`--url`](base-options.md#url)
+
+**Option relationships:**
+
+- **Conflicts:** [`--locked`](general-options.md#locked)
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --url https://api.example.com/schema.json --update-lock --lockfile datamodel-codegen.lock # (1)!
+    ```
+
+    1. :material-arrow-left: `--update-lock` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Pet",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "tag": {
+          "type": "string"
+        }
+      }
+    }
+    ```
+
+    **Output:**
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  https://api.example.com/schema.json
+    #   timestamp: 2019-07-26T00:00:00+00:00
+
+    from __future__ import annotations
+
+    from pydantic import BaseModel
+
+
+    class Pet(BaseModel):
+        id: int | None = None
+        name: str | None = None
+        tag: str | None = None
+    ```
+
+---
+
 ## `--watch` {#watch}
 
 Watch input file(s) for changes and regenerate output automatically.
@@ -2265,6 +2546,8 @@ The `--watch` flag enables continuous file monitoring mode. When enabled,
 datamodel-codegen watches the input file or directory for changes and
 automatically regenerates the output whenever changes are detected.
 Press Ctrl+C to stop watching.
+
+**See also:** [pyproject.toml Configuration](../pyproject_toml.md)
 
 !!! tip "Usage"
 

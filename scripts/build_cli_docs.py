@@ -361,6 +361,8 @@ MANUAL_OPTION_DESCRIPTIONS = {
     "--version": "Show program version and exit",
     "--debug": "Show debug messages during code generation",
     "--profile": "Use a named profile from pyproject.toml",
+    "--job": "Run a named generation job from pyproject.toml (experimental)",
+    "--all-jobs": "Run every named generation job from pyproject.toml (experimental)",
     "--output-format": "Choose the command output format",
     "--output-format-json-schema": "Output JSON Schema for structured command output or JSON configuration",
     "--no-color": "Disable colorized output",
@@ -844,7 +846,10 @@ def generate_option_section(
     # Usage section (from primary example)
     md += '!!! tip "Usage"\n\n'
     md += "    ```bash\n"
-    if primary.config_content:
+    has_explicit_input = any(
+        arg in {"--input", "--url"} or arg.startswith(("--input=", "--url=")) for arg in primary.cli_args
+    )
+    if primary.config_content or has_explicit_input:
         md += "    datamodel-codegen "
     else:
         md += "    datamodel-codegen --input schema.json "
@@ -1464,9 +1469,11 @@ def generate_manual_docs_section(manual_docs: dict[str, str]) -> str:
 
     for option in sorted(manual_docs.keys()):
         content = manual_docs[option]
-        # Adjust relative paths: manual docs are in manual/ subdirectory,
-        # but utility-options.md is in cli-reference/, so ../../ becomes ../
-        content = content.replace("](../../", "](../")
+        # Manual docs move one directory up when embedded in utility-options.md.
+        content = content.replace("](../", "](")
+        for related_option in manual_docs:
+            related_slug = get_cli_doc_slug(related_option)
+            content = content.replace(f"]({related_slug}.md#{related_slug})", f"](#{related_slug})")
         md += content
         if not content.endswith("\n"):
             md += "\n"

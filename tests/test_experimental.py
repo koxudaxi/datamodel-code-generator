@@ -45,6 +45,10 @@ def test_experimental_table_output_includes_registered_features() -> None:
     compact_output = " ".join(output.split())
 
     assert "ID" in output
+    assert "behavior.batch-generation-jobs" in output
+    assert "[tool.datamodel-codegen.jobs], --job, --all-jobs" in output
+    assert "behavior.remote-reference-lock" in output
+    assert "datamodel-codegen.lock, --lockfile, --update-lock, and --locked" in output
     assert "input-format.avro" in output
     assert "--input-file-type xmlschema" in output
     assert "Notes:" in output
@@ -57,6 +61,7 @@ def test_experimental_table_output_includes_registered_features() -> None:
     assert "experimental httpx2 is selected only when that module is absent" in compact_output
     assert "HTTPBackend.HTTPX2 to require the experimental pair" in compact_output
     assert "Explicit selections and paired dependency errors do not fall back" in compact_output
+    assert "The lock stores opaque SHA-256 request-identity digests and SHA-256 body digests" in compact_output
 
 
 def test_experimental_markdown_output_includes_details() -> None:
@@ -65,6 +70,8 @@ def test_experimental_markdown_output_includes_details() -> None:
 
     assert "| ID | Kind | Target | Since | Tracking |" in output
     assert "## Details" in output
+    assert "behavior.batch-generation-jobs" in output
+    assert "[tool.datamodel-codegen.jobs], --job, --all-jobs" in output
     assert "input-format.asyncapi" in output
     assert "input-format.avro" in output
     assert "input-format.protobuf" in output
@@ -72,6 +79,9 @@ def test_experimental_markdown_output_includes_details() -> None:
     assert "cli-option.generate-schema-validators" in output
     assert "cli-option.use-missing-sentinel" in output
     assert "formatter.builtin" in output
+    assert "behavior.remote-reference-lock" in output
+    assert "lock document schema and request-identity compatibility may evolve" in output
+    assert "integrity mismatches remain fail-closed and credentials are never persisted" in output
 
 
 def test_experimental_markdown_output_can_omit_header() -> None:
@@ -93,6 +103,12 @@ def test_release_note_output_filters_by_version() -> None:
     assert "--input-file-type xmlschema" in output
     assert "--formatters builtin" in output
 
+    batch_jobs_output = render_release_note_experimental_features("0.72.3")
+
+    assert "## Experimental Features" in batch_jobs_output
+    assert "[tool.datamodel-codegen.jobs], --job, --all-jobs" in batch_jobs_output
+    assert "configuration schema, batch output, and transactional/watch execution contracts" in batch_jobs_output
+
 
 def test_release_note_output_includes_schema_validation_features() -> None:
     """Release-note snippets include experimental schema validation features."""
@@ -102,6 +118,15 @@ def test_release_note_output_includes_schema_validation_features() -> None:
     assert "--generate-schema-validators" in output
     assert "--schema-validator-type" in output
     assert "--use-missing-sentinel" in output
+
+
+def test_release_note_output_includes_remote_reference_lock_feature() -> None:
+    """Release-note snippets identify the experimental remote lock behavior."""
+    output = render_release_note_experimental_features("0.72.3")
+
+    assert "## Experimental Features" in output
+    assert "datamodel-codegen.lock, --lockfile, --update-lock, and --locked" in output
+    assert "lock document schema and request-identity compatibility may evolve" in output
 
 
 def test_experimental_markdown_includes_tracking_issue(monkeypatch: pytest.MonkeyPatch) -> None:

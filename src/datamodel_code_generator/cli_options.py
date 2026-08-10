@@ -144,6 +144,8 @@ MANUAL_DOCS: frozenset[str] = frozenset({
     "--version",
     "--debug",
     "--profile",
+    "--job",
+    "--all-jobs",
     "--output-format",
     "--output-format-json-schema",
     "--no-color",
@@ -878,6 +880,36 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     # General Options
     # ==========================================================================
     "--check": CLIOptionMeta(name="--check", category=OptionCategory.GENERAL),
+    "--diff-against": CLIOptionMeta(
+        name="--diff-against",
+        category=OptionCategory.GENERAL,
+        requires=(
+            CLIOptionRelation(
+                option="--input",
+                message="`--diff-against` requires --input with the current local schema path.",
+            ),
+            CLIOptionRelation(
+                option="--output",
+                message="`--diff-against` requires --output to select file or directory output layout.",
+            ),
+        ),
+        conflicts=(
+            CLIOptionRelation(option="--check"),
+            CLIOptionRelation(option="--watch"),
+            CLIOptionRelation(option="--url"),
+            CLIOptionRelation(option="--input-model"),
+            CLIOptionRelation(option="--emit-model-metadata"),
+            CLIOptionRelation(option="--fail-on-multi-module-stdout"),
+            CLIOptionRelation(
+                option="--job",
+                message="`--diff-against` compares one profile or input and cannot run named jobs.",
+            ),
+            CLIOptionRelation(
+                option="--all-jobs",
+                message="`--diff-against` compares one profile or input and cannot run named jobs.",
+            ),
+        ),
+    ),
     "--fail-on-multi-module-stdout": CLIOptionMeta(
         name="--fail-on-multi-module-stdout", category=OptionCategory.GENERAL
     ),
@@ -891,6 +923,17 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--http-ignore-tls": CLIOptionMeta(name="--http-ignore-tls", category=OptionCategory.GENERAL),
     "--http-query-parameters": CLIOptionMeta(name="--http-query-parameters", category=OptionCategory.GENERAL),
     "--http-timeout": CLIOptionMeta(name="--http-timeout", category=OptionCategory.GENERAL),
+    "--lockfile": CLIOptionMeta(name="--lockfile", category=OptionCategory.GENERAL),
+    "--update-lock": CLIOptionMeta(
+        name="--update-lock",
+        category=OptionCategory.GENERAL,
+        conflicts=(CLIOptionRelation(option="--locked"),),
+    ),
+    "--locked": CLIOptionMeta(
+        name="--locked",
+        category=OptionCategory.GENERAL,
+        conflicts=(CLIOptionRelation(option="--update-lock"),),
+    ),
     "--ignore-pyproject": CLIOptionMeta(name="--ignore-pyproject", category=OptionCategory.GENERAL),
     "--generate-cli-command": CLIOptionMeta(name="--generate-cli-command", category=OptionCategory.GENERAL),
     "--generate-pyproject-config": CLIOptionMeta(name="--generate-pyproject-config", category=OptionCategory.GENERAL),

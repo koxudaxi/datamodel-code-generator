@@ -247,6 +247,29 @@ base_options.add_argument(
     ),
 )
 base_options.add_argument(
+    "--lockfile",
+    help=(
+        "Select the remote reference integrity lock file (experimental). "
+        "An existing selected lock is verified automatically; "
+        "a missing selected lock is ignored unless --locked is used. "
+        "The default is datamodel-codegen.lock beside the discovered pyproject.toml, or in the invocation working "
+        "directory when no project is found. Explicit relative paths resolve from the invocation working directory."
+    ),
+)
+remote_lock_options = base_options.add_mutually_exclusive_group()
+remote_lock_options.add_argument(
+    "--update-lock",
+    action="store_true",
+    default=None,
+    help="Create or atomically update the selected remote lock after generation (experimental).",
+)
+remote_lock_options.add_argument(
+    "--locked",
+    action="store_true",
+    default=None,
+    help="Require an existing remote lock and validate each fetched resource against it (experimental).",
+)
+base_options.add_argument(
     "--input",
     help="Input file/directory (default: stdin)",
 )
@@ -1323,6 +1346,16 @@ general_options.add_argument(
     "Useful for CI to ensure generated code is committed.",
 )
 general_options.add_argument(
+    "--diff-against",
+    metavar="BASELINE_INPUT",
+    help=(
+        "Generate BASELINE_INPUT and the current --input into temporary outputs, then show the generated-code diff "
+        "from baseline to current. "
+        "Requires --input and --output; --output is a virtual output path that selects file or directory layout "
+        "and is never modified. Exits with code 1 when generated outputs differ."
+    ),
+)
+general_options.add_argument(
     "--debug",
     help="show debug message (require \"debug\". `$ pip install 'datamodel-code-generator[debug]'`)",
     action="store_true",
@@ -1421,6 +1454,20 @@ general_options.add_argument(
     "--profile",
     help="Use a named profile from pyproject.toml [tool.datamodel-codegen.profiles.<name>]",
     default=None,
+)
+job_selection_options = general_options.add_mutually_exclusive_group()
+job_selection_options.add_argument(
+    "--job",
+    action="append",
+    default=None,
+    metavar="NAME",
+    help="Run a named job from pyproject.toml [tool.datamodel-codegen.jobs.<name>] (experimental). Can be repeated.",
+)
+job_selection_options.add_argument(
+    "--all-jobs",
+    action="store_true",
+    default=None,
+    help="Run every named job from pyproject.toml in declaration order (experimental).",
 )
 general_options.add_argument(
     "--watch",

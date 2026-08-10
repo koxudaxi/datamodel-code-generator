@@ -15,8 +15,8 @@ This documentation is auto-generated from test cases.
 | 🎨 [Template Customization](template-customization.md) | 27 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 8 | OpenAPI-specific features |
 | 📋 [GraphQL-only Options](graphql-only-options.md) | 1 |  |
-| ⚙️ [General Options](general-options.md) | 20 | Utilities and meta options |
-| 📝 [Utility Options](utility-options.md) | 10 | Help, version, debug options |
+| ⚙️ [General Options](general-options.md) | 24 | Utilities and meta options |
+| 📝 [Utility Options](utility-options.md) | 12 | Help, version, debug options |
 
 ## 🎯 Focused Topics
 
@@ -51,10 +51,22 @@ These links are generated from CLI option metadata and summarize options that im
 | [`--custom-file-header`](template-customization.md#custom-file-header) | Conflicts | Always | [`--custom-file-header-path`](template-customization.md#custom-file-header-path) | `--custom-file-header` can not be used with `--custom-file-header-path`. |
 | [`--custom-file-header-path`](template-customization.md#custom-file-header-path) | Conflicts | Always | [`--custom-file-header`](template-customization.md#custom-file-header) | `--custom-file-header-path` can not be used with `--custom-file-header`. |
 | [`--all-exports-collision-strategy`](general-options.md#all-exports-collision-strategy) | Requires | Always | [`--all-exports-scope`](general-options.md#all-exports-scope) = `recursive` | `--all-exports-collision-strategy` can only be used with `--all-exports-scope=recursive`. |
+| [`--diff-against`](general-options.md#diff-against) | Requires | Always | [`--input`](base-options.md#input) | `--diff-against` requires --input with the current local schema path. |
+| [`--diff-against`](general-options.md#diff-against) | Requires | Always | [`--output`](base-options.md#output) | `--diff-against` requires --output to select file or directory output layout. |
+| [`--diff-against`](general-options.md#diff-against) | Conflicts | Always | [`--check`](general-options.md#check) | - |
+| [`--diff-against`](general-options.md#diff-against) | Conflicts | Always | [`--watch`](general-options.md#watch) | - |
+| [`--diff-against`](general-options.md#diff-against) | Conflicts | Always | [`--url`](base-options.md#url) | - |
+| [`--diff-against`](general-options.md#diff-against) | Conflicts | Always | [`--input-model`](base-options.md#input-model) | - |
+| [`--diff-against`](general-options.md#diff-against) | Conflicts | Always | [`--emit-model-metadata`](base-options.md#emit-model-metadata) | - |
+| [`--diff-against`](general-options.md#diff-against) | Conflicts | Always | [`--fail-on-multi-module-stdout`](general-options.md#fail-on-multi-module-stdout) | - |
+| [`--diff-against`](general-options.md#diff-against) | Conflicts | Always | `--job` | `--diff-against` compares one profile or input and cannot run named jobs. |
+| [`--diff-against`](general-options.md#diff-against) | Conflicts | Always | `--all-jobs` | `--diff-against` compares one profile or input and cannot run named jobs. |
+| [`--locked`](general-options.md#locked) | Conflicts | Always | [`--update-lock`](general-options.md#update-lock) | - |
+| [`--update-lock`](general-options.md#update-lock) | Conflicts | Always | [`--locked`](general-options.md#locked) | - |
 
 ## All Options
 
-**Jump to:** [A](#a) · [B](#b) · [C](#c) · [D](#d) · [E](#e) · [F](#f) · [G](#g) · [H](#h) · [I](#i) · [K](#k) · [L](#l) · [M](#m) · [N](#n) · [O](#o) · [P](#p) · [R](#r) · [S](#s) · [T](#t) · [U](#u) · [V](#v) · [W](#w)
+**Jump to:** [A](#a) · [B](#b) · [C](#c) · [D](#d) · [E](#e) · [F](#f) · [G](#g) · [H](#h) · [I](#i) · [J](#j) · [K](#k) · [L](#l) · [M](#m) · [N](#n) · [O](#o) · [P](#p) · [R](#r) · [S](#s) · [T](#t) · [U](#u) · [V](#v) · [W](#w)
 
 
 ### A {#a}
@@ -64,6 +76,7 @@ These links are generated from CLI option metadata and summarize options that im
 - [`--aliases`](field-customization.md#aliases)
 - [`--all-exports-collision-strategy`](general-options.md#all-exports-collision-strategy)
 - [`--all-exports-scope`](general-options.md#all-exports-scope)
+- [`--all-jobs`](utility-options.md#all-jobs)
 - [`--allof-class-hierarchy`](typing-customization.md#allof-class-hierarchy)
 - [`--allof-merge-mode`](typing-customization.md#allof-merge-mode)
 - [`--allow-extra-fields`](model-customization.md#allow-extra-fields)
@@ -101,6 +114,7 @@ These links are generated from CLI option metadata and summarize options that im
 - [`--dataclass-arguments`](model-customization.md#dataclass-arguments)
 - [`--debug`](utility-options.md#debug)
 - [`--default-values`](field-customization.md#default-values)
+- [`--diff-against`](general-options.md#diff-against)
 - [`--disable-appending-item-suffix`](template-customization.md#disable-appending-item-suffix)
 - [`--disable-future-imports`](typing-customization.md#disable-future-imports)
 - [`--disable-timestamp`](template-customization.md#disable-timestamp)
@@ -164,6 +178,10 @@ These links are generated from CLI option metadata and summarize options that im
 - [`--input-model`](base-options.md#input-model)
 - [`--input-model-ref-strategy`](base-options.md#input-model-ref-strategy)
 
+### J {#j}
+
+- [`--job`](utility-options.md#job)
+
 ### K {#k}
 
 - [`--keep-model-order`](model-customization.md#keep-model-order)
@@ -173,6 +191,8 @@ These links are generated from CLI option metadata and summarize options that im
 
 - [`--list-deprecations`](utility-options.md#list-deprecations)
 - [`--list-experimental`](utility-options.md#list-experimental)
+- [`--locked`](general-options.md#locked)
+- [`--lockfile`](general-options.md#lockfile)
 
 ### M {#m}
 
@@ -248,6 +268,7 @@ These links are generated from CLI option metadata and summarize options that im
 ### U {#u}
 
 - [`--union-mode`](model-customization.md#union-mode)
+- [`--update-lock`](general-options.md#update-lock)
 - [`--url`](base-options.md#url)
 - [`--use-annotated`](typing-customization.md#use-annotated)
 - [`--use-attribute-docstrings`](field-customization.md#use-attribute-docstrings)

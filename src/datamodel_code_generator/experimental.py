@@ -11,6 +11,8 @@ from datamodel_code_generator._registry_render import _render_registry_json, _re
 ExperimentalFeatureKind = Literal["input-format", "formatter", "cli-option", "python-api", "behavior", "extra"]
 ExperimentalFeatureFormat = Literal["table", "json", "markdown"]
 ExperimentalFeatureId = Literal[
+    "behavior.batch-generation-jobs",
+    "behavior.remote-reference-lock",
     "cli-option.generate-schema-validators",
     "cli-option.schema-validator-type",
     "cli-option.use-missing-sentinel",
@@ -40,6 +42,36 @@ class ExperimentalFeature:
 
 
 EXPERIMENTAL_FEATURES: dict[ExperimentalFeatureId, ExperimentalFeature] = {
+    "behavior.batch-generation-jobs": ExperimentalFeature(
+        id="behavior.batch-generation-jobs",
+        kind="behavior",
+        target="[tool.datamodel-codegen.jobs], --job, --all-jobs",
+        message=(
+            "Named batch jobs are experimental; their configuration schema, batch output, and transactional/watch "
+            "execution contracts may change."
+        ),
+        since_version="0.72.3",
+        note=(
+            "Define named generation jobs in [tool.datamodel-codegen.jobs] and select them with --job or "
+            "--all-jobs. Each selected job has its own input and output, and the full selection is validated "
+            "before generation begins."
+        ),
+    ),
+    "behavior.remote-reference-lock": ExperimentalFeature(
+        id="behavior.remote-reference-lock",
+        kind="behavior",
+        target="datamodel-codegen.lock, --lockfile, --update-lock, and --locked",
+        message=(
+            "Remote reference integrity locking is experimental: the lock document schema and request-identity "
+            "compatibility may evolve, but integrity mismatches remain fail-closed and credentials are never persisted."
+        ),
+        since_version="0.72.3",
+        note=(
+            "The lock stores opaque SHA-256 request-identity digests and SHA-256 body digests, never response "
+            "bodies or request values directly. Each saved display origin contains only the scheme, host, and "
+            "explicit port—never a path, query, or request headers."
+        ),
+    ),
     "extra.httpx2": ExperimentalFeature(
         id="extra.httpx2",
         kind="extra",

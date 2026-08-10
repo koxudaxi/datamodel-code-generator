@@ -194,6 +194,7 @@ What other options should I use?
 - `--allow-private-network`: Allow HTTP requests to private network schema endpoints.
 - `--allow-remote-refs`: Enable fetching of `$ref` targets over HTTP/HTTPS.
 - `--check`: Verify generated code matches existing output without modifying files.
+- `--diff-against`: Compare generated code from a baseline input with the current schema without writing files.
 - `--disable-warnings`: Suppress warning messages during code generation.
 - `--fail-on-multi-module-stdout`: Fail instead of concatenating multiple modules in text stdout.
 - `--generate-cli-command`: Generate CLI command from pyproject.toml configuration.
@@ -204,11 +205,14 @@ What other options should I use?
 - `--http-query-parameters`: Add query parameters to HTTP requests for remote schemas.
 - `--http-timeout`: Set timeout for HTTP requests to remote hosts.
 - `--ignore-pyproject`: Ignore pyproject.toml configuration file.
+- `--locked`: Require an existing remote lock and validate each fetched resource against it (experimental).
+- `--lockfile`: Select the remote reference integrity lock file (experimental).
 - `--module-split-mode`: Split generated models into separate files, one per model class.
 - `--no-allow-private-network`
 - `--no-allow-remote-refs`
 - `--shared-module-name`: Customize the name of the shared module for deduplicated models.
 - `--strict-refs`: Treat unresolved local `$ref` JSON pointers as errors.
+- `--update-lock`: Create or atomically update the selected remote lock after generation (experimental).
 - `--watch`: Watch input file(s) for changes and regenerate output automatically.
 - `--watch-delay`: Set debounce delay in seconds for watch mode.
 
@@ -310,6 +314,16 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         etc.), regenerate same-family. 'reuse-all': Reuse all
                         referenced types via import. If not specified,
                         defaults to regenerate-all behavior.
+  --locked              Require an existing remote lock and validate each
+                        fetched resource against it (experimental).
+  --lockfile LOCKFILE   Select the remote reference integrity lock file
+                        (experimental). An existing selected lock is verified
+                        automatically; a missing selected lock is ignored
+                        unless --locked is used. The default is datamodel-
+                        codegen.lock beside the discovered pyproject.toml, or
+                        in the invocation working directory when no project is
+                        found. Explicit relative paths resolve from the
+                        invocation working directory.
   --output OUTPUT       Output file (default: stdout)
   --output-model-type {pydantic_v2.BaseModel,pydantic_v2.dataclass,dataclasses.dataclass,typing.TypedDict,msgspec.Struct}
                         Output model type (default: pydantic_v2.BaseModel)
@@ -332,6 +346,8 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         warn on features outside declared/detected version.
   --strict-refs         Treat unresolved local $ref JSON pointers as errors
                         instead of generating fallback Any models.
+  --update-lock         Create or atomically update the selected remote lock
+                        after generation (experimental).
   --url URL             Input file URL. `--input` is ignored when `--url` is
                         used. For HTTP(S), datamodel-code-generator[http]
                         remains the stable HTTPX backend and is not
@@ -831,12 +847,22 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         mutations.
 
 [36;1mGeneral options[0m:
+  --all-jobs            Run every named job from pyproject.toml in declaration
+                        order (experimental).
   --check               Verify generated files are up-to-date without
                         modifying them. Exits with code 1 if differences
                         found, 0 if up-to-date. Useful for CI to ensure
                         generated code is committed.
   --debug               show debug message (require "debug". `$ pip install
                         'datamodel-code-generator[debug]'`)
+  --diff-against BASELINE_INPUT
+                        Generate BASELINE_INPUT and the current --input into
+                        temporary outputs, then show the generated-code diff
+                        from baseline to current. Requires --input and
+                        --output; --output is a virtual output path that
+                        selects file or directory layout and is never
+                        modified. Exits with code 1 when generated outputs
+                        differ.
   --disable-warnings    disable warnings
   --fail-on-multi-module-stdout
                         Return an error instead of concatenating multiple
@@ -855,6 +881,8 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         Generate pyproject.toml configuration from the
                         provided CLI arguments and exit
   --ignore-pyproject    Ignore pyproject.toml configuration
+  --job NAME            Run a named job from pyproject.toml [tool.datamodel-
+                        codegen.jobs.<name>] (experimental). Can be repeated.
   --list-deprecations [{table,json,markdown}]
                         List registered deprecations and scheduled breaking
                         changes, then exit.
@@ -918,7 +946,7 @@ Recommend a final CLI command for the user's schema and target runtime. Include:
 - `--openapi-include-paths` only has an effect when `--openapi-scopes paths` is included.
 - `--strict-types` requires one or more values: `str`, `int`, `float`, `bool`, or `bytes`.
 - `--use-specialized-enum` requires `--target-python-version >= 3.11`.
-- `--output-format json` is supported for generation, `--generate-prompt`, and `--check`; not for `--watch`.
+- `--output-format json` is supported for generation, `--generate-prompt`, `--check`, and `--diff-against`; not for `--watch`.
 - `--output-format-json-schema` accepts `config`, `generate-prompt`, `generation`, `model-metadata`, or `structured-output`; use `config` for JSON configuration schemas.
 - `--validation` is deprecated; use `--field-constraints` for generated Field constraints.
 

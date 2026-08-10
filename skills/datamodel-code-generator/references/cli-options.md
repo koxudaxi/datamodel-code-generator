@@ -220,11 +220,15 @@ General utility, HTTP, checking, and project integration options.
 - `--http-ignore-tls`: Disable verification of the remote host's TLS certificate
 - `--http-timeout`: Timeout in seconds for HTTP requests to remote hosts (default: 30)
 - `--http-local-ref-path`: Resolve HTTP(S) JSON Schema $ref URLs from a local directory instead of fetching them. URLs are mapped under the directory by host and path; extensionless refs also try '.json'.
+- `--lockfile`: Select the remote reference integrity lock file (experimental). An existing selected lock is verified automatically; a missing selected lock is ignored unless --locked is used. The default is datamodel-codegen.lock beside the discovered pyproject.toml, or in the invocation working directory when no project is found. Explicit relative paths resolve from the invocation working directory.
+- `--update-lock`: Create or atomically update the selected remote lock after generation (experimental).
+- `--locked`: Require an existing remote lock and validate each fetched resource against it (experimental).
 - `--shared-module-name`: Name of the shared module for --reuse-scope=tree (default: "shared"). Use this option if your schema has a file named "shared".
 - `--all-exports-scope`: Generate __all__ in __init__.py with re-exports. 'children': export from direct child modules only. 'recursive': export from all descendant modules. Choices: `children`, `recursive`.
 - `--all-exports-collision-strategy`: Strategy for name collisions when using --all-exports-scope=recursive. 'error': raise an error (default). 'minimal-prefix': add module prefix only to colliding names. 'full-prefix': add full module path prefix to colliding names. Choices: `error`, `minimal-prefix`, `full-prefix`.
 - `--module-split-mode`: Split generated models into separate files. 'single': generate one file per model class. Choices: `single`.
 - `--check`: Verify generated files are up-to-date without modifying them. Exits with code 1 if differences found, 0 if up-to-date. Useful for CI to ensure generated code is committed.
+- `--diff-against`: Generate BASELINE_INPUT and the current --input into temporary outputs, then show the generated-code diff from baseline to current. Requires --input and --output; --output is a virtual output path that selects file or directory layout and is never modified. Exits with code 1 when generated outputs differ.
 - `--debug`: show debug message (require "debug". `$ pip install 'datamodel-code-generator[debug]'`)
 - `--disable-warnings`: disable warnings
 - `--list-deprecations`: List registered deprecations and scheduled breaking changes, then exit. Choices: `table`, `json`, `markdown`.
@@ -239,6 +243,8 @@ General utility, HTTP, checking, and project integration options.
 - `--generate-prompt`: Generate a prompt for consulting LLMs about CLI options. Optionally provide your question as an argument. Pipe to CLI tools (e.g., `| claude -p`, `| codex exec`) or copy to clipboard (e.g., `| pbcopy`, `| xclip`) for web LLM chats.
 - `--ignore-pyproject`: Ignore pyproject.toml configuration
 - `--profile`: Use a named profile from pyproject.toml [tool.datamodel-codegen.profiles.<name>]
+- `--job`: Run a named job from pyproject.toml [tool.datamodel-codegen.jobs.<name>] (experimental). Can be repeated.
+- `--all-jobs`: Run every named job from pyproject.toml in declaration order (experimental).
 - `--watch`: Watch input file(s) for changes and regenerate output automatically
 - `--watch-delay`: Debounce delay in seconds for watch mode (default: 0.5)
 - `--version`: show version

@@ -1,5 +1,23 @@
 [
   {
+    "id": "behavior.batch-generation-jobs",
+    "kind": "behavior",
+    "message": "Named batch jobs are experimental; their configuration schema, batch output, and transactional/watch execution contracts may change.",
+    "note": "Define named generation jobs in [tool.datamodel-codegen.jobs] and select them with --job or --all-jobs. Each selected job has its own input and output, and the full selection is validated before generation begins.",
+    "since_version": "0.72.3",
+    "target": "[tool.datamodel-codegen.jobs], --job, --all-jobs",
+    "tracking_issue": null
+  },
+  {
+    "id": "behavior.remote-reference-lock",
+    "kind": "behavior",
+    "message": "Remote reference integrity locking is experimental: the lock document schema and request-identity compatibility may evolve, but integrity mismatches remain fail-closed and credentials are never persisted.",
+    "note": "The lock stores opaque SHA-256 request-identity digests and SHA-256 body digests, never response bodies or request values directly. Each saved display origin contains only the scheme, host, and explicit port\u2014never a path, query, or request headers.",
+    "since_version": "0.72.3",
+    "target": "datamodel-codegen.lock, --lockfile, --update-lock, and --locked",
+    "tracking_issue": null
+  },
+  {
     "id": "cli-option.generate-schema-validators",
     "kind": "cli-option",
     "message": "Schema-derived runtime validators are experimental and may change as JSON Schema coverage is expanded.",
