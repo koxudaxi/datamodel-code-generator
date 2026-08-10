@@ -45,6 +45,8 @@ def test_experimental_table_output_includes_registered_features() -> None:
     compact_output = " ".join(output.split())
 
     assert "ID" in output
+    assert "behavior.batch-generation-jobs" in output
+    assert "[tool.datamodel-codegen.jobs], --job, --all-jobs" in output
     assert "input-format.avro" in output
     assert "--input-file-type xmlschema" in output
     assert "Notes:" in output
@@ -65,6 +67,8 @@ def test_experimental_markdown_output_includes_details() -> None:
 
     assert "| ID | Kind | Target | Since | Tracking |" in output
     assert "## Details" in output
+    assert "behavior.batch-generation-jobs" in output
+    assert "[tool.datamodel-codegen.jobs], --job, --all-jobs" in output
     assert "input-format.asyncapi" in output
     assert "input-format.avro" in output
     assert "input-format.protobuf" in output
@@ -92,6 +96,12 @@ def test_release_note_output_filters_by_version() -> None:
     assert "--input-file-type protobuf" in output
     assert "--input-file-type xmlschema" in output
     assert "--formatters builtin" in output
+
+    batch_jobs_output = render_release_note_experimental_features("0.72.3")
+
+    assert "## Experimental Features" in batch_jobs_output
+    assert "[tool.datamodel-codegen.jobs], --job, --all-jobs" in batch_jobs_output
+    assert "configuration schema, batch output, and transactional/watch execution contracts" in batch_jobs_output
 
 
 def test_release_note_output_includes_schema_validation_features() -> None:

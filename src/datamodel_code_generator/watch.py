@@ -59,6 +59,12 @@ class _WatchContext:
     config: Config
     dependencies: WatchDependencies
     regenerate: Callable[[], Exit]
+    watch_delay: float | None = None
+
+    @property
+    def effective_watch_delay(self) -> float:
+        """Return the outer scheduler delay, defaulting to the generation config."""
+        return self.config.watch_delay if self.watch_delay is None else self.watch_delay
 
 
 @dataclass(slots=True)
@@ -112,7 +118,7 @@ def _watch_changes(
 ) -> None:
     """Publish filesystem changes from the persistent background watch stream."""
     force_polling = _force_polling()
-    debounce_ms = max(1, int(context.config.watch_delay * 1000))
+    debounce_ms = max(1, int(context.effective_watch_delay * 1000))
     poll_delay_ms = min(300, debounce_ms)
     if force_polling:
         context.dependencies.enable_polling_fingerprints()
@@ -211,6 +217,8 @@ def watch_and_regenerate(
     *,
     dependencies: WatchDependencies | None = None,
     regenerate: Callable[[], Exit],
+    watch_path: Path | None = None,
+    watch_delay: float | None = None,
 ) -> Exit:
     """Watch every local generation dependency and fully regenerate on changes."""
     from datamodel_code_generator.__main__ import Exit  # noqa: PLC0415
@@ -218,7 +226,7 @@ def watch_and_regenerate(
 
     watchfiles = _get_watchfiles()
 
-    watch_path = Path(config.input) if isinstance(config.input, (str, Path)) else None
+    watch_path = watch_path or (Path(config.input) if isinstance(config.input, (str, Path)) else None)
     if watch_path is None:
         print("Watch mode requires --input file path", file=sys.stderr)  # noqa: T201
         return Exit.ERROR
@@ -229,7 +237,13 @@ def watch_and_regenerate(
 
     print(f"Watching {watch_path} for changes... (Ctrl+C to stop)")  # noqa: T201
 
-    watch_context = _WatchContext(watchfiles, config, dependencies, regenerate)
+    watch_context = _WatchContext(
+        watchfiles,
+        config,
+        dependencies,
+        regenerate,
+        watch_delay,
+    )
     catch_up = False
     try:
         while watch_roots := dependencies.watch_roots():

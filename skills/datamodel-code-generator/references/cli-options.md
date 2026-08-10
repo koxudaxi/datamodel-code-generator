@@ -239,6 +239,8 @@ General utility, HTTP, checking, and project integration options.
 - `--generate-prompt`: Generate a prompt for consulting LLMs about CLI options. Optionally provide your question as an argument. Pipe to CLI tools (e.g., `| claude -p`, `| codex exec`) or copy to clipboard (e.g., `| pbcopy`, `| xclip`) for web LLM chats.
 - `--ignore-pyproject`: Ignore pyproject.toml configuration
 - `--profile`: Use a named profile from pyproject.toml [tool.datamodel-codegen.profiles.<name>]
+- `--job`: Run a named job from pyproject.toml [tool.datamodel-codegen.jobs.<name>] (experimental). Can be repeated.
+- `--all-jobs`: Run every named job from pyproject.toml in declaration order (experimental).
 - `--watch`: Watch input file(s) for changes and regenerate output automatically
 - `--watch-delay`: Debounce delay in seconds for watch mode (default: 0.5)
 - `--version`: show version

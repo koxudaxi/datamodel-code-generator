@@ -16,7 +16,7 @@ This documentation is auto-generated from test cases.
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 8 | OpenAPI-specific features |
 | 📋 [GraphQL-only Options](graphql-only-options.md) | 1 |  |
 | ⚙️ [General Options](general-options.md) | 20 | Utilities and meta options |
-| 📝 [Utility Options](utility-options.md) | 10 | Help, version, debug options |
+| 📝 [Utility Options](utility-options.md) | 12 | Help, version, debug options |
 
 ## 🎯 Focused Topics
 
@@ -54,7 +54,7 @@ These links are generated from CLI option metadata and summarize options that im
 
 ## All Options
 
-**Jump to:** [A](#a) · [B](#b) · [C](#c) · [D](#d) · [E](#e) · [F](#f) · [G](#g) · [H](#h) · [I](#i) · [K](#k) · [L](#l) · [M](#m) · [N](#n) · [O](#o) · [P](#p) · [R](#r) · [S](#s) · [T](#t) · [U](#u) · [V](#v) · [W](#w)
+**Jump to:** [A](#a) · [B](#b) · [C](#c) · [D](#d) · [E](#e) · [F](#f) · [G](#g) · [H](#h) · [I](#i) · [J](#j) · [K](#k) · [L](#l) · [M](#m) · [N](#n) · [O](#o) · [P](#p) · [R](#r) · [S](#s) · [T](#t) · [U](#u) · [V](#v) · [W](#w)
 
 
 ### A {#a}
@@ -64,6 +64,7 @@ These links are generated from CLI option metadata and summarize options that im
 - [`--aliases`](field-customization.md#aliases)
 - [`--all-exports-collision-strategy`](general-options.md#all-exports-collision-strategy)
 - [`--all-exports-scope`](general-options.md#all-exports-scope)
+- [`--all-jobs`](utility-options.md#all-jobs)
 - [`--allof-class-hierarchy`](typing-customization.md#allof-class-hierarchy)
 - [`--allof-merge-mode`](typing-customization.md#allof-merge-mode)
 - [`--allow-extra-fields`](model-customization.md#allow-extra-fields)
@@ -163,6 +164,10 @@ These links are generated from CLI option metadata and summarize options that im
 - [`--input-file-type`](base-options.md#input-file-type)
 - [`--input-model`](base-options.md#input-model)
 - [`--input-model-ref-strategy`](base-options.md#input-model-ref-strategy)
+
+### J {#j}
+
+- [`--job`](utility-options.md#job)
 
 ### K {#k}
 

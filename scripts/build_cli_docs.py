@@ -361,6 +361,8 @@ MANUAL_OPTION_DESCRIPTIONS = {
     "--version": "Show program version and exit",
     "--debug": "Show debug messages during code generation",
     "--profile": "Use a named profile from pyproject.toml",
+    "--job": "Run a named generation job from pyproject.toml (experimental)",
+    "--all-jobs": "Run every named generation job from pyproject.toml (experimental)",
     "--output-format": "Choose the command output format",
     "--output-format-json-schema": "Output JSON Schema for structured command output or JSON configuration",
     "--no-color": "Disable colorized output",
@@ -1467,6 +1469,9 @@ def generate_manual_docs_section(manual_docs: dict[str, str]) -> str:
         # Adjust relative paths: manual docs are in manual/ subdirectory,
         # but utility-options.md is in cli-reference/, so ../../ becomes ../
         content = content.replace("](../../", "](../")
+        for related_option in manual_docs:
+            related_slug = get_cli_doc_slug(related_option)
+            content = content.replace(f"]({related_slug}.md#{related_slug})", f"](#{related_slug})")
         md += content
         if not content.endswith("\n"):
             md += "\n"

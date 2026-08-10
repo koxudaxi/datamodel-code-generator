@@ -1,6 +1,69 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$defs": {
+    "BatchJobPayload": {
+      "additionalProperties": false,
+      "description": "One named job result emitted by batch generation.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "result": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GenerationPayload"
+            },
+            {
+              "$ref": "#/$defs/CheckOutputPayload"
+            }
+          ],
+          "title": "Result"
+        }
+      },
+      "required": [
+        "name",
+        "result"
+      ],
+      "title": "BatchJobPayload",
+      "type": "object"
+    },
+    "BatchOutputPayload": {
+      "additionalProperties": false,
+      "description": "Structured JSON payload emitted by --job/--all-jobs with --output-format json.",
+      "properties": {
+        "version": {
+          "const": 1,
+          "title": "Version",
+          "type": "integer"
+        },
+        "format": {
+          "const": "json",
+          "title": "Format",
+          "type": "string"
+        },
+        "kind": {
+          "const": "batch",
+          "title": "Kind",
+          "type": "string"
+        },
+        "jobs": {
+          "items": {
+            "$ref": "#/$defs/BatchJobPayload"
+          },
+          "title": "Jobs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "version",
+        "format",
+        "kind",
+        "jobs"
+      ],
+      "title": "BatchOutputPayload",
+      "type": "object"
+    },
     "CheckDifferencePayload": {
       "additionalProperties": false,
       "description": "One --check difference emitted by --output-format json.",
@@ -686,6 +749,7 @@
   },
   "discriminator": {
     "mapping": {
+      "batch": "#/$defs/BatchOutputPayload",
       "check": "#/$defs/CheckOutputPayload",
       "cli-command": "#/$defs/CliCommandOutputPayload",
       "deprecations": "#/$defs/DeprecationsOutputPayload",
@@ -714,6 +778,9 @@
     },
     {
       "$ref": "#/$defs/CheckOutputPayload"
+    },
+    {
+      "$ref": "#/$defs/BatchOutputPayload"
     },
     {
       "$ref": "#/$defs/PromptPayload"
