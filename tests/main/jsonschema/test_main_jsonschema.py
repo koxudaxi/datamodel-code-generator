@@ -5354,6 +5354,29 @@ def test_jsonschema_array_type_union_self_ref(output_file: Path) -> None:
         )
 
 
+def test_jsonschema_recursive_nullable_union(output_file: Path) -> None:
+    """Keep nullable recursive container references importable in RootModel bases."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "recursive_nullable_union.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="recursive_nullable_union.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-python-version",
+            "3.10",
+            "--use-standard-collections",
+            "--use-union-operator",
+            "--formatters",
+            "builtin",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+    )
+
+
 def test_jsonschema_pattern_properties_field_constraints(output_file: Path) -> None:
     """Test pattern properties with field constraints."""
     run_main_and_assert(
