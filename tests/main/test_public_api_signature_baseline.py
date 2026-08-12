@@ -43,8 +43,11 @@ if TYPE_CHECKING:
     from collections import defaultdict
     from collections.abc import Callable, Iterable, Mapping, Sequence
     from pathlib import Path
+    from typing import Unpack
     from urllib.parse import ParseResult
 
+    from datamodel_code_generator import GeneratedModules
+    from datamodel_code_generator._types import GenerateConfigDict
     from datamodel_code_generator.config import GenerateConfig
     from datamodel_code_generator.format import DateClassType, DatetimeClassType, Formatter, PythonVersion
     from datamodel_code_generator.model import DataModel, DataModelFieldBase
@@ -422,6 +425,15 @@ def _baseline_generate(
     schema_version_mode: VersionMode | None = None,
     external_ref_mapping: dict[str, str] | None = None,
 ) -> str | object | None:
+    raise NotImplementedError
+
+
+def _baseline_generate_runtime_signature(
+    input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
+    *,
+    config: GenerateConfig | None = None,
+    **options: Unpack[GenerateConfigDict],
+) -> str | GeneratedModules | None:
     raise NotImplementedError
 
 
@@ -875,6 +887,12 @@ def test_generate_signature_matches_baseline() -> None:
         assert config_default == param.default, (
             f"Default mismatch for '{name}':\n  Baseline: {param.default!r}\n  GenerateConfig: {config_default!r}"
         )
+
+
+def test_generate_runtime_signature_matches_baseline() -> None:
+    """Keep generate()'s introspected public callable shape stable."""
+    assert generate.__module__ == "datamodel_code_generator"
+    assert inspect.signature(generate) == inspect.signature(_baseline_generate_runtime_signature)
 
 
 def test_parser_signature_matches_baseline() -> None:

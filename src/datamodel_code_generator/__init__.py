@@ -1298,6 +1298,37 @@ def _convert_mcp_tools(
     return source_override, InputFileType.JsonSchema, True
 
 
+def _validate_mapping_input(
+    input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
+    input_file_type: InputFileType,
+) -> None:
+    """Reject mapping inputs for formats that require text or a file."""
+    if not isinstance(input_, Mapping):
+        return
+
+    match input_file_type:
+        case InputFileType.Auto:
+            msg = (
+                "input_file_type=Auto is not supported for dict input. "
+                "Please specify input_file_type explicitly (e.g., InputFileType.JsonSchema)."
+            )
+        case InputFileType.GraphQL:
+            msg = "Dict input is not supported for GraphQL. GraphQL requires text input (SDL format)."
+        case InputFileType.XMLSchema:
+            msg = "Dict input is not supported for xmlschema. Provide XSD text, file path, or URL input."
+        case InputFileType.Protobuf:
+            msg = "Dict input is not supported for protobuf. Provide .proto text, file path, or URL input."
+        case InputFileType.Json | InputFileType.Yaml | InputFileType.CSV:
+            msg = (
+                f"Dict input is not supported for {input_file_type.value}. "
+                f"Use InputFileType.Dict to generate schema from dict data, "
+                f"or provide text/file input for {input_file_type.value} format."
+            )
+        case _:
+            return
+    raise Error(msg)
+
+
 def _uses_pydantic_v2_schema_validator(config: GenerateConfig) -> bool:
     if (schema_validator_type := config.schema_validator_type) is None:
         return False
@@ -1848,14 +1879,8 @@ def _generate_with_atomic_remote_update(  # noqa: PLR0912, PLR0914, PLR0915
                 context.cleanup()
 
 
-def _generate(  # noqa: PLR0912, PLR0914, PLR0915
-    input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
-    config: GenerateConfig,
-    caller_cwd: Path,
-    *,
-    use_output_cwd: bool,
-) -> str | GeneratedModules | None:
-    """Generate models after capturing all process-relative state."""
+def _prepare_generation_config(config: GenerateConfig, caller_cwd: Path) -> tuple[GenerateConfig, Path, Path]:
+    """Resolve configuration paths before any process-relative generation work."""
     caller_path_updates = {
         field: absolute_path
         for field in ("output", "emit_model_metadata", "custom_file_header_path")
@@ -1873,26 +1898,82 @@ def _generate(  # noqa: PLR0912, PLR0914, PLR0915
 
     _validate_output_datetime_class(config.output_model_type, config.output_datetime_class)
     _validate_alias_generator(config.output_model_type, config.alias_generator)
+    emit_settings_path = _settings_path_from(caller_cwd, config.settings_path)
+    return config, output_context_path, emit_settings_path
 
-    # Variables that may be modified during processing
-    input_filename = config.input_filename
-    input_file_type = config.input_file_type
-    extra_template_data: defaultdict[str, dict[str, Any]] | None = None
-    if config.extra_template_data is not None:
-        from datamodel_code_generator._template_data import copy_template_data  # noqa: PLC0415
 
-        memo: dict[int, Any] = {}
-        extra_template_data = defaultdict(
-            dict,
-            ((key, copy_template_data(value, memo)) for key, value in config.extra_template_data.items()),
+def _copy_generation_extra_template_data(config: GenerateConfig) -> defaultdict[str, dict[str, Any]] | None:
+    """Copy mutable template data once for the parser lifetime."""
+    if config.extra_template_data is None:
+        return None
+
+    from datamodel_code_generator._template_data import copy_template_data  # noqa: PLC0415
+
+    memo: dict[int, Any] = {}
+    extra_template_data = defaultdict(
+        dict,
+        ((key, copy_template_data(value, memo)) for key, value in config.extra_template_data.items()),
+    )
+    del memo
+    return extra_template_data
+
+
+def _build_generation_parser(  # noqa: PLR0913, PLR0917
+    input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
+    input_file_type: InputFileType,
+    parser_source: Any,
+    config: GenerateConfig,
+    parser_options: ParserConfigDict,
+    data_model_types: Any,
+    schema_versions: _SchemaVersions,
+    diagnostic_source_path: Path | None,
+    *,
+    reference_cache: Any | None = None,
+    python_type_expressions: Mapping[str, Any] | None = None,
+) -> Any:
+    """Build one fresh parser using the caller's reference-resolution base."""
+    jsonschema_version, openapi_version, asyncapi_version, xmlschema_version, protobuf_version = schema_versions
+    with _warn_on_input_string_path_failure(input_):
+        parser = _build_parser(
+            input_file_type,
+            parser_source,
+            config,
+            parser_options,
+            data_model_types,
+            jsonschema_version=jsonschema_version,
+            openapi_version=openapi_version,
+            asyncapi_version=asyncapi_version,
+            xmlschema_version=xmlschema_version,
+            protobuf_version=protobuf_version,
+            python_type_expressions=python_type_expressions,
         )
-        del memo
-    dataclass_arguments = config.dataclass_arguments
-    custom_file_header = config.custom_file_header
-    skip_root_model = config.skip_root_model
-    source_override: Mapping[str, Any] | None = None
-    diagnostic_source_path: Path | None = None
+    if reference_cache is not None and hasattr(parser, "remote_object_cache"):
+        parser.remote_object_cache = reference_cache
+    parser._diagnostic_source_path = diagnostic_source_path  # noqa: SLF001
+    return parser
 
+
+def _prepare_generation_input(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
+    input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
+    config: GenerateConfig,
+    caller_cwd: Path,
+    remote_text_cache: DefaultPutDict[str, str],
+    *,
+    input_file_type: InputFileType,
+    dataclass_arguments: DataclassArguments | None,
+    skip_root_model: bool,
+) -> tuple[
+    GenerateConfig,
+    Path | str | ParseResult | Mapping[str, Any] | list[Any],
+    str | None,
+    InputFileType,
+    DataclassArguments,
+    Mapping[str, Any] | None,
+    Path | None,
+    bool,
+    RemoteReferenceLock | None,
+]:
+    """Normalize input, resolve the remote lock, and retain only parse-ready values."""
     if (
         isinstance(input_, list)
         and input_file_type != InputFileType.MCPTools
@@ -1912,7 +1993,6 @@ def _generate(  # noqa: PLR0912, PLR0914, PLR0915
                     path if path.is_absolute() else (caller_cwd / path.expanduser()).resolve() for path in input_paths
                 ]
 
-    remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     remote_lock = config.remote_lock
     owned_remote_lock: RemoteReferenceLock | None = None
     if config.remote_lock_resolved:
@@ -1977,37 +2057,9 @@ def _generate(  # noqa: PLR0912, PLR0914, PLR0915
         if config.keyword_only:
             dataclass_arguments["kw_only"] = True
 
-    if input_file_type == InputFileType.Auto and isinstance(input_, Mapping):
-        msg = (
-            "input_file_type=Auto is not supported for dict input. "
-            "Please specify input_file_type explicitly (e.g., InputFileType.JsonSchema)."
-        )
-        raise Error(msg)
-
-    if isinstance(input_, Mapping) and input_file_type == InputFileType.GraphQL:
-        msg = "Dict input is not supported for GraphQL. GraphQL requires text input (SDL format)."
-        raise Error(msg)
-
-    if isinstance(input_, Mapping) and input_file_type == InputFileType.XMLSchema:
-        msg = "Dict input is not supported for xmlschema. Provide XSD text, file path, or URL input."
-        raise Error(msg)
-
-    if isinstance(input_, Mapping) and input_file_type == InputFileType.Protobuf:
-        msg = "Dict input is not supported for protobuf. Provide .proto text, file path, or URL input."
-        raise Error(msg)
-
-    if isinstance(input_, Mapping) and input_file_type in {
-        InputFileType.Json,
-        InputFileType.Yaml,
-        InputFileType.CSV,
-    }:
-        msg = (
-            f"Dict input is not supported for {input_file_type.value}. "
-            f"Use InputFileType.Dict to generate schema from dict data, "
-            f"or provide text/file input for {input_file_type.value} format."
-        )
-        raise Error(msg)
-
+    _validate_mapping_input(input_, input_file_type)
+    source_override: Mapping[str, Any] | None = None
+    diagnostic_source_path: Path | None = None
     if input_file_type == InputFileType.Auto:
         try:
             if isinstance(input_, Path):
@@ -2049,124 +2101,114 @@ def _generate(  # noqa: PLR0912, PLR0914, PLR0915
 
     if isinstance(input_, ParseResult) and input_file_type not in RAW_DATA_TYPES:
         input_text = None
-
-    data_model_types, source, defer_formatting, additional_options, python_type_expressions = (
-        _prepare_parser_common_options(
-            input_,
-            input_text,
-            input_file_type,
-            source_override,
-            config,
-            extra_template_data,
-            dataclass_arguments,
-            skip_root_model=skip_root_model,
-            remote_text_cache=remote_text_cache,
-        )
-    )
-    if additional_options["base_path"] is None and not isinstance(source, Path):
-        additional_options["base_path"] = caller_cwd
-
-    jsonschema_version, openapi_version, asyncapi_version, xmlschema_version, protobuf_version = (
-        _resolve_schema_versions(input_file_type, config.schema_version)
-    )
-
-    def build_parser(  # noqa: PLR0913
-        active_config: GenerateConfig,
-        parser_source: Any,
-        parser_options: ParserConfigDict,
-        active_data_model_types: Any,
-        *,
-        reference_cache: Any | None = None,
-        active_python_type_expressions: Mapping[str, Any] | None = None,
-    ) -> Any:
-        """Build one fresh parser using the caller's reference-resolution base."""
-        with _warn_on_input_string_path_failure(input_):
-            active_parser = _build_parser(
-                input_file_type,
-                parser_source,
-                active_config,
-                parser_options,
-                active_data_model_types,
-                jsonschema_version=jsonschema_version,
-                openapi_version=openapi_version,
-                asyncapi_version=asyncapi_version,
-                xmlschema_version=xmlschema_version,
-                protobuf_version=protobuf_version,
-                python_type_expressions=active_python_type_expressions,
-            )
-        if reference_cache is not None and hasattr(active_parser, "remote_object_cache"):
-            active_parser.remote_object_cache = reference_cache
-        active_parser._diagnostic_source_path = diagnostic_source_path  # noqa: SLF001
-        return active_parser
-
-    def parse_with_disposal(active_parser: Any, active_config: GenerateConfig) -> Any:
-        """Parse with one parser and dispose it if parsing fails."""
-        if not use_output_cwd:
-            active_parser._formatter_cwd = output_context_path  # noqa: SLF001
-        try:
-            with _warn_on_input_string_path_failure(input_):
-                active_results = active_parser.parse(
-                    settings_path=parser_settings_path,
-                    disable_future_imports=active_config.disable_future_imports,
-                    all_exports_scope=active_config.all_exports_scope,
-                    all_exports_collision_strategy=active_config.all_exports_collision_strategy,
-                    module_split_mode=active_config.module_split_mode,
-                    collect_model_metadata=active_config.emit_model_metadata is not None,
-                )
-        except BaseException:
-            with contextlib.suppress(BaseException):
-                active_parser._dispose()  # noqa: SLF001
-            raise
-        finally:
-            if not use_output_cwd:
-                active_parser.__dict__.pop("_formatter_cwd", None)
-        return active_results
-
-    parser_settings_path = (
-        config.settings_path if use_output_cwd else _settings_path_from(output_context_path, config.settings_path)
-    )
-    emit_settings_path = _settings_path_from(caller_cwd, config.settings_path)
-    parser = build_parser(
+    return (
         config,
-        source,
-        additional_options,
-        data_model_types,
-        active_python_type_expressions=python_type_expressions,
+        input_,
+        input_text,
+        input_file_type,
+        dataclass_arguments,
+        source_override,
+        diagnostic_source_path,
+        skip_root_model,
+        owned_remote_lock,
     )
-    with chdir(output_context_path if use_output_cwd else None):
-        results = parse_with_disposal(parser, config)
-        model_metadata = parser.model_metadata
-        repair_modules = parser.invalid_dotted_stdout_repair_modules
-        repair_state = (
-            (
-                parser.generated_model_inventory,
-                parser.source_data_fingerprint,
-                parser.remote_text_cache,
-                getattr(parser, "remote_object_cache", None),
-                parser.base_path,
+
+
+def _parse_with_disposal(  # noqa: PLR0913
+    input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
+    parser: Any,
+    config: GenerateConfig,
+    *,
+    parser_settings_path: Path | None,
+    use_output_cwd: bool,
+    output_context_path: Path,
+) -> Any:
+    """Parse with one parser and dispose it if parsing fails."""
+    if not use_output_cwd:
+        parser._formatter_cwd = output_context_path  # noqa: SLF001
+    try:
+        with _warn_on_input_string_path_failure(input_):
+            results = parser.parse(
+                settings_path=parser_settings_path,
+                disable_future_imports=config.disable_future_imports,
+                all_exports_scope=config.all_exports_scope,
+                all_exports_collision_strategy=config.all_exports_collision_strategy,
+                module_split_mode=config.module_split_mode,
+                collect_model_metadata=config.emit_model_metadata is not None,
             )
-            if repair_modules
-            else None
+    except BaseException:
+        with contextlib.suppress(BaseException):
+            parser._dispose()  # noqa: SLF001
+        raise
+    finally:
+        if not use_output_cwd:
+            parser.__dict__.pop("_formatter_cwd", None)
+    return results
+
+
+def _parse_generation(  # noqa: PLR0913, PLR0914, PLR0917
+    input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
+    input_text: str | None,
+    input_file_type: InputFileType,
+    source_override: Mapping[str, Any] | None,
+    config: GenerateConfig,
+    parser_source: Any,
+    parser_options: ParserConfigDict,
+    data_model_types: Any,
+    defer_formatting: bool,  # noqa: FBT001
+    extra_template_data: defaultdict[str, dict[str, Any]] | None,
+    dataclass_arguments: DataclassArguments,
+    *,
+    python_type_expressions: Mapping[str, Any] | None,
+    skip_root_model: bool,
+    schema_versions: _SchemaVersions,
+    diagnostic_source_path: Path | None,
+    parser_settings_path: Path | None,
+    use_output_cwd: bool,
+    output_context_path: Path,
+) -> tuple[Any, ModelMetadata | None, Any, bool]:
+    """Parse, dispose, and optionally retry invalid dotted stdout inside the output cwd."""
+    # Phase 3: build before chdir so initial reference resolution keeps the caller's cwd.
+    parser = _build_generation_parser(
+        input_,
+        input_file_type,
+        parser_source,
+        config,
+        parser_options,
+        data_model_types,
+        schema_versions,
+        diagnostic_source_path,
+        python_type_expressions=python_type_expressions,
+    )
+    # Phase 4: initial parse, disposal, and the complete retry flow share the output cwd.
+    with chdir(output_context_path if use_output_cwd else None):
+        results = _parse_with_disposal(
+            input_,
+            parser,
+            config,
+            parser_settings_path=parser_settings_path,
+            use_output_cwd=use_output_cwd,
+            output_context_path=output_context_path,
         )
+        model_metadata = parser.model_metadata
+        if repair_modules := parser.invalid_dotted_stdout_repair_modules:
+            legacy_inventory = parser.generated_model_inventory
+            legacy_source_fingerprint = parser.source_data_fingerprint
+            retry_remote_text_cache = parser.remote_text_cache
+            retry_reference_cache = getattr(parser, "remote_object_cache", None)
+            retry_base_path = parser.base_path
         parser._dispose()  # noqa: SLF001
         del parser
 
-        if repair_state is not None:
-            (
-                legacy_inventory,
-                legacy_source_fingerprint,
-                retry_remote_text_cache,
-                retry_reference_cache,
-                retry_base_path,
-            ) = repair_state
+        if repair_modules:
             retry_config = config.model_copy(
                 update={
                     "repair_invalid_dotted_stdout": False,
                     "forced_invalid_dotted_stdout_repair_modules": repair_modules,
                 }
             )
-            retry_parse: tuple[Any, Any] | None = None
             retry_options: ParserConfigDict | None = None
+            retry_completed = False
             with contextlib.suppress(Exception), warnings.catch_warnings():
                 warnings.simplefilter("ignore", DanglingRefWarning)
                 (
@@ -2187,20 +2229,30 @@ def _generate(  # noqa: PLR0912, PLR0914, PLR0915
                     remote_text_cache=retry_remote_text_cache,
                 )
                 retry_options["base_path"] = retry_base_path
-                retry_parser = build_parser(
-                    retry_config,
+                retry_parser = _build_generation_parser(
+                    input_,
+                    input_file_type,
                     retry_source,
+                    retry_config,
                     retry_options,
                     retry_data_model_types,
+                    schema_versions,
+                    diagnostic_source_path,
                     reference_cache=retry_reference_cache,
-                    active_python_type_expressions=retry_python_type_expressions,
+                    python_type_expressions=retry_python_type_expressions,
                 )
-                retry_results = parse_with_disposal(retry_parser, retry_config)
-                retry_parse = retry_parser, retry_results
+                retry_results = _parse_with_disposal(
+                    input_,
+                    retry_parser,
+                    retry_config,
+                    parser_settings_path=parser_settings_path,
+                    use_output_cwd=use_output_cwd,
+                    output_context_path=output_context_path,
+                )
+                retry_completed = True
 
-            # This is a compatibility repair: retain the completed legacy result if it cannot be proven safe.
-            if retry_parse is not None:
-                retry_parser, retry_results = retry_parse
+            if retry_completed:
+                # This is a compatibility repair: retain the completed legacy result if it cannot be proven safe.
                 try:
                     if (
                         isinstance(retry_results, str)
@@ -2219,8 +2271,23 @@ def _generate(  # noqa: PLR0912, PLR0914, PLR0915
 
             del retry_reference_cache, retry_remote_text_cache
             del retry_options
+    return results, model_metadata, data_model_types, defer_formatting
 
-    del additional_options, extra_template_data
+
+def _emit_generation(  # noqa: PLR0913
+    results: str | dict[tuple[str, ...], Any],
+    input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
+    config: GenerateConfig,
+    model_metadata: ModelMetadata | None,
+    data_model_types: Any,
+    *,
+    input_filename: str | None,
+    custom_file_header: str | None,
+    defer_formatting: bool,
+    settings_path: Path,
+    owned_remote_lock: RemoteReferenceLock | None,
+) -> str | GeneratedModules | None:
+    """Emit generated artifacts and commit a generation-owned remote lock."""
     generated = _emit_results(
         results,
         input_,
@@ -2229,13 +2296,102 @@ def _generate(  # noqa: PLR0912, PLR0914, PLR0915
         config,
         defer_formatting=defer_formatting,
         data_model_types=data_model_types,
-        settings_path=emit_settings_path,
+        settings_path=settings_path,
     )
     if config.emit_model_metadata is not None:
         _write_model_metadata(config.emit_model_metadata, model_metadata, config.encoding)
     if owned_remote_lock is not None:
         owned_remote_lock.commit()
     return generated
+
+
+def _generate(  # noqa: PLR0914
+    input_: Path | str | ParseResult | Mapping[str, Any] | list[Any],
+    config: GenerateConfig,
+    caller_cwd: Path,
+    *,
+    use_output_cwd: bool,
+) -> str | GeneratedModules | None:
+    """Generate models after capturing all process-relative state."""
+    config, output_context_path, emit_settings_path = _prepare_generation_config(config, caller_cwd)
+    input_filename = config.input_filename
+    input_file_type = config.input_file_type
+    extra_template_data = _copy_generation_extra_template_data(config)
+    dataclass_arguments = config.dataclass_arguments
+    custom_file_header = config.custom_file_header
+    skip_root_model = config.skip_root_model
+    remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
+    (
+        config,
+        input_,
+        input_text,
+        input_file_type,
+        dataclass_arguments,
+        source_override,
+        diagnostic_source_path,
+        skip_root_model,
+        owned_remote_lock,
+    ) = _prepare_generation_input(
+        input_,
+        config,
+        caller_cwd,
+        remote_text_cache,
+        input_file_type=input_file_type,
+        dataclass_arguments=dataclass_arguments,
+        skip_root_model=skip_root_model,
+    )
+    data_model_types, source, defer_formatting, additional_options, python_type_expressions = (
+        _prepare_parser_common_options(
+            input_,
+            input_text,
+            input_file_type,
+            source_override,
+            config,
+            extra_template_data,
+            dataclass_arguments,
+            skip_root_model=skip_root_model,
+            remote_text_cache=remote_text_cache,
+        )
+    )
+    if additional_options["base_path"] is None and not isinstance(source, Path):
+        additional_options["base_path"] = caller_cwd
+    schema_versions = _resolve_schema_versions(input_file_type, config.schema_version)
+    parser_settings_path = (
+        config.settings_path if use_output_cwd else _settings_path_from(output_context_path, config.settings_path)
+    )
+    results, model_metadata, data_model_types, defer_formatting = _parse_generation(
+        input_,
+        input_text,
+        input_file_type,
+        source_override,
+        config,
+        source,
+        additional_options,
+        data_model_types,
+        defer_formatting,
+        extra_template_data,
+        dataclass_arguments,
+        python_type_expressions=python_type_expressions,
+        skip_root_model=skip_root_model,
+        schema_versions=schema_versions,
+        diagnostic_source_path=diagnostic_source_path,
+        parser_settings_path=parser_settings_path,
+        use_output_cwd=use_output_cwd,
+        output_context_path=output_context_path,
+    )
+    del additional_options, extra_template_data
+    return _emit_generation(
+        results,
+        input_,
+        config,
+        model_metadata,
+        data_model_types,
+        input_filename=input_filename,
+        custom_file_header=custom_file_header,
+        defer_formatting=defer_formatting,
+        settings_path=emit_settings_path,
+        owned_remote_lock=owned_remote_lock,
+    )
 
 
 def infer_input_type(text: str) -> InputFileType:  # noqa: PLR0911, PLR0912
