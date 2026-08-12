@@ -604,6 +604,24 @@ def test_main_pydantic_v2_model_rebuild_inheritance(output_file: Path) -> None:
 
 
 @pytest.mark.benchmark
+def test_main_simple_pydantic_v2_fields(output_file: Path) -> None:
+    """Generate simple and fallback Pydantic v2 fields through the CLI."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "simple_pydantic_v2_fields.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="simple_pydantic_v2_fields.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--field-constraints",
+            "--disable-timestamp",
+        ],
+    )
+
+
+@pytest.mark.benchmark
 def test_main_autodetect(output_file: Path) -> None:
     """Test automatic input file type detection."""
     run_main_and_assert(

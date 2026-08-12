@@ -2619,7 +2619,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if original_field_name is not None and field_name is not None
             else None
         )
-        return self.data_model_field_type(
+        return self._data_model_field_constructor(
             name=field_name,
             default=effective_default,
             data_type=field_type,
@@ -2708,7 +2708,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         extras = self.get_field_extras(field)
         read_only = self._resolve_field_flag(field, "readOnly")
         write_only = self._resolve_field_flag(field, "writeOnly")
-        model_field = self.data_model_field_type(
+        model_field = self._data_model_field_constructor(
             name=field_name,
             default=default_value,
             data_type=field_type,
