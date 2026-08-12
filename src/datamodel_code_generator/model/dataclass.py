@@ -145,6 +145,7 @@ def _build_nested_dataclass_default_factory(data_type: DataType, default: dict[A
 _REQUIRED_INHERITED_INIT_KEY = "_required_inherited_init"
 _BUILTIN_TEMPLATE_FILE_PATH = "dataclass.jinja2"
 _BUILTIN_TEMPLATE_PATH = Path(_BUILTIN_TEMPLATE_FILE_PATH)
+# Keep these snapshots synchronized with public render hooks used by the built-in template.
 _BUILTIN_RENDER = TemplateBase._render  # noqa: SLF001
 _BUILTIN_TEMPLATE = DataModel.template
 _BUILTIN_TEMPLATE_FILE_PATH_DESCRIPTOR = DataModel.template_file_path

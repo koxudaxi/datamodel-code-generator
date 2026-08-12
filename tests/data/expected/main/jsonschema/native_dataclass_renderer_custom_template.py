@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 
 from typing_extensions import deprecated
 
-custom_template_model = 'Profile'
+custom_template_model_Profile = 'Profile'
 
 
-custom_template_model = 'NativeDataclassRenderer'
+custom_template_model_NativeDataclassRenderer = 'NativeDataclassRenderer'

@@ -91,6 +91,21 @@ def test_dataclass_builtin_renderer_keeps_public_argument_format(dataclass_argum
             ),
             id="inline-field-docstring",
         ),
+        pytest.param(
+            DataClass(
+                reference=Reference(path="LastInlineDoc", name="LastInlineDoc"),
+                fields=[
+                    DataModelField(
+                        name="documented",
+                        data_type=DataType(type="str"),
+                        required=True,
+                        use_inline_field_description=True,
+                        extras={"description": "last inline field doc"},
+                    ),
+                ],
+            ),
+            id="last-inline-field-docstring",
+        ),
     ],
 )
 def test_dataclass_builtin_renderer_keeps_docstring_layout(model: DataClass) -> None:
