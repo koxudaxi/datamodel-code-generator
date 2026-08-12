@@ -2381,11 +2381,10 @@ def test_parse_enum_preserves_custom_data_type_manager_factory_calls() -> None:
     class CustomDataTypeManager(model_types.data_type_manager):
         def __init__(self, **kwargs: Any) -> None:
             super().__init__(**kwargs)
-            self.any_type_requests = 0
+            self.type_requests: list[Types] = []
 
         def get_data_type(self, types: Types, **kwargs: Any) -> DataType:
-            if types is Types.any:
-                self.any_type_requests += 1
+            self.type_requests.append(types)
             return super().get_data_type(types, **kwargs)
 
     parser = JsonSchemaParser(
@@ -2404,7 +2403,7 @@ def test_parse_enum_preserves_custom_data_type_manager_factory_calls() -> None:
     )
 
     enum = next(model for model in parser.results if isinstance(model, Enum))
-    assert parser.data_type_manager.any_type_requests == len(enum.fields)  # ty: ignore[unresolved-attribute]
+    assert parser.data_type_manager.type_requests == [Types.any] * len(enum.fields)  # ty: ignore[unresolved-attribute]
     assert len({id(field.data_type) for field in enum.fields}) == len(enum.fields)
 
 
