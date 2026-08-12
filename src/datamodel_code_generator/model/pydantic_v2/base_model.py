@@ -10,6 +10,7 @@ import re
 from collections import defaultdict
 from functools import lru_cache
 from pathlib import Path
+from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 from warnings import warn
 
@@ -555,6 +556,72 @@ class DataModelField(_PydanticBaseDataModelField):
 
 
 _LOOKAROUND_PATTERN: re.Pattern[str] = re.compile(r"\(\?<?[=!]")
+
+
+_PARSER_SIMPLE_FIELD_DEFAULTS = MappingProxyType({
+    "name": None,
+    "default": None,
+    "required": False,
+    "alias": None,
+    "validation_aliases": None,
+    "serialization_alias": None,
+    "data_type": None,
+    "constraints": None,
+    "strip_default_none": False,
+    "nullable": None,
+    "parent": None,
+    "extras": None,
+    "use_annotated": False,
+    "use_serialize_as_any": False,
+    "has_default": False,
+    "use_field_description": False,
+    "use_field_description_example": False,
+    "use_inline_field_description": False,
+    "const": False,
+    "original_name": None,
+    "use_default_kwarg": False,
+    "use_missing_sentinel": False,
+    "use_one_literal_as_default": False,
+    "type_has_null": None,
+    "read_only": False,
+    "write_only": False,
+    "use_frozen_field": False,
+    "use_serialization_alias": False,
+    "use_default_factory_for_optional_nested_models": False,
+    "use_default_with_required": False,
+})
+_PARSER_SIMPLE_FIELD_NAMES = frozenset(_PARSER_SIMPLE_FIELD_DEFAULTS)
+_PARSER_SIMPLE_FIELD_LAYOUT_SUPPORTED = DataModelField.model_fields.keys() == _PARSER_SIMPLE_FIELD_NAMES
+_SET_PARSER_FIELD_ATTRIBUTE = object.__setattr__
+
+
+def _construct_parser_simple_field(**data: Any) -> DataModelField:
+    """Construct a parser-normalized simple field without Pydantic validation."""
+    match (
+        _PARSER_SIMPLE_FIELD_LAYOUT_SUPPORTED,
+        data.get("constraints"),
+        data.get("extras"),
+        data.get("const", False),
+    ):
+        case (True, None, None | {} as extras, False) if (
+            not extras and "data_type" in data and data.keys() <= _PARSER_SIMPLE_FIELD_NAMES
+        ):
+            pass
+        case _:
+            return DataModelField(**data)
+
+    # Keep Pydantic's private instance layout in this one compatibility boundary.
+    values = _PARSER_SIMPLE_FIELD_DEFAULTS.copy()
+    values.update(data)
+    values["extras"] = {}
+    field = object.__new__(DataModelField)
+    _SET_PARSER_FIELD_ATTRIBUTE(field, "__dict__", values)
+    _SET_PARSER_FIELD_ATTRIBUTE(field, "__pydantic_fields_set__", set(data))
+    _SET_PARSER_FIELD_ATTRIBUTE(field, "__pydantic_extra__", None)
+    _SET_PARSER_FIELD_ATTRIBUTE(field, "__pydantic_private__", None)
+    if (data_type := field.data_type).reference or data_type.data_types:
+        data_type.parent = field
+    return field
 
 
 def has_lookaround_pattern(
