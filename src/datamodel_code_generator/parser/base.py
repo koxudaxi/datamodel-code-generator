@@ -3837,7 +3837,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         return overridden
 
     @staticmethod
-    def __disable_union_operator_for_forward_ref_parents(data_type: DataType) -> None:
+    def __disable_union_operator_for_forward_ref(data_type: DataType) -> None:
+        data_type.use_union_operator = False
         parent = data_type.parent
         while isinstance(parent, DataType):
             if parent.is_union:
@@ -3898,7 +3899,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     source_index = model_index.get(name)
                     if source_index is not None and source_index >= i:
                         data_type.alias = f'"{name}"'
-                        cls.__disable_union_operator_for_forward_ref_parents(data_type)
+                        cls.__disable_union_operator_for_forward_ref(data_type)
                         has_aliased_forward_ref = True
 
             if has_aliased_forward_ref:
