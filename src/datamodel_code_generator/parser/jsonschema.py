@@ -8429,6 +8429,47 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         return specialized_type, None
 
+    def _get_reusable_enum_member_data_type(self) -> DataType | None:
+        """Return an inert Any leaf when custom generation code cannot observe its identity."""
+        if not self._configured_generation_types_are_builtin or self.custom_template_dir is not None:
+            return None
+
+        # Python version and the collection/union/dot/SerializeAsAny options are immutable
+        # parser-context values. They are intentionally allowed to vary because a plain Any
+        # enum leaf does not branch on them and the parser never mutates them after setup.
+        match enum_member_data_type := self.data_type_manager.get_data_type(Types.any):
+            case DataType(
+                type=type_,
+                reference=None,
+                data_types=[],
+                is_func=False,
+                kwargs=None,
+                import_=import_,
+                python_type=None,
+                is_optional=False,
+                is_dict=False,
+                is_list=False,
+                is_set=False,
+                is_frozen_set=False,
+                is_mapping=False,
+                is_sequence=False,
+                is_tuple=False,
+                tuple_item_count=None,
+                is_custom_type=False,
+                literals=[],
+                enum_member_literals=[],
+                preserve_union_member_order=False,
+                alias=None,
+                parent=None,
+                children=[],
+                strict=False,
+                dict_key=None,
+                discriminator=None,
+            ) if type_ == ANY and import_ == IMPORT_ANY:
+                return enum_member_data_type
+            case _:
+                return None
+
     def _extra_template_data_for_reference(self, reference: Reference) -> defaultdict[str, dict[str, Any]] | None:
         """Return shared template data only when the enum reference has relevant entries."""
         if not (extra_template_data := self.extra_template_data):
@@ -8474,6 +8515,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             nullable = False
 
         exclude_field_names: set[str] = set()
+        reusable_enum_member_data_type = self._get_reusable_enum_member_data_type() if enum_times else None
 
         enum_names = obj.x_enum_varnames or obj.x_enum_names
         enum_descriptions = obj.x_enum_descriptions
@@ -8506,8 +8548,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 self.data_model_field_type(
                     name=field_name,
                     default=default,
-                    data_type=self.data_type_manager.get_data_type(
-                        Types.any,
+                    data_type=(
+                        reusable_enum_member_data_type
+                        if reusable_enum_member_data_type is not None
+                        else self.data_type_manager.get_data_type(Types.any)
                     ),
                     required=True,
                     strip_default_none=self.strip_default_none,
