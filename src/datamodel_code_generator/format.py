@@ -727,11 +727,12 @@ class CodeFormatter:
         if Formatter.ISORT in self.formatters:
             code = self.apply_isort(code)
         if self.use_builtin_formatter:
+            formatter = self.apply_builtin_formatter
             match generated:
                 case True:
                     formatter = _builtin_formatter_attr("_apply_builtin_generated_formatter")
-                case _:
-                    formatter = self.apply_builtin_formatter
+                case False:
+                    pass
             code = formatter(
                 code,
                 line_length=self.builtin_line_length,
