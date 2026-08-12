@@ -11,7 +11,7 @@ from collections import Counter
 from copy import deepcopy
 from ipaddress import ip_address
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast
 
 import pydantic
 import pytest
@@ -725,7 +725,7 @@ def test_get_ref_data_type_uses_cached_validated_definition_facts(mocker: Mocker
     parser.parse(format_=False)
 
     load_ref_schema_object.assert_not_called()
-    assert parser._ref_data_type_facts["#/$defs/User"] == (None, True)
+    assert parser._ref_data_type_facts["#/$defs/User"] == (None, True, False)
     assert "user: Optional[User]" in dump_templates(list(parser.results))
 
 
@@ -738,6 +738,117 @@ def test_get_ref_data_type_falls_back_when_facts_are_not_cached(mocker: MockerFi
     parser.get_ref_data_type("#/$defs/User")
 
     load_ref_schema_object.assert_called_once_with("#/$defs/User")
+
+
+def test_local_ref_false_schema_reuses_validated_facts() -> None:
+    """Reuse local false facts only after the standard schema validation completed."""
+    parser = JsonSchemaParser("")
+    parser.raw_obj = {
+        "$defs": {
+            "Never": False,
+            "Allowed": True,
+            "Text": {"type": "string"},
+        }
+    }
+
+    assert parser._uses_builtin_false_ref_facts()
+    assert parser._is_local_ref_false_schema("#/$defs/Never", use_builtin_facts=True)
+    for ref in ("#/$defs/Never", "#/$defs/Allowed", "#/$defs/Text"):
+        resolved_ref = parser.model_resolver.resolve_ref(ref)
+        parser._cache_ref_data_type_facts(resolved_ref, parser._load_ref_schema_object(ref))
+
+    parser.raw_obj["$defs"] = {"Never": True, "Allowed": False, "Text": False}
+    assert parser._is_local_ref_false_schema("#/$defs/Never", use_builtin_facts=True)
+    assert not parser._is_local_ref_false_schema("#/$defs/Allowed", use_builtin_facts=True)
+    assert not parser._is_local_ref_false_schema("#/$defs/Text", use_builtin_facts=True)
+    parser._ref_data_type_facts["#/$defs/Never"] = cast("tuple[Any, bool, bool]", (None, False))
+    assert not parser._is_local_ref_false_schema("#/$defs/Never", use_builtin_facts=True)
+
+
+def test_local_ref_false_schema_falls_back_when_facts_are_missing() -> None:
+    """Keep the validation path when a local ref was not already parsed."""
+
+    class LoaderTrackingParser(JsonSchemaParser):
+        loaded_refs: ClassVar[list[str]] = []
+
+        def _load_ref_schema_object(self, ref: str) -> JsonSchemaObject:
+            type(self).loaded_refs.append(ref)
+            return super()._load_ref_schema_object(ref)
+
+    LoaderTrackingParser.loaded_refs = []
+    parser = LoaderTrackingParser("")
+    parser.raw_obj = {"$defs": {"Never": False}}
+
+    assert not parser._uses_builtin_false_ref_facts()
+    assert parser._is_local_ref_false_schema("#/$defs/Never", use_builtin_facts=False)
+    assert LoaderTrackingParser.loaded_refs == ["#/$defs/Never"]
+
+
+def test_local_ref_false_schema_facts_fall_back_for_custom_hooks(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep custom loader, validator, and schema construction hooks observable."""
+
+    class LoaderOverrideParser(JsonSchemaParser):
+        loaded_refs: ClassVar[list[str]] = []
+
+        def _load_ref_schema_object(self, ref: str) -> JsonSchemaObject:
+            type(self).loaded_refs.append(ref)
+            return super()._load_ref_schema_object(ref)
+
+    class ValidatorOverrideParser(JsonSchemaParser):
+        validated_paths: ClassVar[list[list[str]]] = []
+
+        def _validate_schema_object(self, raw: dict[str, Any] | Any, path: list[str]) -> JsonSchemaObject:
+            type(self).validated_paths.append(path)
+            return super()._validate_schema_object(raw, path)
+
+    class RawLoaderOverrideParser(JsonSchemaParser):
+        loaded_refs: ClassVar[list[str]] = []
+
+        def _get_ref_raw_schema(self, resolved_ref: str) -> dict[str, Any] | Any:
+            type(self).loaded_refs.append(resolved_ref)
+            return super()._get_ref_raw_schema(resolved_ref)
+
+    class CustomSchema(JsonSchemaObject):
+        constructed: ClassVar[int] = 0
+
+        def model_post_init(self, context: Any, /) -> None:
+            type(self).constructed += 1
+            super().model_post_init(context)
+
+    class SchemaOverrideParser(JsonSchemaParser):
+        SCHEMA_OBJECT_TYPE = CustomSchema
+
+    LoaderOverrideParser.loaded_refs = []
+    ValidatorOverrideParser.validated_paths = []
+    RawLoaderOverrideParser.loaded_refs = []
+    CustomSchema.constructed = 0
+    for parser_type in (LoaderOverrideParser, ValidatorOverrideParser, RawLoaderOverrideParser, SchemaOverrideParser):
+        parser = parser_type("")
+        parser.raw_obj = {"$defs": {"Never": False}}
+        parser._ref_data_type_facts["#/$defs/Never"] = (None, False, False)
+
+        assert not parser._uses_builtin_false_ref_facts()
+        assert parser._is_local_ref_false_schema("#/$defs/Never", use_builtin_facts=False)
+
+    assert LoaderOverrideParser.loaded_refs == ["#/$defs/Never"]
+    assert ValidatorOverrideParser.validated_paths == [["#/$defs/Never"]]
+    assert RawLoaderOverrideParser.loaded_refs == ["#/$defs/Never"]
+    assert CustomSchema.constructed == 1
+
+    instance_calls: list[str] = []
+    parser = JsonSchemaParser("")
+    parser.raw_obj = {"$defs": {"Never": False}}
+    parser._ref_data_type_facts["#/$defs/Never"] = (None, False, False)
+
+    def instance_loader(ref: str) -> JsonSchemaObject:
+        instance_calls.append(ref)
+        return JsonSchemaParser._load_ref_schema_object(parser, ref)
+
+    monkeypatch.setattr(parser, "_load_ref_schema_object", instance_loader)
+
+    assert not parser._uses_builtin_false_ref_facts()
+    assert parser._is_local_ref_false_schema("#/$defs/Never", use_builtin_facts=False)
+    assert instance_calls == ["#/$defs/Never"]
 
 
 def test_resolve_local_ref_path_caches_safe_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
