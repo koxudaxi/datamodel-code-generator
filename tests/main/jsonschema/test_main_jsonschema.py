@@ -16350,6 +16350,27 @@ def test_main_jsonschema_uuid_format_versions(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_native_pydantic_renderer(output_file: Path) -> None:
+    """Keep built-in Pydantic rendering identical through the CLI."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "native_pydantic_renderer.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-field-description",
+            "--use-single-line-docstring",
+            "--formatters",
+            "builtin",
+            "--disable-timestamp",
+        ],
+        assert_func=assert_file_content,
+        expected_file="native_pydantic_renderer.py",
+        importable_module_name="generated_native_pydantic_renderer",
+    )
+
+
 def test_main_dataclass_enum_member_special_defaults(output_file: Path) -> None:
     """Test enum defaults containing quotes resolve to members for scalars and lists."""
     run_main_and_assert(

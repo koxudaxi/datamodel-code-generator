@@ -555,6 +555,45 @@ class DataModelField(_PydanticBaseDataModelField):
 
 
 _LOOKAROUND_PATTERN: re.Pattern[str] = re.compile(r"\(\?<?[=!]")
+_BUILTIN_RENDER_CALL_KEYS: frozenset[str] = frozenset({
+    "base_class",
+    "class_name",
+    "dataclass_arguments",
+    "decorators",
+    "description",
+    "fields",
+    "methods",
+    "path",
+})
+_BUILTIN_RENDER_FEATURE_KEYS: tuple[str, ...] = (
+    "class_body_lines",
+    "config",
+    "prepared_validators",
+    "schema_runtime_validation",
+    "schema_runtime_validation_use_base",
+)
+
+
+def _render_builtin_field(field: DataModelField) -> str:
+    """Render one standard Pydantic v2 field without invoking Jinja."""
+    rendered_field, annotated = field._rendered_field_values()  # noqa: SLF001
+    match annotated, rendered_field:
+        case None, str() as assignment if assignment:
+            return f"    {field.name}: {field.type_hint} = {assignment}"
+        case str() as annotation, _:
+            rendered = f"    {field.name}: {annotation}"
+        case _:
+            rendered = f"    {field.name}: {field.type_hint}"
+
+    if field.has_default_factory_in_field or (field.required and not field.use_default_with_required):
+        return rendered
+    if (
+        (represented_default := field.represented_default) == "None"
+        and field.strip_default_none
+        and not field.data_type.is_optional
+    ):
+        return rendered
+    return f"{rendered} = {represented_default}"
 
 
 def has_lookaround_pattern(
@@ -630,6 +669,52 @@ class BaseModel(BaseModelBase):
         ConfigAttribute("frozen", "frozen", False),  # noqa: FBT003
         ConfigAttribute("use_attribute_docstrings", "use_attribute_docstrings", False),  # noqa: FBT003
     ]
+
+    def render(self, *, class_name: str | None = None) -> str:
+        """Render standard built-in models without paying the Jinja dispatch cost."""
+        if (rendered := self._render_builtin(class_name)) is not None:
+            return rendered
+        return super().render(class_name=class_name)
+
+    def _render_builtin(self, class_name: str | None) -> str | None:
+        """Return native built-in output, or None when Jinja semantics are required."""
+        instance_data = self.__dict__
+        if (
+            type(self) is not BaseModel
+            or self._custom_template_dir is not None
+            or "template" in instance_data
+            or "_render" in instance_data
+        ):
+            return None
+        if self.template_file_path != Path(self.TEMPLATE_FILE_PATH):
+            return None
+
+        template_data = self.extra_template_data
+        if "comment" in template_data or not template_data.keys().isdisjoint(_BUILTIN_RENDER_CALL_KEYS):
+            return None
+        if any(template_data.get(key) for key in _BUILTIN_RENDER_FEATURE_KEYS) or self.methods:
+            return None
+        if any(type(field) is not DataModelField or field.is_pydantic_extra_field for field in self.fields):
+            return None
+
+        lines = [*self.decorators, f"class {class_name or self.class_name}({self.base_class}):"]
+        if rendered_description := self.rendered_description:
+            lines.append(f"    {rendered_description}")
+        elif not self.fields:
+            lines.append("    pass")
+
+        last_field_index = len(self.fields) - 1
+        for index, field in enumerate(self.fields):
+            lines.append(_render_builtin_field(field))
+            if field_docstring := self._format_docstring(field.docstring, self.FIELD_DOCSTRING_INDENT):
+                lines.append(f"    {field_docstring}")
+                if field.use_inline_field_description and index != last_field_index:
+                    lines.extend(("", ""))
+            elif inline_docstring := field.inline_field_docstring:
+                lines.append(f"    {inline_docstring}")
+                if index != last_field_index:
+                    lines.extend(("", ""))
+        return "\n".join(lines)
 
     @classmethod
     def resolve_nested_constrained_model_type(

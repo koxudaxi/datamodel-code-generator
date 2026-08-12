@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NativeRendererModel",
+  "description": "A generated model rendered through the built-in Pydantic template.",
+  "deprecated": true,
+  "type": "object",
+  "required": [
+    "identifier",
+    "profile"
+  ],
+  "properties": {
+    "identifier": {
+      "type": "integer",
+      "description": "Stable identifier."
+    },
+    "display-name": {
+      "type": "string",
+      "description": "Human readable display name."
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "profile": {
+      "$ref": "#/$defs/Profile"
+    }
+  },
+  "$defs": {
+    "Profile": {
+      "type": "object",
+      "required": [
+        "email"
+      ],
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "active": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    }
+  }
+}
