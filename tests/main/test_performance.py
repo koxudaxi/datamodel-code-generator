@@ -235,7 +235,7 @@ def test_perf_false_reference_validation(
     )
     assert isinstance(result, str)
     assert "class FalseReferencePerformance(BaseModel):" in result
-    assert "value_499: Value" in result
+    assert result.endswith("    value_499: Value | None = None")
 
 
 @pytest.mark.perf
