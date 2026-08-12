@@ -158,6 +158,20 @@ def _is_pydantic_v2_data_model_field(value: object) -> bool:
     return _type_mro_contains_type(_model_type(value), module=_PYDANTIC_V2_BASE_MODEL_MODULE, name="DataModelField")
 
 
+def _get_builtin_pydantic_v2_field_constructor(
+    field_type: type[DataModelFieldBase],
+) -> Callable[..., DataModelFieldBase] | None:
+    """Return the internal constructor only for the exact built-in v2 field."""
+    if field_type.__module__ != _PYDANTIC_V2_BASE_MODEL_MODULE or field_type.__name__ != "DataModelField":
+        return None
+    from datamodel_code_generator.model.pydantic_v2.base_model import (  # noqa: PLC0415
+        DataModelField,
+        _construct_parser_simple_field,
+    )
+
+    return _construct_parser_simple_field if field_type is DataModelField else None
+
+
 def _get_field_dependency_ordering_model_type(model_type: type[DataModel]) -> type[DataModel] | None:
     """Return the configured model type when its fields require dependency ordering."""
     return model_type if model_type.REQUIRES_FIELD_DEPENDENCY_ORDERING else None
@@ -1943,6 +1957,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             self.data_model_root_type
         )
         self.data_model_field_type: type[DataModelFieldBase] = config.data_model_field_type
+        self._data_model_field_constructor: Callable[..., DataModelFieldBase] = self.data_model_field_type
+        if (
+            simple_field_constructor := _get_builtin_pydantic_v2_field_constructor(self.data_model_field_type)
+        ) is not None:
+            self._data_model_field_constructor = simple_field_constructor
         self._configured_generation_types_are_builtin = all(
             generation_type.__module__.startswith(_MODEL_MODULE_PREFIX)
             for generation_type in (
