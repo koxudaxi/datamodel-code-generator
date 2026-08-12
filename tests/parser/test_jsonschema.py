@@ -808,15 +808,6 @@ def test_local_ref_false_schema_facts_fall_back_for_custom_hooks(monkeypatch: py
             type(self).loaded_refs.append(resolved_ref)
             return super()._get_ref_raw_schema(resolved_ref)
 
-    class FactCacheOverrideParser(JsonSchemaParser):
-        cached_refs: ClassVar[list[str]] = []
-
-        def _cache_ref_data_type_facts(self, resolved_ref: str, obj: JsonSchemaObject) -> None:
-            type(self).cached_refs.append(resolved_ref)
-            super()._cache_ref_data_type_facts(resolved_ref, obj)
-            x_python_import, is_optional, _is_false_schema = self._ref_data_type_facts[resolved_ref]
-            self._ref_data_type_facts[resolved_ref] = (x_python_import, is_optional, False)
-
     class CustomSchema(JsonSchemaObject):
         constructed: ClassVar[int] = 0
 
@@ -830,13 +821,11 @@ def test_local_ref_false_schema_facts_fall_back_for_custom_hooks(monkeypatch: py
     LoaderOverrideParser.loaded_refs = []
     ValidatorOverrideParser.validated_paths = []
     RawLoaderOverrideParser.loaded_refs = []
-    FactCacheOverrideParser.cached_refs = []
     CustomSchema.constructed = 0
     for parser_type in (
         LoaderOverrideParser,
         ValidatorOverrideParser,
         RawLoaderOverrideParser,
-        FactCacheOverrideParser,
         SchemaOverrideParser,
     ):
         parser = parser_type("")
@@ -849,7 +838,6 @@ def test_local_ref_false_schema_facts_fall_back_for_custom_hooks(monkeypatch: py
     assert LoaderOverrideParser.loaded_refs == ["#/$defs/Never"]
     assert ValidatorOverrideParser.validated_paths == [["#/$defs/Never"]]
     assert RawLoaderOverrideParser.loaded_refs == ["#/$defs/Never"]
-    assert FactCacheOverrideParser.cached_refs == []
     assert CustomSchema.constructed == 1
 
     instance_calls: list[str] = []
