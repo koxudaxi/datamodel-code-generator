@@ -466,6 +466,14 @@ def _baseline_process_single_module_runtime_signature(
     raise NotImplementedError
 
 
+def _baseline_openapi_parser_parse_runtime_signature(
+    self,  # noqa: ANN001
+    *args: Any,
+    **kwargs: Any,
+) -> str | dict[tuple[str, ...], Result]:
+    raise NotImplementedError
+
+
 class _BaselineParser:
     def __init__(
         self,
@@ -819,8 +827,21 @@ def test_data_model_set_tuple_abi_matches_baseline() -> None:
         known_third_party,
     ) = model_types
 
+    defaulted_model_types = DataModelSet(
+        data_model,
+        root_model,
+        field_model,
+        data_type_manager,
+        dump_resolve_reference_action,
+        scalar_model,
+        union_model,
+    )
+
+    assert issubclass(DataModelSet, tuple)
     assert DataModelSet._fields == expected_fields
+    assert DataModelSet._field_defaults == {"known_third_party": None}
     assert len(model_types) == len(expected_fields)
+    assert defaulted_model_types.known_third_party is None
     assert (
         DataModelSet(
             data_model,
@@ -834,6 +855,53 @@ def test_data_model_set_tuple_abi_matches_baseline() -> None:
         )
         == model_types
     )
+
+
+@pytest.mark.parametrize(
+    ("context_type", "expected_fields"),
+    [
+        pytest.param(
+            "ModuleContext",
+            ("module", "module_key", "models", "is_init", "imports", "scoped_model_resolver"),
+            id="module-context",
+        ),
+        pytest.param(
+            "ParseConfig",
+            (
+                "with_import",
+                "use_deferred_annotations",
+                "code_formatter",
+                "module_split_mode",
+                "all_exports_scope",
+                "all_exports_collision_strategy",
+            ),
+            id="parse-config",
+        ),
+    ],
+)
+def test_parser_named_tuple_context_abi_matches_baseline(
+    context_type: str,
+    expected_fields: tuple[str, ...],
+) -> None:
+    """Keep parser processing contexts compatible with tuple consumers."""
+    from datamodel_code_generator.parser import base
+
+    context_class = getattr(base, context_type)
+    values = tuple(object() for _ in expected_fields)
+    context = context_class(*values)
+
+    assert context_class.__module__ == "datamodel_code_generator.parser.base"
+    assert issubclass(context_class, tuple)
+    assert context_class._fields == expected_fields
+    assert context_class._field_defaults == {}
+    assert tuple(context) == values
+    assert tuple(getattr(context, field) for field in expected_fields) == values
+    if context_type == "ParseConfig":
+        replacement = object()
+        updated_context = context._replace(with_import=replacement)
+
+        assert updated_context.with_import is replacement
+        assert tuple(updated_context)[1:] == values[1:]
 
 
 def test_json_schema_parser_extension_method_signatures_match_baseline() -> None:
@@ -940,6 +1008,20 @@ def test_parser_process_single_module_runtime_signature_matches_baseline() -> No
     assert inspect.signature(Parser._process_single_module) == inspect.signature(
         _baseline_process_single_module_runtime_signature
     )
+
+
+def test_openapi_and_asyncapi_parser_parse_runtime_signatures_match_baseline() -> None:
+    """Keep OpenAPI's forwarding parse hook and AsyncAPI inheritance intact."""
+    from datamodel_code_generator.parser.asyncapi import AsyncAPIParser
+    from datamodel_code_generator.parser.openapi import OpenAPIParser
+
+    expected = inspect.signature(_baseline_openapi_parser_parse_runtime_signature)
+
+    assert OpenAPIParser.parse.__module__ == "datamodel_code_generator.parser.openapi"
+    assert inspect.signature(OpenAPIParser.parse) == expected
+    assert AsyncAPIParser.parse is OpenAPIParser.parse
+    assert AsyncAPIParser.parse.__module__ == "datamodel_code_generator.parser.openapi"
+    assert inspect.signature(AsyncAPIParser.parse) == expected
 
 
 def test_parser_signature_matches_baseline() -> None:
