@@ -197,6 +197,29 @@ def test_dataclass_builtin_renderer_falls_back_for_instance_render_overrides() -
     assert model.render() == "overridden"
 
 
+def test_dataclass_builtin_renderer_keeps_fast_path_after_template_access() -> None:
+    """Keep standard cached template access independent from render dispatch."""
+    model = _dataclass_model()
+    cached_template = model.template
+
+    assert model.__dict__["template"] is cached_template
+    assert model._render_builtin(None) == DataModel.render(model)
+
+
+def test_dataclass_builtin_renderer_falls_back_for_instance_template_override() -> None:
+    """Respect a caller-owned instance template override."""
+
+    class CustomTemplate:
+        @staticmethod
+        def render(*_args: object, **_kwargs: object) -> str:
+            return "instance-template-overridden"
+
+    model = _dataclass_model()
+    model.__dict__["template"] = CustomTemplate()
+
+    assert model.render() == "instance-template-overridden"
+
+
 def test_dataclass_builtin_renderer_falls_back_for_class_render_override(monkeypatch: pytest.MonkeyPatch) -> None:
     """Respect class-level renderer replacement."""
     model = _dataclass_model()

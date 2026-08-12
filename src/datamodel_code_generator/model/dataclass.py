@@ -23,6 +23,7 @@ from datamodel_code_generator.model.base import (
     _has_field_assignment,
     _nested_model_default_factory,
     get_effective_fields,
+    get_template,
 )
 from datamodel_code_generator.model.imports import IMPORT_DATACLASS, IMPORT_FIELD
 from datamodel_code_generator.model.types import DataTypeManager as _DataTypeManager
@@ -145,6 +146,7 @@ def _build_nested_dataclass_default_factory(data_type: DataType, default: dict[A
 _REQUIRED_INHERITED_INIT_KEY = "_required_inherited_init"
 _BUILTIN_TEMPLATE_FILE_PATH = "dataclass.jinja2"
 _BUILTIN_TEMPLATE_PATH = Path(_BUILTIN_TEMPLATE_FILE_PATH)
+_NO_CACHED_TEMPLATE = object()
 # Keep these snapshots synchronized with public render hooks used by the built-in template.
 _BUILTIN_RENDER = TemplateBase._render  # noqa: SLF001
 _BUILTIN_TEMPLATE = DataModel.template
@@ -196,10 +198,14 @@ def _uses_builtin_dataclass_instance(model: DataClass) -> bool:
         return False
     if type(model.extra_template_data) not in {dict, defaultdict}:
         return False
+    if (
+        cached_template := instance_data.get("template", _NO_CACHED_TEMPLATE)
+    ) is not _NO_CACHED_TEMPLATE and cached_template is not get_template(_BUILTIN_TEMPLATE_PATH):
+        return False
     template_data_keys = model.extra_template_data.keys()
     return bool(
         model._custom_template_dir is None  # noqa: SLF001
-        and instance_data.keys().isdisjoint({"template", "_render"})
+        and "_render" not in instance_data
         and instance_data.get("template_file_path", _BUILTIN_TEMPLATE_PATH) == _BUILTIN_TEMPLATE_PATH
         and all(type(key) is str for key in template_data_keys)
         and template_data_keys.isdisjoint(_BUILTIN_RENDER_CALL_KEYS)
