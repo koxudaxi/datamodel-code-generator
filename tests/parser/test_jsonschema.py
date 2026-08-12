@@ -808,6 +808,15 @@ def test_local_ref_false_schema_facts_fall_back_for_custom_hooks(monkeypatch: py
             type(self).loaded_refs.append(resolved_ref)
             return super()._get_ref_raw_schema(resolved_ref)
 
+    class FactCacheOverrideParser(JsonSchemaParser):
+        cached_refs: ClassVar[list[str]] = []
+
+        def _cache_ref_data_type_facts(self, resolved_ref: str, obj: JsonSchemaObject) -> None:
+            type(self).cached_refs.append(resolved_ref)
+            super()._cache_ref_data_type_facts(resolved_ref, obj)
+            x_python_import, is_optional, _is_false_schema = self._ref_data_type_facts[resolved_ref]
+            self._ref_data_type_facts[resolved_ref] = (x_python_import, is_optional, False)
+
     class CustomSchema(JsonSchemaObject):
         constructed: ClassVar[int] = 0
 
@@ -821,8 +830,15 @@ def test_local_ref_false_schema_facts_fall_back_for_custom_hooks(monkeypatch: py
     LoaderOverrideParser.loaded_refs = []
     ValidatorOverrideParser.validated_paths = []
     RawLoaderOverrideParser.loaded_refs = []
+    FactCacheOverrideParser.cached_refs = []
     CustomSchema.constructed = 0
-    for parser_type in (LoaderOverrideParser, ValidatorOverrideParser, RawLoaderOverrideParser, SchemaOverrideParser):
+    for parser_type in (
+        LoaderOverrideParser,
+        ValidatorOverrideParser,
+        RawLoaderOverrideParser,
+        FactCacheOverrideParser,
+        SchemaOverrideParser,
+    ):
         parser = parser_type("")
         parser.raw_obj = {"$defs": {"Never": False}}
         parser._ref_data_type_facts["#/$defs/Never"] = (None, False, False)
@@ -833,6 +849,7 @@ def test_local_ref_false_schema_facts_fall_back_for_custom_hooks(monkeypatch: py
     assert LoaderOverrideParser.loaded_refs == ["#/$defs/Never"]
     assert ValidatorOverrideParser.validated_paths == [["#/$defs/Never"]]
     assert RawLoaderOverrideParser.loaded_refs == ["#/$defs/Never"]
+    assert FactCacheOverrideParser.cached_refs == []
     assert CustomSchema.constructed == 1
 
     instance_calls: list[str] = []
@@ -849,6 +866,83 @@ def test_local_ref_false_schema_facts_fall_back_for_custom_hooks(monkeypatch: py
     assert not parser._uses_builtin_false_ref_facts()
     assert parser._is_local_ref_false_schema("#/$defs/Never", use_builtin_facts=False)
     assert instance_calls == ["#/$defs/Never"]
+
+
+def test_local_ref_false_schema_preserves_custom_fact_cache_output() -> None:
+    """Do not let a custom cache transform change false-ref branch selection."""
+
+    class FactCacheOverrideParser(JsonSchemaParser):
+        cached_refs: ClassVar[list[str]] = []
+
+        def _cache_ref_data_type_facts(self, resolved_ref: str, obj: JsonSchemaObject) -> None:
+            type(self).cached_refs.append(resolved_ref)
+            super()._cache_ref_data_type_facts(resolved_ref, obj)
+            x_python_import, is_optional, _is_false_schema = self._ref_data_type_facts[resolved_ref]
+            self._ref_data_type_facts[resolved_ref] = (x_python_import, is_optional, False)
+
+    FactCacheOverrideParser.cached_refs = []
+    parser = FactCacheOverrideParser(
+        json.dumps({
+            "title": "Payload",
+            "type": "object",
+            "properties": {
+                "value": {
+                    "anyOf": [
+                        {"$ref": "#/$defs/Never"},
+                        {"type": "string"},
+                    ]
+                }
+            },
+            "$defs": {"Never": False},
+        })
+    )
+
+    parser.parse(format_=False)
+
+    assert not parser._uses_builtin_false_ref_facts()
+    assert "value: Optional[str] = None" in dump_templates(list(parser.results))
+    assert FactCacheOverrideParser.cached_refs == ["#", "#/$defs/Never", "#/$defs/Never"]
+
+
+def test_legacy_reference_fact_cache_remains_compatible() -> None:
+    """Keep custom caches that retain the historical two-item fact tuple working."""
+
+    class LegacyFactCacheParser(JsonSchemaParser):
+        cached_refs: ClassVar[list[str]] = []
+
+        def _cache_ref_data_type_facts(self, resolved_ref: str, obj: JsonSchemaObject) -> None:
+            type(self).cached_refs.append(resolved_ref)
+            super()._cache_ref_data_type_facts(resolved_ref, obj)
+            self._ref_data_type_facts[resolved_ref] = self._ref_data_type_facts[resolved_ref][:2]
+
+    LegacyFactCacheParser.cached_refs = []
+    parser = LegacyFactCacheParser(
+        json.dumps({
+            "title": "Payload",
+            "type": "object",
+            "properties": {
+                "user": {"$ref": "#/$defs/User"},
+                "value": {
+                    "anyOf": [
+                        {"$ref": "#/$defs/Never"},
+                        {"type": "string"},
+                    ]
+                },
+            },
+            "$defs": {
+                "Never": False,
+                "User": {"type": "string"},
+            },
+        })
+    )
+
+    parser.parse(format_=False)
+
+    output = dump_templates(list(parser.results))
+    assert not parser._uses_builtin_false_ref_facts()
+    assert "user: Optional[User] = None" in output
+    assert "value: Optional[str] = None" in output
+    assert LegacyFactCacheParser.cached_refs == ["#", "#/$defs/Never", "#/$defs/User", "#/$defs/Never", "#/$defs/User"]
 
 
 def test_resolve_local_ref_path_caches_safe_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

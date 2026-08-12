@@ -2905,7 +2905,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 ref_schema.is_boolean_schema_false,
             )
             self._ref_data_type_facts[resolved_ref] = facts
-        x_python_import, is_optional, _is_false_schema = facts
+        x_python_import, is_optional = facts[:2]
         if isinstance(x_python_import, dict) and (full_path := self._get_x_python_import_path(x_python_import)):
             import_ = Import.from_full_path(full_path)
             self.imports.append(import_)
@@ -3452,6 +3452,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _uses_builtin_false_ref_facts(self) -> bool:
         """Return whether cached local false-ref facts preserve parser hooks."""
         if self.SCHEMA_OBJECT_TYPE is not JsonSchemaObject:
+            return False
+        if getattr(self._cache_ref_data_type_facts, "__func__", None) is not _BUILTIN_REF_FACT_CACHER:
             return False
         if getattr(self._get_ref_raw_schema, "__func__", None) is not _BUILTIN_REF_RAW_SCHEMA_LOADER:
             return False
@@ -9682,3 +9684,4 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 _BUILTIN_REF_RAW_SCHEMA_LOADER = JsonSchemaParser._get_ref_raw_schema  # noqa: SLF001
 _BUILTIN_REF_SCHEMA_LOADER = JsonSchemaParser._load_ref_schema_object  # noqa: SLF001
 _BUILTIN_SCHEMA_VALIDATOR = JsonSchemaParser._validate_schema_object  # noqa: SLF001
+_BUILTIN_REF_FACT_CACHER = JsonSchemaParser._cache_ref_data_type_facts  # noqa: SLF001
