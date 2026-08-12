@@ -3476,9 +3476,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return self._load_ref_schema_object(ref).is_boolean_schema_false
         match facts:
             case (_, _, is_false_schema):
-                return is_false_schema
+                pass
             case _:
                 return self._load_ref_schema_object(ref).is_boolean_schema_false
+        return is_false_schema
 
     def _anchor_ref_path(self, root_key: tuple[str, ...], path: list[str]) -> str:  # noqa: PLR6301
         """Return the local ref path for an anchor under the current root."""
