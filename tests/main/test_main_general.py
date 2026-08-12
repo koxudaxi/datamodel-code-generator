@@ -103,6 +103,29 @@ class _GenerateParseAbort(BaseException):
     """Test-only parse abort that is not an Exception subclass."""
 
 
+def test_parser_collects_empty_model_metadata() -> None:
+    """Collect an empty metadata payload when parsing emits no models."""
+    from datamodel_code_generator.model_metadata import dump_model_metadata
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    parser = JsonSchemaParser(
+        JSON_SCHEMA_DATA_PATH / "const_null.json",
+        formatters=[],
+        skip_root_model=True,
+    )
+    try:
+        assert_output(
+            f"{parser.parse(collect_model_metadata=True, format_=False)!r}\n",
+            EXPECTED_MAIN_PATH / "empty_model_metadata_modules.txt",
+        )
+        assert_output(
+            f"{dump_model_metadata(parser.model_metadata)}\n",
+            EXPECTED_MAIN_PATH / "empty_model_metadata_map.txt",
+        )
+    finally:
+        parser._dispose()
+
+
 def test_parser_retains_builtin_import_cache_and_invalidates_custom_cache() -> None:
     """Retain built-in caches while keeping the legacy custom-model invalidation contract."""
     from datamodel_code_generator.model import DataModel, get_data_model_types
