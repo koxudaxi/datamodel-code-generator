@@ -8468,7 +8468,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             ) if type_ == ANY and import_ == IMPORT_ANY:
                 return enum_member_data_type
             case _:
-                return None
+                pass
+        return None
 
     def _extra_template_data_for_reference(self, reference: Reference) -> defaultdict[str, dict[str, Any]] | None:
         """Return shared template data only when the enum reference has relevant entries."""
