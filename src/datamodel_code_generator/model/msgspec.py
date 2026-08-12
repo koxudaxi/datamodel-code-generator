@@ -448,7 +448,8 @@ class DataModelField(DataModelFieldBase):
             case True:
                 return f"{type_hint} | UnsetType"
             case _:
-                return f"Union[{type_hint}, UnsetType]"
+                pass
+        return f"Union[{type_hint}, UnsetType]"
 
     def _imports_data_type(self, meta: str | None = None) -> DataType:
         if meta is None:
