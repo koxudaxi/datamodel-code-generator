@@ -731,7 +731,7 @@ class CodeFormatter:
             match generated:
                 case True:
                     formatter = _builtin_formatter_attr("_apply_builtin_generated_formatter")
-                case False:
+                case _:
                     pass
             code = formatter(
                 code,
