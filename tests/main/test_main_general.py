@@ -111,8 +111,10 @@ def test_parser_retains_builtin_import_cache_and_invalidates_custom_cache() -> N
 
     class CacheProbeJsonSchemaParser(JsonSchemaParser):
         cache_reuse_manifest: tuple[str, ...] = ()
+        module_processing_calls: int = 0
 
         def _process_single_module(self, module_: Any, models: list[Any], *args: Any, **kwargs: Any) -> Any:
+            self.module_processing_calls += 1
             for model in models:
                 _ = model.imports
             cached_imports = tuple(model.__dict__[model._IMPORTS_CACHE_KEY] for model in models)
@@ -162,6 +164,10 @@ def test_parser_retains_builtin_import_cache_and_invalidates_custom_cache() -> N
     parser = CacheProbeJsonSchemaParser(input_path, **parser_options)
     assert_output(parser.parse(), EXPECTED_MAIN_PATH / "builtin_import_cache_retention.py")
     assert_output(
+        f"{parser.module_processing_calls}\n",
+        EXPECTED_MAIN_PATH / "process_single_module_single_call.txt",
+    )
+    assert_output(
         "\n".join(parser.cache_reuse_manifest) + "\n",
         EXPECTED_MAIN_PATH / "builtin_import_cache_retention.txt",
     )
@@ -179,6 +185,10 @@ def test_parser_retains_builtin_import_cache_and_invalidates_custom_cache() -> N
     assert_output(
         unhashable_default_parser.parse(),
         EXPECTED_MAIN_PATH / "builtin_import_cache_unique_items_unhashable.py",
+    )
+    assert_output(
+        f"{unhashable_default_parser.module_processing_calls}\n",
+        EXPECTED_MAIN_PATH / "process_single_module_single_call.txt",
     )
     assert_output(
         "\n".join(unhashable_default_parser.cache_reuse_manifest) + "\n",

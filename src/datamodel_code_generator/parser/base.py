@@ -5027,6 +5027,47 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         all_module_fields = {field.name for model in models for field in model.fields if field.name is not None}
         scoped_model_resolver = ModelResolver(exclude_names=all_module_fields)
 
+        can_retain_cache = self.__prepare_module_models(
+            models,
+            all_module_fields=all_module_fields,
+            imports=imports,
+            scoped_model_resolver=scoped_model_resolver,
+            is_init=is_init,
+            internal_modules=internal_modules,
+            model_path_to_module_name=model_path_to_module_name,
+            can_retain_cache=can_retain_cache,
+        )
+        models = self.__process_module_models(
+            models,
+            unused_models=unused_models,
+            imports=imports,
+            scoped_model_resolver=scoped_model_resolver,
+            model_path_to_module_name=model_path_to_module_name,
+            require_update_action_models=require_update_action_models,
+            use_deferred_annotations=config.use_deferred_annotations,
+            can_retain_cache=can_retain_cache,
+        )
+        self.__finalize_module_models(
+            models,
+            use_deferred_annotations=config.use_deferred_annotations,
+            can_retain_cache=can_retain_cache,
+        )
+
+        return ModuleContext(module, module_, models, is_init, imports, scoped_model_resolver)
+
+    def __prepare_module_models(  # noqa: PLR0913
+        self,
+        models: list[DataModel],
+        *,
+        all_module_fields: set[str],
+        imports: Imports,
+        scoped_model_resolver: ModelResolver,
+        is_init: bool,
+        internal_modules: set[ModulePath],
+        model_path_to_module_name: dict[str, str],
+        can_retain_cache: bool,
+    ) -> bool:
+        """Prepare aliases, imports, and inherited enums before default processing."""
         self.__alias_shadowed_imports(models, all_module_fields, can_retain_cache=can_retain_cache)
         self.__override_required_field(models, can_retain_cache=can_retain_cache)
         self.__replace_unique_list_to_set(models, can_retain_cache=can_retain_cache)
@@ -5039,32 +5080,54 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             model_path_to_module_name=model_path_to_module_name,
         )
         self.__extract_inherited_enum(models)
-        can_retain_cache = can_retain_cache and _can_retain_model_imports_cache(
+        return can_retain_cache and _can_retain_model_imports_cache(
             models,
             configured_types_are_builtin=self._configured_generation_types_are_builtin,
         )
+
+    def __process_module_models(  # noqa: PLR0913
+        self,
+        models: list[DataModel],
+        *,
+        unused_models: list[DataModel],
+        imports: Imports,
+        scoped_model_resolver: ModelResolver,
+        model_path_to_module_name: dict[str, str],
+        require_update_action_models: list[str],
+        use_deferred_annotations: bool,
+        can_retain_cache: bool,
+    ) -> list[DataModel]:
+        """Apply defaults and model transforms before final type adjustments."""
         self.__set_reference_default_value_to_field(models, can_retain_cache=can_retain_cache)
         self.__reuse_model(models, require_update_action_models)
         self.__collapse_root_models(models, unused_models, imports, scoped_model_resolver, model_path_to_module_name)
         self.__set_default_enum_member(models, can_retain_cache=can_retain_cache)
-        self.__sort_models(models, imports, use_deferred_annotations=config.use_deferred_annotations)
+        self.__sort_models(models, imports, use_deferred_annotations=use_deferred_annotations)
         self.__change_field_name(models, can_retain_cache=can_retain_cache)
         self.__apply_discriminator_type(models, imports, can_retain_cache=can_retain_cache)
         self.__set_one_literal_on_default(models, can_retain_cache=can_retain_cache)
         self.__fix_constructor_field_ordering(models)
-        models = self.__remove_overridden_models(models)
+
+        return self.__remove_overridden_models(models)
+
+    def __finalize_module_models(
+        self,
+        models: list[DataModel],
+        *,
+        use_deferred_annotations: bool,
+        can_retain_cache: bool,
+    ) -> None:
+        """Apply final type metadata and invalidate imports only when required."""
         self.__apply_type_overrides(models)
         self.__update_type_aliases(
             models,
             self.pydantic_v2_root_model_type,
-            use_deferred_annotations=config.use_deferred_annotations,
+            use_deferred_annotations=use_deferred_annotations,
             can_retain_cache=can_retain_cache,
         )
         self.__set_validate_default_on_fields(models, can_retain_cache=can_retain_cache)
         if not can_retain_cache:
             _clear_model_imports_cache(models)
-
-        return ModuleContext(module, module_, models, is_init, imports, scoped_model_resolver)
 
     def _finalize_bound_python_type_imports(self, contexts: list[ModuleContext]) -> None:
         """Resolve aliases introduced after generic base classes are applied."""
