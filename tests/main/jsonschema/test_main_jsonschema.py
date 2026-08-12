@@ -16495,6 +16495,49 @@ def test_main_jsonschema_native_pydantic_renderer(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_native_dataclass_renderer(output_file: Path) -> None:
+    """Keep built-in dataclass rendering identical through the CLI."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "native_dataclass_renderer.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--output-model-type",
+            "dataclasses.dataclass",
+            "--use-field-description",
+            "--use-single-line-docstring",
+            "--dataclass-arguments",
+            '{"slots":true,"kw_only":true,"frozen":true}',
+            "--formatters",
+            "builtin",
+            "--disable-timestamp",
+        ],
+        assert_func=assert_file_content,
+        expected_file="native_dataclass_renderer.py",
+        importable_module_name="generated_native_dataclass_renderer",
+    )
+
+
+def test_main_jsonschema_native_dataclass_renderer_custom_template(output_file: Path) -> None:
+    """Keep custom dataclass templates on the Jinja fallback."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "native_dataclass_renderer.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--output-model-type",
+            "dataclasses.dataclass",
+            "--custom-template-dir",
+            str(DATA_PATH / "templates_native_dataclass_renderer"),
+            "--formatters",
+            "builtin",
+            "--disable-timestamp",
+        ],
+        assert_func=assert_file_content,
+        expected_file="native_dataclass_renderer_custom_template.py",
+    )
+
+
 def test_main_dataclass_enum_member_special_defaults(output_file: Path) -> None:
     """Test enum defaults containing quotes resolve to members for scalars and lists."""
     run_main_and_assert(

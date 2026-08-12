@@ -432,6 +432,22 @@ def test_perf_large_models_dataclass(tmp_path: Path) -> None:
 
 @pytest.mark.perf
 @pytest.mark.benchmark
+def test_perf_large_models_dataclass_native_render(tmp_path: Path) -> None:
+    """Track native dataclass rendering without formatter overhead."""
+    output_file = tmp_path / "output.py"
+    generate(
+        input_=PERFORMANCE_DATA_PATH / "large_models.json",
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.DataclassesDataclass,
+        formatters=[],
+    )
+    content = output_file.read_text()
+    assert content.count("class Model") >= 500
+
+
+@pytest.mark.perf
+@pytest.mark.benchmark
 @pytest.mark.parametrize(
     "use_total_false_for_typed_dict",
     [

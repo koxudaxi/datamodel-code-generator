@@ -5,6 +5,8 @@ Generates Python dataclasses using the @dataclass decorator.
 
 from __future__ import annotations
 
+from collections import defaultdict
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 
 from datamodel_code_generator._format_types import (
@@ -17,6 +19,7 @@ from datamodel_code_generator.model import DataModel, DataModelFieldBase, _rebui
 from datamodel_code_generator.model._constraints import Constraints  # noqa: TC001 # needed for pydantic
 from datamodel_code_generator.model.base import (
     UNDEFINED,
+    TemplateBase,
     _has_field_assignment,
     _nested_model_default_factory,
     get_effective_fields,
@@ -28,9 +31,7 @@ from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType, StrictTypes, chain_as_tuple
 
 if TYPE_CHECKING:
-    from collections import defaultdict
     from collections.abc import Collection, Sequence
-    from pathlib import Path
 
     from datamodel_code_generator.enums import DataclassArguments
     from datamodel_code_generator.imports import Import
@@ -142,6 +143,107 @@ def _build_nested_dataclass_default_factory(data_type: DataType, default: dict[A
 
 
 _REQUIRED_INHERITED_INIT_KEY = "_required_inherited_init"
+_BUILTIN_TEMPLATE_FILE_PATH = "dataclass.jinja2"
+_BUILTIN_TEMPLATE_PATH = Path(_BUILTIN_TEMPLATE_FILE_PATH)
+_BUILTIN_RENDER = TemplateBase._render  # noqa: SLF001
+_BUILTIN_TEMPLATE = DataModel.template
+_BUILTIN_TEMPLATE_FILE_PATH_DESCRIPTOR = DataModel.template_file_path
+_BUILTIN_RENDERED_FIELDS = DataModel.rendered_fields
+_BUILTIN_DATA_MODEL_RENDER = DataModel.render
+_BUILTIN_RENDER_CALL_KEYS: frozenset[str] = frozenset({
+    "base_class",
+    "class_name",
+    "dataclass_arguments",
+    "decorators",
+    "description",
+    "fields",
+    "methods",
+    "path",
+})
+
+
+def _uses_builtin_dataclass_classes() -> bool:
+    """Return whether public class-level rendering hooks remain unchanged."""
+    return bool(
+        DataClass.TEMPLATE_FILE_PATH == _BUILTIN_TEMPLATE_FILE_PATH
+        and DataClass.FORMAT_DESCRIPTION_AS_DOCSTRING is True
+        and DataClass._render is _BUILTIN_RENDER  # noqa: SLF001
+        and DataClass.template is _BUILTIN_TEMPLATE
+        and DataClass.template_file_path is _BUILTIN_TEMPLATE_FILE_PATH_DESCRIPTOR
+        and DataClass.rendered_fields is _BUILTIN_RENDERED_FIELDS
+        and DataModel.render is _BUILTIN_DATA_MODEL_RENDER
+        and DataModelField.field is _BUILTIN_FIELD_RENDERER
+        and DataModelField.type_hint is _BUILTIN_FIELD_TYPE_HINT
+        and DataModelField.represented_default is _BUILTIN_FIELD_REPRESENTED_DEFAULT
+        and DataModelField.docstring is _BUILTIN_FIELD_DOCSTRING
+        and DataModelField.inline_field_docstring is _BUILTIN_FIELD_INLINE_DOCSTRING
+    )
+
+
+def _uses_builtin_dataclass_arguments(arguments: object) -> bool:
+    """Return whether arguments match the public parser's strict bool mapping."""
+    return bool(
+        type(arguments) is dict
+        and all(type(key) is str and (type(value) is bool or value is None) for key, value in arguments.items())
+    )
+
+
+def _uses_builtin_dataclass_instance(model: DataClass) -> bool:
+    """Return whether instance-level custom rendering hooks are inactive."""
+    instance_data = model.__dict__
+    if type(model.fields) is not list or type(model.decorators) is not list:
+        return False
+    if type(model.extra_template_data) not in {dict, defaultdict}:
+        return False
+    template_data_keys = model.extra_template_data.keys()
+    return bool(
+        model._custom_template_dir is None  # noqa: SLF001
+        and instance_data.keys().isdisjoint({"template", "_render"})
+        and instance_data.get("template_file_path", _BUILTIN_TEMPLATE_PATH) == _BUILTIN_TEMPLATE_PATH
+        and all(type(key) is str for key in template_data_keys)
+        and template_data_keys.isdisjoint(_BUILTIN_RENDER_CALL_KEYS)
+        and all(type(field) is DataModelField for field in model.fields)
+        and _uses_builtin_dataclass_arguments(model.dataclass_arguments)
+        and all(type(decorator) is str for decorator in model.decorators)
+    )
+
+
+def _render_builtin_field(field: DataModelField) -> str:
+    """Render one standard dataclass field without invoking Jinja."""
+    if assignment := field.field:
+        return f"    {field.name}: {field.type_hint} = {assignment}"
+    rendered = f"    {field.name}: {field.type_hint}"
+    represented_default = field.represented_default
+    match (
+        field.required and not field.use_default_with_required,
+        represented_default,
+        field.strip_default_none,
+    ):
+        case (True, _, _) | (False, "None", True):
+            return rendered
+        case _:
+            pass
+    return f"{rendered} = {represented_default}"
+
+
+def _append_builtin_field_docstring(
+    lines: list[str],
+    model: DataClass,
+    field: DataModelField,
+    *,
+    is_last: bool,
+) -> None:
+    """Append the built-in template's field docstring layout."""
+    if field_docstring := model._format_docstring(field.docstring, model.FIELD_DOCSTRING_INDENT):  # noqa: SLF001
+        lines.append(f"    {field_docstring}")
+        if field.use_inline_field_description and not is_last:
+            lines.extend(("", ""))
+        return
+    if not (inline_docstring := field.inline_field_docstring):
+        return
+    lines.append(f"    {inline_docstring}")
+    if not is_last:
+        lines.extend(("", ""))
 
 
 class _DataclassReuseMixin:
@@ -187,6 +289,50 @@ class DataClass(_DataclassReuseMixin, DataModel):
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = True
     SUPPORTS_INHERITED_DISCRIMINATOR_ENUM: ClassVar[bool] = True
     SUPPORTS_KW_ONLY: ClassVar[bool] = True
+
+    def render(self, *, class_name: str | None = None) -> str:
+        """Render standard built-in dataclasses without Jinja dispatch."""
+        if (rendered := self._render_builtin(class_name)) is not None:
+            return rendered
+        return super().render(class_name=class_name)
+
+    def _render_builtin(self, class_name: str | None) -> str | None:
+        """Return native built-in output, or None when template semantics are required."""
+        if (
+            type(self) is not DataClass
+            or self.CUSTOM_TEMPLATE_ADAPTER is not None
+            or not _uses_builtin_dataclass_classes()
+            or not _uses_builtin_dataclass_instance(self)
+        ):
+            return None
+
+        arguments = [
+            f"{key}={value!r}"
+            for key, value in self.dataclass_arguments.items()
+            if value is not None and value is not False
+        ]
+        lines = [*self.decorators]
+        if lines:
+            lines.append("")
+        lines.append(f"@dataclass({', '.join(arguments)})" if arguments else "@dataclass")
+        resolved_class_name = class_name or self.class_name
+        lines.append(
+            f"class {resolved_class_name}({base_class}):"
+            if (base_class := self.base_class)
+            else f"class {resolved_class_name}:"
+        )
+
+        if rendered_description := self.rendered_description:
+            lines.append(f"    {rendered_description}")
+        elif not self.fields:
+            lines.append("    pass")
+
+        last_field_index = len(self.fields) - 1
+        for index, field in enumerate(self.fields):
+            lines.append(_render_builtin_field(field))
+            _append_builtin_field_docstring(lines, self, field, is_last=index == last_field_index)
+
+        return ("" if self.decorators else "\n") + "\n".join(lines)
 
     @classmethod
     def prepare_required_inherited_field(
@@ -429,5 +575,11 @@ class DataTypeManager(_DataTypeManager):
             use_serialize_as_any=use_serialize_as_any,
         )
 
+
+_BUILTIN_FIELD_RENDERER = DataModelField.field
+_BUILTIN_FIELD_TYPE_HINT = DataModelField.type_hint
+_BUILTIN_FIELD_REPRESENTED_DEFAULT = DataModelField.represented_default
+_BUILTIN_FIELD_DOCSTRING = DataModelField.docstring
+_BUILTIN_FIELD_INLINE_DOCSTRING = DataModelField.inline_field_docstring
 
 _rebuild_model_with_datamodel_namespace(DataModelField)

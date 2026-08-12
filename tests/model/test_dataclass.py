@@ -2,11 +2,294 @@
 
 from __future__ import annotations
 
+from collections import UserDict, UserList
+
 import pytest
 
+from datamodel_code_generator.model.base import DataModel, TemplateBase
 from datamodel_code_generator.model.dataclass import DataClass, DataModelField
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType
+
+
+def _dataclass_model(**kwargs: object) -> DataClass:
+    return DataClass(
+        reference=Reference(path="Model", name="Model"),
+        fields=[DataModelField(name="value", data_type=DataType(type="str"), required=True)],
+        **kwargs,
+    )
+
+
+@pytest.mark.parametrize(
+    "dataclass_arguments",
+    [
+        pytest.param({"slots": "x" * 100}, id="long-string"),
+        pytest.param({"slots": list(range(50))}, id="long-list"),
+        pytest.param({"slots": {"values": list(range(50))}}, id="long-dict"),
+    ],
+)
+def test_dataclass_builtin_renderer_keeps_public_argument_format(dataclass_arguments: dict[str, object]) -> None:
+    """Match Jinja pprint output for direct public construction values."""
+    model = _dataclass_model(dataclass_arguments=dataclass_arguments)
+
+    assert model.render() == DataModel.render(model)
+
+
+@pytest.mark.parametrize(
+    "model",
+    [
+        pytest.param(
+            DataClass(reference=Reference(path="Empty", name="Empty"), fields=[]),
+            id="empty",
+        ),
+        pytest.param(
+            DataClass(reference=Reference(path="Described", name="Described"), fields=[], description="model doc"),
+            id="model-description",
+        ),
+        pytest.param(
+            DataClass(
+                reference=Reference(path="Assigned", name="Assigned"),
+                fields=[
+                    DataModelField(
+                        name="assigned",
+                        data_type=DataType(type="str"),
+                        extras={"repr": False},
+                    ),
+                ],
+            ),
+            id="field-assignment",
+        ),
+        pytest.param(
+            DataClass(
+                reference=Reference(path="FieldDoc", name="FieldDoc"),
+                fields=[
+                    DataModelField(
+                        name="documented",
+                        data_type=DataType(type="str"),
+                        required=True,
+                        use_inline_field_description=True,
+                        extras={"description": "line one\nline two"},
+                    ),
+                    DataModelField(name="tail", data_type=DataType(type="str"), required=True),
+                ],
+            ),
+            id="multiline-field-docstring",
+        ),
+        pytest.param(
+            DataClass(
+                reference=Reference(path="InlineDoc", name="InlineDoc"),
+                fields=[
+                    DataModelField(
+                        name="documented",
+                        data_type=DataType(type="str"),
+                        required=True,
+                        use_inline_field_description=True,
+                        extras={"description": "inline field doc"},
+                    ),
+                    DataModelField(name="tail", data_type=DataType(type="str"), required=True),
+                ],
+            ),
+            id="inline-field-docstring",
+        ),
+    ],
+)
+def test_dataclass_builtin_renderer_keeps_docstring_layout(model: DataClass) -> None:
+    """Match the built-in template's empty and docstring layouts."""
+    assert model.render() == DataModel.render(model)
+
+
+@pytest.mark.parametrize("collision", sorted({"base_class", "class_name", "fields", "path"}))
+def test_dataclass_builtin_renderer_falls_back_for_render_key_collision(collision: str) -> None:
+    """Preserve Jinja's duplicate render-argument error behavior."""
+    model = _dataclass_model()
+    model.extra_template_data[collision] = "duplicate"
+
+    with pytest.raises(TypeError) as expected:
+        DataModel.render(model)
+    with pytest.raises(TypeError) as actual:
+        model.render()
+
+    assert str(actual.value) == str(expected.value)
+
+
+def test_dataclass_builtin_renderer_falls_back_for_non_string_template_key() -> None:
+    """Preserve Jinja's non-string keyword error."""
+    model = _dataclass_model()
+    model.extra_template_data[1] = "invalid"
+
+    with pytest.raises(TypeError) as expected:
+        DataModel.render(model)
+    with pytest.raises(TypeError) as actual:
+        model.render()
+
+    assert str(actual.value) == str(expected.value)
+
+
+def test_dataclass_builtin_renderer_falls_back_for_non_string_decorator() -> None:
+    """Preserve Jinja's public decorator stringification."""
+    model = _dataclass_model()
+    model.decorators = [1]  # type: ignore[list-item]
+
+    assert model.render() == DataModel.render(model)
+
+
+@pytest.mark.parametrize("attribute", ["decorators", "extra_template_data", "fields"])
+def test_dataclass_builtin_renderer_falls_back_for_custom_containers(attribute: str) -> None:
+    """Avoid consuming stateful public container subclasses on the native path."""
+
+    class CustomList(UserList[object]):
+        pass
+
+    class CustomDict(UserDict[object, object]):
+        pass
+
+    model = _dataclass_model()
+    match attribute:
+        case "decorators":
+            model.decorators = CustomList(model.decorators)  # type: ignore[assignment]
+        case "extra_template_data":
+            model.extra_template_data = CustomDict(model.extra_template_data)  # type: ignore[assignment]
+        case _:
+            model.fields = CustomList(model.fields)  # type: ignore[assignment]
+
+    assert model.render() == DataModel.render(model)
+
+
+def test_dataclass_builtin_renderer_falls_back_for_model_and_field_subclasses() -> None:
+    """Keep public subclass hooks on the Jinja renderer."""
+
+    class CustomDataClass(DataClass):
+        pass
+
+    class CustomDataModelField(DataModelField):
+        pass
+
+    model = CustomDataClass(reference=Reference(path="Custom", name="Custom"), fields=[])
+    field_model = DataClass(
+        reference=Reference(path="FieldCustom", name="FieldCustom"),
+        fields=[CustomDataModelField(name="value", data_type=DataType(type="str"), required=True)],
+    )
+
+    assert model.render() == DataModel.render(model)
+    assert field_model.render() == DataModel.render(field_model)
+
+
+def test_dataclass_builtin_renderer_falls_back_for_instance_render_overrides() -> None:
+    """Respect public instance-level template and renderer overrides."""
+    model = _dataclass_model()
+    model.__dict__["_render"] = lambda *args, **kwargs: "overridden"  # noqa: ARG005
+
+    assert model.render() == "overridden"
+
+
+def test_dataclass_builtin_renderer_falls_back_for_class_render_override(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Respect class-level renderer replacement."""
+    model = _dataclass_model()
+    monkeypatch.setattr(DataClass, "_render", lambda *_args, **_kwargs: "class-overridden")
+
+    assert model.render() == "class-overridden"
+
+
+def test_dataclass_builtin_renderer_falls_back_for_class_template_path_override(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Respect class-level template path replacement."""
+    model = _dataclass_model()
+    monkeypatch.setattr(DataClass, "TEMPLATE_FILE_PATH", "missing-dataclass.jinja2")
+
+    with pytest.raises(Exception) as expected:  # noqa: PT011
+        DataModel.render(model)
+    with pytest.raises(Exception) as actual:  # noqa: PT011
+        model.render()
+
+    assert type(actual.value) is type(expected.value)
+    assert str(actual.value) == str(expected.value)
+
+
+def test_dataclass_builtin_renderer_falls_back_for_class_template_override(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Respect class-level template descriptor replacement."""
+
+    class CustomTemplate:
+        @staticmethod
+        def render(*_args: object, **_kwargs: object) -> str:
+            return "template-overridden"
+
+    model = _dataclass_model()
+    monkeypatch.setattr(DataClass, "template", property(lambda _self: CustomTemplate()))
+
+    assert model.render() == DataModel.render(model) == "template-overridden"
+
+
+@pytest.mark.parametrize("owner", [DataModel, DataClass])
+def test_dataclass_builtin_renderer_falls_back_for_parent_template_override(
+    owner: type[DataModel],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Respect inherited template-dispatch descriptor replacement."""
+
+    class CustomTemplate:
+        @staticmethod
+        def render(*_args: object, **_kwargs: object) -> str:
+            return "parent-template-overridden"
+
+    model = _dataclass_model()
+    monkeypatch.setattr(owner, "template", property(lambda _self: CustomTemplate()))
+
+    assert model.render() == "parent-template-overridden"
+
+
+def test_dataclass_builtin_renderer_falls_back_for_parent_render_override(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Respect inherited public model-render replacement."""
+    model = _dataclass_model()
+    monkeypatch.setattr(DataModel, "render", lambda *_args, **_kwargs: "parent-render-overridden")
+
+    assert model.render() == "parent-render-overridden"
+
+
+def test_dataclass_builtin_renderer_falls_back_for_parent_internal_render_override(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Respect inherited low-level renderer replacement."""
+    model = _dataclass_model()
+    monkeypatch.setattr(TemplateBase, "_render", lambda *_args, **_kwargs: "parent-internal-overridden")
+
+    assert model.render() == "parent-internal-overridden"
+
+
+def test_dataclass_builtin_renderer_falls_back_for_description_policy_override(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Respect class-level description rendering policy replacement."""
+    model = DataClass(reference=Reference(path="Model", name="Model"), fields=[], description="plain description")
+    monkeypatch.setattr(DataClass, "FORMAT_DESCRIPTION_AS_DOCSTRING", False)
+
+    assert model.render() == DataModel.render(model)
+    assert '"""' not in model.render()
+
+
+def test_dataclass_builtin_renderer_falls_back_for_rendered_fields_override(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Respect class-level rendered-fields descriptor replacement."""
+    model = _dataclass_model()
+    monkeypatch.setattr(DataClass, "rendered_fields", property(lambda _self: []))
+
+    assert model.render() == DataModel.render(model)
+    assert "value: str" not in model.render()
+
+
+def test_dataclass_builtin_renderer_falls_back_for_field_property_override(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Respect class-level field rendering replacement."""
+    model = _dataclass_model()
+    monkeypatch.setattr(DataModelField, "field", property(lambda _self: "custom_field()"))
+
+    assert model.render() == DataModel.render(model)
+    assert "custom_field()" in model.render()
+
+
+def test_dataclass_builtin_renderer_falls_back_for_field_docstring_override(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Respect class-level field docstring replacement."""
+    model = _dataclass_model()
+    monkeypatch.setattr(DataModelField, "docstring", property(lambda _self: "custom docstring"))
+
+    assert model.render() == DataModel.render(model)
+    assert "custom docstring" in model.render()
 
 
 def test_data_model_field_process_const() -> None:
