@@ -9,7 +9,7 @@ from functools import wraps
 from math import isfinite
 from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, Optional, TypeVar
 
-from datamodel_code_generator.imports import IMPORT_OPTIONAL, Import
+from datamodel_code_generator.imports import IMPORT_OPTIONAL, IMPORT_UNION, Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase, _rebuild_model_with_datamodel_namespace
 from datamodel_code_generator.model._constraints import PatternConstraints as _Constraints
 from datamodel_code_generator.model.base import UNDEFINED, BaseClassDataType, _nested_model_default_factory
@@ -27,6 +27,8 @@ from datamodel_code_generator.python_literal import represent_python_value
 from datamodel_code_generator.reference import ModelType
 from datamodel_code_generator.types import (
     NONE,
+    DataType,
+    _create_context_data_type,
     chain_as_tuple,
     merge_normalized_constraint,
     normalize_integer_constraint,
@@ -58,7 +60,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from datamodel_code_generator.reference import Reference
-    from datamodel_code_generator.types import DataType
 
 
 def has_field_assignment(field: DataModelFieldBase) -> bool:
@@ -390,6 +391,65 @@ class DataModelField(DataModelFieldBase):
             return self._unset_union_data_type()
         return self.data_type
 
+    def _is_builtin_simple_unset_data_type(self, data_type: DataType) -> bool:
+        """Return whether direct rendering is equivalent for this leaf type."""
+        if data_type.data_types or data_type.dict_key or data_type.reference or data_type.python_type:
+            return False
+        if data_type.type is not None and not data_type.type.isidentifier():
+            return False
+        if data_type.literals or data_type.enum_member_literals or data_type.kwargs or data_type.alias:
+            return False
+        if any((
+            data_type.is_dict,
+            data_type.is_list,
+            data_type.is_set,
+            data_type.is_frozen_set,
+            data_type.is_mapping,
+            data_type.is_sequence,
+            data_type.is_tuple,
+        )):
+            return False
+        data_type_class = type(data_type)
+        if data_type_class is not DataType and data_type_class is not _create_context_data_type(
+            "ContextDataType",
+            DataType,
+            data_type.python_version,
+            data_type.use_standard_collections,
+            data_type.use_generic_container,
+            data_type.use_union_operator,
+            data_type.treat_dot_as_module,
+            data_type.use_serialize_as_any,
+        ):
+            return False
+        return not any((
+            data_type.is_custom_type,
+            data_type.discriminator is not None,
+            data_type.is_optional,
+            data_type.is_union,
+            data_type.is_func,
+            self._has_explicit_typing_import_requirements(data_type),
+        ))
+
+    def _get_simple_unset_type_hint(self) -> str | None:
+        """Render a standard unset union without copying its data type graph."""
+        parent = self.parent
+        data_type = self.data_type
+        if type(self) is not DataModelField or type(parent) is not Struct:
+            return None
+        if any((self.required, self.nullable, self.use_annotated)):
+            return None
+        if not self._is_builtin_simple_unset_data_type(data_type) or self._field_has_top_level_none():
+            return None
+
+        if (type_hint := data_type.type_hint) in {None, "", "UnsetType"}:
+            return None
+
+        match self._use_union_operator:
+            case True:
+                return f"{type_hint} | UnsetType"
+            case _:
+                return f"Union[{type_hint}, UnsetType]"
+
     def _imports_data_type(self, meta: str | None = None) -> DataType:
         if meta is None:
             return self._type_hint_data_type()
@@ -529,6 +589,8 @@ class DataModelField(DataModelFieldBase):
     @property
     def type_hint(self) -> str:
         """Return the type hint, using UnsetType for non-required non-nullable fields."""
+        if (simple_unset_type_hint := self._get_simple_unset_type_hint()) is not None:
+            return simple_unset_type_hint
         if self._not_required and not self.nullable:
             return self._unset_union_data_type().type_hint
         return super().type_hint
@@ -536,6 +598,12 @@ class DataModelField(DataModelFieldBase):
     @property
     def imports(self) -> tuple[Import, ...]:
         """Get imports from the structurally rendered msgspec annotation."""
+        if self._get_simple_unset_type_hint() is not None:
+            imports = self._collect_field_imports(needs_annotated=False, data_type=self.data_type)
+            trailing_imports = (
+                (IMPORT_MSGSPEC_UNSETTYPE,) if self._use_union_operator else (IMPORT_MSGSPEC_UNSETTYPE, IMPORT_UNION)
+            )
+            return chain_as_tuple(imports, (item for item in trailing_imports if item not in imports))
         meta = self._get_meta_string() if self.use_annotated else None
         return self._collect_field_imports(
             needs_annotated=meta is not None,
