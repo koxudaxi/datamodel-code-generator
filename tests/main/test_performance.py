@@ -23,7 +23,11 @@ from pathlib import Path
 import pytest
 
 from datamodel_code_generator import DataModelType, Formatter, InputFileType, ModuleSplitMode, generate
+from datamodel_code_generator.model.msgspec import DataModelField as MsgspecDataModelField
+from datamodel_code_generator.model.msgspec import DataTypeManager as MsgspecDataTypeManager
+from datamodel_code_generator.model.msgspec import Struct as MsgspecStruct
 from datamodel_code_generator.model.pydantic_v2.base_model import _construct_parser_simple_field
+from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType
 
 PERFORMANCE_DATA_PATH: Path = Path(__file__).parent.parent / "data" / "performance"
@@ -62,6 +66,21 @@ def enum_member_performance_schema() -> dict[str, object]:
             for index in range(enum_count)
         },
     }
+
+
+@pytest.fixture(scope="module")
+def simple_msgspec_unset_fields() -> list[MsgspecDataModelField]:
+    """Prepare parser-style msgspec fields outside the measured rendering call."""
+    data_type = MsgspecDataTypeManager().data_type
+    fields = [
+        MsgspecDataModelField(name=f"field_{index}", data_type=data_type(type="str"), required=False)
+        for index in range(5000)
+    ]
+    MsgspecStruct(
+        reference=Reference(path="MsgspecPerformance", name="MsgspecPerformance"),
+        fields=fields,
+    )
+    return fields
 
 
 def _build_inherited_required_performance_schema(
@@ -266,6 +285,19 @@ def test_perf_enum_member_type_reuse(enum_member_performance_schema: dict[str, o
     )
     assert isinstance(result, str)
     assert result.count("(Enum):") == 500
+
+
+@pytest.mark.perf
+@pytest.mark.benchmark
+def test_perf_simple_msgspec_unset_field_rendering(
+    simple_msgspec_unset_fields: list[MsgspecDataModelField],
+) -> None:
+    """Benchmark simple unset annotations and imports without a timing threshold."""
+    rendered = [(field.type_hint, field.imports) for field in simple_msgspec_unset_fields]
+
+    assert len(rendered) == len(simple_msgspec_unset_fields)
+    assert rendered[-1][0] == "Union[str, UnsetType]"
+    assert tuple(import_.import_ for import_ in rendered[-1][1]) == ("UnsetType", "Union", "UNSET")
 
 
 @pytest.mark.perf

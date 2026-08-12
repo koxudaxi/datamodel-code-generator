@@ -3870,6 +3870,59 @@ def test_main_jsonschema_enum_member_type_reuse(
     )
 
 
+@pytest.mark.parametrize(
+    ("output_model_type", "expected_name"),
+    [
+        *BACKEND_GOLDEN_CASES,
+        pytest.param(DataModelType.PydanticV2Dataclass.value, "pydantic_v2_dataclass", id="pydantic-v2-dataclass"),
+    ],
+)
+def test_main_jsonschema_msgspec_unset_fastpath(
+    output_file: Path,
+    output_model_type: str,
+    expected_name: str,
+) -> None:
+    """Preserve generated syntax and runtime behavior across output backends."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "msgspec_unset_fastpath.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=f"output_model_types/msgspec_unset_fastpath_{expected_name}.py",
+        extra_args=[
+            *BACKEND_GOLDEN_TARGET_ARGS,
+            "--formatters",
+            "builtin",
+            "--output-model-type",
+            output_model_type,
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+    )
+
+
+def test_main_jsonschema_msgspec_unset_fastpath_custom_template(output_file: Path) -> None:
+    """Preserve public field values and bytes observed by an external msgspec template."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "msgspec_unset_fastpath.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="msgspec_unset_fastpath_custom_template.py",
+        extra_args=[
+            *BACKEND_GOLDEN_TARGET_ARGS,
+            "--custom-template-dir",
+            str(DATA_PATH / "templates_msgspec_unset_fastpath"),
+            "--formatters",
+            "builtin",
+            "--output-model-type",
+            DataModelType.MsgspecStruct.value,
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+    )
+
+
 def test_main_jsonschema_custom_enum_template_observes_distinct_member_data_types(output_file: Path) -> None:
     """Preserve caller-owned enum member type identity for external templates."""
     run_main_and_assert(
