@@ -110,6 +110,14 @@ YamlValue = TypeAliasType("YamlValue", "dict[str, YamlValue] | list[YamlValue] |
 
 
 if TYPE_CHECKING:
+    _SchemaVersion = TypeVar(
+        "_SchemaVersion",
+        JsonSchemaVersion,
+        OpenAPIVersion,
+        AsyncAPIVersion,
+        XMLSchemaVersion,
+        ProtobufVersion,
+    )
     _GenerationInput: TypeAlias = Path | str | ParseResult | Mapping[str, Any] | list[Any]
     _ParserResults: TypeAlias = str | dict[tuple[str, ...], Result]
     _ParserSource: TypeAlias = str | Path | list[Path] | ParseResult | dict[str, Any]
@@ -1151,7 +1159,7 @@ _SchemaVersions: TypeAlias = tuple[
 ]
 
 
-def _parse_schema_version(enum_type: Any, schema_version: str, label: str) -> Any:
+def _parse_schema_version(enum_type: type[_SchemaVersion], schema_version: str, label: str) -> _SchemaVersion:
     try:
         return enum_type(schema_version)
     except ValueError:
@@ -1161,41 +1169,26 @@ def _parse_schema_version(enum_type: Any, schema_version: str, label: str) -> An
 
 
 def _resolve_schema_versions(input_file_type: InputFileType, schema_version: str | None) -> _SchemaVersions:
-    jsonschema_version: JsonSchemaVersion | None = None
-    openapi_version: OpenAPIVersion | None = None
-    asyncapi_version: AsyncAPIVersion | None = None
-    xmlschema_version: XMLSchemaVersion | None = None
-    protobuf_version: ProtobufVersion | None = None
     if not schema_version or schema_version == "auto":
-        return jsonschema_version, openapi_version, asyncapi_version, xmlschema_version, protobuf_version
+        return None, None, None, None, None
 
-    if input_file_type == InputFileType.Avro:
-        msg = "--schema-version is not supported for avro because Avro schemas do not carry a version marker"
-        raise Error(msg)
-    if input_file_type == InputFileType.GraphQL:
-        msg = f"--schema-version is not supported for {input_file_type.value}"
-        raise Error(msg)
-
-    version_targets = {
-        InputFileType.OpenAPI: (OpenAPIVersion, "OpenAPI"),
-        InputFileType.AsyncAPI: (AsyncAPIVersion, "AsyncAPI"),
-        InputFileType.XMLSchema: (XMLSchemaVersion, "XML Schema"),
-        InputFileType.Protobuf: (ProtobufVersion, "Protobuf"),
-    }
-    enum_type, label = version_targets.get(input_file_type, (JsonSchemaVersion, "JSON Schema"))
-    version = _parse_schema_version(enum_type, schema_version, label)
     match input_file_type:
+        case InputFileType.Avro:
+            msg = "--schema-version is not supported for avro because Avro schemas do not carry a version marker"
+            raise Error(msg)
+        case InputFileType.GraphQL:
+            msg = f"--schema-version is not supported for {input_file_type.value}"
+            raise Error(msg)
         case InputFileType.OpenAPI:
-            openapi_version = version
+            return None, _parse_schema_version(OpenAPIVersion, schema_version, "OpenAPI"), None, None, None
         case InputFileType.AsyncAPI:
-            asyncapi_version = version
+            return None, None, _parse_schema_version(AsyncAPIVersion, schema_version, "AsyncAPI"), None, None
         case InputFileType.XMLSchema:
-            xmlschema_version = version
+            return None, None, None, _parse_schema_version(XMLSchemaVersion, schema_version, "XML Schema"), None
         case InputFileType.Protobuf:
-            protobuf_version = version
+            return None, None, None, None, _parse_schema_version(ProtobufVersion, schema_version, "Protobuf")
         case _:
-            jsonschema_version = version
-    return jsonschema_version, openapi_version, asyncapi_version, xmlschema_version, protobuf_version
+            return _parse_schema_version(JsonSchemaVersion, schema_version, "JSON Schema"), None, None, None, None
 
 
 def _openapi_shared_options(config: GenerateConfig) -> OpenAPIParserConfigDict:
@@ -1786,24 +1779,21 @@ def generate(
     config = _apply_generate_config_preset(config)
     config = _apply_missing_sentinel_config(config)
 
-    if (
+    atomic_remote_update = (
         config.update_lock
         and not config.remote_lock_resolved
         and (config.output is not None or config.emit_model_metadata is not None)
-    ):
-        if config.output is not None and _uses_legacy_process_state(config):
-            with PROCESS_STATE_LOCK:
-                return _generate_with_atomic_remote_update(input_, config, Path.cwd(), use_output_cwd=True)
-        with PROCESS_STATE_LOCK:
-            caller_cwd = Path.cwd()
-        return _generate_with_atomic_remote_update(input_, config, caller_cwd, use_output_cwd=False)
-
+    )
     if config.output is not None and _uses_legacy_process_state(config):
         with PROCESS_STATE_LOCK:
-            return _generate(input_, config, Path.cwd(), use_output_cwd=config.output is not None)
+            return (_generate_with_atomic_remote_update if atomic_remote_update else _generate)(
+                input_, config, Path.cwd(), use_output_cwd=atomic_remote_update or config.output is not None
+            )
     with PROCESS_STATE_LOCK:
         caller_cwd = Path.cwd()
-    return _generate(input_, config, caller_cwd, use_output_cwd=False)
+    return (_generate_with_atomic_remote_update if atomic_remote_update else _generate)(
+        input_, config, caller_cwd, use_output_cwd=False
+    )
 
 
 def _generate_with_atomic_remote_update(  # noqa: PLR0912, PLR0914, PLR0915
