@@ -179,6 +179,24 @@ def _is_pydantic_v2_dump_resolve_reference_action(value: object) -> bool:
     )
 
 
+def _get_model_dedup_key(
+    model: DataModel,
+    class_name: str | None = None,
+    *,
+    use_default: bool = True,
+) -> tuple[Any, ...]:
+    """Return the cheapest exact duplicate key available for a model."""
+    if (
+        isinstance(model, Enum)
+        and (
+            key := model._get_builtin_dedup_key(class_name, use_default=use_default)  # noqa: SLF001
+        )
+        is not None
+    ):
+        return key
+    return model.get_dedup_key(class_name, use_default=use_default)
+
+
 def __getattr__(name: str) -> Any:
     """Return compatibility model modules without importing them on parser load."""
     match name:
@@ -1784,9 +1802,9 @@ def _resolve_module_file(module_: ModulePath, results: dict[ModulePath, Result])
     return ("__init__.py",), is_init
 
 
-def _format_body_safe(body: str, code_formatter: CodeFormatter) -> str:
+def _format_body_safe(body: str, code_formatter: CodeFormatter, *, generated_code: bool = False) -> str:
     try:
-        return code_formatter.format_code(body)
+        return code_formatter._format_generated_code(body) if generated_code else code_formatter.format_code(body)  # noqa: SLF001
     except Exception as exc:  # noqa: BLE001
         warn(
             f"Failed to format code: {exc!r}. Emitting unformatted output.",
@@ -1956,6 +1974,23 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             or generation_type.__module__.startswith(_MODEL_MODULE_PREFIX)
             for attribute in ("data_model_scalar_type", "data_model_union_type")
         )
+        self._uses_standard_generation_templates = self._configured_generation_types_are_builtin and not any((
+            config.custom_template_dir,
+            config.additional_imports,
+            config.class_decorators,
+            config.base_class,
+            config.base_class_map,
+            config.extra_template_data,
+            config.validators,
+            config.generate_schema_validators,
+            config.alias_generator,
+            config.custom_class_name_generator,
+            config.dump_resolve_reference_action is not None
+            and not _is_pydantic_v2_dump_resolve_reference_action(config.dump_resolve_reference_action),
+            config.type_mappings,
+            config.type_overrides,
+            config.import_overrides,
+        ))
 
         self.imports: Imports = Imports(config.use_exact_imports)
         self.use_exact_imports: bool = config.use_exact_imports
@@ -2515,8 +2550,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 reuse_allowed
                 and (original_model := model_class_names.get(class_name)) is not None
                 and self._reuse_optimization_context.allows_model(original_model)
-                and model.get_dedup_key(model.duplicate_class_name, use_default=False)
-                == original_model.get_dedup_key(original_model.duplicate_class_name, use_default=False)
+                and _get_model_dedup_key(model, model.duplicate_class_name, use_default=False)
+                == _get_model_dedup_key(original_model, original_model.duplicate_class_name, use_default=False)
             ):
                 model_to_duplicate_models[original_model].append(model)
                 continue
@@ -2545,7 +2580,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     if model in models_to_remove or isinstance(model, self.data_model_root_type):
                         continue
                     model._dedup_key_cache.clear()  # noqa: SLF001
-                    content_key_to_models[model.get_dedup_key(None, use_default=True)].append(model)
+                    content_key_to_models[_get_model_dedup_key(model)].append(model)
 
                 if not (
                     duplicates := [
@@ -5293,7 +5328,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
         body = "\n".join(result)
         if config.code_formatter:
-            body = _format_body_safe(body, config.code_formatter)
+            body = _format_body_safe(
+                body,
+                config.code_formatter,
+                generated_code=self._uses_standard_generation_templates,
+            )
 
         return Result(
             body=body,
@@ -5324,7 +5363,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 parts += [str(export_imports), "", export_imports.dump_all(multiline=True)]
                 body = "\n".join(parts)
                 if config.code_formatter:
-                    body = _format_body_safe(body, config.code_formatter)
+                    body = _format_body_safe(
+                        body,
+                        config.code_formatter,
+                        generated_code=self._uses_standard_generation_templates,
+                    )
                 results[init_module] = Result(
                     body=body,
                     future_imports=future_imports_str,

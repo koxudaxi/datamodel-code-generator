@@ -1,0 +1,16 @@
+[unterminated-import]
+'from package import (\n    Item\n'
+[newer-target]
+'value = 1\n'
+[empty]
+''
+[leading-header]
+'# generated header\nvalue = 1\n'
+[body-only]
+'class Model:\n    pass\n'
+[invalid-import]
+'from package import )\n'
+[compound-import-line]
+'import package\n'
+[import-only]
+'import package\n'

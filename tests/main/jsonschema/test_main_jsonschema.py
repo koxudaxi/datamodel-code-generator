@@ -5158,6 +5158,47 @@ def test_long_description_wrap_string_literal(output_file: Path) -> None:
     )
 
 
+@pytest.mark.isolate_builtin_formatter_config
+@pytest.mark.parametrize(
+    ("input_name", "expected_name", "extra_args"),
+    [
+        pytest.param(
+            "long_description.json",
+            "long_description_wrap_string_literal.py",
+            ["--wrap-string-literal"],
+            id="wrap-string-literal",
+        ),
+        pytest.param(
+            "all_of_any_of_base_class_ref.json",
+            "all_of_any_of_base_class_ref.py",
+            ["--snake-case-field", "--use-double-quotes", "--reuse-model"],
+            id="string-normalization",
+        ),
+        pytest.param(
+            "extra_fields.json",
+            "extra_fields_v2_forbid.py",
+            ["--extra-fields", "forbid", "--output-model-type", "pydantic_v2.BaseModel"],
+            id="config-dict",
+        ),
+    ],
+)
+def test_main_builtin_generated_formatter_fallbacks(
+    input_name: str,
+    expected_name: str,
+    extra_args: list[str],
+    output_file: Path,
+) -> None:
+    """Preserve generated output when built-in formatter fast-path guards fall back."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / input_name,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=expected_name,
+        extra_args=[*extra_args, "--formatters", "builtin"],
+    )
+
+
 @pytest.mark.allow_direct_assert
 def test_version(capsys: pytest.CaptureFixture) -> None:
     """Test version output."""
@@ -10441,6 +10482,8 @@ def test_main_jsonschema_type_alias_type_recursive_exports(output_dir: Path) -> 
             "recursive",
             "--disable-future-imports",
             "--disable-timestamp",
+            "--formatters",
+            "builtin",
         ],
         force_exec_validation=True,
         importable_module_name="generated_type_alias_type_module",

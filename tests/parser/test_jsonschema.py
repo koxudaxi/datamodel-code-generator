@@ -21,6 +21,7 @@ from datamodel_code_generator import (
     AllOfMergeMode,
     DataModelType,
     Error,
+    Formatter,
     PythonVersion,
     ReadOnlyWriteOnlyModelType,
 )
@@ -72,6 +73,59 @@ DATA_PATH: Path = Path(__file__).parents[1] / "data" / "jsonschema"
 
 def _json_schema_object(data: dict[str, Any]) -> JsonSchemaObject:
     return JsonSchemaObject.model_validate(data)
+
+
+def test_builtin_formatter_falls_back_for_custom_class_name_generator() -> None:
+    """Keep invalid custom names on the full formatter's syntax-error path."""
+
+    def invalid_class_name(_: str) -> str:
+        return "Bad-Name"
+
+    model_types = get_data_model_types(
+        DataModelType.PydanticV2BaseModel,
+        target_python_version=PythonVersion.PY_311,
+    )
+    input_path = DATA_PATH / "user.json"
+    parser = JsonSchemaParser(
+        input_path,
+        base_path=input_path.parent,
+        data_model_type=model_types.data_model,
+        data_model_root_type=model_types.root_model,
+        data_model_field_type=model_types.field_model,
+        data_type_manager_type=model_types.data_type_manager,
+        dump_resolve_reference_action=model_types.dump_resolve_reference_action,
+        custom_class_name_generator=invalid_class_name,
+        formatters=[Formatter.BUILTIN],
+        target_python_version=PythonVersion.PY_311,
+    )
+
+    assert_output(parser.parse(), DATA_PATH / "builtin_formatter_custom_class_name.snapshot")
+
+
+def test_builtin_formatter_falls_back_for_custom_resolve_reference_action() -> None:
+    """Keep custom trailing source on the full formatter's syntax-error path."""
+
+    def invalid_resolve_reference_action(_: object) -> str:
+        return "BROKEN = ("
+
+    model_types = get_data_model_types(
+        DataModelType.PydanticV2BaseModel,
+        target_python_version=PythonVersion.PY_311,
+    )
+    input_path = DATA_PATH / "self_reference.json"
+    parser = JsonSchemaParser(
+        input_path,
+        base_path=input_path.parent,
+        data_model_type=model_types.data_model,
+        data_model_root_type=model_types.root_model,
+        data_model_field_type=model_types.field_model,
+        data_type_manager_type=model_types.data_type_manager,
+        dump_resolve_reference_action=invalid_resolve_reference_action,
+        formatters=[Formatter.BUILTIN],
+        target_python_version=PythonVersion.PY_311,
+    )
+
+    assert_output(parser.parse(), DATA_PATH / "builtin_formatter_custom_resolve_action.snapshot")
 
 
 @pytest.fixture(autouse=True)
