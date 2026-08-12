@@ -3838,6 +3838,59 @@ def test_main_jsonschema_special_enum(output_file: Path) -> None:
     )
 
 
+@pytest.mark.parametrize(
+    ("output_model_type", "expected_name"),
+    [
+        *BACKEND_GOLDEN_CASES,
+        pytest.param(DataModelType.PydanticV2Dataclass.value, "pydantic_v2_dataclass", id="pydantic-v2-dataclass"),
+    ],
+)
+def test_main_jsonschema_enum_member_type_reuse(
+    output_file: Path,
+    output_model_type: str,
+    expected_name: str,
+) -> None:
+    """Preserve enum member output across all built-in model backends."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_member_type_reuse.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=f"output_model_types/enum_member_type_reuse_{expected_name}.py",
+        extra_args=[
+            *BACKEND_GOLDEN_TARGET_ARGS,
+            "--formatters",
+            "builtin",
+            "--output-model-type",
+            output_model_type,
+            "--use-field-description",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+    )
+
+
+def test_main_jsonschema_custom_enum_template_observes_distinct_member_data_types(output_file: Path) -> None:
+    """Preserve caller-owned enum member type identity for external templates."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_member_type_reuse.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="enum_member_type_reuse_custom_template.py",
+        extra_args=[
+            "--custom-template-dir",
+            str(DATA_PATH / "templates_enum_member_identity"),
+            "--formatters",
+            "builtin",
+            "--output-model-type",
+            DataModelType.PydanticV2BaseModel.value,
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+    )
+
+
 @pytest.mark.isolate_builtin_formatter_config
 def test_main_jsonschema_builtin_formatter_preserves_unicode_line_separators(output_file: Path) -> None:
     """Keep Unicode separators in generated enum values without creating source lines."""

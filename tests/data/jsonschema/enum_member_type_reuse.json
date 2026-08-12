@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EnumMemberTypes",
+  "type": "object",
+  "required": ["state", "rank", "choice"],
+  "properties": {
+    "state": {
+      "type": "string",
+      "enum": ["ready", "in-progress", ""],
+      "x-enum-varnames": ["READY", "IN_PROGRESS", "EMPTY"],
+      "x-enum-descriptions": ["Ready to run", "Currently running", "Explicit empty state"]
+    },
+    "rank": {
+      "type": "integer",
+      "enum": [0, 1, -1],
+      "x-enum-varnames": ["ZERO", "ONE", "NEGATIVE_ONE"]
+    },
+    "choice": {
+      "enum": [null, true, 2, 2.5, "two"],
+      "x-enum-varnames": ["NONE", "ENABLED", "INTEGER", "NUMBER", "TEXT"]
+    }
+  }
+}

@@ -30,6 +30,7 @@ from datamodel_code_generator.http import _get_http_stack, _get_httpx
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModelFieldBase, get_data_model_types
 from datamodel_code_generator.model.dataclass import DataClass
+from datamodel_code_generator.model.enum import Enum
 from datamodel_code_generator.model.pydantic_v2.base_model import BaseModel
 from datamodel_code_generator.model.pydantic_v2.root_model import RootModel
 from datamodel_code_generator.model.runtime_validation import (
@@ -2270,17 +2271,43 @@ def test_parse_combined_schema_anyof_with_ref_and_schema_keywords() -> None:
     assert len(results) >= 1
 
 
-def test_parse_enum_empty_enum_not_nullable() -> None:
-    """Test parse_enum returns null type when enum_fields is empty and not nullable."""
+@pytest.mark.parametrize(
+    ("schema", "expected_type", "has_reference"),
+    [
+        pytest.param({"type": "integer", "enum": []}, "None", False, id="empty"),
+        pytest.param({"type": "string", "enum": [None]}, None, True, id="null-only"),
+    ],
+)
+def test_parse_enum_without_members_does_not_request_any_type(
+    schema: dict[str, Any],
+    expected_type: str | None,
+    *,
+    has_reference: bool,
+) -> None:
+    """Avoid constructing an unused Any leaf when no enum members are generated."""
     parser = JsonSchemaParser("")
-    obj = JsonSchemaObject.model_validate({"type": "integer", "enum": []})
-    result = parser.parse_enum("EmptyEnum", obj, ["EmptyEnum"])
-    assert result.type == "None"
+    type_requests: list[Types] = []
+
+    class CountingDataTypeManager(type(parser.data_type_manager)):
+        def get_data_type(self, types: Types, **kwargs: Any) -> DataType:
+            type_requests.append(types)
+            return super().get_data_type(types, **kwargs)
+
+    parser.data_type_manager = CountingDataTypeManager()
+    result = parser.parse_enum(
+        "NoMembers",
+        JsonSchemaObject.model_validate(schema),
+        ["NoMembers"],
+    )
+
+    assert result.type == expected_type
+    assert (result.reference is not None) is has_reference
+    assert Types.any not in type_requests
 
 
 def test_parse_enum_preserves_explicit_null_member() -> None:
     """Keep a native JSON null member distinct from an unset field default."""
-    from datamodel_code_generator.model.enum import NULL_ENUM_MEMBER_VALUE, Enum
+    from datamodel_code_generator.model.enum import NULL_ENUM_MEMBER_VALUE
 
     parser = JsonSchemaParser("")
     parser.parse_enum("Mixed", JsonSchemaObject.model_validate({"enum": [None, "None"]}), ["Mixed"])
@@ -2289,6 +2316,123 @@ def test_parse_enum_preserves_explicit_null_member() -> None:
     assert enum.fields[0].default is NULL_ENUM_MEMBER_VALUE
     assert enum.find_member(None).field is enum.fields[0]  # ty: ignore[union-attr]
     assert enum.find_member("None").field is enum.fields[1]  # ty: ignore[union-attr]
+
+
+@pytest.mark.parametrize("output_model_type", DataModelType)
+def test_parse_enum_reuses_parentless_any_leaf_for_builtin_backends(output_model_type: DataModelType) -> None:
+    """Share one inert Any leaf across enum members for every built-in output backend."""
+    model_types = get_data_model_types(output_model_type, target_python_version=PythonVersion.PY_311)
+    parser = JsonSchemaParser(
+        "",
+        data_model_type=model_types.data_model,
+        data_model_root_type=model_types.root_model,
+        data_model_field_type=model_types.field_model,
+        data_type_manager_type=model_types.data_type_manager,
+        target_python_version=PythonVersion.PY_311,
+    )
+
+    parser.parse_enum(
+        "Status",
+        JsonSchemaObject.model_validate({"type": "string", "enum": ["ready", "running", "done"]}),
+        ["Status"],
+    )
+
+    enum = next(model for model in parser.results if isinstance(model, Enum))
+    member_data_type = enum.fields[0].data_type
+    assert all(field.data_type is member_data_type for field in enum.fields)
+    parser.generation_store.refresh()
+    model_id = parser.generation_store.model_id(enum)
+    assert model_id is not None
+    occurrence_facts = [
+        parser.generation_store.data_type_facts[data_type_id]
+        for data_type_id in parser.generation_store.data_types_by_model[model_id]
+        if parser.generation_store.data_type_facts[data_type_id].role == "field"
+    ]
+    assert [fact.owner_field_index for fact in occurrence_facts] == [0, 1, 2]
+    assert all(fact.data_type is member_data_type for fact in occurrence_facts)
+    assert member_data_type.parent is None
+    assert member_data_type.data_types == []
+    assert member_data_type.children == []
+    assert member_data_type.kwargs is None
+    assert member_data_type.literals == []
+    assert member_data_type.enum_member_literals == []
+
+
+def test_parse_enum_does_not_reuse_mutable_any_leaf() -> None:
+    """Fall back to caller-owned copies when the built-in Any prototype carries mutable state."""
+    parser = JsonSchemaParser("")
+    parser.data_type_manager.type_map[Types.any].kwargs = {"marker": True}  # ty: ignore[unresolved-attribute]
+
+    parser.parse_enum(
+        "Status",
+        JsonSchemaObject.model_validate({"type": "string", "enum": ["ready", "running", "done"]}),
+        ["Status"],
+    )
+
+    enum = next(model for model in parser.results if isinstance(model, Enum))
+    assert len({id(field.data_type) for field in enum.fields}) == len(enum.fields)
+    assert all(field.data_type.kwargs == {"marker": True} for field in enum.fields)
+
+
+def test_parse_enum_preserves_custom_data_type_manager_factory_calls() -> None:
+    """Keep custom type managers on the per-member compatibility path."""
+    model_types = get_data_model_types(DataModelType.PydanticV2BaseModel, target_python_version=PythonVersion.PY_311)
+
+    class CustomDataTypeManager(model_types.data_type_manager):
+        def __init__(self, **kwargs: Any) -> None:
+            super().__init__(**kwargs)
+            self.any_type_requests = 0
+
+        def get_data_type(self, types: Types, **kwargs: Any) -> DataType:
+            if types is Types.any:
+                self.any_type_requests += 1
+            return super().get_data_type(types, **kwargs)
+
+    parser = JsonSchemaParser(
+        "",
+        data_model_type=model_types.data_model,
+        data_model_root_type=model_types.root_model,
+        data_model_field_type=model_types.field_model,
+        data_type_manager_type=CustomDataTypeManager,
+        target_python_version=PythonVersion.PY_311,
+    )
+
+    parser.parse_enum(
+        "Status",
+        JsonSchemaObject.model_validate({"type": "string", "enum": ["ready", "running", "done"]}),
+        ["Status"],
+    )
+
+    enum = next(model for model in parser.results if isinstance(model, Enum))
+    assert parser.data_type_manager.any_type_requests == len(enum.fields)  # ty: ignore[unresolved-attribute]
+    assert len({id(field.data_type) for field in enum.fields}) == len(enum.fields)
+
+
+def test_parse_enum_preserves_custom_field_type_owned_data_types() -> None:
+    """Keep custom field subclasses on the per-member compatibility path."""
+    model_types = get_data_model_types(DataModelType.PydanticV2BaseModel, target_python_version=PythonVersion.PY_311)
+
+    class CustomField(model_types.field_model):
+        pass
+
+    parser = JsonSchemaParser(
+        "",
+        data_model_type=model_types.data_model,
+        data_model_root_type=model_types.root_model,
+        data_model_field_type=CustomField,
+        data_type_manager_type=model_types.data_type_manager,
+        target_python_version=PythonVersion.PY_311,
+    )
+
+    parser.parse_enum(
+        "Status",
+        JsonSchemaObject.model_validate({"type": "string", "enum": ["ready", "running", "done"]}),
+        ["Status"],
+    )
+
+    enum = next(model for model in parser.results if isinstance(model, Enum))
+    assert all(isinstance(field, CustomField) for field in enum.fields)
+    assert len({id(field.data_type) for field in enum.fields}) == len(enum.fields)
 
 
 @pytest.mark.parametrize(

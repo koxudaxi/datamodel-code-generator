@@ -45,6 +45,25 @@ def simple_pydantic_v2_data_types() -> list[DataType]:
     return [DataType(type="str") for _ in range(5000)]
 
 
+@pytest.fixture(scope="module")
+def enum_member_performance_schema() -> dict[str, object]:
+    """Prepare an enum-heavy schema outside the measured generation call."""
+    enum_count = 500
+    return {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "EnumMemberPerformance",
+        "type": "object",
+        "properties": {f"status_{index}": {"$ref": f"#/$defs/Status{index}"} for index in range(enum_count)},
+        "$defs": {
+            f"Status{index}": {
+                "type": "string",
+                "enum": [f"value_{index}_{member}" for member in range(20)],
+            }
+            for index in range(enum_count)
+        },
+    }
+
+
 def _build_inherited_required_performance_schema(
     *,
     base_first: bool,
@@ -232,6 +251,21 @@ def test_perf_simple_pydantic_v2_field_construction(simple_pydantic_v2_data_type
     ]
     assert len(fields) == len(simple_pydantic_v2_data_types)
     assert fields[-1].name == "field_4999"
+
+
+@pytest.mark.perf
+@pytest.mark.benchmark
+def test_perf_enum_member_type_reuse(enum_member_performance_schema: dict[str, object]) -> None:
+    """Benchmark enum-heavy generation without a timing threshold."""
+    result = generate(
+        enum_member_performance_schema,
+        input_file_type=InputFileType.JsonSchema,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        formatters=[],
+        disable_timestamp=True,
+    )
+    assert isinstance(result, str)
+    assert result.count("(Enum):") == 500
 
 
 @pytest.mark.perf
