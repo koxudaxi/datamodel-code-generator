@@ -195,6 +195,29 @@ def test_parser_retains_builtin_import_cache_and_invalidates_custom_cache() -> N
         EXPECTED_MAIN_PATH / "builtin_import_cache_unique_items_unhashable.txt",
     )
 
+    input_path = DATA_PATH / "performance" / "large_models.json"
+    parser = CacheProbeJsonSchemaParser(
+        input_path,
+        **{**parser_options, "base_path": input_path.parent},
+    )
+    large_models = cast(
+        "dict[tuple[str, ...], Any]",
+        parser.parse(module_split_mode=datamodel_code_generator.ModuleSplitMode.Single),
+    )
+
+    assert_output(
+        large_models["model499.py",].body,
+        EXPECTED_MAIN_PATH / "module_split_large_models_model499.py",
+    )
+    assert_output(
+        f"{type(large_models).__name__}\n{len(large_models)}\nmodel499.py\n",
+        EXPECTED_MAIN_PATH / "module_split_large_models_manifest.txt",
+    )
+    assert_output(
+        f"{parser.module_processing_calls}\n",
+        EXPECTED_MAIN_PATH / "process_single_module_large_models_calls.txt",
+    )
+
     input_path = JSON_SCHEMA_DATA_PATH / "person.json"
     custom_parser = JsonSchemaParser(
         input_path,

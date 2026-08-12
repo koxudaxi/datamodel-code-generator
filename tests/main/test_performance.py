@@ -22,7 +22,7 @@ from pathlib import Path
 
 import pytest
 
-from datamodel_code_generator import DataModelType, Formatter, InputFileType, generate
+from datamodel_code_generator import DataModelType, Formatter, InputFileType, ModuleSplitMode, generate
 
 PERFORMANCE_DATA_PATH: Path = Path(__file__).parent.parent / "data" / "performance"
 EXPECTED_STARTUP_MEASUREMENT_CASES = {
@@ -230,6 +230,24 @@ def test_perf_large_models(tmp_path: Path) -> None:
     content = output_file.read_text()
     # Verify we generated all 500 models
     assert content.count("class Model") >= 500
+
+
+@pytest.mark.perf
+@pytest.mark.benchmark
+def test_perf_large_models_single_module_stdout() -> None:
+    """Benchmark the 500-model modular stdout path without formatting overhead."""
+    result = generate(
+        input_=PERFORMANCE_DATA_PATH / "large_models.json",
+        input_file_type=InputFileType.JsonSchema,
+        module_split_mode=ModuleSplitMode.Single,
+        output=None,
+        formatters=[],
+        disable_timestamp=True,
+    )
+
+    assert isinstance(result, dict)
+    assert len(result) == 502
+    assert ("model499.py",) in result
 
 
 @pytest.mark.perf
