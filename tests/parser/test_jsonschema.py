@@ -17,10 +17,12 @@ import pydantic
 import pytest
 import yaml
 
+import datamodel_code_generator._builtin_formatter as builtin_formatter
 from datamodel_code_generator import (
     AllOfMergeMode,
     DataModelType,
     Error,
+    Formatter,
     PythonVersion,
     ReadOnlyWriteOnlyModelType,
 )
@@ -65,6 +67,8 @@ from datamodel_code_generator.types import ANY, DataType
 from tests.conftest import assert_output
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from pytest_mock import MockerFixture
 
 DATA_PATH: Path = Path(__file__).parents[1] / "data" / "jsonschema"
@@ -72,6 +76,105 @@ DATA_PATH: Path = Path(__file__).parents[1] / "data" / "jsonschema"
 
 def _json_schema_object(data: dict[str, Any]) -> JsonSchemaObject:
     return JsonSchemaObject.model_validate(data)
+
+
+def test_generated_formatter_mode_only_enabled_for_builtin() -> None:
+    """Keep no-formatter and external-formatter output outside generated fast-path dispatch."""
+    model_types = get_data_model_types(
+        DataModelType.PydanticV2BaseModel,
+        target_python_version=PythonVersion.PY_310,
+    )
+    input_path = DATA_PATH / "user.json"
+    formatted_cases: list[str] = []
+    for name, formatters in (
+        ("none", []),
+        ("black", [Formatter.BLACK]),
+        ("builtin", [Formatter.BUILTIN]),
+    ):
+        parser = JsonSchemaParser(
+            input_path,
+            base_path=input_path.parent,
+            data_model_type=model_types.data_model,
+            data_model_root_type=model_types.root_model,
+            data_model_field_type=model_types.field_model,
+            data_type_manager_type=model_types.data_type_manager,
+            dump_resolve_reference_action=model_types.dump_resolve_reference_action,
+            formatters=formatters,
+            target_python_version=PythonVersion.PY_310,
+        )
+        output = parser.parse()
+        fast_path = vars(parser)["_uses_standard_generation_templates"]
+        formatted_cases.append(f"[{name} fast_path={fast_path}]\n{output}")
+
+    assert_output(
+        "\n".join(formatted_cases),
+        DATA_PATH / "generated_formatter_modes.snapshot",
+    )
+
+
+def test_builtin_formatter_falls_back_for_custom_class_name_generator(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep invalid custom names on the full formatter's syntax-error path."""
+
+    def invalid_class_name(_: str) -> str:
+        return "Bad-Name"
+
+    model_types = get_data_model_types(
+        DataModelType.PydanticV2BaseModel,
+        target_python_version=PythonVersion.PY_311,
+    )
+    input_path = DATA_PATH / "user.json"
+    parser = JsonSchemaParser(
+        input_path,
+        base_path=input_path.parent,
+        data_model_type=model_types.data_model,
+        data_model_root_type=model_types.root_model,
+        data_model_field_type=model_types.field_model,
+        data_type_manager_type=model_types.data_type_manager,
+        dump_resolve_reference_action=model_types.dump_resolve_reference_action,
+        custom_class_name_generator=invalid_class_name,
+        formatters=[Formatter.BUILTIN],
+        target_python_version=PythonVersion.PY_311,
+    )
+
+    monkeypatch.setattr(
+        builtin_formatter,
+        "_apply_builtin_generated_formatter",
+        lambda *_args, **_kwargs: pytest.fail("custom class-name hook reached generated formatter fast path"),
+    )
+    output = parser.parse()
+    assert_output(output, DATA_PATH / "builtin_formatter_custom_class_name.snapshot")
+
+
+def test_builtin_formatter_falls_back_for_custom_resolve_reference_action(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep custom trailing source on the full formatter's syntax-error path."""
+
+    def invalid_resolve_reference_action(_: Iterable[str]) -> str:
+        return "BROKEN = ("
+
+    model_types = get_data_model_types(
+        DataModelType.PydanticV2BaseModel,
+        target_python_version=PythonVersion.PY_311,
+    )
+    input_path = DATA_PATH / "self_reference.json"
+    parser = JsonSchemaParser(
+        input_path,
+        base_path=input_path.parent,
+        data_model_type=model_types.data_model,
+        data_model_root_type=model_types.root_model,
+        data_model_field_type=model_types.field_model,
+        data_type_manager_type=model_types.data_type_manager,
+        dump_resolve_reference_action=invalid_resolve_reference_action,
+        formatters=[Formatter.BUILTIN],
+        target_python_version=PythonVersion.PY_311,
+    )
+
+    monkeypatch.setattr(
+        builtin_formatter,
+        "_apply_builtin_generated_formatter",
+        lambda *_args, **_kwargs: pytest.fail("custom resolve hook reached generated formatter fast path"),
+    )
+    output = parser.parse()
+    assert_output(output, DATA_PATH / "builtin_formatter_custom_resolve_action.snapshot")
 
 
 @pytest.fixture(autouse=True)

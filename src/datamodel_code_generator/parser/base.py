@@ -1784,9 +1784,9 @@ def _resolve_module_file(module_: ModulePath, results: dict[ModulePath, Result])
     return ("__init__.py",), is_init
 
 
-def _format_body_safe(body: str, code_formatter: CodeFormatter) -> str:
+def _format_body_safe(body: str, code_formatter: CodeFormatter, *, generated_code: bool = False) -> str:
     try:
-        return code_formatter.format_code(body)
+        return code_formatter._format_generated_code(body) if generated_code else code_formatter.format_code(body)  # noqa: SLF001
     except Exception as exc:  # noqa: BLE001
         warn(
             f"Failed to format code: {exc!r}. Emitting unformatted output.",
@@ -1956,6 +1956,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             or generation_type.__module__.startswith(_MODEL_MODULE_PREFIX)
             for attribute in ("data_model_scalar_type", "data_model_union_type")
         )
+        self._uses_standard_generation_templates = False
 
         self.imports: Imports = Imports(config.use_exact_imports)
         self.use_exact_imports: bool = config.use_exact_imports
@@ -5293,7 +5294,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
         body = "\n".join(result)
         if config.code_formatter:
-            body = _format_body_safe(body, config.code_formatter)
+            body = _format_body_safe(
+                body,
+                config.code_formatter,
+                generated_code=self._uses_standard_generation_templates,
+            )
 
         return Result(
             body=body,
@@ -5324,7 +5329,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 parts += [str(export_imports), "", export_imports.dump_all(multiline=True)]
                 body = "\n".join(parts)
                 if config.code_formatter:
-                    body = _format_body_safe(body, config.code_formatter)
+                    body = _format_body_safe(
+                        body,
+                        config.code_formatter,
+                        generated_code=self._uses_standard_generation_templates,
+                    )
                 results[init_module] = Result(
                     body=body,
                     future_imports=future_imports_str,
@@ -5505,6 +5514,29 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                             is_multi_module_output=self.defer_formatting or len(module_models) > 1,
                         ),
                     )
+
+        self._uses_standard_generation_templates = bool(
+            (code_formatter := config.code_formatter)
+            and code_formatter.use_builtin_formatter
+            and self._configured_generation_types_are_builtin
+            and not (parser_config := self.config).custom_template_dir
+            and not any((
+                parser_config.additional_imports,
+                parser_config.class_decorators,
+                parser_config.base_class,
+                parser_config.base_class_map,
+                parser_config.extra_template_data,
+                parser_config.validators,
+                parser_config.generate_schema_validators,
+                parser_config.alias_generator,
+                parser_config.custom_class_name_generator,
+                parser_config.dump_resolve_reference_action is not None
+                and not _is_pydantic_v2_dump_resolve_reference_action(parser_config.dump_resolve_reference_action),
+                parser_config.type_mappings,
+                parser_config.type_overrides,
+                parser_config.import_overrides,
+            ))
+        )
 
         return self.__process_modules(
             module_models,

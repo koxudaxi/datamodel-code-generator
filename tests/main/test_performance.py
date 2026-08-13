@@ -539,6 +539,22 @@ def test_perf_openapi_large(tmp_path: Path) -> None:
 
 
 @pytest.mark.perf
+@pytest.mark.benchmark
+def test_perf_openapi_large_pydantic_v2_builtin(tmp_path: Path) -> None:
+    """Track built-in formatting performance for a large OpenAPI document."""
+    output_file = tmp_path / "output.py"
+    generate(
+        input_=PERFORMANCE_DATA_PATH / "openapi_large.yaml",
+        input_file_type=InputFileType.OpenAPI,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        formatters=[Formatter.BUILTIN],
+    )
+    content = output_file.read_text()
+    assert content.count("class Entity") >= 300
+
+
+@pytest.mark.perf
 def test_perf_openapi_large_strict_types(tmp_path: Path) -> None:
     """Performance test: Large OpenAPI with strict types enabled."""
     output_file = tmp_path / "output.py"
