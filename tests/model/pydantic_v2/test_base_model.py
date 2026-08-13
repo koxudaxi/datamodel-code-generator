@@ -222,11 +222,12 @@ def test_parser_simple_field_call_keywords_match_model_fields() -> None:
         and node.target.attr == "_data_model_field_common_kwargs_cache"
     ]
     assert len(common_kwargs_assignments) == 1
-    match common_kwargs_assignments[0]:
-        case ast.Dict(keys=keys) if all(isinstance(key, ast.Constant) and isinstance(key.value, str) for key in keys):
-            constructor_keywords.update(key.value for key in keys)
-        case assignment:  # pragma: no cover
-            pytest.fail(f"Common field kwargs must stay a static dict: {ast.unparse(assignment)}")
+    assignment = common_kwargs_assignments[0]
+    if not isinstance(assignment, ast.Dict) or not all(
+        isinstance(key, ast.Constant) and isinstance(key.value, str) for key in assignment.keys
+    ):  # pragma: no cover
+        pytest.fail(f"Common field kwargs must stay a static dict: {ast.unparse(assignment)}")
+    constructor_keywords.update(key.value for key in assignment.keys if isinstance(key, ast.Constant))
 
     assert "data_type" in constructor_keywords
     assert constructor_keywords <= DataModelField.model_fields.keys()
