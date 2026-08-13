@@ -193,9 +193,6 @@ def _template_branch_cases() -> tuple[tuple[str, Path, dict[str, Any]], ...]:  #
             self.truth_tests += 1
             return self.truth_tests == 1
 
-        def __getitem__(self, index: int) -> SimpleNamespace:
-            return _field()
-
     base_path = Path("pydantic_v2/BaseModel.jinja2")
     base_context = _template_context(base_path)
     empty_base = {
