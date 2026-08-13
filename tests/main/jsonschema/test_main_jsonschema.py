@@ -15,7 +15,7 @@ from collections.abc import Callable as ABCCallable
 from collections.abc import Sequence
 from dataclasses import Field as DataclassField
 from pathlib import Path, PurePath
-from typing import get_args, get_type_hints
+from typing import cast, get_args, get_type_hints
 
 import black
 import pytest
@@ -3906,15 +3906,16 @@ def test_main_jsonschema_msgspec_unset_fastpath_custom_template(output_file: Pat
     ids=["builtin-template", "custom-template"],
 )
 def test_main_jsonschema_msgspec_unset_fastpath_matches_graph_fallback(
+    output_file: Path,
     target_python_version: PythonVersion,
     use_union_operator: bool,
     custom_template_dir: Path | None,
 ) -> None:
     """CI preserves formatted bytes for built-in and external templates on every target."""
     model_types = get_data_model_types(DataModelType.MsgspecStruct, target_python_version)
-    outputs: list[str] = []
-    for field_model in (model_types.field_model, _FallbackMsgspecDataModelField):
-        parser = JsonSchemaParser(
+
+    def generate(field_model: type[model_base.DataModelFieldBase]) -> object:
+        return JsonSchemaParser(
             JSON_SCHEMA_DATA_PATH / "msgspec_unset_fastpath.json",
             data_model_type=model_types.data_model,
             data_model_root_type=model_types.root_model,
@@ -3924,12 +3925,10 @@ def test_main_jsonschema_msgspec_unset_fastpath_matches_graph_fallback(
             use_union_operator=use_union_operator,
             custom_template_dir=custom_template_dir,
             formatters=[Formatter.BUILTIN],
-        )
-        generated = parser.parse()
-        assert isinstance(generated, str)
-        outputs.append(generated)
+        ).parse()
 
-    assert outputs[0] == outputs[1]
+    output_file.write_text(cast("str", generate(_FallbackMsgspecDataModelField)), encoding="utf-8")
+    assert_output(generate(model_types.field_model), output_file)
 
 
 @pytest.mark.isolate_builtin_formatter_config
