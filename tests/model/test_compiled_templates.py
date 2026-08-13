@@ -859,6 +859,15 @@ def test_compiler_rejects_generated_module_name_collisions() -> None:
     with pytest.raises(
         ValueError,
         match=(
+            r"template module name 'registry' for 'registry\.jinja2' is reserved for generated package code; "
+            r".*update the standalone template compiler"
+        ),
+    ):
+        _validate_module_names((Path("registry.jinja2"),))
+
+    with pytest.raises(
+        ValueError,
+        match=(
             r"template module name collision: 'nested/foo-bar\.jinja2' and 'nested/foo_bar\.jinja2' "
             r"both map to 'nested_foo_bar'; .*update the standalone template compiler"
         ),

@@ -31,6 +31,7 @@ from scripts._template_compiler.compiler import module_name_for_path  # noqa: E4
 
 TEMPLATE_DIR = ROOT / "src/datamodel_code_generator/model/template"
 OUTPUT_DIR = ROOT / "src/datamodel_code_generator/model/_compiled_templates"
+_RESERVED_MODULE_NAMES = frozenset({"__init__", "registry"})
 
 
 def _render_registry(template_paths: Iterable[Path]) -> str:
@@ -99,6 +100,12 @@ def _validate_module_names(template_paths: Iterable[Path]) -> None:
     modules: dict[str, Path] = {}
     for path in template_paths:
         module_name = module_name_for_path(path)
+        if module_name in _RESERVED_MODULE_NAMES:
+            error_message = (
+                f"template module name {module_name!r} for {path.as_posix()!r} is reserved for generated package "
+                "code; rename the template and update the standalone template compiler before compiling"
+            )
+            raise ValueError(error_message)
         if (existing := modules.get(module_name)) is not None:
             error_message = (
                 f"template module name collision: {existing.as_posix()!r} and {path.as_posix()!r} both map to "
