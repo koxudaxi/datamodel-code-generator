@@ -67,6 +67,8 @@ from datamodel_code_generator.types import ANY, DataType
 from tests.conftest import assert_output
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from pytest_mock import MockerFixture
 
 DATA_PATH: Path = Path(__file__).parents[1] / "data" / "jsonschema"
@@ -146,7 +148,7 @@ def test_builtin_formatter_falls_back_for_custom_class_name_generator(monkeypatc
 def test_builtin_formatter_falls_back_for_custom_resolve_reference_action(monkeypatch: pytest.MonkeyPatch) -> None:
     """Keep custom trailing source on the full formatter's syntax-error path."""
 
-    def invalid_resolve_reference_action(_: object) -> str:
+    def invalid_resolve_reference_action(_: Iterable[str]) -> str:
         return "BROKEN = ("
 
     model_types = get_data_model_types(
