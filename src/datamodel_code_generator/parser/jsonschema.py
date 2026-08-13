@@ -1078,7 +1078,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self._dangling_refs: set[tuple[str, str]] = set()
         self._dynamic_anchor_index: dict[tuple[str, ...], dict[str, str]] = {}
         self._recursive_anchor_index: dict[tuple[str, ...], list[str]] = {}
-        self._ref_data_type_facts: dict[str, tuple[Any, bool, bool]] = {}
+        self._ref_data_type_facts: dict[str, tuple[Any, bool]] = {}
+        self._ref_boolean_schema_facts: dict[str, bool] = {}
         self._inherited_schema_cache: dict[str, JsonSchemaObject] = {}
         self._inherited_schema_ancestor_cache: dict[str, frozenset[str]] = {}
         self._inherited_schema_linearization_cache: dict[tuple[str, ...], tuple[str, ...]] = {}
@@ -2881,8 +2882,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self._ref_data_type_facts[resolved_ref] = (
             obj.extras.get("x-python-import"),
             obj.type == "null" or (self.strict_nullable and obj.nullable is True),
-            obj.is_boolean_schema_false,
         )
+        self._ref_boolean_schema_facts[resolved_ref] = obj.is_boolean_schema_false
 
     def get_ref_data_type(self, ref: str) -> DataType:
         """Get a data type from a reference string.
@@ -2902,10 +2903,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             facts = (
                 ref_schema.extras.get("x-python-import"),
                 ref_schema.type == "null" or (self.strict_nullable and ref_schema.nullable is True),
-                ref_schema.is_boolean_schema_false,
             )
             self._ref_data_type_facts[resolved_ref] = facts
-        x_python_import, is_optional = facts[:2]
+        x_python_import, is_optional = facts
         if isinstance(x_python_import, dict) and (full_path := self._get_x_python_import_path(x_python_import)):
             import_ = Import.from_full_path(full_path)
             self.imports.append(import_)
@@ -3472,13 +3472,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return self._load_ref_schema_object(ref).is_boolean_schema_false
 
         resolved_ref = self.model_resolver.resolve_ref(ref)
-        if (facts := self._ref_data_type_facts.get(resolved_ref)) is None:
+        if (is_false_schema := self._ref_boolean_schema_facts.get(resolved_ref)) is None:
             return self._load_ref_schema_object(ref).is_boolean_schema_false
-        match facts:
-            case (_, _, is_false_schema):
-                pass
-            case _:
-                return self._load_ref_schema_object(ref).is_boolean_schema_false
         return is_false_schema
 
     def _anchor_ref_path(self, root_key: tuple[str, ...], path: list[str]) -> str:  # noqa: PLR6301
