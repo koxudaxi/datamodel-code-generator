@@ -286,6 +286,8 @@ def test_builtin_generated_formatter_edge_cases() -> None:
         ("invalid-import", "from package import )\n", {}),
         ("compound-import-line", "import package; value = 1\n", {}),
         ("import-only", "import package\n", {}),
+        ("import-class", "import package\n\n\nclass Model:\n    pass\n", {}),
+        ("import-statement", "import package\n\nvalue = 1\n", {}),
     )
     formatted_cases = [
         f"[{name}]\n{builtin_formatter._apply_builtin_generated_formatter(source, **options)!r}"

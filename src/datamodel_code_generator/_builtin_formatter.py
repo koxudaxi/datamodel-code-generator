@@ -2037,9 +2037,13 @@ def _try_apply_builtin_generated_formatter(  # noqa: PLR0911, PLR0913
         return None
 
     import_block = _build_builtin_import_block(import_nodes, line_length, lines, known_first_party)
-    body = "\n".join(lines[import_end:]).strip("\n")
-    if not body:
+    body_start = import_end
+    while body_start < len(lines) and not lines[body_start]:
+        body_start += 1
+    del lines[:body_start]
+    if not lines:
         return _finalize_builtin_code(import_block, string_normalization=False)
+    body = "\n".join(lines)
     separator = "\n\n\n" if body.startswith(("class ", "def ", "async def ", "@")) else "\n\n"
     return _finalize_builtin_code(f"{import_block}{separator}{body}", string_normalization=False)
 

@@ -14,3 +14,7 @@
 'import package\n'
 [import-only]
 'import package\n'
+[import-class]
+'import package\n\n\nclass Model:\n    pass\n'
+[import-statement]
+'import package\n\nvalue = 1\n'
