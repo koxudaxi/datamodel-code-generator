@@ -758,7 +758,7 @@ class BaseModel(BaseModelBase):
                 runtime_validation.conditional_required for runtime_validation in runtime_validations
             ),
         }
-        if custom_template_dir is None:
+        if custom_template_dir is None and cls.__module__.startswith("datamodel_code_generator.model."):
             from datamodel_code_generator.model._compiled_templates import get_builtin_renderer  # noqa: PLC0415
 
             if renderer := get_builtin_renderer(cls.SCHEMA_RUNTIME_VALIDATION_HELPERS_TEMPLATE_FILE_PATH):

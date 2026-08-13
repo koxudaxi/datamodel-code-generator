@@ -16,3 +16,15 @@ class DataclassModel:
     Dataclass description.
     """
     value: str
+    standard_default: Optional[str] = 'fallback'
+
+
+@dataclass
+class PydanticDataclassModel:
+    pydantic_default: Optional[str] = 'fallback'
+    items: list[str] = Field(default_factory=list)
+
+class RootDefault(RootModel[Optional[str]]):
+    root: Optional[str] = 'fallback'
+
+RootAlias = RootModel[str]

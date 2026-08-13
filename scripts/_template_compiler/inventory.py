@@ -59,6 +59,41 @@ SUPPORTED_ASSIGNMENTS = frozenset({"Name", "NSRef"})
 SUPPORTED_CALLS = frozenset({"append", "get", "items", "get_type_annotation", "get_type_hint", "namespace"})
 _SELECTATTR_TEST_ARGUMENT_INDEX = 1
 _SELECTATTR_TEST_MINIMUM_ARGUMENTS = 2
+_SCOPED_ASSIGNMENT_SITES = frozenset({
+    ("dataclass.jinja2", 7, "Name", "_", "Call"),
+    ("msgspec.jinja2", 19, "NSRef", "ns.has_rendered_field", "Const"),
+    ("msgspec.jinja2", 22, "NSRef", "ns.has_rendered_field", "Const"),
+    ("pydantic_v2/RootModel.jinja2", 37, "Name", "field", "Getitem"),
+    ("pydantic_v2/dataclass.jinja2", 7, "Name", "_", "Call"),
+    ("pydantic_v2/dataclass.jinja2", 11, "Name", "config_items", "List"),
+    ("pydantic_v2/dataclass.jinja2", 13, "Name", "_", "Call"),
+    ("pydantic_v2/dataclass.jinja2", 15, "Name", "_", "Call"),
+    ("pydantic_v2/schema_runtime_validation.jinja2", 2, "Name", "schema_validator_state", "Call"),
+    ("pydantic_v2/schema_runtime_validation.jinja2", 12, "Name", "pattern_property", "Getitem"),
+    ("pydantic_v2/schema_runtime_validation.jinja2", 23, "NSRef", "schema_validator_state.has_prior", "Const"),
+    ("pydantic_v2/schema_runtime_validation.jinja2", 25, "Name", "one_of_required_groups", "Filter"),
+    ("pydantic_v2/schema_runtime_validation.jinja2", 36, "NSRef", "schema_validator_state.has_prior", "Const"),
+    ("pydantic_v2/schema_runtime_validation.jinja2", 38, "Name", "any_of_required_groups", "Filter"),
+    ("pydantic_v2/schema_runtime_validation.jinja2", 49, "NSRef", "schema_validator_state.has_prior", "Const"),
+})
+_SCOPED_ASSIGNMENT_CONTAINERS = (nodes.FilterBlock, nodes.For, nodes.If, nodes.Macro)
+_SUPPORTED_GETATTR_ROOT_NAMES = frozenset({
+    "_field",
+    "_fields",
+    "args",
+    "config",
+    "config_items",
+    "data_type",
+    "field",
+    "fields",
+    "loop",
+    "ns",
+    "pattern_property",
+    "rule",
+    "schema_runtime_validation",
+    "schema_validator_state",
+    "v",
+})
 # ``prepared_validators`` is built as dictionaries in pydantic_v2/base_model.py.
 # The template intentionally uses Jinja's mapping-dot fallback for these keys.
 KNOWN_MAPPING_DOT_ACCESSES = frozenset({
@@ -130,6 +165,126 @@ def _call_name(node: nodes.Call) -> str | None:
     return None
 
 
+def _assignment_name(node: nodes.Assign) -> str:
+    if isinstance(node.target, nodes.Name):
+        return node.target.name
+    if isinstance(node.target, nodes.NSRef):
+        return f"{node.target.name}.{node.target.attr}"
+    return type(node.target).__name__
+
+
+def _validate_scoped_assignments(path: Path, ast: nodes.Template) -> None:
+    """Allow only the built-in scoped assignments the standalone compiler models.
+
+    Jinja ``if`` blocks share their containing scope while loop and macro bodies
+    do not.  The standalone compiler deliberately does not implement that full
+    lexical-assignment model, so a new scoped ``set`` must be reviewed rather
+    than silently receiving Python's different binding behaviour.
+    """
+
+    def visit(node: nodes.Node, containers: tuple[str, ...] = ()) -> None:
+        if isinstance(node, nodes.Assign) and containers:
+            assignment = (
+                path.as_posix(),
+                node.lineno,
+                type(node.target).__name__,
+                _assignment_name(node),
+                type(node.node).__name__,
+            )
+            if assignment not in _SCOPED_ASSIGNMENT_SITES:
+                location = "/".join(containers)
+                raise _unsupported(path, node, f"scoped assignment in {location}", _assignment_name(node))
+        child_containers = (
+            (*containers, type(node).__name__) if isinstance(node, _SCOPED_ASSIGNMENT_CONTAINERS) else containers
+        )
+        for child in node.iter_child_nodes():
+            visit(child, child_containers)
+
+    visit(ast)
+
+
+def _validate_for_target(path: Path, node: nodes.For) -> None:
+    if not isinstance(node.target, nodes.Tuple):
+        return
+    if any(isinstance(item, nodes.Tuple) for item in node.target.items):
+        raise _unsupported(path, node, "for target", "nested tuple")
+
+
+def _getattr_root(node: nodes.Expr) -> nodes.Expr:
+    while isinstance(node, (nodes.Getattr, nodes.Getitem)):
+        node = node.node
+    return node
+
+
+def _validate_getattr_root(path: Path, node: nodes.Getattr) -> None:
+    root = _getattr_root(node)
+    if isinstance(root, nodes.Name):
+        if root.name not in _SUPPORTED_GETATTR_ROOT_NAMES:
+            raise _unsupported(path, node, "mapping dot access", node.attr)
+        if root.name != "v":
+            return
+        mapping_access = (path.as_posix(), root.name, node.attr)
+        if mapping_access in KNOWN_MAPPING_DOT_ACCESSES:
+            return
+        raise _unsupported(path, node, "mapping dot access", node.attr)
+    if isinstance(root, (nodes.Filter, nodes.Or)) and node.attr == "items":
+        return
+    raise _unsupported(path, node, "mapping dot access", node.attr)
+
+
+def _validate_macro_local_captures(path: Path, ast: nodes.Template) -> None:
+    """Reject macros that close over template-local ``set`` bindings."""
+    local_names = {
+        assignment.target.name
+        for assignment in ast.body
+        if isinstance(assignment, nodes.Assign) and isinstance(assignment.target, nodes.Name)
+    }
+    if not local_names:
+        return
+    for macro in ast.find_all(nodes.Macro):
+        parameters = {argument.name for argument in macro.args}
+        if (
+            captured := next(
+                (
+                    name
+                    for name in macro.find_all(nodes.Name)
+                    if name.ctx == "load" and name.name in local_names - parameters
+                ),
+                None,
+            )
+        ) is not None:
+            raise _unsupported(path, captured, "macro local capture", captured.name)
+
+
+def _validate_include_macro_captures(templates: dict[Path, nodes.Template], graph: dict[Path, set[Path]]) -> None:
+    """Reject included templates which depend on a macro from an includer.
+
+    Includes receive ordinary context bindings in generated code, but macros
+    are compiler-local functions and cannot be captured across generated
+    modules without a separate lexical-environment implementation.
+    """
+    macro_names = {path: {macro.name for macro in ast.find_all(nodes.Macro)} for path, ast in templates.items()}
+
+    def visit(path: Path, inherited: frozenset[str]) -> None:
+        visible = inherited | macro_names[path]
+        for included_path in graph.get(path, ()):
+            locally_defined = macro_names[included_path]
+            captured = next(
+                (
+                    name
+                    for name in templates[included_path].find_all(nodes.Name)
+                    if name.ctx == "load" and name.name in visible - locally_defined
+                ),
+                None,
+            )
+            if captured is not None:
+                raise _unsupported(included_path, captured, "include macro capture", captured.name)
+            visit(included_path, visible)
+
+    for path in templates:
+        visit(path, frozenset())
+
+
 def inventory_templates(template_dir: Path, environment: Environment | None = None) -> TemplateInventory:
     """Parse and validate every built-in template, returning its derived inventory."""
     env = environment or build_environment()
@@ -152,9 +307,13 @@ def inventory_templates(template_dir: Path, environment: Environment | None = No
         )
     }
     include_graph: dict[Path, set[Path]] = defaultdict(set)
+    templates: dict[Path, nodes.Template] = {}
     for path in iter_template_paths(template_dir):
         relative_path = path.relative_to(template_dir)
         ast = env.parse(path.read_text(encoding="utf-8"))
+        templates[relative_path] = ast
+        _validate_scoped_assignments(relative_path, ast)
+        _validate_macro_local_captures(relative_path, ast)
         _record(values["nodes"], type(ast).__name__, relative_path, ast)
         static_mapping_names = {
             node.target.name
@@ -197,6 +356,7 @@ def inventory_templates(template_dir: Path, environment: Environment | None = No
                     _record(values["namespaces"], "attribute mutation", relative_path, node)
             elif isinstance(node, nodes.For):
                 _record(values["for_targets"], _target_form(node.target), relative_path, node)
+                _validate_for_target(relative_path, node)
             elif isinstance(node, nodes.Macro):
                 _inventory_macro(values["macros"], relative_path, node)
             elif isinstance(node, nodes.Include):
@@ -226,17 +386,11 @@ def inventory_templates(template_dir: Path, environment: Environment | None = No
                 and node.attr not in {"get", "items"}
             ):
                 raise _unsupported(relative_path, node, "mapping dot access", node.attr)
-            if (
-                relative_path.as_posix() == "pydantic_v2/BaseModel.jinja2"
-                and isinstance(node.node, nodes.Name)
-                and node.node.name == "v"
-            ):
-                mapping_access = (relative_path.as_posix(), node.node.name, node.attr)
-                if mapping_access in KNOWN_MAPPING_DOT_ACCESSES:
-                    _record(values["mapping_dot_accesses"], node.attr, relative_path, node)
-                else:
-                    raise _unsupported(relative_path, node, "mapping dot access", node.attr)
+            _validate_getattr_root(relative_path, node)
+            if isinstance(node.node, nodes.Name) and node.node.name == "v":
+                _record(values["mapping_dot_accesses"], node.attr, relative_path, node)
     _check_include_cycles(include_graph)
+    _validate_include_macro_captures(templates, include_graph)
     return TemplateInventory(**{
         name: {key: tuple(locations) for key, locations in mapping.items()} for name, mapping in values.items()
     })

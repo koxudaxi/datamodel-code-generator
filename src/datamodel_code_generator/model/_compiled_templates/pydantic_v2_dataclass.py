@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from datamodel_code_generator.model._compiled_template_runtime import (
+    MISSING as _MISSING,
     Scope as _Scope,
     concat as _concat,
     filter_join as _filter_join,
@@ -58,36 +59,35 @@ def render_with_scope(_scope: _Scope) -> str:
     if (not _context_fields) and (not _context_description):
         _parts.append("\n    pass")
     for field, _loop_last_6 in _loop_last_iter(_context_fields):
-        if (not _getattr(field, "annotated")) and _getattr(field, "field"):
-            _value_7 = _stringify(_getattr(field, "name"))
-            _value_8 = _stringify(_getattr(field, "type_hint"))
-            _value_9 = _stringify(_getattr(field, "field"))
+        if (not field.annotated) and field.field:
+            _value_7 = _stringify(field.name)
+            _value_8 = _stringify(field.type_hint)
+            _value_9 = _stringify(field.field)
             _parts.append(f"\n    {_value_7}: {_value_8} = {_value_9}")
         else:
-            if _getattr(field, "annotated"):
-                _value_10 = _stringify(_getattr(field, "name"))
-                _value_11 = _stringify(_getattr(field, "annotated"))
+            if field.annotated:
+                _value_10 = _stringify(field.name)
+                _value_11 = _stringify(field.annotated)
                 _parts.append(f"\n    {_value_10}: {_value_11}")
             else:
-                _value_12 = _stringify(_getattr(field, "name"))
-                _value_13 = _stringify(_getattr(field, "type_hint"))
+                _value_12 = _stringify(field.name)
+                _value_13 = _stringify(field.type_hint)
                 _parts.append(f"\n    {_value_12}: {_value_13}")
             if (
-                (not _getattr(field, "has_default_factory_in_field"))
-                and ((not _getattr(field, "required")) or _getattr(field, "use_default_with_required"))
+                (not getattr(field, "has_default_factory_in_field", _MISSING))
+                and ((not field.required) or field.use_default_with_required)
             ) and (
-                ((_getattr(field, "represented_default") != "None") or (not _getattr(field, "strip_default_none")))
-                or _getattr(_getattr(field, "data_type"), "is_optional")
+                ((field.represented_default != "None") or (not field.strip_default_none)) or field.data_type.is_optional
             ):
-                _value_14 = _stringify(_getattr(field, "represented_default"))
+                _value_14 = _stringify(field.represented_default)
                 _parts.append(f" = {_value_14}")
-        if _getattr(field, "docstring"):
-            _value_15 = _stringify(_getattr(field, "docstring"))
+        if field.docstring:
+            _value_15 = _stringify(field.docstring)
             _parts.append(f"\n    {_value_15}")
-            if _getattr(field, "use_inline_field_description") and (not _loop_last_6):
+            if field.use_inline_field_description and (not _loop_last_6):
                 _parts.append("\n\n")
-        elif _getattr(field, "inline_field_docstring"):
-            _value_16 = _stringify(_getattr(field, "inline_field_docstring"))
+        elif field.inline_field_docstring:
+            _value_16 = _stringify(field.inline_field_docstring)
             _parts.append(f"\n    {_value_16}")
             if not _loop_last_6:
                 _parts.append("\n\n")

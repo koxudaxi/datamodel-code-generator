@@ -501,6 +501,17 @@ next"""
     inline: str
     """inline \ description"""
 
+=== dataclass_default_without_field
+@decorator
+
+@dataclass(frozen=True)
+class Unicodeモデル(BaseModel):
+    """description こんにちは \ \" {braces}
+next"""
+    default: str = 'value'
+    """field \ \" quote
+next"""
+
 === enum_inline_description
 @decorator
 class Unicodeモデル(BaseModel):

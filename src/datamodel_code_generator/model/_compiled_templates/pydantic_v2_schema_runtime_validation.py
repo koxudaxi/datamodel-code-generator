@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from datamodel_code_generator.model._compiled_template_runtime import (
+    MISSING as _MISSING,
     Scope as _Scope,
     filter_length as _filter_length,
     filter_list as _filter_list,
@@ -38,30 +39,32 @@ def render_with_scope(_scope: _Scope) -> str:
                 _parts.append(f"\n{_value_0}")
             _parts.append("\n    __json_schema_pattern_properties__: ClassVar[tuple[Any, ...]] = (")
             for rule in _getattr(_context_schema_runtime_validation, "pattern_properties"):
-                _value_1 = _stringify(_filter_repr(_getattr(rule, "declared_properties")))
-                _value_2 = _stringify(_filter_repr(_getattr(rule, "rejected_patterns")))
+                _value_1 = _stringify(_filter_repr(getattr(rule, "declared_properties", _MISSING)))
+                _value_2 = _stringify(_filter_repr(getattr(rule, "rejected_patterns", _MISSING)))
                 _parts.append(
                     f"\n        {{\n            'declared_properties': {_value_1},\n            'rejected_patterns': {_value_2},\n            'pattern_properties': "
                 )
-                if _filter_length(_getattr(rule, "pattern_properties")) == 1:
-                    pattern_property = _getitem(_getattr(rule, "pattern_properties"), 0)
+                if _filter_length(getattr(rule, "pattern_properties", _MISSING)) == 1:
+                    pattern_property = _getitem(getattr(rule, "pattern_properties", _MISSING), 0)
                     _value_3 = _stringify(_filter_repr(_getitem(pattern_property, 0)))
                     _value_4 = _stringify(_getattr(_getitem(pattern_property, 1), "type_hint"))
                     _parts.append(f"(({_value_3}, {_value_4}),)")
                 else:
                     _parts.append("(")
-                    for pattern, data_type in _getattr(rule, "pattern_properties"):
+                    for pattern, data_type in getattr(rule, "pattern_properties", _MISSING):
                         _value_5 = _stringify(_filter_repr(pattern))
-                        _value_6 = _stringify(_getattr(data_type, "type_hint"))
+                        _value_6 = _stringify(data_type.type_hint)
                         _parts.append(f"\n                ({_value_5}, {_value_6}),")
                     _parts.append("\n            )")
                 _parts.append(",\n            'additional_property_type': ")
-                if _getattr(rule, "additional_property_type"):
-                    _value_7 = _stringify(_getattr(_getattr(rule, "additional_property_type"), "type_hint"))
+                if getattr(rule, "additional_property_type", _MISSING):
+                    _value_7 = _stringify(
+                        getattr(getattr(rule, "additional_property_type", _MISSING), "type_hint", _MISSING)
+                    )
                     _parts.append(f"{_value_7}")
                 else:
                     _parts.append("None")
-                _value_8 = _stringify(_filter_repr(_getattr(rule, "allow_unmatched")))
+                _value_8 = _stringify(_filter_repr(getattr(rule, "allow_unmatched", _MISSING)))
                 _parts.append(f",\n            'allow_unmatched': {_value_8},\n        }},")
             _value_9 = _stringify("\n")
             _parts.append(f"\n    )\n{_value_9}")
@@ -77,7 +80,7 @@ def render_with_scope(_scope: _Scope) -> str:
                 _parts.append(f"\n{_value_10}")
             _parts.append("\n    __json_schema_one_of_required_groups__: ClassVar[tuple[Any, ...]] = (")
             for rule in one_of_required_groups:
-                _value_11 = _stringify(_filter_repr(_getattr(rule, "groups")))
+                _value_11 = _stringify(_filter_repr(getattr(rule, "groups", _MISSING)))
                 _parts.append(f"\n        {_value_11},")
             _value_12 = _stringify("\n")
             _parts.append(f"\n    )\n{_value_12}")
@@ -93,7 +96,7 @@ def render_with_scope(_scope: _Scope) -> str:
                 _parts.append(f"\n{_value_13}")
             _parts.append("\n    __json_schema_any_of_required_groups__: ClassVar[tuple[Any, ...]] = (")
             for rule in any_of_required_groups:
-                _value_14 = _stringify(_filter_repr(_getattr(rule, "groups")))
+                _value_14 = _stringify(_filter_repr(getattr(rule, "groups", _MISSING)))
                 _parts.append(f"\n        {_value_14},")
             _value_15 = _stringify("\n")
             _parts.append(f"\n    )\n{_value_15}")
@@ -104,9 +107,9 @@ def render_with_scope(_scope: _Scope) -> str:
                 _parts.append(f"\n{_value_16}")
             _parts.append("\n    __json_schema_conditional_required__: ClassVar[tuple[Any, ...]] = (")
             for rule in _getattr(_context_schema_runtime_validation, "conditional_required"):
-                _value_17 = _stringify(_filter_repr(_getattr(rule, "condition")))
-                _value_18 = _stringify(_filter_repr(_getattr(rule, "then_groups")))
-                _value_19 = _stringify(_filter_repr(_getattr(rule, "else_groups")))
+                _value_17 = _stringify(_filter_repr(getattr(rule, "condition", _MISSING)))
+                _value_18 = _stringify(_filter_repr(getattr(rule, "then_groups", _MISSING)))
+                _value_19 = _stringify(_filter_repr(getattr(rule, "else_groups", _MISSING)))
                 _parts.append(
                     f"\n        {{\n            'condition': {_value_17},\n            'then_required_groups': {_value_18},\n            'else_required_groups': {_value_19},\n        }},"
                 )

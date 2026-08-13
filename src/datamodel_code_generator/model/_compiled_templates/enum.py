@@ -6,7 +6,6 @@ from typing import Any
 
 from datamodel_code_generator.model._compiled_template_runtime import (
     Scope as _Scope,
-    getattr_ as _getattr,
     loop_last_iter as _loop_last_iter,
     stringify as _stringify,
 )
@@ -33,16 +32,16 @@ def render_with_scope(_scope: _Scope) -> str:
         _value_3 = _stringify(_context_description)
         _parts.append(f"\n    {_value_3}")
     for field, _loop_last_4 in _loop_last_iter(_context_fields):
-        _value_5 = _stringify(_getattr(field, "name"))
-        _value_6 = _stringify(_getattr(field, "default"))
+        _value_5 = _stringify(field.name)
+        _value_6 = _stringify(field.default)
         _parts.append(f"\n    {_value_5} = {_value_6}")
-        if _getattr(field, "docstring"):
-            _value_7 = _stringify(_getattr(field, "docstring"))
+        if field.docstring:
+            _value_7 = _stringify(field.docstring)
             _parts.append(f"\n    {_value_7}")
-            if _getattr(field, "use_inline_field_description") and (not _loop_last_4):
+            if field.use_inline_field_description and (not _loop_last_4):
                 _parts.append("\n\n")
-        elif _getattr(field, "inline_field_docstring"):
-            _value_8 = _stringify(_getattr(field, "inline_field_docstring"))
+        elif field.inline_field_docstring:
+            _value_8 = _stringify(field.inline_field_docstring)
             _parts.append(f"\n    {_value_8}")
             if not _loop_last_4:
                 _parts.append("\n\n")

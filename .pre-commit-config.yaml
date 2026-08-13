@@ -63,7 +63,7 @@ repos:
     pass_filenames: false
   - id: compiled-templates
     name: Check generated built-in template renderers
-    entry: uv run --no-sync python scripts/compile_builtin_templates.py --check
+    entry: bash -c '[ -x .tox/dev/bin/python ] && PYTHON=.tox/dev/bin/python || PYTHON=.tox/dev/Scripts/python; test -x "$PYTHON" || tox run -e dev --notest -qq; "$PYTHON" scripts/compile_builtin_templates.py --check'
     language: system
     files: ^(src/datamodel_code_generator/model/template/.*\.jinja2|scripts/_template_compiler/.*\.py|scripts/compile_builtin_templates\.py|src/datamodel_code_generator/model/_compiled_template_runtime\.py|src/datamodel_code_generator/model/_compiled_templates/.*\.py)$
     pass_filenames: false

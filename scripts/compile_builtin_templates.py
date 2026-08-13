@@ -82,6 +82,7 @@ def generated_sources() -> dict[Path, str]:
     environment = build_environment()
     inventory_templates(TEMPLATE_DIR, environment)
     template_paths = tuple(path.relative_to(TEMPLATE_DIR) for path in iter_template_paths(TEMPLATE_DIR))
+    _validate_module_names(template_paths)
     sources = {}
     for path in template_paths:
         output_path = OUTPUT_DIR / f"{module_name_for_path(path)}.py"
@@ -91,6 +92,20 @@ def generated_sources() -> dict[Path, str]:
     for path, source in sources.items():
         _validate_source(source, path)
     return sources
+
+
+def _validate_module_names(template_paths: Iterable[Path]) -> None:
+    """Reject template paths that would overwrite one generated module."""
+    modules: dict[str, Path] = {}
+    for path in template_paths:
+        module_name = module_name_for_path(path)
+        if (existing := modules.get(module_name)) is not None:
+            error_message = (
+                f"template module name collision: {existing.as_posix()!r} and {path.as_posix()!r} both map to "
+                f"{module_name!r}; rename one template and update the standalone template compiler before compiling"
+            )
+            raise ValueError(error_message)
+        modules[module_name] = path
 
 
 def _validate_source(source: str, path: Path) -> None:
@@ -105,7 +120,7 @@ def _validate_source(source: str, path: Path) -> None:
 def _format_python(source: str, path: Path) -> str:
     """Apply the repository formatter while source is still in memory."""
     result = subprocess.run(
-        ["ruff", "format", "--stdin-filename", str(path), "-"],
+        [sys.executable, "-m", "ruff", "format", "--stdin-filename", str(path), "-"],
         check=True,
         capture_output=True,
         input=source,

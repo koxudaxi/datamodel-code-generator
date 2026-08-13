@@ -5,9 +5,9 @@ from __future__ import annotations
 from typing import Any
 
 from datamodel_code_generator.model._compiled_template_runtime import (
+    MISSING as _MISSING,
     Scope as _Scope,
     filter_default as _filter_default,
-    getattr_ as _getattr,
     loop_last_iter as _loop_last_iter,
     stringify as _stringify,
 )
@@ -30,16 +30,16 @@ def render_with_scope(_scope: _Scope) -> str:
     _value_2 = _stringify(_context_class_name)
     _parts.append(f"\n{_value_1} = TypedDict('{_value_2}', {{")
     for field, _loop_last_3 in _loop_last_iter(_context_all_fields):
-        _value_4 = _stringify(_getattr(field, "key"))
-        _value_5 = _stringify(_getattr(field, "type_hint"))
+        _value_4 = _stringify(getattr(field, "key", _MISSING))
+        _value_5 = _stringify(field.type_hint)
         _parts.append(f"\n    '{_value_4}': {_value_5},")
-        if _getattr(field, "docstring"):
-            _value_6 = _stringify(_getattr(field, "docstring"))
+        if field.docstring:
+            _value_6 = _stringify(field.docstring)
             _parts.append(f"\n    {_value_6}")
-            if _getattr(field, "use_inline_field_description") and (not _loop_last_3):
+            if field.use_inline_field_description and (not _loop_last_3):
                 _parts.append("\n\n")
-        elif _getattr(field, "inline_field_docstring"):
-            _value_7 = _stringify(_getattr(field, "inline_field_docstring"))
+        elif field.inline_field_docstring:
+            _value_7 = _stringify(field.inline_field_docstring)
             _parts.append(f"\n    {_value_7}")
             if not _loop_last_3:
                 _parts.append("\n\n")

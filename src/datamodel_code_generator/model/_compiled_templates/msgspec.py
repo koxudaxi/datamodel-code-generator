@@ -47,43 +47,39 @@ def render_with_scope(_scope: _Scope) -> str:
         _parts.append(f"\n    {_value_6}")
     ns = _namespace(has_rendered_field=False)
     for field, _loop_last_7 in _loop_last_iter(_context_fields):
-        if _getattr(_getattr(field, "extras"), "get")("is_classvar"):
+        if field.extras.get("is_classvar"):
             pass
-        elif (not _getattr(field, "annotated")) and _getattr(field, "field"):
+        elif (not field.annotated) and field.field:
             _setattr(ns, "has_rendered_field", True)
-            _value_8 = _stringify(_getattr(field, "name"))
-            _value_9 = _stringify(_getattr(field, "type_hint"))
-            _value_10 = _stringify(_getattr(field, "field"))
+            _value_8 = _stringify(field.name)
+            _value_9 = _stringify(field.type_hint)
+            _value_10 = _stringify(field.field)
             _parts.append(f"\n    {_value_8}: {_value_9} = {_value_10}")
         else:
             _setattr(ns, "has_rendered_field", True)
-            if _getattr(field, "annotated") and (not _getattr(field, "field")):
-                _value_11 = _stringify(_getattr(field, "name"))
-                _value_12 = _stringify(_getattr(field, "annotated"))
+            if field.annotated and (not field.field):
+                _value_11 = _stringify(field.name)
+                _value_12 = _stringify(field.annotated)
                 _parts.append(f"\n    {_value_11}: {_value_12}")
-            elif _getattr(field, "annotated") and _getattr(field, "field"):
-                _value_13 = _stringify(_getattr(field, "name"))
-                _value_14 = _stringify(_getattr(field, "annotated"))
-                _value_15 = _stringify(_getattr(field, "field"))
+            elif field.annotated and field.field:
+                _value_13 = _stringify(field.name)
+                _value_14 = _stringify(field.annotated)
+                _value_15 = _stringify(field.field)
                 _parts.append(f"\n    {_value_13}: {_value_14} = {_value_15}")
             else:
-                _value_16 = _stringify(_getattr(field, "name"))
-                _value_17 = _stringify(_getattr(field, "type_hint"))
+                _value_16 = _stringify(field.name)
+                _value_17 = _stringify(field.type_hint)
                 _parts.append(f"\n    {_value_16}: {_value_17}")
-            if (not _getattr(field, "field")) and (
-                (not _getattr(field, "required")) or _getattr(field, "use_default_with_required")
-            ):
-                _value_18 = _stringify(_getattr(field, "represented_default"))
+            if (not field.field) and ((not field.required) or field.use_default_with_required):
+                _value_18 = _stringify(field.represented_default)
                 _parts.append(f" = {_value_18}")
-        if (not _getattr(_getattr(field, "extras"), "get")("is_classvar")) and _getattr(field, "docstring"):
-            _value_19 = _stringify(_getattr(field, "docstring"))
+        if (not field.extras.get("is_classvar")) and field.docstring:
+            _value_19 = _stringify(field.docstring)
             _parts.append(f"\n    {_value_19}")
-            if _getattr(field, "use_inline_field_description") and (not _loop_last_7):
+            if field.use_inline_field_description and (not _loop_last_7):
                 _parts.append("\n\n")
-        elif (not _getattr(_getattr(field, "extras"), "get")("is_classvar")) and _getattr(
-            field, "inline_field_docstring"
-        ):
-            _value_20 = _stringify(_getattr(field, "inline_field_docstring"))
+        elif (not field.extras.get("is_classvar")) and field.inline_field_docstring:
+            _value_20 = _stringify(field.inline_field_docstring)
             _parts.append(f"\n    {_value_20}")
             if not _loop_last_7:
                 _parts.append("\n\n")

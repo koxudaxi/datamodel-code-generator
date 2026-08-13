@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from datamodel_code_generator.model._compiled_template_runtime import (
+    MISSING as _MISSING,
     Scope as _Scope,
     filter_indent as _filter_indent,
     getattr_ as _getattr,
@@ -93,30 +94,27 @@ def render_with_scope(_scope: _Scope) -> str:
             _parts.append("\n    pass")
     else:
         field = _getitem(_context_fields, 0)
-        if (not _getattr(field, "annotated")) and _getattr(field, "field"):
-            _value_14 = _stringify(_getattr(field, "type_hint"))
-            _value_15 = _stringify(_getattr(field, "field"))
+        if (not field.annotated) and field.field:
+            _value_14 = _stringify(field.type_hint)
+            _value_15 = _stringify(field.field)
             _parts.append(f"\n    root: {_value_14} = {_value_15}")
         else:
-            if _getattr(field, "annotated"):
-                _value_16 = _stringify(_getattr(field, "annotated"))
+            if field.annotated:
+                _value_16 = _stringify(field.annotated)
                 _parts.append(f"\n    root: {_value_16}")
             else:
-                _value_17 = _stringify(_getattr(field, "type_hint"))
+                _value_17 = _stringify(field.type_hint)
                 _parts.append(f"\n    root: {_value_17}")
-            if (not _getattr(field, "has_default_factory_in_field")) and (
-                not (
-                    _getattr(field, "required")
-                    or ((_getattr(field, "represented_default") == "None") and _getattr(field, "strip_default_none"))
-                )
+            if (not getattr(field, "has_default_factory_in_field", _MISSING)) and (
+                not (field.required or ((field.represented_default == "None") and field.strip_default_none))
             ):
-                _value_18 = _stringify(_getattr(field, "represented_default"))
+                _value_18 = _stringify(field.represented_default)
                 _parts.append(f" = {_value_18}")
-        if _getattr(field, "docstring"):
-            _value_19 = _stringify(_getattr(field, "docstring"))
+        if field.docstring:
+            _value_19 = _stringify(field.docstring)
             _parts.append(f"\n    {_value_19}")
-        elif _getattr(field, "inline_field_docstring"):
-            _value_20 = _stringify(_getattr(field, "inline_field_docstring"))
+        elif field.inline_field_docstring:
+            _value_20 = _stringify(field.inline_field_docstring)
             _parts.append(f"\n    {_value_20}")
         if _is_defined(_context_sequence_item_type) and _is_defined(_context_sequence_slice_type):
             _value_21 = _stringify(_context_sequence_item_type)

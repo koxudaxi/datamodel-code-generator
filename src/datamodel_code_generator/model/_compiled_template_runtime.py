@@ -32,7 +32,7 @@ class _Missing:
         return "Undefined"
 
 
-MISSING = _Missing()
+MISSING: Any = _Missing()
 
 
 class Scope:

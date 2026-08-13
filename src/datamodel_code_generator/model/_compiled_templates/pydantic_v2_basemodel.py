@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from datamodel_code_generator.model._compiled_template_runtime import (
+    MISSING as _MISSING,
     Scope as _Scope,
     filter_indent as _filter_indent,
     getattr_ as _getattr,
@@ -69,8 +70,8 @@ def render_with_scope(_scope: _Scope) -> str:
         _captured_7.append(_include_0(_include_scope_8))
         _parts.append(_filter_indent("".join(_captured_7), 4))
     for field in _context_fields:
-        if _getattr(field, "use_pydantic_extra_annotations_dict"):
-            _value_9 = _stringify(_getattr(field, "pydantic_extra_type_hint"))
+        if getattr(field, "use_pydantic_extra_annotations_dict", _MISSING):
+            _value_9 = _stringify(getattr(field, "pydantic_extra_type_hint", _MISSING))
             _parts.append(f"\n    __annotations__ = {{\n        '__pydantic_extra__': {_value_9},\n    }}")
     for line in _context_class_body_lines:
         _value_10 = _stringify(line)
@@ -79,37 +80,36 @@ def render_with_scope(_scope: _Scope) -> str:
     _parts.append(_include_1(_include_scope_11))
     for field, _loop_last_12 in _loop_last_iter(_context_fields):
         if (
-            (not _getattr(field, "use_pydantic_extra_annotations_dict")) and (not _getattr(field, "annotated"))
-        ) and _getattr(field, "field"):
-            _value_13 = _stringify(_getattr(field, "name"))
-            _value_14 = _stringify(_getattr(field, "type_hint"))
-            _value_15 = _stringify(_getattr(field, "field"))
+            (not getattr(field, "use_pydantic_extra_annotations_dict", _MISSING)) and (not field.annotated)
+        ) and field.field:
+            _value_13 = _stringify(field.name)
+            _value_14 = _stringify(field.type_hint)
+            _value_15 = _stringify(field.field)
             _parts.append(f"\n    {_value_13}: {_value_14} = {_value_15}")
-        elif not _getattr(field, "use_pydantic_extra_annotations_dict"):
-            if _getattr(field, "annotated"):
-                _value_16 = _stringify(_getattr(field, "name"))
-                _value_17 = _stringify(_getattr(field, "annotated"))
+        elif not getattr(field, "use_pydantic_extra_annotations_dict", _MISSING):
+            if field.annotated:
+                _value_16 = _stringify(field.name)
+                _value_17 = _stringify(field.annotated)
                 _parts.append(f"\n    {_value_16}: {_value_17}")
             else:
-                _value_18 = _stringify(_getattr(field, "name"))
-                _value_19 = _stringify(_getattr(field, "type_hint"))
+                _value_18 = _stringify(field.name)
+                _value_19 = _stringify(field.type_hint)
                 _parts.append(f"\n    {_value_18}: {_value_19}")
             if (
-                (not _getattr(field, "has_default_factory_in_field"))
-                and ((not _getattr(field, "required")) or _getattr(field, "use_default_with_required"))
+                (not getattr(field, "has_default_factory_in_field", _MISSING))
+                and ((not field.required) or field.use_default_with_required)
             ) and (
-                ((_getattr(field, "represented_default") != "None") or (not _getattr(field, "strip_default_none")))
-                or _getattr(_getattr(field, "data_type"), "is_optional")
+                ((field.represented_default != "None") or (not field.strip_default_none)) or field.data_type.is_optional
             ):
-                _value_20 = _stringify(_getattr(field, "represented_default"))
+                _value_20 = _stringify(field.represented_default)
                 _parts.append(f" = {_value_20}")
-        if _getattr(field, "docstring"):
-            _value_21 = _stringify(_getattr(field, "docstring"))
+        if field.docstring:
+            _value_21 = _stringify(field.docstring)
             _parts.append(f"\n    {_value_21}")
-            if _getattr(field, "use_inline_field_description") and (not _loop_last_12):
+            if field.use_inline_field_description and (not _loop_last_12):
                 _parts.append("\n\n")
-        elif _getattr(field, "inline_field_docstring"):
-            _value_22 = _stringify(_getattr(field, "inline_field_docstring"))
+        elif field.inline_field_docstring:
+            _value_22 = _stringify(field.inline_field_docstring)
             _parts.append(f"\n    {_value_22}")
             if not _loop_last_12:
                 _parts.append("\n\n")

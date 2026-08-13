@@ -13,6 +13,7 @@ from typing import Any
 
 import pytest
 
+from datamodel_code_generator.model import DataModelFieldBase
 from datamodel_code_generator.model._compiled_template_runtime import (
     MISSING,
     Namespace,
@@ -36,11 +37,21 @@ from datamodel_code_generator.model._compiled_template_runtime import (
     stringify,
 )
 from datamodel_code_generator.model._compiled_templates import get_builtin_renderer
-from datamodel_code_generator.model.base import TEMPLATE_DIR, TemplateBase, _safe_extra_template_data, get_template
+from datamodel_code_generator.model.base import (
+    TEMPLATE_DIR,
+    DataModel,
+    TemplateBase,
+    _safe_extra_template_data,
+    get_template,
+)
 from datamodel_code_generator.model.dataclass import DataClass
 from datamodel_code_generator.model.dataclass import DataModelField as DataclassField
 from datamodel_code_generator.model.pydantic_v2.base_model import BaseModel
 from datamodel_code_generator.model.pydantic_v2.base_model import DataModelField as PydanticField
+from datamodel_code_generator.model.pydantic_v2.dataclass import DataClass as PydanticDataclass
+from datamodel_code_generator.model.pydantic_v2.dataclass import DataModelField as PydanticDataclassField
+from datamodel_code_generator.model.pydantic_v2.root_model import RootModel
+from datamodel_code_generator.model.pydantic_v2.root_model_type_alias import RootModelTypeAlias
 from datamodel_code_generator.model.runtime_validation import RequiredGroupsRule, SchemaRuntimeValidation
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType
@@ -55,7 +66,7 @@ def _reference(name: str) -> Reference:
     return Reference(name=name, original_name=name, path=name)
 
 
-def _model_context(model: BaseModel | DataClass) -> dict[str, Any]:
+def _model_context(model: DataModel) -> dict[str, Any]:
     """Mirror the public DataModel.render context for its built-in Jinja oracle."""
     return {
         "class_name": model.class_name,
@@ -372,6 +383,10 @@ def _template_branch_cases() -> tuple[tuple[str, Path, dict[str, Any]], ...]:  #
         (
             "dataclass_concrete_and_inline_last",
             *context_for("dataclass.jinja2", fields=[concrete_field, inline_field]),
+        ),
+        (
+            "dataclass_default_without_field",
+            *context_for("dataclass.jinja2", fields=[default_field]),
         ),
         (
             "enum_inline_description",
@@ -768,6 +783,88 @@ def test_inventory_rejects_unknown_filter_with_actionable_diagnostic(tmp_path: P
         inventory_templates(tmp_path)
 
 
+@pytest.mark.parametrize(
+    ("filename", "source", "diagnostic"),
+    [
+        (
+            "scoped_assignment.jinja2",
+            "{% if enabled %}{% set value = 'local' %}{% endif %}{{ value }}",
+            (
+                r"scoped_assignment\.jinja2:1: unsupported Jinja scoped assignment in If 'value'; "
+                r"update the standalone template compiler"
+            ),
+        ),
+        (
+            "macro_capture.jinja2",
+            "{% set prefix = 'P' %}{% macro get_type_hint() %}{{ prefix }}{% endmacro %}{{ get_type_hint() }}",
+            (
+                r"macro_capture\.jinja2:1: unsupported Jinja macro local capture 'prefix'; "
+                r"update the standalone template compiler"
+            ),
+        ),
+        (
+            "nested_target.jinja2",
+            "{% for (first, second), third in values %}{{ first }}{% endfor %}",
+            (
+                r"nested_target\.jinja2:1: unsupported Jinja for target 'nested tuple'; "
+                r"update the standalone template compiler"
+            ),
+        ),
+        (
+            "unknown_mapping.jinja2",
+            "{% for record in records %}{{ record.value }}{% endfor %}",
+            (
+                r"unknown_mapping\.jinja2:1: unsupported Jinja mapping dot access 'value'; "
+                r"update the standalone template compiler"
+            ),
+        ),
+    ],
+)
+def test_inventory_rejects_unsafe_supported_shapes(
+    tmp_path: Path,
+    filename: str,
+    source: str,
+    diagnostic: str,
+) -> None:
+    """Accepted node classes must not permit constructs the compiler would misrender."""
+    tmp_path.joinpath(filename).write_text(source, encoding="utf-8")
+
+    with pytest.raises(ValueError, match=diagnostic):
+        inventory_templates(tmp_path)
+
+
+def test_inventory_rejects_include_capture_of_parent_macro(tmp_path: Path) -> None:
+    """Static includes cannot call a macro that exists only in the including module."""
+    tmp_path.joinpath("parent.jinja2").write_text(
+        "{% macro get_type_hint() %}parent{% endmacro %}{% include 'child.jinja2' %}",
+        encoding="utf-8",
+    )
+    tmp_path.joinpath("child.jinja2").write_text("{{ get_type_hint() }}", encoding="utf-8")
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"child\.jinja2:1: unsupported Jinja include macro capture 'get_type_hint'; "
+            r"update the standalone template compiler"
+        ),
+    ):
+        inventory_templates(tmp_path)
+
+
+def test_compiler_rejects_generated_module_name_collisions() -> None:
+    """Different template paths cannot silently overwrite one generated module."""
+    from scripts.compile_builtin_templates import _validate_module_names
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"template module name collision: 'nested/foo-bar\.jinja2' and 'nested/foo_bar\.jinja2' "
+            r"both map to 'nested_foo_bar'; .*update the standalone template compiler"
+        ),
+    ):
+        _validate_module_names((Path("nested/foo-bar.jinja2"), Path("nested/foo_bar.jinja2")))
+
+
 def test_compile_check_detects_missing_and_stale_generated_files(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -875,13 +972,53 @@ def test_model_rendering_uses_generated_renderers_with_real_model_objects() -> N
     pydantic_model.methods.append('def generated(self) -> str:\n        return "ok"')
     dataclass_reference = _reference("DataclassModel")
     dataclass_model = DataClass(
-        fields=[DataclassField(name="value", data_type=DataType(type="str"), required=True)],
+        fields=[
+            DataclassField(name="value", data_type=DataType(type="str"), required=True),
+            DataclassField(
+                name="standard_default",
+                data_type=DataType(type="str"),
+                default="fallback",
+                required=False,
+            ),
+        ],
         reference=dataclass_reference,
         description="Dataclass description.",
         frozen=True,
     )
+    pydantic_dataclass_model = PydanticDataclass(
+        fields=[
+            PydanticDataclassField(
+                name="pydantic_default",
+                data_type=DataType(type="str"),
+                default="fallback",
+                required=False,
+            ),
+            PydanticDataclassField(
+                name="items",
+                data_type=DataType(type="list[str]"),
+                required=False,
+                extras={"default_factory": "list"},
+            ),
+        ],
+        reference=_reference("PydanticDataclassModel"),
+    )
+    root_model = RootModel(
+        fields=[
+            DataModelFieldBase(
+                name="root",
+                data_type=DataType(type="str"),
+                default="fallback",
+                required=False,
+            )
+        ],
+        reference=_reference("RootDefault"),
+    )
+    root_model_type_alias = RootModelTypeAlias(
+        fields=[DataModelFieldBase(name="root", data_type=DataType(type="str"), required=True)],
+        reference=_reference("RootAlias"),
+    )
 
-    models = (pydantic_model, dataclass_model)
+    models = (pydantic_model, dataclass_model, pydantic_dataclass_model, root_model, root_model_type_alias)
     generated = "\n\n".join(model.render() for model in models) + "\n"
     jinja = (
         "\n\n".join(get_template(model.template_file_path).render(**_model_context(model)) for model in models) + "\n"
@@ -954,6 +1091,46 @@ def test_template_base_extension_seams_and_unknown_templates_stay_on_jinja(tmp_p
         positional._render(positional_context),
     ))
     assert_output(output + "\n", EXPECTED_PATH / "extension_seams.txt")
+
+
+def test_external_base_model_module_helper_stays_on_jinja(monkeypatch: pytest.MonkeyPatch) -> None:
+    """External subclasses retain Jinja when inheriting the module helper renderer."""
+
+    class ExternalBaseModel(BaseModel):
+        pass
+
+    reference = _reference("ExternalRuntimeModel")
+    model = ExternalBaseModel(
+        fields=[],
+        reference=reference,
+        extra_template_data=defaultdict(
+            dict,
+            {
+                reference.path: {
+                    "schema_runtime_validation": _runtime_validation(),
+                    "schema_runtime_validation_enabled": True,
+                }
+            },
+        ),
+    )
+    jinja = get_template(Path(ExternalBaseModel.SCHEMA_RUNTIME_VALIDATION_HELPERS_TEMPLATE_FILE_PATH)).render(
+        schema_runtime_validation_base_class_name=ExternalBaseModel.SCHEMA_RUNTIME_VALIDATION_BASE_CLASS_NAME,
+        has_pattern_properties=False,
+        has_required_groups=True,
+        has_conditional_required=False,
+    )
+
+    from datamodel_code_generator.model import _compiled_templates
+
+    def fail_compiled_lookup(_: object) -> None:
+        pytest.fail("external BaseModel subclass attempted compiled template lookup")
+
+    monkeypatch.setattr(_compiled_templates, "get_builtin_renderer", fail_compiled_lookup)
+    rendered = ExternalBaseModel.render_module_code([model])
+
+    expected = EXPECTED_PATH / "module_helper_parity.txt"
+    assert_output(f"{jinja!r}\n", expected)
+    assert_output(f"{rendered!r}\n", expected)
 
 
 def test_module_runtime_validation_helper_uses_generated_or_custom_jinja_renderer(

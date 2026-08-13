@@ -32,7 +32,7 @@ def render_with_scope(_scope: _Scope) -> str:
         _value_2 = _stringify(_context_class_name)
         _parts.append(f'\n{_value_1} = TypeAliasType("{_value_2}", Union[')
         for field in _context_fields:
-            _value_3 = _stringify(_getattr(field, "name"))
+            _value_3 = _stringify(field.name)
             _parts.append(f"\n    '{_value_3}',")
         _parts.append("\n])")
     elif _context_fields:

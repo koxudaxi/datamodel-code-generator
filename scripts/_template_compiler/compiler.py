@@ -9,7 +9,7 @@ from __future__ import annotations
 import ast as python_ast
 from hashlib import sha256
 from json import dumps
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from jinja2 import Environment, nodes
 
@@ -38,6 +38,35 @@ _RUNTIME_HELPERS = (
     ("setattr_", "_setattr"),
     ("stringify", "_stringify"),
 )
+
+# These bindings only ever refer to project model/runtime value objects in the
+# checked-in templates.  Their attributes may be intentionally absent on a
+# base-class instance, so they retain Jinja's missing-value behaviour through
+# Python's ``getattr(..., _MISSING)`` rather than using raw ``value.attr``.
+# The fast path covers only attributes guaranteed by DataModelFieldBase and
+# DataType.  Backend-specific field properties remain on the missing-safe path.
+_DIRECT_ATTRIBUTE_PATHS = {
+    ("_field",): frozenset({"annotated", "field", "type_hint"}),
+    ("data_type",): frozenset({"type_hint"}),
+    ("field",): frozenset({
+        "annotated",
+        "data_type",
+        "default",
+        "docstring",
+        "extras",
+        "field",
+        "inline_field_docstring",
+        "name",
+        "represented_default",
+        "required",
+        "strip_default_none",
+        "type_hint",
+        "use_default_with_required",
+        "use_inline_field_description",
+    }),
+    ("field", "data_type"): frozenset({"is_optional"}),
+    ("field", "extras"): frozenset({"get"}),
+}
 
 
 def _runtime_imports(source: str) -> str:
@@ -373,7 +402,12 @@ class _Compiler:
                     and (loop_last := names.get("loop")) is not None
                 ):
                     return loop_last
-                return f"_getattr({self.expression(node.node, scope, names)}, {node.attr!r})"
+                value = self.expression(node.node, scope, names)
+                if self._has_direct_attribute(node.node, node.attr):
+                    return f"{value}.{node.attr}"
+                if self._has_object_attributes(node.node):
+                    return f"getattr({value}, {node.attr!r}, _MISSING)"
+                return f"_getattr({value}, {node.attr!r})"
             case nodes.Getitem():
                 return (
                     f"_getitem({self.expression(node.node, scope, names)}, {self.expression(node.arg, scope, names)})"
@@ -484,6 +518,32 @@ class _Compiler:
             target = f"_macro_{node.node.name}({scope}"
             return target + (", " + ", ".join(arguments) if arguments else "") + ")"
         return f"{target}({', '.join(arguments)})"
+
+    @staticmethod
+    def _has_direct_attribute(node: nodes.Expr, attribute: str) -> bool:
+        """Return whether an attribute is guaranteed on its field/runtime binding."""
+        if (path := _Compiler._attribute_path(node)) is None:
+            return False
+        return attribute in _DIRECT_ATTRIBUTE_PATHS.get(path, ())
+
+    @staticmethod
+    def _has_object_attributes(node: nodes.Expr) -> bool:
+        """Return whether an expression is rooted in a model/runtime object binding."""
+        if (path := _Compiler._attribute_path(node)) is None:
+            return False
+        return path[0] in {"_field", "data_type", "field", "rule"}
+
+    @staticmethod
+    def _attribute_path(node: nodes.Expr) -> tuple[str, ...] | None:
+        """Return a static attribute path rooted at a local template binding."""
+        candidate = cast("Any", node)
+        match candidate:
+            case nodes.Name():
+                return (candidate.name,)
+            case nodes.Getattr():
+                if (path := _Compiler._attribute_path(candidate.node)) is not None:
+                    return (*path, candidate.attr)
+        return None
 
 
 def compile_template(template_dir: Path, relative_path: Path, environment: Environment) -> str:

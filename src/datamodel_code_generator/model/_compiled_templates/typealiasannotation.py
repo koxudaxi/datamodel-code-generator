@@ -20,15 +20,15 @@ def render(**context: Any) -> str:
 def render_with_scope(_scope: _Scope) -> str:
     def _macro_get_type_annotation(_parent: _Scope, _field: Any) -> str:
         _parts: list[str] = []
-        if _getattr(_field, "annotated"):
-            _value_0 = _stringify(_getattr(_field, "annotated"))
+        if _field.annotated:
+            _value_0 = _stringify(_field.annotated)
             _parts.append(f"{_value_0}")
-        elif _getattr(_field, "field"):
-            _value_1 = _stringify(_getattr(_field, "type_hint"))
-            _value_2 = _stringify(_getattr(_field, "field"))
+        elif _field.field:
+            _value_1 = _stringify(_field.type_hint)
+            _value_2 = _stringify(_field.field)
             _parts.append(f"Annotated[{_value_1}, {_value_2}]")
         else:
-            _value_3 = _stringify(_getattr(_field, "type_hint"))
+            _value_3 = _stringify(_field.type_hint)
             _parts.append(f"{_value_3}")
         return "".join(_parts)
 
