@@ -6,6 +6,7 @@ the small standard-library-only runtime in ``model._compiled_template_runtime``.
 
 from __future__ import annotations
 
+import ast as python_ast
 from hashlib import sha256
 from json import dumps
 from typing import TYPE_CHECKING, Any
@@ -15,28 +16,42 @@ from jinja2 import Environment, nodes
 if TYPE_CHECKING:
     from pathlib import Path
 
-_RUNTIME_IMPORTS = """from datamodel_code_generator.model._compiled_template_runtime import (
-    MISSING as _MISSING,
-    Scope as _Scope,
-    concat as _concat,
-    filter_default as _filter_default,
-    filter_indent as _filter_indent,
-    filter_join as _filter_join,
-    filter_length as _filter_length,
-    filter_list as _filter_list,
-    filter_pprint as _filter_pprint,
-    filter_replace as _filter_replace,
-    filter_repr as _filter_repr,
-    filter_selectattr as _filter_selectattr,
-    getattr_ as _getattr,
-    getitem as _getitem,
-    is_defined as _is_defined,
-    loop_last_iter as _loop_last_iter,
-    namespace as _namespace,
-    setattr_ as _setattr,
-    stringify as _stringify,
+_RUNTIME_IMPORT_MARKER = "# __standalone_template_runtime_imports__"
+_RUNTIME_HELPERS = (
+    ("MISSING", "_MISSING"),
+    ("Scope", "_Scope"),
+    ("concat", "_concat"),
+    ("filter_default", "_filter_default"),
+    ("filter_indent", "_filter_indent"),
+    ("filter_join", "_filter_join"),
+    ("filter_length", "_filter_length"),
+    ("filter_list", "_filter_list"),
+    ("filter_pprint", "_filter_pprint"),
+    ("filter_replace", "_filter_replace"),
+    ("filter_repr", "_filter_repr"),
+    ("filter_selectattr", "_filter_selectattr"),
+    ("getattr_", "_getattr"),
+    ("getitem", "_getitem"),
+    ("is_defined", "_is_defined"),
+    ("loop_last_iter", "_loop_last_iter"),
+    ("namespace", "_namespace"),
+    ("setattr_", "_setattr"),
+    ("stringify", "_stringify"),
 )
-"""
+
+
+def _runtime_imports(source: str) -> str:
+    loaded_names = {
+        node.id
+        for node in python_ast.walk(python_ast.parse(source))
+        if isinstance(node, python_ast.Name) and isinstance(node.ctx, python_ast.Load)
+    }
+    imports = [f"    {name} as {alias}," for name, alias in _RUNTIME_HELPERS if alias in loaded_names]
+    return "\n".join([
+        "from datamodel_code_generator.model._compiled_template_runtime import (",
+        *imports,
+        ")",
+    ])
 
 
 def module_name_for_path(relative_path: Path) -> str:
@@ -65,7 +80,7 @@ class _Compiler:
             "",
             "from typing import Any",
             "",
-            _RUNTIME_IMPORTS.rstrip(),
+            _RUNTIME_IMPORT_MARKER,
             "",
         ])
         for include_path, alias in self._discover_includes().items():
@@ -90,7 +105,8 @@ class _Compiler:
                 (node for node in self.ast.body if not isinstance(node, nodes.Macro)), "_scope", "_parts", names
             )
             self.emit("return ''.join(_parts)")
-        return "\n".join(self.lines) + "\n"
+        source = "\n".join(self.lines) + "\n"
+        return source.replace(_RUNTIME_IMPORT_MARKER, _runtime_imports(source))
 
     def _external_names(self) -> tuple[str, ...]:
         bound_names: set[str] = set()
@@ -326,7 +342,8 @@ class _Compiler:
 
     def expression(self, node: nodes.Expr, scope: str, names: dict[str, str]) -> str:  # noqa: PLR0911
         match node:
-            case nodes.Name(name=name):
+            case nodes.Name():
+                name = node.name
                 if (local := names.get(name)) is not None:
                     return local
                 if name in self._macros:

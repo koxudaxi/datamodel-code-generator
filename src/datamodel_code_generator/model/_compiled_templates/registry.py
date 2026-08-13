@@ -5,7 +5,6 @@ from collections.abc import Callable
 from functools import lru_cache
 from importlib import import_module
 from os import PathLike
-from typing import Any
 
 _RENDERER_MODULES: dict[str, str] = {
     "Enum.jinja2": ".enum",

@@ -45,7 +45,6 @@ def _render_registry(template_paths: Iterable[Path]) -> str:
             "from functools import lru_cache",
             "from importlib import import_module",
             "from os import PathLike",
-            "from typing import Any",
             "",
             "_RENDERER_MODULES: dict[str, str] = {",
             *mapping,

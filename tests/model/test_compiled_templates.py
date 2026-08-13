@@ -611,7 +611,7 @@ def _render_template_branch_cases(*, compiled: bool) -> str:
 
 
 def _render_runtime_subset(*, compiled: bool) -> str:  # noqa: PLR0914
-    from jinja2 import Environment
+    from jinja2 import Environment, select_autoescape
 
     values = {
         "missing": MISSING,
@@ -656,7 +656,7 @@ def _render_runtime_subset(*, compiled: bool) -> str:  # noqa: PLR0914
         ])
         return "\n".join(output) + "\n"
 
-    environment = Environment()
+    environment = Environment(autoescape=select_autoescape(["html", "xml"], default_for_string=False))
     environment.filters["repr"] = repr
     default_template = environment.from_string(
         "{{ name }}|{{ value|default('fallback') }}|{{ value is defined }}|{{ value|default('boolean', true) }}"
