@@ -11,7 +11,6 @@ import pytest
 
 import datamodel_code_generator._builtin_formatter as builtin_formatter
 import datamodel_code_generator.config as config_module
-from datamodel_code_generator.config import GraphQLParserConfig, ParserConfig
 from datamodel_code_generator.parser.base import Parser
 from tests.conftest import assert_output
 
@@ -31,7 +30,10 @@ def _assigned_value(tree: ast.AST, attribute_name: str) -> ast.expr:
             for target in node.targets
         ):
             return node.value
-    pytest.fail(f"Parser.__init__ no longer assigns self.{attribute_name}")  # pragma: no cover
+    msg = f"Parser.__init__ no longer assigns self.{attribute_name}"  # pragma: no cover
+    raise AssertionError(  # pragma: no cover
+        msg
+    )
 
 
 def _attributes_on(node: ast.AST, object_name: str) -> set[str]:
@@ -71,7 +73,7 @@ def _generated_formatter_guarded_config_fields() -> set[str]:
         for attribute in _attributes_on(configured_types, "self")
         if attribute in config_by_instance_attribute
     )
-    config_field_names = set(GraphQLParserConfig.model_fields)
+    config_field_names = set(config_module.GraphQLParserConfig.model_fields)
     guarded_fields.update(
         child.value
         for child in ast.walk(configured_types)
@@ -89,7 +91,7 @@ def test_generated_formatter_parser_config_contract() -> None:
             for value in vars(config_module).values()
             if isinstance(value, type)
             and value.__module__ == config_module.__name__
-            and issubclass(value, ParserConfig)
+            and issubclass(value, config_module.ParserConfig)
         ),
         key=lambda config_type: (len(config_type.mro()), config_type.__name__),
     )
