@@ -834,8 +834,6 @@ def test_local_ref_false_schema_facts_fall_back_for_custom_hooks(monkeypatch: py
     ):
         parser = parser_type("")
         parser.raw_obj = {"$defs": {"Never": False}}
-        if parser._false_schema_refs is not None:
-            parser._false_schema_refs.discard("#/$defs/Never")
 
         assert not parser._uses_builtin_false_ref_facts()
         assert parser._is_local_ref_false_schema("#/$defs/Never", use_builtin_facts=False)
@@ -848,8 +846,6 @@ def test_local_ref_false_schema_facts_fall_back_for_custom_hooks(monkeypatch: py
     instance_calls: list[str] = []
     parser = JsonSchemaParser("")
     parser.raw_obj = {"$defs": {"Never": False}}
-    if parser._false_schema_refs is not None:
-        parser._false_schema_refs.discard("#/$defs/Never")
 
     def instance_loader(ref: str) -> JsonSchemaObject:
         instance_calls.append(ref)
