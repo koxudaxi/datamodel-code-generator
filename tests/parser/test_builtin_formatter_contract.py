@@ -38,9 +38,7 @@ def _attributes_on(node: ast.AST, object_name: str) -> set[str]:
     return {
         child.attr
         for child in ast.walk(node)
-        if isinstance(child, ast.Attribute)
-        and isinstance(child.value, ast.Name)
-        and child.value.id == object_name
+        if isinstance(child, ast.Attribute) and isinstance(child.value, ast.Name) and child.value.id == object_name
     }
 
 
@@ -65,11 +63,7 @@ def _generated_formatter_guarded_config_fields() -> set[str]:
             case _:
                 continue
         for target in targets:
-            if (
-                isinstance(target, ast.Attribute)
-                and isinstance(target.value, ast.Name)
-                and target.value.id == "self"
-            ):
+            if isinstance(target, ast.Attribute) and isinstance(target.value, ast.Name) and target.value.id == "self":
                 config_by_instance_attribute[target.attr] = config_field
     guarded_fields = _attributes_on(configured_types, "config") | _attributes_on(standard_templates, "config")
     guarded_fields.update(
