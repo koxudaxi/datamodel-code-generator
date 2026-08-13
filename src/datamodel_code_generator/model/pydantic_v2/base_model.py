@@ -70,6 +70,7 @@ from datamodel_code_generator.types import chain_as_tuple
 
 if TYPE_CHECKING:
     from jinja2 import Template
+    from typing_extensions import TypedDict, Unpack
 
     from datamodel_code_generator.reference import Reference
     from datamodel_code_generator.types import DataType
@@ -558,6 +559,39 @@ class DataModelField(_PydanticBaseDataModelField):
 _LOOKAROUND_PATTERN: re.Pattern[str] = re.compile(r"\(\?<?[=!]")
 
 
+if TYPE_CHECKING:
+
+    class _ParserSimpleFieldData(TypedDict, total=False):
+        name: str | None
+        default: object | None
+        required: bool
+        alias: str | None
+        validation_aliases: list[str] | None
+        serialization_alias: str | None
+        data_type: DataType
+        constraints: Constraints | dict[str, object] | None
+        strip_default_none: bool
+        nullable: bool | None
+        extras: dict[str, object] | None
+        use_annotated: bool
+        use_serialize_as_any: bool
+        has_default: bool
+        use_field_description: bool
+        use_field_description_example: bool
+        use_inline_field_description: bool
+        const: bool
+        original_name: str | None
+        use_default_kwarg: bool
+        use_missing_sentinel: bool
+        type_has_null: bool | None
+        read_only: bool
+        write_only: bool
+        use_frozen_field: bool
+        use_serialization_alias: bool
+        use_default_factory_for_optional_nested_models: bool
+        use_default_with_required: bool
+
+
 _PARSER_SIMPLE_FIELD_DEFAULTS = MappingProxyType({
     name: None if field_info.is_required() or field_info.default_factory is not None else field_info.default
     for name, field_info in DataModelField.model_fields.items()
@@ -566,7 +600,7 @@ _PARSER_SIMPLE_FIELD_HAS_PRIVATE_STATE = DataModelField.__pydantic_post_init__ i
 _SET_PARSER_FIELD_ATTRIBUTE = object.__setattr__
 
 
-def _construct_parser_simple_field(**data: Any) -> DataModelField:
+def _construct_parser_simple_field(**data: Unpack[_ParserSimpleFieldData]) -> DataModelField:
     """Construct a parser-normalized simple field without Pydantic validation."""
     match (
         data.get("constraints"),
