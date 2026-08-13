@@ -7,7 +7,6 @@ import pytest
 from datamodel_code_generator import DataModelType
 from datamodel_code_generator.config import JSONSchemaParserConfig
 from datamodel_code_generator.model import get_data_model_types
-from datamodel_code_generator.model.pydantic_v2 import base_model as pydantic_v2_base_model
 from datamodel_code_generator.model.pydantic_v2.base_model import (
     BaseModel,
     Constraints,
@@ -71,26 +70,63 @@ def test_schema_runtime_validation_helpers_are_gated_by_parser_option() -> None:
 
 @pytest.mark.allow_direct_assert
 def test_parser_simple_field_matches_validated_field() -> None:
-    """Preserve dumps and rendering when the parser supplies normalized values."""
-    values = {
+    """Keep every fast-constructor field and private slot equivalent to Pydantic."""
+    representative_values = {
         "name": "item_name",
         "default": "'item'",
         "required": True,
         "alias": "item-name",
-        "data_type": DataType(type="str"),
+        "validation_aliases": ["item_name", "item-name"],
+        "serialization_alias": "itemName",
+        "constraints": None,
+        "strip_default_none": True,
+        "nullable": True,
+        "parent": None,
         "extras": {},
         "use_annotated": True,
+        "use_serialize_as_any": True,
+        "has_default": True,
+        "use_field_description": True,
+        "use_field_description_example": True,
+        "use_inline_field_description": True,
+        "const": False,
+        "original_name": "item-name",
+        "use_default_kwarg": True,
         "use_missing_sentinel": True,
+        "use_one_literal_as_default": True,
+        "type_has_null": True,
+        "read_only": True,
+        "write_only": True,
+        "use_frozen_field": True,
+        "use_serialization_alias": True,
+        "use_default_factory_for_optional_nested_models": True,
+        "use_default_with_required": True,
     }
-    validated = DataModelField(**values)
-    constructed = _construct_parser_simple_field(**{**values, "data_type": DataType(type="str")})
+    assert representative_values.keys() | {"data_type"} == DataModelField.model_fields.keys()
+    assert {
+        name for name, field_info in DataModelField.model_fields.items() if field_info.default_factory is not None
+    } == {"extras"}
 
-    assert constructed.model_dump() == validated.model_dump()
-    assert constructed.model_dump(exclude_unset=True) == validated.model_dump(exclude_unset=True)
-    assert constructed.__pydantic_fields_set__ == validated.__pydantic_fields_set__
-    assert repr(constructed) == repr(validated)
-    assert constructed.type_hint == validated.type_hint
-    assert constructed.field == validated.field
+    pydantic_slots = {
+        slot
+        for model_type in DataModelField.__mro__
+        for slot in getattr(model_type, "__slots__", ())
+        if slot.startswith("__pydantic_")
+    }
+    for values in ({}, representative_values):
+        data_type = DataType(type="str")
+        validated = DataModelField(**values, data_type=data_type)
+        constructed = _construct_parser_simple_field(**values, data_type=data_type)
+
+        assert constructed.__dict__ == validated.__dict__
+        assert {slot: getattr(constructed, slot) for slot in pydantic_slots} == {
+            slot: getattr(validated, slot) for slot in pydantic_slots
+        }
+        assert constructed.model_dump() == validated.model_dump()
+        assert constructed.model_dump(exclude_unset=True) == validated.model_dump(exclude_unset=True)
+        assert repr(constructed) == repr(validated)
+        assert constructed.type_hint == validated.type_hint
+        assert constructed.field == validated.field
 
 
 @pytest.mark.allow_direct_assert
@@ -135,16 +171,6 @@ def test_parser_simple_field_constructor_requires_exact_builtin_type() -> None:
 
     assert _get_builtin_pydantic_v2_field_constructor(DataModelField) is _construct_parser_simple_field
     assert _get_builtin_pydantic_v2_field_constructor(CustomDataModelField) is None
-
-
-@pytest.mark.allow_direct_assert
-def test_parser_simple_field_unknown_layout_falls_back(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Use validation when a future Pydantic release changes instance layout."""
-    monkeypatch.setattr(pydantic_v2_base_model, "_PARSER_SIMPLE_FIELD_LAYOUT_SUPPORTED", False)
-
-    field = _construct_parser_simple_field(name="value", data_type=DataType(type="str"))
-
-    assert field == DataModelField(name="value", data_type=DataType(type="str"))
 
 
 @pytest.mark.allow_direct_assert
