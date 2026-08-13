@@ -892,6 +892,23 @@ def test_local_ref_false_schema_preserves_custom_fact_cache_output() -> None:
     assert FactCacheOverrideParser.cached_refs == ["#", "#/$defs/Never", "#/$defs/Never"]
 
 
+def test_local_ref_false_schema_fast_path_matches_validation_path() -> None:
+    """Keep generated output identical to repeated reference validation."""
+
+    class ValidationPathParser(JsonSchemaParser):
+        def _uses_builtin_false_ref_facts(self) -> bool:
+            return False
+
+    source = (DATA_PATH / "false_reference_fast_path.json").read_text()
+    outputs = []
+    for parser_type in (ValidationPathParser, JsonSchemaParser):
+        parser = parser_type(source)
+        parser.parse(format_=False)
+        outputs.append(dump_templates(list(parser.results)))
+
+    assert outputs[0] == outputs[1]
+
+
 def test_resolve_local_ref_path_caches_safe_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Avoid resolving the same local ref path repeatedly after it has passed safety checks."""
     parser = JsonSchemaParser(tmp_path / "schema.json")
