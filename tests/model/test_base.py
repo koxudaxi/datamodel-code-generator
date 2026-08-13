@@ -1474,6 +1474,32 @@ def test_msgspec_simple_unset_fast_path_matches_graph_fallback(
 
 
 @pytest.mark.parametrize(
+    ("import_", "expected_imports"),
+    [
+        pytest.param(
+            IMPORT_MSGSPEC_UNSETTYPE,
+            (IMPORT_MSGSPEC_UNSETTYPE, IMPORT_UNION, IMPORT_MSGSPEC_UNSET),
+            id="existing-unset",
+        ),
+        pytest.param(
+            IMPORT_UNION,
+            (IMPORT_UNION, IMPORT_MSGSPEC_UNSETTYPE, IMPORT_MSGSPEC_UNSET),
+            id="existing-union",
+        ),
+    ],
+)
+def test_msgspec_simple_unset_fast_path_deduplicates_trailing_imports(
+    import_: Import,
+    expected_imports: tuple[Import, ...],
+) -> None:
+    """Direct rendering retains ordered imports already supplied by the leaf."""
+    field = _msgspec_field(DataType(type="str", import_=import_))
+
+    assert field._get_simple_unset_type_hint() == "Union[str, UnsetType]"
+    assert field.imports == expected_imports
+
+
+@pytest.mark.parametrize(
     "data_type",
     [
         pytest.param(DataType(), id="empty"),
@@ -1485,6 +1511,8 @@ def test_msgspec_simple_unset_fast_path_matches_graph_fallback(
             pytest.param(DataType(**{flag: True}), id=f"bare-{flag.removeprefix('is_').replace('_', '-')}")
             for flag in ("is_list", "is_dict", "is_set", "is_frozen_set", "is_mapping", "is_sequence", "is_tuple")
         ],
+        pytest.param(DataType(type="str", is_list=True), id="typed-list"),
+        pytest.param(DataType(type="str", is_mapping=True), id="typed-mapping"),
         pytest.param(DataType(is_list=True, data_types=[DataType(type="str")]), id="nested-container"),
         pytest.param(
             DataType(data_types=[DataType(type="str"), DataType(type=NONE)]),
