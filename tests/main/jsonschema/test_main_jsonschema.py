@@ -15,7 +15,7 @@ from collections.abc import Callable as ABCCallable
 from collections.abc import Sequence
 from dataclasses import Field as DataclassField
 from pathlib import Path, PurePath
-from typing import cast, get_args, get_type_hints
+from typing import TYPE_CHECKING, get_args, get_type_hints
 
 import black
 import pytest
@@ -87,6 +87,9 @@ from tests.main.conftest import (
     run_main_with_system_exit,
 )
 from tests.main.jsonschema.conftest import EXPECTED_JSON_SCHEMA_PATH, assert_file_content
+
+if TYPE_CHECKING:
+    from datamodel_code_generator.parser.base import Result
 
 FixtureRequest = pytest.FixtureRequest
 
@@ -3914,7 +3917,9 @@ def test_main_jsonschema_msgspec_unset_fastpath_matches_graph_fallback(
     """CI preserves formatted bytes for built-in and external templates on every target."""
     model_types = get_data_model_types(DataModelType.MsgspecStruct, target_python_version)
 
-    def generate(field_model: type[model_base.DataModelFieldBase]) -> object:
+    def generate(
+        field_model: type[model_base.DataModelFieldBase],
+    ) -> str | dict[tuple[str, ...], Result]:
         return JsonSchemaParser(
             JSON_SCHEMA_DATA_PATH / "msgspec_unset_fastpath.json",
             data_model_type=model_types.data_model,
@@ -3927,7 +3932,11 @@ def test_main_jsonschema_msgspec_unset_fastpath_matches_graph_fallback(
             formatters=[Formatter.BUILTIN],
         ).parse()
 
-    output_file.write_text(cast("str", generate(_FallbackMsgspecDataModelField)), encoding="utf-8")
+    match generate(_FallbackMsgspecDataModelField):
+        case str() as generated:
+            output_file.write_text(generated, encoding="utf-8")
+        case generated:  # pragma: no cover - this parser is configured for single-file output
+            assert_output(generated, output_file)
     assert_output(generate(model_types.field_model), output_file)
 
 

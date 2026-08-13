@@ -10,6 +10,7 @@ from typing import Any
 from unittest.mock import Mock
 
 import pytest
+from typing_extensions import TypedDict, Unpack
 
 from datamodel_code_generator._format_types import PythonVersion
 from datamodel_code_generator.imports import (
@@ -1384,7 +1385,21 @@ def test_pydantic_v2_nested_discriminator_still_imports_field() -> None:
     assert IMPORT_FIELD in field.imports
 
 
-def _msgspec_field(data_type: DataType, *, required: bool = False, **kwargs: Any) -> MsgspecDataModelField:
+class _MsgspecFieldKwargs(TypedDict, total=False):
+    nullable: bool
+    default: str
+    has_default: bool
+    type_has_null: bool
+    extras: dict[str, int]
+    use_annotated: bool
+
+
+def _msgspec_field(
+    data_type: DataType,
+    *,
+    required: bool = False,
+    **kwargs: Unpack[_MsgspecFieldKwargs],
+) -> MsgspecDataModelField:
     field = MsgspecDataModelField(name="value", data_type=data_type, required=required, **kwargs)
     MsgspecStruct(fields=[field], reference=Reference(path="Model", original_name="Model", name="Model"))
     return field
@@ -1434,7 +1449,7 @@ def test_msgspec_unset_type_hint_handles_empty_and_simple_types() -> None:
 def test_msgspec_simple_unset_fast_path_matches_graph_fallback(
     python_version: PythonVersion,
     use_union_operator: bool,
-    field_kwargs: dict[str, Any],
+    field_kwargs: _MsgspecFieldKwargs,
     has_forward_reference: bool,
 ) -> None:
     """CI compares every supported target with the graph fallback as the source of truth."""
