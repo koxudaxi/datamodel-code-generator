@@ -789,6 +789,8 @@ def test_compile_check_detects_missing_and_stale_generated_files(
     stale_path.write_text("# stale\n", encoding="utf-8")
     missing_path = generated_dir / "msgspec.py"
     missing_path.unlink()
+    orphan_path = generated_dir / "orphan.py"
+    orphan_path.write_text("# orphan\n", encoding="utf-8")
 
     stderr = io.StringIO()
     with contextlib.redirect_stderr(stderr):
@@ -797,6 +799,17 @@ def test_compile_check_detects_missing_and_stale_generated_files(
     assert_output(
         f"status: {status}\n{stderr.getvalue()}",
         EXPECTED_PATH / "compile_check_stale.txt",
+    )
+
+    generation_status = compile_builtin_templates.main([])
+    check_status = compile_builtin_templates.main(["--check"])
+    assert_output(
+        "".join([
+            f"generation status: {generation_status}\n",
+            f"check status: {check_status}\n",
+            f"orphan exists: {orphan_path.exists()}\n",
+        ]),
+        EXPECTED_PATH / "compile_generation_cleanup.txt",
     )
 
 

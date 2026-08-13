@@ -34,7 +34,7 @@ OUTPUT_DIR = ROOT / "src/datamodel_code_generator/model/_compiled_templates"
 
 
 def _render_registry(template_paths: Iterable[Path]) -> str:
-    entries = tuple(sorted(template_paths))
+    entries = tuple(sorted(template_paths, key=lambda path: path.as_posix()))
     mapping = [f"    {path.as_posix()!r}: '.{module_name_for_path(path)}'," for path in entries]
     return (
         "\n".join([
@@ -118,9 +118,16 @@ def _stale_paths(sources: dict[Path, str]) -> list[Path]:
     stale = [
         path for path, source in sources.items() if not path.is_file() or path.read_text(encoding="utf-8") != source
     ]
+    stale.extend(_orphan_paths(sources))
+    return sorted(set(stale), key=lambda path: path.relative_to(ROOT).as_posix())
+
+
+def _orphan_paths(sources: dict[Path, str]) -> list[Path]:
     generated_names = {path.name for path in sources}
-    stale.extend(path for path in OUTPUT_DIR.glob("*.py") if path.name not in generated_names)
-    return sorted(set(stale))
+    return sorted(
+        (path for path in OUTPUT_DIR.glob("*.py") if path.name not in generated_names),
+        key=lambda path: path.relative_to(ROOT).as_posix(),
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -139,6 +146,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.check:
         return 0
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    for path in _orphan_paths(sources):
+        path.unlink()
     for path, source in sources.items():
         path.write_text(source, encoding="utf-8")
     return 0

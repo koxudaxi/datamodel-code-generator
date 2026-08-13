@@ -32,7 +32,7 @@ def render_with_scope(_scope: _Scope) -> str:
         _parts.append(f"{_value_0}\n")
     args = []
     for k, v in _getattr((_context_dataclass_arguments or {}), "items")():
-        if (not (v is None)) and (not (v is False)):
+        if (v is not None) and (v is not False):
             _ = _getattr(args, "append")(_concat(k, "=", _filter_pprint(v)))
     if args:
         _value_1 = _stringify(_filter_join(args, ", "))

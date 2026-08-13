@@ -379,6 +379,8 @@ class _Compiler:
                     f"_getitem({self.expression(node.node, scope, names)}, {self.expression(node.arg, scope, names)})"
                 )
             case nodes.Not():
+                if isinstance(node.node, nodes.Test):
+                    return self._test(node.node, scope, names, negated=True)
                 return f"(not {self.expression(node.node, scope, names)})"
             case nodes.And():
                 return f"({self.expression(node.left, scope, names)} and {self.expression(node.right, scope, names)})"
@@ -417,17 +419,18 @@ class _Compiler:
             result += f" {operator} {self.expression(operation.expr, scope, names)}"
         return f"({result})"
 
-    def _test(self, node: nodes.Test, scope: str, names: dict[str, str]) -> str:
+    def _test(self, node: nodes.Test, scope: str, names: dict[str, str], *, negated: bool = False) -> str:
         if node.args or node.kwargs or node.dyn_args is not None or node.dyn_kwargs is not None:
             self._unsupported(node, f"test arguments for {node.name}")
         value = self.expression(node.node, scope, names)
         match node.name:
             case "defined":
-                return f"_is_defined({value})"
+                result = f"_is_defined({value})"
+                return f"(not {result})" if negated else result
             case "none":
-                return f"({value} is None)"
+                return f"({value} is{' not' if negated else ''} None)"
             case "false":
-                return f"({value} is False)"
+                return f"({value} is{' not' if negated else ''} False)"
             case _:
                 self._unsupported(node, f"test {node.name}")
         error_message = "unreachable"

@@ -74,11 +74,19 @@ def _measure(function: Callable[[], str], *, number: int, repeats: int) -> float
     return statistics.median(samples) * 1_000_000 / number
 
 
+def _positive_int(value: str) -> int:
+    """Parse an integer that can produce at least one benchmark sample."""
+    if (parsed := int(value)) > 0:
+        return parsed
+    error_message = "must be a positive integer"
+    raise argparse.ArgumentTypeError(error_message)
+
+
 def main(argv: list[str] | None = None) -> int:
     """Run string-building and isolated renderer measurements."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--number", type=int, default=100_000, help="calls per sample")
-    parser.add_argument("--repeats", type=int, default=7, help="number of samples")
+    parser.add_argument("--number", type=_positive_int, default=100_000, help="calls per sample")
+    parser.add_argument("--repeats", type=_positive_int, default=7, help="number of samples")
     args = parser.parse_args(argv)
     for label, function in {**_micro_output_strategies(), **_renderers()}.items():
         print(f"{label}: {_measure(function, number=args.number, repeats=args.repeats):.3f} us/op")
