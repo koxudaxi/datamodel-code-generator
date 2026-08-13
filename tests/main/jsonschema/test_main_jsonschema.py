@@ -42,10 +42,13 @@ from datamodel_code_generator import (
 from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.format import Formatter, is_supported_in_black
 from datamodel_code_generator.model import base as model_base
+from datamodel_code_generator.model import get_data_model_types
+from datamodel_code_generator.model.msgspec import DataModelField as MsgspecDataModelField
 from datamodel_code_generator.model.pydantic_v2.version import (
     PYDANTIC_V2_DATACLASS_ALIAS_NEEDS_FALLBACK,
     PYDANTIC_V2_ROOT_MODEL_DICT_KEY_FORWARD_REF_NEEDS_SORTING,
 )
+from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
 from tests.conftest import (
     HttpxGetMockFactory,
     MockHttpxResponse,
@@ -86,6 +89,10 @@ from tests.main.conftest import (
 from tests.main.jsonschema.conftest import EXPECTED_JSON_SCHEMA_PATH, assert_file_content
 
 FixtureRequest = pytest.FixtureRequest
+
+
+class _FallbackMsgspecDataModelField(MsgspecDataModelField):
+    """Force the conventional graph-rendering path for CI parity checks."""
 
 
 def assert_run_main_with_args_error(args: list[str], capsys: pytest.CaptureFixture[str], expected_error: str) -> None:
@@ -3889,6 +3896,40 @@ def test_main_jsonschema_msgspec_unset_fastpath_custom_template(output_file: Pat
         ],
         force_exec_validation=True,
     )
+
+
+@pytest.mark.parametrize("target_python_version", list(PythonVersion))
+@pytest.mark.parametrize("use_union_operator", [False, True], ids=["typing-union", "union-operator"])
+@pytest.mark.parametrize(
+    "custom_template_dir",
+    [None, DATA_PATH / "templates_msgspec_unset_fastpath"],
+    ids=["builtin-template", "custom-template"],
+)
+def test_main_jsonschema_msgspec_unset_fastpath_matches_graph_fallback(
+    target_python_version: PythonVersion,
+    use_union_operator: bool,
+    custom_template_dir: Path | None,
+) -> None:
+    """CI preserves formatted bytes for built-in and external templates on every target."""
+    model_types = get_data_model_types(DataModelType.MsgspecStruct, target_python_version)
+    outputs: list[str] = []
+    for field_model in (model_types.field_model, _FallbackMsgspecDataModelField):
+        parser = JsonSchemaParser(
+            JSON_SCHEMA_DATA_PATH / "msgspec_unset_fastpath.json",
+            data_model_type=model_types.data_model,
+            data_model_root_type=model_types.root_model,
+            data_model_field_type=field_model,
+            data_type_manager_type=model_types.data_type_manager,
+            target_python_version=target_python_version,
+            use_union_operator=use_union_operator,
+            custom_template_dir=custom_template_dir,
+            formatters=[Formatter.BUILTIN],
+        )
+        generated = parser.parse()
+        assert isinstance(generated, str)
+        outputs.append(generated)
+
+    assert outputs[0] == outputs[1]
 
 
 @pytest.mark.isolate_builtin_formatter_config

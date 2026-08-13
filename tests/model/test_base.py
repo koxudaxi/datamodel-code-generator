@@ -1418,69 +1418,59 @@ def test_msgspec_unset_type_hint_handles_empty_and_simple_types() -> None:
 
 
 @pytest.mark.parametrize(
-    ("data_type", "expected_type_hint", "expected_imports"),
+    "python_version",
+    list(PythonVersion),
+)
+@pytest.mark.parametrize("use_union_operator", [False, True], ids=["typing-union", "union-operator"])
+@pytest.mark.parametrize(
+    ("field_kwargs", "has_forward_reference"),
     [
-        pytest.param(
-            DataType(type="str"),
-            "Union[str, UnsetType]",
-            (IMPORT_MSGSPEC_UNSETTYPE, IMPORT_UNION, IMPORT_MSGSPEC_UNSET),
-            id="primitive",
-        ),
-        pytest.param(
-            DataType(type="str", use_union_operator=True),
-            "str | UnsetType",
-            (IMPORT_MSGSPEC_UNSETTYPE, IMPORT_MSGSPEC_UNSET),
-            id="union-operator",
-        ),
-        pytest.param(
-            DataType.from_import(IMPORT_DECIMAL),
-            "Union[Decimal, UnsetType]",
-            (IMPORT_DECIMAL, IMPORT_MSGSPEC_UNSETTYPE, IMPORT_UNION, IMPORT_MSGSPEC_UNSET),
-            id="imported",
-        ),
-        pytest.param(
-            MsgspecDataTypeManager(python_version=PythonVersion.PY_311).data_type(type="str"),
-            "Union[str, UnsetType]",
-            (IMPORT_MSGSPEC_UNSETTYPE, IMPORT_UNION, IMPORT_MSGSPEC_UNSET),
-            id="context-python-311",
-        ),
-        pytest.param(
-            MsgspecDataTypeManager(
-                python_version=PythonVersion.PY_314,
-                use_standard_collections=True,
-                use_generic_container_types=True,
-                use_union_operator=True,
-                treat_dot_as_module=True,
-                use_serialize_as_any=True,
-            ).data_type(type="str"),
-            "str | UnsetType",
-            (IMPORT_MSGSPEC_UNSETTYPE, IMPORT_MSGSPEC_UNSET),
-            id="configured-context",
-        ),
+        pytest.param({}, False, id="implicit-nullability"),
+        pytest.param({"nullable": False}, False, id="explicit-non-null"),
+        pytest.param({"default": "value", "has_default": True}, False, id="schema-default"),
+        pytest.param({}, True, id="forward-reference"),
     ],
 )
 def test_msgspec_simple_unset_fast_path_matches_graph_fallback(
-    data_type: DataType,
-    expected_type_hint: str,
-    expected_imports: tuple[Import, ...],
+    python_version: PythonVersion,
+    use_union_operator: bool,
+    field_kwargs: dict[str, Any],
+    has_forward_reference: bool,
 ) -> None:
-    """Direct rendering preserves the graph fallback's hint and ordered imports."""
-    fast_field = _msgspec_field(deepcopy(data_type))
-    fallback_field = _FallbackMsgspecField(
-        name="value",
-        data_type=deepcopy(data_type),
-        required=False,
+    """CI compares every supported target with the graph fallback as the source of truth."""
+    manager = MsgspecDataTypeManager(
+        python_version=python_version,
+        use_standard_collections=True,
+        use_generic_container_types=True,
+        use_union_operator=use_union_operator,
+        treat_dot_as_module=True,
+        use_serialize_as_any=True,
     )
-    MsgspecStruct(
-        fields=[fallback_field],
-        reference=Reference(path="FallbackModel", name="FallbackModel"),
-    )
+    for data_type in (
+        manager.data_type(type="str"),
+        manager.data_type(type="int"),
+        manager.data_type.from_import(IMPORT_DECIMAL),
+    ):
+        fast_field = _msgspec_field(deepcopy(data_type), **field_kwargs)
+        assert fast_field.parent is not None
+        fast_field.parent.has_forward_reference = has_forward_reference
+        fallback_field = _FallbackMsgspecField(
+            name="value",
+            data_type=deepcopy(data_type),
+            required=False,
+            **field_kwargs,
+        )
+        fallback_model = MsgspecStruct(
+            fields=[fallback_field],
+            reference=Reference(path="FallbackModel", name="FallbackModel"),
+        )
+        fallback_model.has_forward_reference = has_forward_reference
 
-    assert fast_field._get_simple_unset_type_hint() is not None
-    assert fallback_field._get_simple_unset_type_hint() is None
-    assert fast_field.type_hint == fallback_field.type_hint == expected_type_hint
-    assert fast_field.imports == fallback_field.imports == expected_imports
-    assert len(fast_field.imports) == len(set(fast_field.imports))
+        assert fast_field._get_simple_unset_type_hint() is not None
+        assert fallback_field._get_simple_unset_type_hint() is None
+        assert fast_field.type_hint == fallback_field.type_hint
+        assert fast_field.imports == fallback_field.imports
+        assert len(fast_field.imports) == len(set(fast_field.imports))
 
 
 @pytest.mark.parametrize(
