@@ -134,7 +134,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"validated {len(sources) - 2} built-in templates")
     if (stale := _stale_paths(sources)) and args.check:
         for path in stale:
-            print(path.relative_to(ROOT), file=sys.stderr)
+            print(path.relative_to(ROOT).as_posix(), file=sys.stderr)
         return 1
     if args.check:
         return 0

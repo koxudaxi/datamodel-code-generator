@@ -90,7 +90,7 @@ class TemplateInventory:
 
 
 def iter_template_paths(template_dir: Path) -> tuple[Path, ...]:
-    return tuple(sorted(template_dir.rglob("*.jinja2")))
+    return tuple(sorted(template_dir.rglob("*.jinja2"), key=lambda path: path.relative_to(template_dir).as_posix()))
 
 
 def build_environment() -> Environment:
