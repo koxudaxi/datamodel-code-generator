@@ -131,6 +131,26 @@ JsonSchemaConstraintKey = Literal[
 JsonSchemaConstraintValue = int | float | str | bool
 JsonSchemaDataTypeKwargValue = JsonSchemaConstraintValue
 TaggedUnionValue = Union[int, str]  # noqa: UP007
+
+
+def _update_false_schema_refs(
+    false_schema_refs: set[str] | None,
+    resolved_ref: str,
+    *,
+    is_false: bool,
+) -> set[str] | None:
+    """Record only false refs; the regular fact cache proves all other refs were validated."""
+    match is_false:
+        case True:
+            if false_schema_refs is None:
+                false_schema_refs = set()
+            false_schema_refs.add(resolved_ref)
+        case _:
+            if false_schema_refs is not None:
+                false_schema_refs.discard(resolved_ref)
+    return false_schema_refs
+
+
 _MIN_UNION_VARIANT_LITERAL_VALUES = 2
 _NUMBER_CONSTRAINT_KEYS: tuple[JsonSchemaConstraintKey, ...] = (
     "minimum",
@@ -1079,7 +1099,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self._dynamic_anchor_index: dict[tuple[str, ...], dict[str, str]] = {}
         self._recursive_anchor_index: dict[tuple[str, ...], list[str]] = {}
         self._ref_data_type_facts: dict[str, tuple[Any, bool]] = {}
-        self._ref_boolean_schema_facts: dict[str, bool] = {}
+        self._false_schema_refs: set[str] | None = None
         self._inherited_schema_cache: dict[str, JsonSchemaObject] = {}
         self._inherited_schema_ancestor_cache: dict[str, frozenset[str]] = {}
         self._inherited_schema_linearization_cache: dict[tuple[str, ...], tuple[str, ...]] = {}
@@ -2883,7 +2903,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             obj.extras.get("x-python-import"),
             obj.type == "null" or (self.strict_nullable and obj.nullable is True),
         )
-        self._ref_boolean_schema_facts[resolved_ref] = obj.is_boolean_schema_false
+        self._false_schema_refs = _update_false_schema_refs(
+            self._false_schema_refs,
+            resolved_ref,
+            is_false=obj.is_boolean_schema_false,
+        )
 
     def get_ref_data_type(self, ref: str) -> DataType:
         """Get a data type from a reference string.
@@ -2905,6 +2929,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 ref_schema.type == "null" or (self.strict_nullable and ref_schema.nullable is True),
             )
             self._ref_data_type_facts[resolved_ref] = facts
+            self._false_schema_refs = _update_false_schema_refs(
+                self._false_schema_refs,
+                resolved_ref,
+                is_false=ref_schema.is_boolean_schema_false,
+            )
         x_python_import, is_optional = facts
         if isinstance(x_python_import, dict) and (full_path := self._get_x_python_import_path(x_python_import)):
             import_ = Import.from_full_path(full_path)
@@ -3472,9 +3501,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return self._load_ref_schema_object(ref).is_boolean_schema_false
 
         resolved_ref = self.model_resolver.resolve_ref(ref)
-        if (is_false_schema := self._ref_boolean_schema_facts.get(resolved_ref)) is None:
-            return self._load_ref_schema_object(ref).is_boolean_schema_false
-        return is_false_schema
+        if (false_schema_refs := self._false_schema_refs) is not None and resolved_ref in false_schema_refs:
+            return True
+        if resolved_ref in self._ref_data_type_facts:
+            return False
+        return self._load_ref_schema_object(ref).is_boolean_schema_false
 
     def _anchor_ref_path(self, root_key: tuple[str, ...], path: list[str]) -> str:  # noqa: PLR6301
         """Return the local ref path for an anchor under the current root."""

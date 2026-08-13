@@ -726,7 +726,7 @@ def test_get_ref_data_type_uses_cached_validated_definition_facts(mocker: Mocker
 
     load_ref_schema_object.assert_not_called()
     assert parser._ref_data_type_facts["#/$defs/User"] == (None, True)
-    assert not parser._ref_boolean_schema_facts["#/$defs/User"]
+    assert parser._false_schema_refs is None
     assert "user: Optional[User]" in dump_templates(list(parser.results))
 
 
@@ -757,12 +757,15 @@ def test_local_ref_false_schema_reuses_validated_facts() -> None:
     for ref in ("#/$defs/Never", "#/$defs/Allowed", "#/$defs/Text"):
         resolved_ref = parser.model_resolver.resolve_ref(ref)
         parser._cache_ref_data_type_facts(resolved_ref, parser._load_ref_schema_object(ref))
+    assert parser._false_schema_refs == {"#/$defs/Never"}
+    assert parser._false_schema_refs <= parser._ref_data_type_facts.keys()
 
     parser.raw_obj["$defs"] = {"Never": True, "Allowed": False, "Text": False}
     assert parser._is_local_ref_false_schema("#/$defs/Never", use_builtin_facts=True)
     assert not parser._is_local_ref_false_schema("#/$defs/Allowed", use_builtin_facts=True)
     assert not parser._is_local_ref_false_schema("#/$defs/Text", use_builtin_facts=True)
-    del parser._ref_boolean_schema_facts["#/$defs/Never"]
+    assert parser._false_schema_refs is not None
+    parser._false_schema_refs.remove("#/$defs/Never")
     assert not parser._is_local_ref_false_schema("#/$defs/Never", use_builtin_facts=True)
 
 
@@ -831,7 +834,8 @@ def test_local_ref_false_schema_facts_fall_back_for_custom_hooks(monkeypatch: py
     ):
         parser = parser_type("")
         parser.raw_obj = {"$defs": {"Never": False}}
-        parser._ref_boolean_schema_facts["#/$defs/Never"] = False
+        if parser._false_schema_refs is not None:
+            parser._false_schema_refs.discard("#/$defs/Never")
 
         assert not parser._uses_builtin_false_ref_facts()
         assert parser._is_local_ref_false_schema("#/$defs/Never", use_builtin_facts=False)
@@ -844,7 +848,8 @@ def test_local_ref_false_schema_facts_fall_back_for_custom_hooks(monkeypatch: py
     instance_calls: list[str] = []
     parser = JsonSchemaParser("")
     parser.raw_obj = {"$defs": {"Never": False}}
-    parser._ref_boolean_schema_facts["#/$defs/Never"] = False
+    if parser._false_schema_refs is not None:
+        parser._false_schema_refs.discard("#/$defs/Never")
 
     def instance_loader(ref: str) -> JsonSchemaObject:
         instance_calls.append(ref)
@@ -866,7 +871,8 @@ def test_local_ref_false_schema_preserves_custom_fact_cache_output() -> None:
         def _cache_ref_data_type_facts(self, resolved_ref: str, obj: JsonSchemaObject) -> None:
             type(self).cached_refs.append(resolved_ref)
             super()._cache_ref_data_type_facts(resolved_ref, obj)
-            self._ref_boolean_schema_facts[resolved_ref] = False
+            if self._false_schema_refs is not None:
+                self._false_schema_refs.discard(resolved_ref)
 
     FactCacheOverrideParser.cached_refs = []
     parser = FactCacheOverrideParser(
