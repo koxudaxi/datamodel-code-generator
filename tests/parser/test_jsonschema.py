@@ -17,6 +17,7 @@ import pydantic
 import pytest
 import yaml
 
+import datamodel_code_generator._builtin_formatter as builtin_formatter
 from datamodel_code_generator import (
     AllOfMergeMode,
     DataModelType,
@@ -75,7 +76,7 @@ def _json_schema_object(data: dict[str, Any]) -> JsonSchemaObject:
     return JsonSchemaObject.model_validate(data)
 
 
-def test_builtin_formatter_falls_back_for_custom_class_name_generator() -> None:
+def test_builtin_formatter_falls_back_for_custom_class_name_generator(monkeypatch: pytest.MonkeyPatch) -> None:
     """Keep invalid custom names on the full formatter's syntax-error path."""
 
     def invalid_class_name(_: str) -> str:
@@ -99,10 +100,16 @@ def test_builtin_formatter_falls_back_for_custom_class_name_generator() -> None:
         target_python_version=PythonVersion.PY_311,
     )
 
-    assert_output(parser.parse(), DATA_PATH / "builtin_formatter_custom_class_name.snapshot")
+    monkeypatch.setattr(
+        builtin_formatter,
+        "_apply_builtin_generated_formatter",
+        lambda *_args, **_kwargs: pytest.fail("custom class-name hook reached generated formatter fast path"),
+    )
+    output = parser.parse()
+    assert_output(output, DATA_PATH / "builtin_formatter_custom_class_name.snapshot")
 
 
-def test_builtin_formatter_falls_back_for_custom_resolve_reference_action() -> None:
+def test_builtin_formatter_falls_back_for_custom_resolve_reference_action(monkeypatch: pytest.MonkeyPatch) -> None:
     """Keep custom trailing source on the full formatter's syntax-error path."""
 
     def invalid_resolve_reference_action(_: object) -> str:
@@ -125,7 +132,13 @@ def test_builtin_formatter_falls_back_for_custom_resolve_reference_action() -> N
         target_python_version=PythonVersion.PY_311,
     )
 
-    assert_output(parser.parse(), DATA_PATH / "builtin_formatter_custom_resolve_action.snapshot")
+    monkeypatch.setattr(
+        builtin_formatter,
+        "_apply_builtin_generated_formatter",
+        lambda *_args, **_kwargs: pytest.fail("custom resolve hook reached generated formatter fast path"),
+    )
+    output = parser.parse()
+    assert_output(output, DATA_PATH / "builtin_formatter_custom_resolve_action.snapshot")
 
 
 @pytest.fixture(autouse=True)
