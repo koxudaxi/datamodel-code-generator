@@ -22,7 +22,7 @@ from pathlib import Path
 
 import pytest
 
-from datamodel_code_generator import DataModelType, Formatter, InputFileType, ModuleSplitMode, generate
+from datamodel_code_generator import DataModelType, Formatter, InputFileType, ModuleSplitMode, YamlValue, generate
 from datamodel_code_generator.model.msgspec import DataModelField as MsgspecDataModelField
 from datamodel_code_generator.model.msgspec import DataTypeManager as MsgspecDataTypeManager
 from datamodel_code_generator.model.msgspec import Struct as MsgspecStruct
@@ -62,6 +62,30 @@ def simple_msgspec_unset_fields() -> list[MsgspecDataModelField]:
         fields=fields,
     )
     return fields
+
+
+@pytest.fixture(scope="module")
+def false_reference_performance_schema() -> dict[str, YamlValue]:
+    """Prepare repeated local false references outside CodSpeed's measured call."""
+    field_count = 500
+    return {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "FalseReferencePerformance",
+        "type": "object",
+        "properties": {
+            f"value_{index}": {
+                "anyOf": [
+                    {"$ref": "#/$defs/Never"},
+                    {"$ref": "#/$defs/Value"},
+                ]
+            }
+            for index in range(field_count)
+        },
+        "$defs": {
+            "Never": False,
+            "Value": {"type": "string"},
+        },
+    }
 
 
 def _build_inherited_required_performance_schema(
@@ -194,6 +218,24 @@ def test_perf_inherited_required_fields(
     assert isinstance(result, str)
     assert "class PerfDerived79(PerfBase):" in result
     assert "field_24: PerfItem" in result
+
+
+@pytest.mark.perf
+@pytest.mark.benchmark
+def test_perf_false_reference_validation(
+    false_reference_performance_schema: dict[str, YamlValue],
+) -> None:
+    """Track literal-false local reference handling without formatter work."""
+    result = generate(
+        false_reference_performance_schema,
+        input_file_type=InputFileType.JsonSchema,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        formatters=[],
+        disable_timestamp=True,
+    )
+    assert isinstance(result, str)
+    assert "class FalseReferencePerformance(BaseModel):" in result
+    assert result.endswith("    value_499: Value | None = None")
 
 
 @pytest.mark.perf

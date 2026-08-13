@@ -6390,6 +6390,35 @@ def test_main_jsonschema_anyof_ref_false_schema(output_file: Path) -> None:
     )
 
 
+@pytest.mark.parametrize(
+    ("output_model_type", "expected_file"),
+    [
+        pytest.param("pydantic_v2.BaseModel", "false_reference_fast_path.py", id="pydantic-v2"),
+        pytest.param(
+            "pydantic_v2.dataclass", "false_reference_fast_path_pydantic_v2_dataclass.py", id="pydantic-dataclass"
+        ),
+        pytest.param("dataclasses.dataclass", "false_reference_fast_path_dataclasses.py", id="dataclasses"),
+        pytest.param("typing.TypedDict", "false_reference_fast_path_typed_dict.py", id="typed-dict"),
+        pytest.param("msgspec.Struct", "false_reference_fast_path_msgspec.py", id="msgspec"),
+    ],
+)
+def test_main_jsonschema_false_reference_fast_path(
+    output_file: Path,
+    output_model_type: str,
+    expected_file: str,
+) -> None:
+    """Keep local false references byte-identical across fast-path fallbacks."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "false_reference_fast_path.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=["--disable-timestamp", "--formatters", "builtin", "--output-model-type", output_model_type],
+        force_exec_validation=True,
+    )
+
+
 _ADDITIONAL_PROPERTIES_CONSTRAINTS_VALID_JSON = (
     '{"existingLocalValue":"kept","nestedMap":{"ok":1},'
     '"titledMap":{"ok":9},"titledRefMap":{"ok":2},'
