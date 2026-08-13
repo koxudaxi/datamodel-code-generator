@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
+import ast
+import inspect
+import textwrap
+from itertools import product
+from pathlib import Path
+
 import pytest
 
-from datamodel_code_generator import DataModelType
+from datamodel_code_generator import DataModelType, Formatter
 from datamodel_code_generator.config import JSONSchemaParserConfig
-from datamodel_code_generator.model import get_data_model_types
+from datamodel_code_generator.model import _rebuild_model_with_datamodel_namespace, get_data_model_types
 from datamodel_code_generator.model.pydantic_v2.base_model import (
     BaseModel,
     Constraints,
@@ -14,10 +20,13 @@ from datamodel_code_generator.model.pydantic_v2.base_model import (
     _construct_parser_simple_field,
 )
 from datamodel_code_generator.model.runtime_validation import RequiredGroupsRule, SchemaRuntimeValidation
-from datamodel_code_generator.parser.base import _get_builtin_pydantic_v2_field_constructor
+from datamodel_code_generator.parser.base import Parser, _get_builtin_pydantic_v2_field_constructor
 from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType
+from tests.conftest import assert_output
+
+JSON_SCHEMA_DATA_PATH = Path(__file__).parents[2] / "data" / "jsonschema"
 
 
 def _schema_runtime_validation() -> SchemaRuntimeValidation:
@@ -171,6 +180,113 @@ def test_parser_simple_field_constructor_requires_exact_builtin_type() -> None:
 
     assert _get_builtin_pydantic_v2_field_constructor(DataModelField) is _construct_parser_simple_field
     assert _get_builtin_pydantic_v2_field_constructor(CustomDataModelField) is None
+
+
+@pytest.mark.allow_direct_assert
+def test_parser_simple_field_call_keywords_match_model_fields() -> None:
+    """Move future parser keyword audits out of the per-field runtime path."""
+    parser_tree = ast.parse(textwrap.dedent(inspect.getsource(JsonSchemaParser)))
+    constructor_calls = [
+        node
+        for node in ast.walk(parser_tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "_data_model_field_constructor"
+    ]
+    assert len(constructor_calls) == 2
+
+    constructor_keywords: set[str] = set()
+    for call in constructor_calls:
+        expansions = [keyword.value for keyword in call.keywords if keyword.arg is None]
+        assert len(expansions) == 1
+        match expansions[0]:
+            case ast.Call(
+                func=ast.Attribute(
+                    value=ast.Name(id="self"),
+                    attr="_data_model_field_common_kwargs",
+                )
+            ):
+                pass
+            case expansion:  # pragma: no cover
+                pytest.fail(f"Unexpected field-constructor kwargs expansion: {ast.unparse(expansion)}")
+        constructor_keywords.update(keyword.arg for keyword in call.keywords if keyword.arg is not None)
+
+    init_tree = ast.parse(textwrap.dedent(inspect.getsource(Parser.__init__)))
+    common_kwargs_assignments = [
+        node.value
+        for node in ast.walk(init_tree)
+        if isinstance(node, ast.AnnAssign)
+        and isinstance(node.target, ast.Attribute)
+        and isinstance(node.target.value, ast.Name)
+        and node.target.value.id == "self"
+        and node.target.attr == "_data_model_field_common_kwargs_cache"
+    ]
+    assert len(common_kwargs_assignments) == 1
+    match common_kwargs_assignments[0]:
+        case ast.Dict(keys=keys) if all(isinstance(key, ast.Constant) and isinstance(key.value, str) for key in keys):
+            constructor_keywords.update(key.value for key in keys)
+        case assignment:  # pragma: no cover
+            pytest.fail(f"Common field kwargs must stay a static dict: {ast.unparse(assignment)}")
+
+    assert "data_type" in constructor_keywords
+    assert constructor_keywords <= DataModelField.model_fields.keys()
+
+
+@pytest.mark.parametrize(
+    ("use_missing_sentinel", "expected_file"),
+    [
+        pytest.param(False, "simple_pydantic_v2_field_states.snapshot", id="standard-default"),
+        pytest.param(True, "simple_pydantic_v2_field_states_missing.snapshot", id="missing-sentinel"),
+    ],
+)
+@pytest.mark.allow_direct_assert
+def test_parser_simple_field_matches_public_constructor_for_schema_states(
+    use_missing_sentinel: bool,
+    expected_file: str,
+) -> None:
+    """Compare actual parser states with public validation across field-state pairs."""
+
+    class PublicDataModelField(DataModelField):
+        pass
+
+    _rebuild_model_with_datamodel_namespace(PublicDataModelField)
+    model_types = get_data_model_types(DataModelType.PydanticV2BaseModel)
+    parser_kwargs = {
+        "source": JSON_SCHEMA_DATA_PATH / "simple_pydantic_v2_field_states.json",
+        "data_model_type": model_types.data_model,
+        "data_model_root_type": model_types.root_model,
+        "data_type_manager_type": model_types.data_type_manager,
+        "dump_resolve_reference_action": model_types.dump_resolve_reference_action,
+        "strict_nullable": True,
+        "use_missing_sentinel": use_missing_sentinel,
+        "apply_default_values_for_required_fields": True,
+        "formatters": [Formatter.BUILTIN],
+    }
+    fast_parser = JsonSchemaParser(data_model_field_type=DataModelField, **parser_kwargs)
+    public_parser = JsonSchemaParser(data_model_field_type=PublicDataModelField, **parser_kwargs)
+
+    expected_path = JSON_SCHEMA_DATA_PATH / expected_file
+    assert_output(fast_parser.parse(), expected_path)
+    assert_output(public_parser.parse(), expected_path)
+
+    fast_fields = {field.name: field for model in fast_parser.results for field in model.fields}
+    public_fields = {field.name: field for model in public_parser.results for field in model.fields}
+    assert fast_fields.keys() == public_fields.keys()
+    assert {
+        (field.required, field.nullable, field.has_default, field.use_missing_sentinel)
+        for field in fast_fields.values()
+    } == set(product((False, True), (False, True), (False, True), (use_missing_sentinel,)))
+    for name, field in fast_fields.items():
+        validated = public_fields[name]
+        assert {key: value for key, value in field.__dict__.items() if key not in {"data_type", "parent"}} == {
+            key: value for key, value in validated.__dict__.items() if key not in {"data_type", "parent"}
+        }
+        assert field.__pydantic_fields_set__ == validated.__pydantic_fields_set__
+        assert field.__pydantic_extra__ == validated.__pydantic_extra__
+        assert field.__pydantic_private__ == validated.__pydantic_private__
+        assert type(field.parent) is type(validated.parent)
+        assert field.type_hint == validated.type_hint
+        assert field.field == validated.field
 
 
 @pytest.mark.allow_direct_assert

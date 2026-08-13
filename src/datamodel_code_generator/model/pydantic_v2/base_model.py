@@ -562,7 +562,6 @@ _PARSER_SIMPLE_FIELD_DEFAULTS = MappingProxyType({
     name: None if field_info.is_required() or field_info.default_factory is not None else field_info.default
     for name, field_info in DataModelField.model_fields.items()
 })
-_PARSER_SIMPLE_FIELD_NAMES = frozenset(_PARSER_SIMPLE_FIELD_DEFAULTS)
 _PARSER_SIMPLE_FIELD_HAS_PRIVATE_STATE = DataModelField.__pydantic_post_init__ is not None
 _SET_PARSER_FIELD_ATTRIBUTE = object.__setattr__
 
@@ -574,9 +573,7 @@ def _construct_parser_simple_field(**data: Any) -> DataModelField:
         data.get("extras"),
         data.get("const", False),
     ):
-        case (None, None | {} as extras, False) if (
-            not extras and "data_type" in data and data.keys() <= _PARSER_SIMPLE_FIELD_NAMES
-        ):
+        case (None, None | {} as extras, False) if not extras and "data_type" in data:
             pass
         case _:
             return DataModelField(**data)
