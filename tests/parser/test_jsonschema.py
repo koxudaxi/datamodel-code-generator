@@ -25,6 +25,7 @@ from datamodel_code_generator import (
     Formatter,
     PythonVersion,
     ReadOnlyWriteOnlyModelType,
+    YamlValue,
 )
 from datamodel_code_generator._python_type_annotation import PythonTypeRuntimeSymbol
 from datamodel_code_generator.http import _get_http_stack, _get_httpx
@@ -801,14 +802,18 @@ def test_local_ref_false_schema_facts_fall_back_for_custom_hooks(monkeypatch: py
     class ValidatorOverrideParser(JsonSchemaParser):
         validated_paths: ClassVar[list[list[str]]] = []
 
-        def _validate_schema_object(self, raw: dict[str, Any] | Any, path: list[str]) -> JsonSchemaObject:
+        def _validate_schema_object(
+            self,
+            raw: dict[str, YamlValue] | YamlValue,
+            path: list[str],
+        ) -> JsonSchemaObject:
             type(self).validated_paths.append(path)
             return super()._validate_schema_object(raw, path)
 
     class RawLoaderOverrideParser(JsonSchemaParser):
         loaded_refs: ClassVar[list[str]] = []
 
-        def _get_ref_raw_schema(self, resolved_ref: str) -> dict[str, Any] | Any:
+        def _get_ref_raw_schema(self, resolved_ref: str) -> dict[str, YamlValue] | YamlValue:
             type(self).loaded_refs.append(resolved_ref)
             return super()._get_ref_raw_schema(resolved_ref)
 
@@ -902,7 +907,7 @@ def test_local_ref_false_schema_fast_path_matches_validation_path() -> None:
             return False
 
     source = (DATA_PATH / "false_reference_fast_path.json").read_text()
-    outputs = []
+    outputs: list[str] = []
     for parser_type in (ValidationPathParser, JsonSchemaParser):
         parser = parser_type(source)
         parser.parse(format_=False)

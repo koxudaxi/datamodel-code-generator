@@ -22,7 +22,7 @@ from pathlib import Path
 
 import pytest
 
-from datamodel_code_generator import DataModelType, Formatter, InputFileType, ModuleSplitMode, generate
+from datamodel_code_generator import DataModelType, Formatter, InputFileType, ModuleSplitMode, YamlValue, generate
 from datamodel_code_generator.model.msgspec import DataModelField as MsgspecDataModelField
 from datamodel_code_generator.model.msgspec import DataTypeManager as MsgspecDataTypeManager
 from datamodel_code_generator.model.msgspec import Struct as MsgspecStruct
@@ -65,7 +65,7 @@ def simple_msgspec_unset_fields() -> list[MsgspecDataModelField]:
 
 
 @pytest.fixture(scope="module")
-def false_reference_performance_schema() -> dict[str, object]:
+def false_reference_performance_schema() -> dict[str, YamlValue]:
     """Prepare repeated local false references outside CodSpeed's measured call."""
     field_count = 500
     return {
@@ -223,7 +223,7 @@ def test_perf_inherited_required_fields(
 @pytest.mark.perf
 @pytest.mark.benchmark
 def test_perf_false_reference_validation(
-    false_reference_performance_schema: dict[str, object],
+    false_reference_performance_schema: dict[str, YamlValue],
 ) -> None:
     """Track literal-false local reference handling without formatter work."""
     result = generate(
