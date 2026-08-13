@@ -45,11 +45,12 @@ def _attributes_on(node: ast.AST, object_name: str) -> set[str]:
 
 
 def _generated_formatter_guarded_config_fields() -> set[str]:
-    tree = ast.parse(textwrap.dedent(inspect.getsource(Parser.__init__)))
-    configured_types = _assigned_value(tree, "_configured_generation_types_are_builtin")
-    standard_templates = _assigned_value(tree, "_uses_standard_generation_templates")
+    init_tree = ast.parse(textwrap.dedent(inspect.getsource(Parser.__init__)))
+    parse_tree = ast.parse(textwrap.dedent(inspect.getsource(Parser._Parser__prepare_parse)))
+    configured_types = _assigned_value(init_tree, "_configured_generation_types_are_builtin")
+    standard_templates = _assigned_value(parse_tree, "_uses_standard_generation_templates")
     config_by_instance_attribute: dict[str, str] = {}
-    for node in ast.walk(tree):
+    for node in ast.walk(init_tree):
         match node:
             case ast.Assign(targets=targets, value=value):
                 pass
@@ -67,7 +68,18 @@ def _generated_formatter_guarded_config_fields() -> set[str]:
         for target in targets:
             if isinstance(target, ast.Attribute) and isinstance(target.value, ast.Name) and target.value.id == "self":
                 config_by_instance_attribute[target.attr] = config_field
-    guarded_fields = _attributes_on(configured_types, "config") | _attributes_on(standard_templates, "config")
+    guarded_fields = (
+        _attributes_on(configured_types, "config")
+        | _attributes_on(standard_templates, "parser_config")
+        | {
+            child.attr
+            for child in ast.walk(standard_templates)
+            if isinstance(child, ast.Attribute)
+            and isinstance(child.value, ast.NamedExpr)
+            and isinstance(child.value.target, ast.Name)
+            and child.value.target.id == "parser_config"
+        }
+    )
     guarded_fields.update(
         config_by_instance_attribute[attribute]
         for attribute in _attributes_on(configured_types, "self")

@@ -1956,23 +1956,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             or generation_type.__module__.startswith(_MODEL_MODULE_PREFIX)
             for attribute in ("data_model_scalar_type", "data_model_union_type")
         )
-        self._uses_standard_generation_templates = self._configured_generation_types_are_builtin and not any((
-            config.custom_template_dir,
-            config.additional_imports,
-            config.class_decorators,
-            config.base_class,
-            config.base_class_map,
-            config.extra_template_data,
-            config.validators,
-            config.generate_schema_validators,
-            config.alias_generator,
-            config.custom_class_name_generator,
-            config.dump_resolve_reference_action is not None
-            and not _is_pydantic_v2_dump_resolve_reference_action(config.dump_resolve_reference_action),
-            config.type_mappings,
-            config.type_overrides,
-            config.import_overrides,
-        ))
+        self._uses_standard_generation_templates = False
 
         self.imports: Imports = Imports(config.use_exact_imports)
         self.use_exact_imports: bool = config.use_exact_imports
@@ -5530,6 +5514,29 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                             is_multi_module_output=self.defer_formatting or len(module_models) > 1,
                         ),
                     )
+
+        self._uses_standard_generation_templates = bool(
+            (code_formatter := config.code_formatter)
+            and code_formatter.use_builtin_formatter
+            and self._configured_generation_types_are_builtin
+            and not (parser_config := self.config).custom_template_dir
+            and not any((
+                parser_config.additional_imports,
+                parser_config.class_decorators,
+                parser_config.base_class,
+                parser_config.base_class_map,
+                parser_config.extra_template_data,
+                parser_config.validators,
+                parser_config.generate_schema_validators,
+                parser_config.alias_generator,
+                parser_config.custom_class_name_generator,
+                parser_config.dump_resolve_reference_action is not None
+                and not _is_pydantic_v2_dump_resolve_reference_action(parser_config.dump_resolve_reference_action),
+                parser_config.type_mappings,
+                parser_config.type_overrides,
+                parser_config.import_overrides,
+            ))
+        )
 
         return self.__process_modules(
             module_models,
