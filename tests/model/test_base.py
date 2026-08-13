@@ -46,7 +46,6 @@ from datamodel_code_generator.model.base import (
     sanitize_module_name,
 )
 from datamodel_code_generator.model.dataclass import DataClass as DataclassModel
-from datamodel_code_generator.model.enum import Enum, EnumMemberValue
 from datamodel_code_generator.model.imports import (
     IMPORT_MSGSPEC_CONVERT,
     IMPORT_MSGSPEC_FIELD,
@@ -70,9 +69,6 @@ from datamodel_code_generator.model.typed_dict import DataModelField as TypedDic
 from datamodel_code_generator.model.typed_dict import TypedDict as TypedDictModel
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import ANY, NONE, DataType, Types
-from tests.conftest import assert_output
-
-ENUM_EXPECTED_PATH = Path(__file__).parent.parent / "data" / "expected" / "enums"
 
 
 class A(TemplateBase):
@@ -394,85 +390,6 @@ def test_data_model_dedup_key_uses_model_base_to_hashable_seam(monkeypatch: pyte
     assert model.get_dedup_key() == (("patched", 1), ("patched", 2))
     assert isinstance(calls[0], str)
     assert calls[1] == model.imports
-
-
-def test_builtin_enum_dedup_key_preserves_rendered_metadata() -> None:
-    """Match the built-in Enum template for descriptions and field docstrings."""
-    fields = [
-        PydanticV2DataModelField(
-            name="FIRST",
-            default=EnumMemberValue("first"),
-            data_type=DataType(type="str"),
-            extras={"description": "First member"},
-            use_field_description=True,
-            use_inline_field_description=True,
-        ),
-        PydanticV2DataModelField(
-            name="SECOND",
-            default=EnumMemberValue("second"),
-            data_type=DataType(type="str"),
-            extras={"description": "Second member"},
-            use_inline_field_description=True,
-        ),
-        PydanticV2DataModelField(
-            name="THIRD",
-            default=EnumMemberValue("third"),
-            data_type=DataType(type="str"),
-            extras={"description": "Third member"},
-            use_field_description=True,
-        ),
-        PydanticV2DataModelField(
-            name="FOURTH",
-            default=EnumMemberValue("fourth"),
-            data_type=DataType(type="str"),
-            extras={"description": "Fourth member"},
-            use_inline_field_description=True,
-        ),
-    ]
-    enum = Enum(
-        fields=fields,
-        reference=Reference(path="Status", original_name="Status", name="Status"),
-        decorators=["@unique"],
-        description="Status values",
-    )
-    key = enum._get_builtin_dedup_key(None, use_default=False)
-    rendered = enum.render(class_name=enum.class_name)
-
-    assert_output(
-        f"[render]\n{rendered}\n[dedup-key]\n{key[0]}\n" if key is not None else key,
-        ENUM_EXPECTED_PATH / "builtin_dedup_metadata.py",
-    )
-
-
-def test_builtin_enum_dedup_key_falls_back_for_customization(tmp_path: Path) -> None:
-    """Use regular rendering for subclasses and conflicting template data."""
-
-    class CustomEnum(Enum):
-        pass
-
-    custom = CustomEnum(fields=[], reference=Reference(path="Custom", name="Custom"))
-    standard = Enum(fields=[], reference=Reference(path="Standard", name="Standard"))
-    standard.extra_template_data["fields"] = "collision"
-    custom_template = Enum(
-        fields=[],
-        reference=Reference(path="CustomTemplate", name="CustomTemplate"),
-        custom_template_dir=tmp_path,
-    )
-    custom_template_path = Enum(fields=[], reference=Reference(path="TemplatePath", name="TemplatePath"))
-    custom_template_path.TEMPLATE_FILE_PATH = "CustomEnum.jinja2"
-    custom_adapter = Enum(fields=[], reference=Reference(path="Adapter", name="Adapter"))
-    custom_adapter.CUSTOM_TEMPLATE_ADAPTER = lambda context: context
-
-    assert_output(
-        (
-            f"{custom._get_builtin_dedup_key()!r}\n"
-            f"{standard._get_builtin_dedup_key()!r}\n"
-            f"{custom_template._get_builtin_dedup_key()!r}\n"
-            f"{custom_template_path._get_builtin_dedup_key()!r}\n"
-            f"{custom_adapter._get_builtin_dedup_key()!r}\n"
-        ),
-        ENUM_EXPECTED_PATH / "builtin_dedup_fallbacks.txt",
-    )
 
 
 def test_data_model_imports_cache_clears_after_field_type_replacement() -> None:

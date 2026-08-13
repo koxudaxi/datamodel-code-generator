@@ -3278,28 +3278,6 @@ def test_main_nested_enum(output_file: Path) -> None:
     )
 
 
-@pytest.mark.isolate_builtin_formatter_config
-def test_main_duplicate_inline_enums_builtin(output_file: Path) -> None:
-    """Deduplicate equal inline enums without merging different members."""
-    run_main_and_assert(
-        input_path=OPEN_API_DATA_PATH / "duplicate_inline_enums.yaml",
-        output_path=output_file,
-        input_file_type="openapi",
-        assert_func=assert_file_content,
-        expected_file="duplicate_inline_enums_builtin.py",
-        extra_args=[
-            "--disable-timestamp",
-            "--formatters",
-            "builtin",
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-            "--reuse-model",
-            "--collapse-reuse-models",
-        ],
-        force_exec_validation=True,
-    )
-
-
 def test_openapi_special_yaml_keywords(mocker: MockerFixture, output_file: Path) -> None:
     """Test OpenAPI generation with special YAML keywords."""
     mock_prance = mocker.patch("prance.BaseParser")

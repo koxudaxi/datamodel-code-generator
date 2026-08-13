@@ -9,7 +9,6 @@ from dataclasses import dataclass
 from functools import cached_property, lru_cache
 from typing import TYPE_CHECKING, Any, ClassVar, Optional
 
-from datamodel_code_generator._internal_utils import to_hashable
 from datamodel_code_generator.imports import IMPORT_ANY, IMPORT_ENUM, IMPORT_INT_ENUM, IMPORT_STR_ENUM, Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.base import UNDEFINED, BaseClassDataType
@@ -238,63 +237,6 @@ class Enum(DataModel):
         """Get imports excluding Any."""
         return tuple(i for i in super().imports if i != IMPORT_ANY)
 
-    def _get_builtin_dedup_key(
-        self,
-        class_name: str | None = None,
-        *,
-        use_default: bool = True,
-    ) -> tuple[Any, ...] | None:
-        """Return the built-in template key without invoking Jinja, when safe."""
-        if (
-            type(self) not in _BUILTIN_ENUM_TYPES
-            or self.TEMPLATE_FILE_PATH != "Enum.jinja2"
-            or self._custom_template_dir is not None
-            or self.CUSTOM_TEMPLATE_ADAPTER is not None
-        ):
-            return None
-
-        cache_key = (class_name, use_default)
-        if (cached := self._dedup_key_cache.get(cache_key)) is not None:
-            return cached
-
-        # Passing any template argument twice raises in DataModel.render(). Keep
-        # that unusual error behavior by using the regular renderer in this case.
-        if self.extra_template_data.keys() & {
-            "base_class",
-            "class_name",
-            "dataclass_arguments",
-            "decorators",
-            "description",
-            "fields",
-            "methods",
-            "path",
-        }:
-            return None
-
-        render_class_name = class_name if class_name is not None or not use_default else "M"
-        parts = [*(f"{decorator}\n" for decorator in self.decorators)]
-        parts.append(f"class {render_class_name or self.class_name}({self.base_class}):")
-        description = self.rendered_description if self.FORMAT_DESCRIPTION_AS_DOCSTRING else self.description
-        if description:
-            parts.append(f"\n    {description}")
-
-        last_field_index = len(self.fields) - 1
-        for index, field in enumerate(self.fields):
-            parts.append(f"\n    {field.name} = {field.default}")
-            if docstring := self._format_docstring(field.docstring, self.FIELD_DOCSTRING_INDENT):
-                parts.append(f"\n    {docstring}")
-                if field.use_inline_field_description and index != last_field_index:
-                    parts.append("\n\n")
-                continue
-            if inline_docstring := field.inline_field_docstring:
-                parts.append(f"\n    {inline_docstring}")
-                if index != last_field_index:
-                    parts.append("\n\n")
-
-        result = ("".join(parts), to_hashable(self.imports))
-        self._dedup_key_cache[cache_key] = result
-        return result
-
 
 class StrEnum(Enum):
     """String enumeration type."""
@@ -308,9 +250,6 @@ class IntEnum(Enum):
 
     BASE_CLASS: ClassVar[str] = "enum.IntEnum"
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_INT_ENUM,)
-
-
-_BUILTIN_ENUM_TYPES: frozenset[type[Enum]] = frozenset((Enum, StrEnum, IntEnum))
 
 
 SPECIALIZED_ENUM_TYPE_MATCH: dict[Types, type[Enum]] = {

@@ -541,7 +541,7 @@ def test_perf_openapi_large(tmp_path: Path) -> None:
 @pytest.mark.perf
 @pytest.mark.benchmark
 def test_perf_openapi_large_pydantic_v2_builtin(tmp_path: Path) -> None:
-    """Track built-in formatting and duplicate inline enum performance together."""
+    """Track built-in formatting performance for a large OpenAPI document."""
     output_file = tmp_path / "output.py"
     generate(
         input_=PERFORMANCE_DATA_PATH / "openapi_large.yaml",

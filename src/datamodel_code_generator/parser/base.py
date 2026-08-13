@@ -179,24 +179,6 @@ def _is_pydantic_v2_dump_resolve_reference_action(value: object) -> bool:
     )
 
 
-def _get_model_dedup_key(
-    model: DataModel,
-    class_name: str | None = None,
-    *,
-    use_default: bool = True,
-) -> tuple[Any, ...]:
-    """Return the cheapest exact duplicate key available for a model."""
-    if (
-        isinstance(model, Enum)
-        and (
-            key := model._get_builtin_dedup_key(class_name, use_default=use_default)  # noqa: SLF001
-        )
-        is not None
-    ):
-        return key
-    return model.get_dedup_key(class_name, use_default=use_default)
-
-
 def __getattr__(name: str) -> Any:
     """Return compatibility model modules without importing them on parser load."""
     match name:
@@ -2550,8 +2532,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 reuse_allowed
                 and (original_model := model_class_names.get(class_name)) is not None
                 and self._reuse_optimization_context.allows_model(original_model)
-                and _get_model_dedup_key(model, model.duplicate_class_name, use_default=False)
-                == _get_model_dedup_key(original_model, original_model.duplicate_class_name, use_default=False)
+                and model.get_dedup_key(model.duplicate_class_name, use_default=False)
+                == original_model.get_dedup_key(original_model.duplicate_class_name, use_default=False)
             ):
                 model_to_duplicate_models[original_model].append(model)
                 continue
@@ -2580,7 +2562,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     if model in models_to_remove or isinstance(model, self.data_model_root_type):
                         continue
                     model._dedup_key_cache.clear()  # noqa: SLF001
-                    content_key_to_models[_get_model_dedup_key(model)].append(model)
+                    content_key_to_models[model.get_dedup_key(None, use_default=True)].append(model)
 
                 if not (
                     duplicates := [
