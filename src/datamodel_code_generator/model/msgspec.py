@@ -428,11 +428,11 @@ class DataModelField(DataModelFieldBase):
             or data_type.is_func
         ):
             return None
-        if (
-            self._has_explicit_typing_import_requirements(data_type)
-            or self.type_has_null is True
-            or type_hint in {NONE, "UnsetType"}
-        ):
+        if self._has_explicit_typing_import_requirements(data_type) or self.type_has_null is True:
+            return None
+        if type_hint == NONE:
+            return None
+        if type_hint == "UnsetType":
             return None
         return type_hint
 
