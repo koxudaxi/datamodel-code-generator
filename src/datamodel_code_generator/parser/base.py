@@ -95,13 +95,16 @@ from datamodel_code_generator.util import camel_to_snake, record_watch_dependenc
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
-    from typing import Protocol
+
+    from typing_extensions import Protocol
 
     from datamodel_code_generator._types import ParserConfigDict
     from datamodel_code_generator.config import ParserConfig
     from datamodel_code_generator.format import CodeFormatter
     from datamodel_code_generator.http import _HTTPFetchSession
-    from datamodel_code_generator.model.pydantic_v2.base_model import _ParserSimpleFieldData
+    from datamodel_code_generator.model.pydantic_v2.base_model import (
+        _ParserSimpleFieldData,
+    )
     from datamodel_code_generator.model_metadata import GeneratedModelMetadata, ModelFieldMetadata, ModelMetadata
 
 
@@ -163,15 +166,15 @@ def _is_pydantic_v2_data_model_field(value: object) -> bool:
 
 
 if TYPE_CHECKING:
-    DataModelFieldT_co = TypeVar("DataModelFieldT_co", bound=DataModelFieldBase, covariant=True)
 
-    class _DataModelFieldConstructor(Protocol[DataModelFieldT_co]):
-        def __call__(self, **data: Unpack[_ParserSimpleFieldData]) -> DataModelFieldT_co: ...
+    class _DataModelFieldConstructor(Protocol):
+        def __call__(self, **data: Unpack[_ParserSimpleFieldData]) -> DataModelFieldBase:
+            raise NotImplementedError
 
 
 def _get_builtin_pydantic_v2_field_constructor(
-    field_type: type[DataModelFieldT_co],
-) -> _DataModelFieldConstructor[DataModelFieldT_co] | None:
+    field_type: type[DataModelFieldBase],
+) -> _DataModelFieldConstructor | None:
     """Return the internal constructor only for the exact built-in v2 field."""
     if field_type.__module__ != _PYDANTIC_V2_BASE_MODEL_MODULE or field_type.__name__ != "DataModelField":
         return None
@@ -180,13 +183,7 @@ def _get_builtin_pydantic_v2_field_constructor(
         _construct_parser_simple_field,
     )
 
-    # The exact identity check makes this concrete return type match the
-    # field type represented by the covariant protocol.
-    return (
-        cast("_DataModelFieldConstructor[DataModelFieldT_co]", _construct_parser_simple_field)
-        if field_type is DataModelField
-        else None
-    )
+    return _construct_parser_simple_field if field_type is DataModelField else None
 
 
 def _get_field_dependency_ordering_model_type(model_type: type[DataModel]) -> type[DataModel] | None:
@@ -1974,8 +1971,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             self.data_model_root_type
         )
         self.data_model_field_type: type[DataModelFieldBase] = config.data_model_field_type
-        self._data_model_field_constructor = cast(
-            "_DataModelFieldConstructor[DataModelFieldBase]", self.data_model_field_type
+        self._data_model_field_constructor: type[DataModelFieldBase] | _DataModelFieldConstructor = (
+            self.data_model_field_type
         )
         if (
             simple_field_constructor := _get_builtin_pydantic_v2_field_constructor(self.data_model_field_type)
