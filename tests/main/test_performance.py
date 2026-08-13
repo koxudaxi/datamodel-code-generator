@@ -23,6 +23,8 @@ from pathlib import Path
 import pytest
 
 from datamodel_code_generator import DataModelType, Formatter, InputFileType, ModuleSplitMode, generate
+from datamodel_code_generator.model.pydantic_v2.base_model import _construct_parser_simple_field
+from datamodel_code_generator.types import DataType
 
 PERFORMANCE_DATA_PATH: Path = Path(__file__).parent.parent / "data" / "performance"
 EXPECTED_STARTUP_MEASUREMENT_CASES = {
@@ -35,6 +37,12 @@ EXPECTED_STARTUP_MEASUREMENT_CASES = {
     "cli-schema-generation",
     "cli-schema-structured-output",
 }
+
+
+@pytest.fixture(scope="module")
+def simple_pydantic_v2_data_types() -> list[DataType]:
+    """Prepare normalized types outside the field-construction benchmark."""
+    return [DataType(type="str") for _ in range(5000)]
 
 
 def _build_inherited_required_performance_schema(
@@ -212,6 +220,18 @@ def test_perf_startup_measurement_script() -> None:
         assert case["runs"] == 1
         assert case["median_ms"] >= 0
         assert case["importtime_top"]
+
+
+@pytest.mark.perf
+@pytest.mark.benchmark
+def test_perf_simple_pydantic_v2_field_construction(simple_pydantic_v2_data_types: list[DataType]) -> None:
+    """Benchmark parser-owned construction without a timing threshold."""
+    fields = [
+        _construct_parser_simple_field(name=f"field_{index}", data_type=data_type)
+        for index, data_type in enumerate(simple_pydantic_v2_data_types)
+    ]
+    assert len(fields) == len(simple_pydantic_v2_data_types)
+    assert fields[-1].name == "field_4999"
 
 
 @pytest.mark.perf
