@@ -20,6 +20,7 @@ import datamodel_code_generator
 import datamodel_code_generator._builtin_formatter as builtin_formatter
 import datamodel_code_generator._format_types as format_types
 import datamodel_code_generator.format as format_module
+from tests.conftest import assert_output
 
 DEFAULT_KNOWN_FIRST_PARTY = format_module.DEFAULT_KNOWN_FIRST_PARTY
 CodeFormatter = format_module.CodeFormatter
@@ -61,6 +62,7 @@ BUILTIN_FORMATTER_LOCAL_CONSTANTS = {
     "TYPE_ALIAS_INLINE_ARGUMENT_COUNT",
     "STRING_PREFIX_PATTERN",
 }
+BUILTIN_FORMATTER_EXPECTED_PATH = Path(__file__).parent / "data" / "expected" / "builtin_formatter"
 
 
 def test_builtin_formatter_moved_names_are_reexported() -> None:
@@ -270,6 +272,32 @@ def test_format_code_builtin_formatter(tmp_path: Path, monkeypatch: pytest.Monke
         "class Model(BaseModel):\n"
         "    pet: Pet\n"
         "    name: str = Field(...)\n"
+    )
+
+
+def test_builtin_generated_formatter_edge_cases() -> None:
+    """Preserve fallback behavior for uncommon generator-owned source shapes."""
+    cases = (
+        ("unterminated-import", "from package import (\n    Item\n", {}),
+        ("newer-target", "value = 1\n", {"python_version": PythonVersion.PY_314}),
+        ("empty", "\n\n", {}),
+        ("leading-header", "# generated header\nvalue = 1\n", {}),
+        ("body-only", "class Model:\n    pass\n", {}),
+        ("invalid-import", "from package import )\n", {}),
+        ("compound-import-line", "import package; value = 1\n", {}),
+        ("import-only", "import package\n", {}),
+        ("import-class", "import package\n\n\nclass Model:\n    pass\n", {}),
+        ("import-statement", "import package\n\nvalue = 1\n", {}),
+    )
+    formatted_cases = [
+        f"[{name}]\n{builtin_formatter._apply_builtin_generated_formatter(source, **options)!r}"
+        for name, source, options in cases
+    ]
+    formatted_output = "\n".join(formatted_cases)
+
+    assert_output(
+        f"{formatted_output}\n",
+        BUILTIN_FORMATTER_EXPECTED_PATH / "generated_edge_cases.txt",
     )
 
 

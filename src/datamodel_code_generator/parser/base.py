@@ -96,17 +96,24 @@ from datamodel_code_generator.util import camel_to_snake, record_watch_dependenc
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 
+    from typing_extensions import Protocol
+
     from datamodel_code_generator._types import ParserConfigDict
     from datamodel_code_generator.config import ParserConfig
     from datamodel_code_generator.format import CodeFormatter
     from datamodel_code_generator.http import _HTTPFetchSession
+    from datamodel_code_generator.model.pydantic_v2.base_model import (
+        _ParserSimpleFieldData,
+    )
     from datamodel_code_generator.model_metadata import GeneratedModelMetadata, ModelFieldMetadata, ModelMetadata
+
 
 # Preserve the existing parser.base export while sharing one canonical escape table.
 escape_characters = _enum_escape_characters
 
 ParserConfigT = TypeVar("ParserConfigT", bound="ParserConfig")
 _ConstructorFieldAdjustment: TypeAlias = Literal["assignment", "keyword_only"]
+
 
 HashableComparable = _internal_utils.HashableComparable
 to_hashable = _internal_utils.to_hashable
@@ -156,6 +163,27 @@ def _model_type(value: object | type[object]) -> type[object]:
 
 def _is_pydantic_v2_data_model_field(value: object) -> bool:
     return _type_mro_contains_type(_model_type(value), module=_PYDANTIC_V2_BASE_MODEL_MODULE, name="DataModelField")
+
+
+if TYPE_CHECKING:
+
+    class _DataModelFieldConstructor(Protocol):
+        def __call__(self, **data: Unpack[_ParserSimpleFieldData]) -> DataModelFieldBase:
+            raise NotImplementedError
+
+
+def _get_builtin_pydantic_v2_field_constructor(
+    field_type: type[DataModelFieldBase],
+) -> _DataModelFieldConstructor | None:
+    """Return the internal constructor only for the exact built-in v2 field."""
+    if field_type.__module__ != _PYDANTIC_V2_BASE_MODEL_MODULE or field_type.__name__ != "DataModelField":
+        return None
+    from datamodel_code_generator.model.pydantic_v2.base_model import (  # noqa: PLC0415
+        DataModelField,
+        _construct_parser_simple_field,
+    )
+
+    return _construct_parser_simple_field if field_type is DataModelField else None
 
 
 def _get_field_dependency_ordering_model_type(model_type: type[DataModel]) -> type[DataModel] | None:
@@ -1784,9 +1812,9 @@ def _resolve_module_file(module_: ModulePath, results: dict[ModulePath, Result])
     return ("__init__.py",), is_init
 
 
-def _format_body_safe(body: str, code_formatter: CodeFormatter) -> str:
+def _format_body_safe(body: str, code_formatter: CodeFormatter, *, generated_code: bool = False) -> str:
     try:
-        return code_formatter.format_code(body)
+        return code_formatter._format_generated_code(body) if generated_code else code_formatter.format_code(body)  # noqa: SLF001
     except Exception as exc:  # noqa: BLE001
         warn(
             f"Failed to format code: {exc!r}. Emitting unformatted output.",
@@ -1943,6 +1971,13 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             self.data_model_root_type
         )
         self.data_model_field_type: type[DataModelFieldBase] = config.data_model_field_type
+        self._data_model_field_constructor: type[DataModelFieldBase] | _DataModelFieldConstructor = (
+            self.data_model_field_type
+        )
+        if (
+            simple_field_constructor := _get_builtin_pydantic_v2_field_constructor(self.data_model_field_type)
+        ) is not None:
+            self._data_model_field_constructor = simple_field_constructor
         self._configured_generation_types_are_builtin = all(
             generation_type.__module__.startswith(_MODEL_MODULE_PREFIX)
             for generation_type in (
@@ -1956,6 +1991,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             or generation_type.__module__.startswith(_MODEL_MODULE_PREFIX)
             for attribute in ("data_model_scalar_type", "data_model_union_type")
         )
+        self._uses_standard_generation_templates = False
 
         self.imports: Imports = Imports(config.use_exact_imports)
         self.use_exact_imports: bool = config.use_exact_imports
@@ -5293,7 +5329,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
         body = "\n".join(result)
         if config.code_formatter:
-            body = _format_body_safe(body, config.code_formatter)
+            body = _format_body_safe(
+                body,
+                config.code_formatter,
+                generated_code=self._uses_standard_generation_templates,
+            )
 
         return Result(
             body=body,
@@ -5324,7 +5364,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 parts += [str(export_imports), "", export_imports.dump_all(multiline=True)]
                 body = "\n".join(parts)
                 if config.code_formatter:
-                    body = _format_body_safe(body, config.code_formatter)
+                    body = _format_body_safe(
+                        body,
+                        config.code_formatter,
+                        generated_code=self._uses_standard_generation_templates,
+                    )
                 results[init_module] = Result(
                     body=body,
                     future_imports=future_imports_str,
@@ -5505,6 +5549,29 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                             is_multi_module_output=self.defer_formatting or len(module_models) > 1,
                         ),
                     )
+
+        self._uses_standard_generation_templates = bool(
+            (code_formatter := config.code_formatter)
+            and code_formatter.use_builtin_formatter
+            and self._configured_generation_types_are_builtin
+            and not (parser_config := self.config).custom_template_dir
+            and not any((
+                parser_config.additional_imports,
+                parser_config.class_decorators,
+                parser_config.base_class,
+                parser_config.base_class_map,
+                parser_config.extra_template_data,
+                parser_config.validators,
+                parser_config.generate_schema_validators,
+                parser_config.alias_generator,
+                parser_config.custom_class_name_generator,
+                parser_config.dump_resolve_reference_action is not None
+                and not _is_pydantic_v2_dump_resolve_reference_action(parser_config.dump_resolve_reference_action),
+                parser_config.type_mappings,
+                parser_config.type_overrides,
+                parser_config.import_overrides,
+            ))
+        )
 
         return self.__process_modules(
             module_models,

@@ -15,7 +15,7 @@ from collections.abc import Callable as ABCCallable
 from collections.abc import Sequence
 from dataclasses import Field as DataclassField
 from pathlib import Path, PurePath
-from typing import get_args, get_type_hints
+from typing import TYPE_CHECKING, get_args, get_type_hints
 
 import black
 import pytest
@@ -42,10 +42,13 @@ from datamodel_code_generator import (
 from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.format import Formatter, is_supported_in_black
 from datamodel_code_generator.model import base as model_base
+from datamodel_code_generator.model import get_data_model_types
+from datamodel_code_generator.model.msgspec import DataModelField as MsgspecDataModelField
 from datamodel_code_generator.model.pydantic_v2.version import (
     PYDANTIC_V2_DATACLASS_ALIAS_NEEDS_FALLBACK,
     PYDANTIC_V2_ROOT_MODEL_DICT_KEY_FORWARD_REF_NEEDS_SORTING,
 )
+from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
 from tests.conftest import (
     HttpxGetMockFactory,
     MockHttpxResponse,
@@ -85,7 +88,14 @@ from tests.main.conftest import (
 )
 from tests.main.jsonschema.conftest import EXPECTED_JSON_SCHEMA_PATH, assert_file_content
 
+if TYPE_CHECKING:
+    from datamodel_code_generator.parser.base import Result
+
 FixtureRequest = pytest.FixtureRequest
+
+
+class _FallbackMsgspecDataModelField(MsgspecDataModelField):
+    """Force the conventional graph-rendering path for CI parity checks."""
 
 
 def assert_run_main_with_args_error(args: list[str], capsys: pytest.CaptureFixture[str], expected_error: str) -> None:
@@ -599,6 +609,24 @@ def test_main_pydantic_v2_model_rebuild_inheritance(output_file: Path) -> None:
             "--keep-model-order",
             "--target-python-version",
             "3.10",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_simple_pydantic_v2_fields(output_file: Path) -> None:
+    """Generate simple and fallback Pydantic v2 fields through the CLI."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "simple_pydantic_v2_fields.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="simple_pydantic_v2_fields.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--field-constraints",
+            "--disable-timestamp",
         ],
     )
 
@@ -3820,6 +3848,98 @@ def test_main_jsonschema_special_enum(output_file: Path) -> None:
     )
 
 
+@pytest.mark.parametrize(
+    ("output_model_type", "expected_name"),
+    [
+        *BACKEND_GOLDEN_CASES,
+        pytest.param(DataModelType.PydanticV2Dataclass.value, "pydantic_v2_dataclass", id="pydantic-v2-dataclass"),
+    ],
+)
+def test_main_jsonschema_msgspec_unset_fastpath(
+    output_file: Path,
+    output_model_type: str,
+    expected_name: str,
+) -> None:
+    """Preserve generated syntax and runtime behavior across output backends."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "msgspec_unset_fastpath.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=f"output_model_types/msgspec_unset_fastpath_{expected_name}.py",
+        extra_args=[
+            *BACKEND_GOLDEN_TARGET_ARGS,
+            "--formatters",
+            "builtin",
+            "--output-model-type",
+            output_model_type,
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+    )
+
+
+def test_main_jsonschema_msgspec_unset_fastpath_custom_template(output_file: Path) -> None:
+    """Preserve public field values and bytes observed by an external msgspec template."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "msgspec_unset_fastpath.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="msgspec_unset_fastpath_custom_template.py",
+        extra_args=[
+            *BACKEND_GOLDEN_TARGET_ARGS,
+            "--custom-template-dir",
+            str(DATA_PATH / "templates_msgspec_unset_fastpath"),
+            "--formatters",
+            "builtin",
+            "--output-model-type",
+            DataModelType.MsgspecStruct.value,
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+    )
+
+
+@pytest.mark.parametrize("target_python_version", list(PythonVersion))
+@pytest.mark.parametrize("use_union_operator", [False, True], ids=["typing-union", "union-operator"])
+@pytest.mark.parametrize(
+    "custom_template_dir",
+    [None, DATA_PATH / "templates_msgspec_unset_fastpath"],
+    ids=["builtin-template", "custom-template"],
+)
+def test_main_jsonschema_msgspec_unset_fastpath_matches_graph_fallback(
+    output_file: Path,
+    target_python_version: PythonVersion,
+    use_union_operator: bool,
+    custom_template_dir: Path | None,
+) -> None:
+    """CI preserves formatted bytes for built-in and external templates on every target."""
+    model_types = get_data_model_types(DataModelType.MsgspecStruct, target_python_version)
+
+    def generate(
+        field_model: type[model_base.DataModelFieldBase],
+    ) -> str | dict[tuple[str, ...], Result]:
+        return JsonSchemaParser(
+            JSON_SCHEMA_DATA_PATH / "msgspec_unset_fastpath.json",
+            data_model_type=model_types.data_model,
+            data_model_root_type=model_types.root_model,
+            data_model_field_type=field_model,
+            data_type_manager_type=model_types.data_type_manager,
+            target_python_version=target_python_version,
+            use_union_operator=use_union_operator,
+            custom_template_dir=custom_template_dir,
+            formatters=[Formatter.BUILTIN],
+        ).parse()
+
+    match generate(_FallbackMsgspecDataModelField):
+        case str() as generated:
+            output_file.write_text(generated, encoding="utf-8")
+        case generated:  # pragma: no cover - this parser is configured for single-file output
+            assert_output(generated, output_file)
+    assert_output(generate(model_types.field_model), output_file)
+
+
 @pytest.mark.isolate_builtin_formatter_config
 def test_main_jsonschema_builtin_formatter_preserves_unicode_line_separators(output_file: Path) -> None:
     """Keep Unicode separators in generated enum values without creating source lines."""
@@ -5158,6 +5278,47 @@ def test_long_description_wrap_string_literal(output_file: Path) -> None:
     )
 
 
+@pytest.mark.isolate_builtin_formatter_config
+@pytest.mark.parametrize(
+    ("input_name", "expected_name", "extra_args"),
+    [
+        pytest.param(
+            "long_description.json",
+            "long_description_wrap_string_literal.py",
+            ["--wrap-string-literal"],
+            id="wrap-string-literal",
+        ),
+        pytest.param(
+            "all_of_any_of_base_class_ref.json",
+            "all_of_any_of_base_class_ref.py",
+            ["--snake-case-field", "--use-double-quotes", "--reuse-model"],
+            id="string-normalization",
+        ),
+        pytest.param(
+            "extra_fields.json",
+            "extra_fields_v2_forbid.py",
+            ["--extra-fields", "forbid", "--output-model-type", "pydantic_v2.BaseModel"],
+            id="config-dict",
+        ),
+    ],
+)
+def test_main_builtin_generated_formatter_fallbacks(
+    input_name: str,
+    expected_name: str,
+    extra_args: list[str],
+    output_file: Path,
+) -> None:
+    """Preserve generated output when built-in formatter fast-path guards fall back."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / input_name,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=expected_name,
+        extra_args=[*extra_args, "--formatters", "builtin"],
+    )
+
+
 @pytest.mark.allow_direct_assert
 def test_version(capsys: pytest.CaptureFixture) -> None:
     """Test version output."""
@@ -6226,6 +6387,35 @@ def test_main_jsonschema_anyof_ref_false_schema(output_file: Path) -> None:
         output_file,
         expected_output=expected,
         extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+@pytest.mark.parametrize(
+    ("output_model_type", "expected_file"),
+    [
+        pytest.param("pydantic_v2.BaseModel", "false_reference_fast_path.py", id="pydantic-v2"),
+        pytest.param(
+            "pydantic_v2.dataclass", "false_reference_fast_path_pydantic_v2_dataclass.py", id="pydantic-dataclass"
+        ),
+        pytest.param("dataclasses.dataclass", "false_reference_fast_path_dataclasses.py", id="dataclasses"),
+        pytest.param("typing.TypedDict", "false_reference_fast_path_typed_dict.py", id="typed-dict"),
+        pytest.param("msgspec.Struct", "false_reference_fast_path_msgspec.py", id="msgspec"),
+    ],
+)
+def test_main_jsonschema_false_reference_fast_path(
+    output_file: Path,
+    output_model_type: str,
+    expected_file: str,
+) -> None:
+    """Keep local false references byte-identical across fast-path fallbacks."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "false_reference_fast_path.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=["--disable-timestamp", "--formatters", "builtin", "--output-model-type", output_model_type],
+        force_exec_validation=True,
     )
 
 
@@ -10441,6 +10631,8 @@ def test_main_jsonschema_type_alias_type_recursive_exports(output_dir: Path) -> 
             "recursive",
             "--disable-future-imports",
             "--disable-timestamp",
+            "--formatters",
+            "builtin",
         ],
         force_exec_validation=True,
         importable_module_name="generated_type_alias_type_module",
