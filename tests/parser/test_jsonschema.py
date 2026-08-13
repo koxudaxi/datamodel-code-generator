@@ -80,7 +80,7 @@ def test_generated_formatter_mode_only_enabled_for_builtin() -> None:
     """Keep no-formatter and external-formatter output outside generated fast-path dispatch."""
     model_types = get_data_model_types(
         DataModelType.PydanticV2BaseModel,
-        target_python_version=PythonVersion.PY_311,
+        target_python_version=PythonVersion.PY_310,
     )
     input_path = DATA_PATH / "user.json"
     formatted_cases: list[str] = []
@@ -98,7 +98,7 @@ def test_generated_formatter_mode_only_enabled_for_builtin() -> None:
             data_type_manager_type=model_types.data_type_manager,
             dump_resolve_reference_action=model_types.dump_resolve_reference_action,
             formatters=formatters,
-            target_python_version=PythonVersion.PY_311,
+            target_python_version=PythonVersion.PY_310,
         )
         output = parser.parse()
         fast_path = vars(parser)["_uses_standard_generation_templates"]
