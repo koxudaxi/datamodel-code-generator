@@ -292,10 +292,98 @@ def _run_no_formatter_generation_probe() -> dict[str, Any]:
             print(json.dumps({
                 "generated": generated,
                 "imported_format": "datamodel_code_generator.format" in sys.modules,
+                "imported_jinja2": "jinja2" in sys.modules,
                 "imported_python_type_codec": (
                     "datamodel_code_generator._python_type_annotation_codec" in sys.modules
                 ),
                 "imported_python_type_ir": "datamodel_code_generator._python_type_annotation" in sys.modules,
+            }, indent=2, sort_keys=True))
+            """
+        )
+    )
+
+
+def _run_custom_template_include_probe() -> dict[str, Any]:
+    return _run_probe(
+        textwrap.dedent(
+            """
+            import json
+            import sys
+            import tempfile
+            from collections import defaultdict
+            from pathlib import Path
+
+            from datamodel_code_generator.model.pydantic_v2.base_model import BaseModel
+            from datamodel_code_generator.reference import Reference
+
+            reference = Reference(name="Custom", path="Custom")
+            with tempfile.TemporaryDirectory() as directory:
+                template_dir = Path(directory) / "pydantic_v2"
+                template_dir.mkdir()
+                (template_dir / "ConfigDict.jinja2").write_text("custom_config = True\\n", encoding="utf-8")
+                model = BaseModel(
+                    fields=[],
+                    reference=reference,
+                    custom_template_dir=Path(directory),
+                    extra_template_data=defaultdict(dict, {reference.path: {"config": {"extra": '\"allow\"'}}}),
+                )
+                include_only_generated = model.render()
+                root_dir = Path(directory) / "root" / "pydantic_v2"
+                root_dir.mkdir(parents=True)
+                (root_dir / "BaseModel.jinja2").write_text("root_custom = '{{ class_name }}'\\n", encoding="utf-8")
+                root_model = BaseModel(
+                    fields=[],
+                    reference=reference,
+                    custom_template_dir=root_dir.parent,
+                )
+                root_generated = root_model.render()
+
+            print(json.dumps({
+                "custom_include_rendered": "custom_config = True" in include_only_generated,
+                "custom_root_rendered": root_generated == "root_custom = 'Custom'",
+                "imported_jinja2": "jinja2" in sys.modules,
+            }, indent=2, sort_keys=True))
+            """
+        )
+    )
+
+
+def _run_schema_runtime_validation_helper_probe() -> dict[str, Any]:
+    return _run_probe(
+        textwrap.dedent(
+            """
+            import json
+            import sys
+            from collections import defaultdict
+
+            from datamodel_code_generator.model.pydantic_v2.base_model import BaseModel
+            from datamodel_code_generator.model.runtime_validation import (
+                RequiredGroupsRule,
+                SchemaRuntimeValidation,
+            )
+            from datamodel_code_generator.reference import Reference
+
+            reference = Reference(name="RuntimeModel", path="RuntimeModel")
+            validation = SchemaRuntimeValidation(
+                required_groups=[RequiredGroupsRule(keyword="oneOf", groups=((("value",),),))]
+            )
+            model = BaseModel(
+                fields=[],
+                reference=reference,
+                extra_template_data=defaultdict(
+                    dict,
+                    {
+                        reference.path: {
+                            "schema_runtime_validation": validation,
+                            "schema_runtime_validation_enabled": True,
+                        }
+                    },
+                ),
+            )
+            generated = BaseModel.render_module_code([model])
+            print(json.dumps({
+                "generated_helper": "_JsonSchemaRuntimeValidationBase" in generated,
+                "imported_jinja2": "jinja2" in sys.modules,
             }, indent=2, sort_keys=True))
             """
         )
@@ -652,6 +740,26 @@ def test_empty_formatters_skip_formatter_runtime() -> None:
     assert_output(
         f"{json.dumps(result, indent=2, sort_keys=True)}\n",
         ROOT / "tests/data/expected/main/cli_fast_paths/empty_formatters.txt",
+    )
+
+
+def test_custom_template_include_uses_jinja_in_a_fresh_process() -> None:
+    """A custom directory keeps the complete root/include operation on Jinja."""
+    result = _run_custom_template_include_probe()
+
+    assert_output(
+        f"{json.dumps(result, indent=2, sort_keys=True)}\n",
+        ROOT / "tests/data/expected/main/cli_fast_paths/custom_template_include.txt",
+    )
+
+
+def test_schema_runtime_validation_module_helper_skips_jinja_in_a_fresh_process() -> None:
+    """Module-level built-in rendering also uses a generated standalone renderer."""
+    result = _run_schema_runtime_validation_helper_probe()
+
+    assert_output(
+        f"{json.dumps(result, indent=2, sort_keys=True)}\n",
+        ROOT / "tests/data/expected/main/cli_fast_paths/schema_runtime_validation_helper.txt",
     )
 
 
