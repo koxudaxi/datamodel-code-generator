@@ -10,6 +10,7 @@ from functools import cached_property
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
+from unittest.mock import Mock
 
 import pytest
 
@@ -1122,11 +1123,10 @@ def test_external_base_model_module_helper_stays_on_jinja(monkeypatch: pytest.Mo
 
     from datamodel_code_generator.model import _compiled_templates
 
-    def fail_compiled_lookup(_: object) -> None:
-        pytest.fail("external BaseModel subclass attempted compiled template lookup")
-
-    monkeypatch.setattr(_compiled_templates, "get_builtin_renderer", fail_compiled_lookup)
+    compiled_lookup = Mock(side_effect=AssertionError("external BaseModel subclass attempted compiled template lookup"))
+    monkeypatch.setattr(_compiled_templates, "get_builtin_renderer", compiled_lookup)
     rendered = ExternalBaseModel.render_module_code([model])
+    compiled_lookup.assert_not_called()
 
     expected = EXPECTED_PATH / "module_helper_parity.txt"
     assert_output(f"{jinja!r}\n", expected)
