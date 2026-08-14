@@ -62,7 +62,7 @@ def _validate_additional_import_paths(value: list[str] | None) -> list[str] | No
     from datamodel_code_generator.validators import _validate_python_import_path  # noqa: PLC0415
 
     try:
-        return [_validate_python_import_path(import_path.strip()) for import_path in value]
+        return [_validate_python_import_path(import_path) for import_path in value]
     except ValueError as exc:
         msg = f"additional_imports {exc}"
         raise Error(msg) from None

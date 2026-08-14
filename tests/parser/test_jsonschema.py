@@ -28,6 +28,7 @@ from datamodel_code_generator import (
     YamlValue,
 )
 from datamodel_code_generator._python_type_annotation import PythonTypeRuntimeSymbol
+from datamodel_code_generator.config import JSONSchemaParserConfig
 from datamodel_code_generator.http import _get_http_stack, _get_httpx
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModelFieldBase, get_data_model_types
@@ -1965,6 +1966,18 @@ def test_additional_imports_reject_invalid_import_path() -> None:
     """Reject direct parser configuration that could inject generated statements."""
     with pytest.raises(Error, match="additional_imports must be a Python import path composed of identifiers"):
         JsonSchemaParser(source="", additional_imports=["collections.deque\nINJECTION_MARKER = 1"])
+
+
+def test_additional_imports_reject_non_string_after_config_mutation() -> None:
+    """Keep the package error contract when a validated parser config is mutated."""
+    config = JSONSchemaParserConfig()
+    config.additional_imports = [1]  # ty: ignore[invalid-assignment]
+
+    with pytest.raises(
+        Error,
+        match=r"additional_imports must be a Python import path composed of identifiers: 1",
+    ):
+        JsonSchemaParser(source="", config=config)
 
 
 def test_no_additional_imports() -> None:
