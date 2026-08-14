@@ -175,6 +175,9 @@ Current version-specific exclusions:
   distinguished by boolean `Literal` fields during dump, so only the affected
   round-trip case is skipped under that older runtime; acceptance coverage
   remains enabled for that schema.
+- Pydantic before 2.10.0 cannot fill generated nested `TypeAliasType` aliases
+  while constructing dataclass schemas, so only the affected dataclass payload
+  runtime case is skipped under older runtimes.
 
 Future work:
 
@@ -183,6 +186,8 @@ Future work:
   behavior.
 - Revisit the Decimal `multipleOf` and enum-key dump skips if older Pydantic
   runtimes can be supported without changing newer runtime behavior.
+- Revisit the nested `TypeAliasType` dataclass skip if support for Pydantic
+  versions before 2.10.0 is required.
 
 ## Round-Trip Dump Limits
 
