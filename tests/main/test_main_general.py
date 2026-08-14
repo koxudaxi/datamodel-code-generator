@@ -1986,16 +1986,21 @@ def test_generate_config_accepts_additional_imports(output_file: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    ("import_path", "expected_path"),
+    ("import_path", "expected_paths"),
     [
-        (" collections.deque ", "collections.deque"),
-        (" café.モジュール ", "café.モジュール"),
+        (" collections.deque ", ["collections.deque"]),
+        (" café.モジュール ", ["café.モジュール"]),
+        (None, None),
     ],
 )
 @pytest.mark.allow_direct_assert
-def test_generate_config_normalizes_valid_additional_imports(import_path: str, expected_path: str) -> None:
+def test_generate_config_normalizes_valid_additional_imports(
+    import_path: str | None,
+    expected_paths: list[str] | None,
+) -> None:
     """Accept whitespace-padded and Unicode Python identifiers through GenerateConfig."""
-    assert GenerateConfig(additional_imports=[import_path]).additional_imports == [expected_path]
+    additional_imports = None if import_path is None else [import_path]
+    assert GenerateConfig(additional_imports=additional_imports).additional_imports == expected_paths
 
 
 @pytest.mark.parametrize(
