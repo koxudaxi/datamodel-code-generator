@@ -1308,6 +1308,24 @@ def test_main_jsonschema_reserved_field_names(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_pydantic_v2_valid_field_names_fast_path(output_file: Path) -> None:
+    """Generate ordinary Pydantic v2 field names with the built-in formatter."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "valid_field_names.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="valid_field_names.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--formatters",
+            "builtin",
+            "--disable-timestamp",
+        ],
+    )
+
+
 def test_main_jsonschema_with_local_anchor(output_file: Path) -> None:
     """Test $id anchor lookup resolves without error and reuses definitions."""
     run_main_and_assert(

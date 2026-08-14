@@ -6,7 +6,7 @@ from typing import cast
 
 import pytest
 
-from datamodel_code_generator.reference import FieldNameResolver, ModelResolver
+from datamodel_code_generator.reference import FieldNameResolver, ModelResolver, PydanticFieldNameResolver
 
 
 @pytest.mark.parametrize(
@@ -22,6 +22,86 @@ def test_get_valid_field_name(name: str, expected_resolved: str) -> None:
     """Test field name resolution to valid Python identifiers."""
     resolver = FieldNameResolver()
     assert expected_resolved == resolver.get_valid_name(name)
+
+
+@pytest.mark.parametrize(
+    (
+        "name",
+        "excludes",
+        "snake_case_field",
+        "capitalise_enum_members",
+        "ignore_snake_case_field",
+        "upper_camel",
+    ),
+    [
+        pytest.param("account_id", None, False, False, False, False, id="snake-case"),
+        pytest.param("displayName", None, False, False, False, False, id="camel-case"),
+        pytest.param("version2", None, False, False, False, False, id="trailing-number"),
+        pytest.param("café", None, False, False, False, False, id="non-ascii-identifier"),
+        pytest.param("json", None, False, False, False, False, id="pydantic-reserved"),
+        pytest.param("display-name", None, False, False, False, False, id="non-identifier"),
+        pytest.param("_private", None, False, False, False, False, id="private-name"),
+        pytest.param("class", None, False, False, False, False, id="keyword"),
+        pytest.param("account_id", {"account_id"}, False, False, False, False, id="excluded"),
+        pytest.param("displayName", None, True, False, False, False, id="snake-case-conversion"),
+        pytest.param("displayName", None, True, False, True, False, id="ignore-snake-case"),
+        pytest.param("account_id", None, False, True, False, False, id="enum-capitalization"),
+        pytest.param("account_id", None, False, False, False, True, id="upper-camel"),
+    ],
+)
+def test_pydantic_field_name_fast_path_matches_conventional_resolution(
+    name: str,
+    excludes: set[str] | None,
+    snake_case_field: bool,
+    capitalise_enum_members: bool,
+    ignore_snake_case_field: bool,
+    upper_camel: bool,
+) -> None:
+    """Keep the built-in fast path equivalent to the conventional resolver."""
+    resolver = PydanticFieldNameResolver(
+        snake_case_field=snake_case_field,
+        capitalise_enum_members=capitalise_enum_members,
+    )
+    conventional_resolver = _ConventionalPydanticFieldNameResolver(
+        snake_case_field=snake_case_field,
+        capitalise_enum_members=capitalise_enum_members,
+    )
+    assert resolver.get_valid_name(
+        name,
+        excludes=excludes,
+        ignore_snake_case_field=ignore_snake_case_field,
+        upper_camel=upper_camel,
+    ) == conventional_resolver.get_valid_name(
+        name,
+        excludes=excludes,
+        ignore_snake_case_field=ignore_snake_case_field,
+        upper_camel=upper_camel,
+    )
+
+
+class _ConventionalPydanticFieldNameResolver(PydanticFieldNameResolver):
+    """Use the conventional path to compare against the exact built-in resolver."""
+
+
+class _CustomPydanticFieldNameResolver(PydanticFieldNameResolver):
+    """Record validation calls made by the extension-compatible path."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.validation_calls = 0
+
+    def _validate_field_name(self, field_name: str) -> bool:
+        del field_name
+        self.validation_calls += 1
+        return True
+
+
+def test_pydantic_field_name_fast_path_preserves_subclass_validation_behavior() -> None:
+    """Keep custom Pydantic resolvers on the existing validation path."""
+    resolver = _CustomPydanticFieldNameResolver()
+
+    assert resolver.get_valid_name("account_id") == "account_id"
+    assert resolver.validation_calls == 2
 
 
 def test_get_valid_field_name_alias_for_unicode_ncname() -> None:

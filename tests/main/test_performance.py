@@ -27,7 +27,7 @@ from datamodel_code_generator.model.msgspec import DataModelField as MsgspecData
 from datamodel_code_generator.model.msgspec import DataTypeManager as MsgspecDataTypeManager
 from datamodel_code_generator.model.msgspec import Struct as MsgspecStruct
 from datamodel_code_generator.model.pydantic_v2.base_model import _construct_parser_simple_field
-from datamodel_code_generator.reference import Reference
+from datamodel_code_generator.reference import PydanticFieldNameResolver, Reference
 from datamodel_code_generator.types import DataType
 
 PERFORMANCE_DATA_PATH: Path = Path(__file__).parent.parent / "data" / "performance"
@@ -47,6 +47,12 @@ EXPECTED_STARTUP_MEASUREMENT_CASES = {
 def simple_pydantic_v2_data_types() -> list[DataType]:
     """Prepare normalized types outside the field-construction benchmark."""
     return [DataType(type="str") for _ in range(5000)]
+
+
+@pytest.fixture(scope="module")
+def ordinary_pydantic_field_names() -> tuple[str, ...]:
+    """Prepare resolver inputs outside the name-resolution benchmark."""
+    return tuple(f"field_{index}" for index in range(5000))
 
 
 @pytest.fixture(scope="module")
@@ -293,6 +299,18 @@ def test_perf_simple_pydantic_v2_field_construction(simple_pydantic_v2_data_type
     ]
     assert len(fields) == len(simple_pydantic_v2_data_types)
     assert fields[-1].name == "field_4999"
+
+
+@pytest.mark.perf
+@pytest.mark.benchmark
+def test_perf_pydantic_field_name_resolution(ordinary_pydantic_field_names: tuple[str, ...]) -> None:
+    """Benchmark ordinary Pydantic field-name resolution without parser work."""
+    resolver = PydanticFieldNameResolver()
+    resolved_name = ""
+    for field_name in ordinary_pydantic_field_names:
+        resolved_name = resolver.get_valid_name(field_name)
+
+    assert resolved_name == "field_4999"
 
 
 @pytest.mark.perf
