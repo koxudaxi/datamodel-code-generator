@@ -66,6 +66,8 @@ from datamodel_code_generator.model.runtime_validation import (
     PatternPropertiesRule,
     RequiredGroupsRule,
     SchemaRuntimeValidation,
+    _is_internal_schema_runtime_validation,
+    _make_internal_schema_runtime_validation,
 )
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.parser._output_context import OutputModelContext
@@ -2476,7 +2478,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     ) -> None:
         """Copy schema runtime rules and retarget their model references."""
         source = self.extra_template_data[source_path].get("schema_runtime_validation")
-        if not isinstance(source, SchemaRuntimeValidation) or not source:
+        if not _is_internal_schema_runtime_validation(source) or not source:
             return
 
         available_names = {name for field in fields for name in self._field_input_names(field)}
@@ -2527,7 +2529,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             for rule in source.conditional_required
             if all(available_names.intersection(input_names) for input_names, _ in rule.condition)
         ]
-        target = SchemaRuntimeValidation(
+        target = _make_internal_schema_runtime_validation(
             pattern_properties=pattern_properties,
             required_groups=required_groups,
             conditional_required=conditional_required,
@@ -6264,8 +6266,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     def _schema_runtime_validation(self, reference_path: str) -> SchemaRuntimeValidation:
         runtime_validation = self.extra_template_data[reference_path].get("schema_runtime_validation")
-        if not isinstance(runtime_validation, SchemaRuntimeValidation):
-            runtime_validation = SchemaRuntimeValidation()
+        if not _is_internal_schema_runtime_validation(runtime_validation):
+            runtime_validation = _make_internal_schema_runtime_validation()
             self.extra_template_data[reference_path]["schema_runtime_validation"] = runtime_validation
         return runtime_validation
 

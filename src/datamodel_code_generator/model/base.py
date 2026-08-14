@@ -22,7 +22,7 @@ from warnings import warn
 from pydantic import ConfigDict, Field
 from typing_extensions import Self
 
-from datamodel_code_generator import cached_path_exists
+from datamodel_code_generator import Error, cached_path_exists
 from datamodel_code_generator._internal_utils import get_most_of_parent, to_hashable
 from datamodel_code_generator.imports import (
     IMPORT_ANNOTATED,
@@ -31,7 +31,7 @@ from datamodel_code_generator.imports import (
     IMPORT_UNION,
     Import,
 )
-from datamodel_code_generator.python_literal import represent_python_value
+from datamodel_code_generator.python_literal import _normalize_string, represent_python_value
 from datamodel_code_generator.reference import Reference, _BaseModel
 from datamodel_code_generator.types import (
     ANY,
@@ -62,6 +62,35 @@ _MAX_MISSING_CUSTOM_TEMPLATE_SUBDIRS = 128
 _NESTED_MODEL_DEFAULT_FACTORY_ORDER_KEY = "_nested_model_default_factory_order"
 _NESTED_MODEL_DEFAULT_FACTORY_RECURSIVE_PATHS_KEY = "_nested_model_default_factory_recursive_paths"
 _REQUIRED_INHERITED_DEFAULT_FACTORY_KEY = "_required_inherited_default_factory"
+_EXTRA_TEMPLATE_DATA_MAPPING_ERROR = "extra template data must be a dictionary"
+_EXTRA_TEMPLATE_DATA_KEY_ERROR = "extra template data keys must be strings"
+_DATACLASS_ARGUMENTS_MAPPING_ERROR = "dataclass_arguments must be a dictionary"
+_DATACLASS_ARGUMENTS_KEY_ERROR = "dataclass_arguments keys must be strings"
+_DATACLASS_ARGUMENT_NAMES: frozenset[str] = frozenset({
+    "eq",
+    "frozen",
+    "init",
+    "kw_only",
+    "match_args",
+    "order",
+    "repr",
+    "slots",
+    "unsafe_hash",
+    "weakref_slot",
+})
+_BUILTIN_TEMPLATE_INTERNAL_DATA_KEYS: frozenset[str] = frozenset({
+    "class_body_lines",
+    "config_items",
+    "schema_runtime_validation",
+    "schema_runtime_validation_base_class_name",
+    "schema_runtime_validation_use_base",
+    "sequence_base_class",
+    "sequence_item_type",
+    "sequence_slice_type",
+    "_safe_config_items",
+    "typed_dict_kwargs",
+    "typed_dict_kwargs_suffix",
+})
 MroT = TypeVar("MroT")
 
 
@@ -167,8 +196,9 @@ def escape_docstring(value: str | None) -> str | None:
     """
     if value is None:
         return None
-    if isinstance(value, _EscapedDocstring):
+    if type(value) is _EscapedDocstring:
         return value
+    value = _normalize_string(value)
     # Escape backslashes first, then triple quotes. Retain the original string
     # when no escaping is needed so custom-template fast paths stay allocation-free.
     escaped = value.replace("\\", "\\\\").replace('"""', '\\"\\"\\"')
@@ -206,7 +236,11 @@ def format_docstring(value: str | None, indent_spaces: int = 0, *, use_single_li
     Returns:
         Empty string when `value` is falsy; otherwise the docstring block.
     """
-    if value is None or not value.strip():
+    if value is None:
+        return ""
+    if type(value) is not _EscapedDocstring:
+        value = _normalize_string(value)
+    if not value.strip():
         return ""
 
     escaped = escape_docstring(value) or ""
@@ -233,6 +267,7 @@ def comment_safe(value: str | None) -> str | None:
     """
     if value is None:
         return None
+    value = _normalize_string(value)
     # Collapse CRLF before converting lone CR.
     return value.replace("\r\n", "\n").replace("\r", "\n")
 
@@ -245,10 +280,90 @@ def inline_comment_safe(value: str | None) -> str | None:
     return safe_value.replace("\v", "\n").replace("\f", "\n").replace("\n", "\n# ")
 
 
-def _safe_extra_template_data(extra_template_data: dict[str, Any]) -> dict[str, Any]:
-    if not isinstance(comment := extra_template_data.get("comment"), str):
-        return extra_template_data
-    return {**extra_template_data, "comment": inline_comment_safe(comment)}
+def _safe_extra_template_data(
+    extra_template_data: dict[str, Any],
+    internal_template_data: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Return built-in template context without user-controlled Python fragments.
+
+    ``extra_template_data`` remains deliberately unrestricted for custom Jinja
+    templates. Built-in templates, however, have a small set of values that
+    are rendered as Python syntax rather than data. Project code places those
+    values in ``internal_template_data`` so user JSON cannot turn an extension
+    value into generated code. Rejecting a reserved user key is intentional:
+    silently ignoring a requested code-generation change would be surprising.
+    """
+    normalized_template_data = _normalize_template_data_keys(extra_template_data)
+    if not normalized_template_data and not internal_template_data:
+        return normalized_template_data
+    internal_template_data = internal_template_data or {}
+    comment = normalized_template_data.get("comment")
+    if unsafe_keys := _BUILTIN_TEMPLATE_INTERNAL_DATA_KEYS.intersection(normalized_template_data):
+        keys = ", ".join(sorted(unsafe_keys))
+        msg = (
+            f"{keys} is reserved for generator-owned built-in template data. "
+            "Use --custom-template-dir to render trusted custom template data instead."
+        )
+        raise Error(msg)
+    if isinstance(comment, str):
+        comment = _normalize_string(comment)
+    elif comment is not None:
+        comment = _normalize_string(str(comment))
+    if comment is None and not internal_template_data:
+        return normalized_template_data
+
+    safe_template_data = normalized_template_data
+    if comment is not None:
+        safe_template_data["comment"] = inline_comment_safe(comment)
+    safe_template_data.update(internal_template_data)
+    return safe_template_data
+
+
+def _normalize_template_data_keys(extra_template_data: dict[str, Any]) -> dict[str, Any]:
+    """Canonicalize public template keys before inspecting or forwarding them.
+
+    A ``str`` subclass may give a mapping a stateful ``__hash__`` implementation.
+    Never use such a key for the reserved-key check or for ``**kwargs`` rendering:
+    either could observe a different hash value.  Always return an ordinary
+    dictionary, including for an empty subclass whose truthiness or ``items``
+    protocol might lie to the renderer.
+    """
+    if not isinstance(extra_template_data, dict):
+        raise Error(_EXTRA_TEMPLATE_DATA_MAPPING_ERROR)
+
+    normalized_template_data: dict[str, Any] = {}
+    for key, value in dict.items(extra_template_data):
+        if not isinstance(key, str):
+            raise Error(_EXTRA_TEMPLATE_DATA_KEY_ERROR)
+        normalized_key = _normalize_string(key)
+        if normalized_key in normalized_template_data:
+            msg = f"extra template data contains duplicate key {normalized_key!r}"
+            raise Error(msg)
+        normalized_template_data[normalized_key] = value
+    return normalized_template_data
+
+
+def _safe_dataclass_arguments(dataclass_arguments: Any) -> dict[str, bool]:
+    """Snapshot and validate decorator arguments consumed as Python syntax."""
+    if not isinstance(dataclass_arguments, dict):
+        raise Error(_DATACLASS_ARGUMENTS_MAPPING_ERROR)
+
+    safe_arguments: dict[str, bool] = {}
+    for key, value in dict.items(dataclass_arguments):
+        if not isinstance(key, str):
+            raise Error(_DATACLASS_ARGUMENTS_KEY_ERROR)
+        normalized_key = _normalize_string(key)
+        if normalized_key not in _DATACLASS_ARGUMENT_NAMES:
+            msg = f"invalid dataclass argument {normalized_key!r}"
+            raise Error(msg)
+        if type(value) is not bool:
+            msg = f"dataclass argument {normalized_key!r} must be a bool"
+            raise Error(msg)
+        if normalized_key in safe_arguments:
+            msg = f"dataclass_arguments contains duplicate key {normalized_key!r}"
+            raise Error(msg)
+        safe_arguments[normalized_key] = value
+    return safe_arguments
 
 
 class _RenderedDataModelField:
@@ -1510,6 +1625,11 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
 
         self.reference.source = self
 
+        # Keep raw Python fragments owned by the generator separate from
+        # user-supplied template data.  Custom templates continue to receive
+        # ``extra_template_data`` unchanged; built-in templates receive this
+        # private mapping in ``_builtin_template_data`` below.
+        self._internal_template_data: dict[str, Any] = {}
         self.extra_template_data: dict[str, Any]
         if extra_template_data is not None:
             # The supplied defaultdict will either create a new entry,
@@ -1673,6 +1793,17 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
                 return custom_template_file_path
         return template_file_path
 
+    @cached_property
+    def _uses_custom_root_template(self) -> bool:
+        """Return whether this model's root template, rather than an include, is custom."""
+        template_file_path = self.template_file_path
+        canonical_template_path = Path(self.TEMPLATE_FILE_PATH)
+        if template_file_path.is_absolute():
+            return True
+        return self._custom_template_dir is not None and cached_path_exists(
+            self._custom_template_dir / canonical_template_path
+        )
+
     def _render(self, *args: Any, **kwargs: Any) -> str:
         """Render project-owned built-ins without loading Jinja."""
         if (
@@ -1693,16 +1824,17 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         """Get the Jinja2 template with custom directory support for includes."""
         resolved_path = self.template_file_path
         template_adapter = self.CUSTOM_TEMPLATE_ADAPTER if self._custom_template_dir is not None else None
-        if template_adapter is None:
-            if resolved_path.is_absolute():
-                return _get_template_with_absolute_path(resolved_path, Path(self.TEMPLATE_FILE_PATH).parent)
-            return _get_template_with_custom_dir(Path(self.TEMPLATE_FILE_PATH), self._custom_template_dir)
-        if resolved_path.is_absolute():
+        if self._uses_custom_root_template:
+            absolute_template_path = resolved_path.absolute()
+            if template_adapter is None:
+                return _get_template_with_absolute_path(absolute_template_path, Path(self.TEMPLATE_FILE_PATH).parent)
             return _get_template_with_absolute_path(
-                resolved_path,
+                absolute_template_path,
                 Path(self.TEMPLATE_FILE_PATH).parent,
                 template_adapter,
             )
+        if template_adapter is None:
+            return _get_template_with_custom_dir(Path(self.TEMPLATE_FILE_PATH), self._custom_template_dir)
         return _get_template_with_custom_dir(
             Path(self.TEMPLATE_FILE_PATH),
             self._custom_template_dir,
@@ -1848,13 +1980,32 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
             field.invalidate_semantic_caches(invalidate_parent=False)
         self.invalidate_render_caches()
 
+    def _set_internal_template_data(self, key: str, value: Any) -> None:
+        """Store project-produced template syntax for built-in renderers only."""
+        self._internal_template_data[key] = value
+
+    def _append_internal_template_data(self, key: str, value: str) -> None:
+        """Append a project-produced line that a built-in template renders as code."""
+        self._internal_template_data.setdefault(key, []).append(value)
+
+    def _pop_internal_template_data(self, key: str) -> None:
+        """Forget a project-produced built-in template value."""
+        self._internal_template_data.pop(key, None)
+
+    def _builtin_template_data(self) -> dict[str, Any]:
+        """Return the restricted context used by project-owned templates."""
+        return _safe_extra_template_data(self.extra_template_data, self._internal_template_data)
+
+    def _custom_template_data(self) -> dict[str, Any]:
+        """Return the legacy unrestricted custom-template context."""
+        if not self._internal_template_data:
+            return self.extra_template_data
+        return {**self.extra_template_data, **self._internal_template_data}
+
     def render(self, *, class_name: str | None = None) -> str:
         """Render the model to a string using the template."""
-        use_custom_template = self.template_file_path.is_absolute()
-        if use_custom_template:
-            extra_template_data = self.extra_template_data
-        else:
-            extra_template_data = _safe_extra_template_data(self.extra_template_data)
+        use_custom_template = self._uses_custom_root_template
+        extra_template_data = self._custom_template_data() if use_custom_template else self._builtin_template_data()
         return self._render(
             class_name=class_name or self.class_name,
             fields=self._template_fields(use_custom_template=use_custom_template),
@@ -1862,7 +2013,11 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
             base_class=self.base_class,
             methods=self.methods,
             description=self._template_description(use_custom_template=use_custom_template),
-            dataclass_arguments=self.dataclass_arguments,
+            dataclass_arguments=(
+                self.dataclass_arguments
+                if use_custom_template or not self.USES_DATACLASS_ARGUMENTS
+                else _safe_dataclass_arguments(self.dataclass_arguments)
+            ),
             path=self.path,
             **extra_template_data,
         )
@@ -1893,11 +2048,9 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
 
     def _template_fields(self, *, use_custom_template: bool) -> Sequence[DataModelFieldBase | _RenderedDataModelField]:
         """Return fields in the representation expected by the selected template."""
-        match use_custom_template:
-            case True:
-                return self._custom_template_fields
-            case False:
-                return self.rendered_fields
+        if use_custom_template:
+            return self._custom_template_fields
+        return self.rendered_fields
 
     def _template_description(self, *, use_custom_template: bool) -> str | None:
         """Return a description safe for the selected template convention."""

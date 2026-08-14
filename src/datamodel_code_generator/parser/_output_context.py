@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from datamodel_code_generator.python_literal import _make_internal_type_expression
+
 if TYPE_CHECKING:
     from typing import Any
 
@@ -96,7 +98,12 @@ class OutputModelContext:
         reference_classes: set[str] | None = None,
     ) -> None:
         """Store output-owned typed additional-properties metadata."""
-        extra_template_data["additionalPropertiesType"] = type_hint
+        # PEP 728 needs a forward reference when the type depends on another
+        # generated TypedDict.  Keep that parser-owned quoting inside the
+        # trusted expression rather than asking the model renderer to repr()
+        # public template data.
+        expression = repr(str(type_hint)) if reference_classes else type_hint
+        extra_template_data["additionalPropertiesType"] = _make_internal_type_expression(type_hint, expression)
         if reference_classes is not None:
             self._store_additional_properties_reference_classes(extra_template_data, reference_classes)
 

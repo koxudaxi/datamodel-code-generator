@@ -15,6 +15,7 @@ from datamodel_code_generator.imports import (
 )
 from datamodel_code_generator.model.base import UNDEFINED
 from datamodel_code_generator.model.type_alias import TypeAliasBase
+from datamodel_code_generator.python_literal import represent_untrusted_public_type_name
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -90,6 +91,14 @@ class _DataTypeScalarBase(TypeAliasBase):
             keyword_only=keyword_only,
             treat_dot_as_module=treat_dot_as_module,
         )
+
+    def _builtin_template_data(self) -> dict[str, Any]:
+        """Serialize public scalar aliases before built-in templates emit them."""
+        template_data = super()._builtin_template_data()
+        return {
+            **template_data,
+            "py_type": represent_untrusted_public_type_name(template_data.get("py_type", DEFAULT_GRAPHQL_SCALAR_TYPE)),
+        }
 
 
 class DataTypeScalar(_DataTypeScalarBase):

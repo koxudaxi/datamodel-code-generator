@@ -452,7 +452,7 @@ class BaseModelBase(DataModel, ABC):
         if self._custom_template_dir is not None:
             custom_template_file_path = self._custom_template_dir / Path(self.TEMPLATE_FILE_PATH).name
             if cached_path_exists(custom_template_file_path):
-                return custom_template_file_path
+                return custom_template_file_path.resolve()
         return super().template_file_path
 
 

@@ -20,6 +20,11 @@ from datamodel_code_generator.model.imports import (
     IMPORT_TYPED_DICT,
     IMPORT_TYPED_DICT_BACKPORT,
 )
+from datamodel_code_generator.python_literal import (
+    _InternalTypeExpression,
+    represent_untrusted_public_type_name,
+    represent_untrusted_python_value,
+)
 from datamodel_code_generator.types import NOT_REQUIRED_PREFIX, READ_ONLY_PREFIX, REQUIRED_PREFIX
 
 if TYPE_CHECKING:
@@ -119,20 +124,22 @@ class TypedDict(DataModel):
         if additional_props is False and not is_base_class:
             typed_dict_kwargs["closed"] = "True"
         elif additional_props_type and not is_base_class:
-            if len(self._additional_properties_reference_classes):
-                typed_dict_kwargs["extra_items"] = repr(additional_props_type)
+            if isinstance(additional_props_type, _InternalTypeExpression):
+                typed_dict_kwargs["extra_items"] = additional_props_type.code
+            elif len(self._additional_properties_reference_classes):
+                typed_dict_kwargs["extra_items"] = represent_untrusted_python_value(additional_props_type)
             else:
-                typed_dict_kwargs["extra_items"] = additional_props_type
+                typed_dict_kwargs["extra_items"] = represent_untrusted_public_type_name(additional_props_type)
 
         if typed_dict_kwargs:
-            self.extra_template_data["typed_dict_kwargs"] = typed_dict_kwargs
             kwargs_str = ", ".join(f"{k}={v}" for k, v in typed_dict_kwargs.items())
-            self.extra_template_data["typed_dict_kwargs_suffix"] = f", {kwargs_str}"
+            self._set_internal_template_data("typed_dict_kwargs", typed_dict_kwargs)
+            self._set_internal_template_data("typed_dict_kwargs_suffix", f", {kwargs_str}")
 
     @property
     def _has_pep728_kwargs(self) -> bool:
         """Check if this TypedDict has closed or extra_items kwargs."""
-        typed_dict_kwargs = self.extra_template_data.get("typed_dict_kwargs", {})
+        typed_dict_kwargs = self._internal_template_data.get("typed_dict_kwargs", {})
         return "closed" in typed_dict_kwargs or "extra_items" in typed_dict_kwargs
 
     @property
@@ -154,7 +161,9 @@ class TypedDict(DataModel):
         For PEP 728 support, includes closed=True or extra_items=X in the base class.
         """
         base = super().base_class
-        if typed_dict_kwargs_suffix := self.extra_template_data.get("typed_dict_kwargs_suffix"):
+        use_custom_template = self._uses_custom_root_template
+        template_data = self._custom_template_data() if use_custom_template else self._internal_template_data
+        if typed_dict_kwargs_suffix := template_data.get("typed_dict_kwargs_suffix"):
             return f"{base}{typed_dict_kwargs_suffix}"
         return base
 
@@ -195,10 +204,11 @@ class TypedDict(DataModel):
 
     def render(self, *, class_name: str | None = None) -> str:
         """Render TypedDict class with appropriate syntax."""
-        use_custom_template = self.template_file_path.is_absolute()
+        use_custom_template = self._uses_custom_root_template
         description = self._template_description(use_custom_template=use_custom_template)
         if not use_custom_template and self.is_functional_syntax:
             description = None
+        extra_template_data = self._custom_template_data() if use_custom_template else self._builtin_template_data()
         return self._render(
             class_name=class_name or self.class_name,
             fields=self._template_fields(use_custom_template=use_custom_template),
@@ -208,7 +218,7 @@ class TypedDict(DataModel):
             description=description,
             is_functional_syntax=self.is_functional_syntax,
             all_fields=self.all_fields,
-            **self.extra_template_data,
+            **extra_template_data,
         )
 
 

@@ -3042,8 +3042,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             if model.reference.path in set_item_references:
                 if isinstance(model, Enum):
                     continue
-                class_body_lines = model.extra_template_data.setdefault("class_body_lines", [])
-                class_body_lines.append("__hash__ = object.__hash__")
+                model._append_internal_template_data("class_body_lines", "__hash__ = object.__hash__")  # noqa: SLF001
 
     @classmethod
     def __set_reference_default_value_to_field(

@@ -12,7 +12,6 @@ from datamodel_code_generator.model import DataModelFieldBase, pydantic_v2
 from datamodel_code_generator.model.msgspec import Constraints as MsgspecConstraints
 from datamodel_code_generator.model.pydantic_base import PatternConstraints
 from datamodel_code_generator.model.pydantic_v2.base_model import (
-    _CONFIG_ITEMS_TEMPLATE_DATA_KEY,
     BaseModel,
     DataModelField,
     _alias_generator_name,
@@ -81,7 +80,7 @@ def test_base_model_config_key_order_with_multiple_shared_parameters() -> None:
         (
             f"config type: {type(config).__name__}\n"
             f"config keys: {list(config.dict(exclude_unset=True))!r}\n"
-            f"template config items: {model.extra_template_data[_CONFIG_ITEMS_TEMPLATE_DATA_KEY]!r}\n\n"
+            f"template config items: {_config_dict_items(config)!r}\n\n"
             f"{_render_model_with_imports(model)}"
         ),
         EXPECTED_PYDANTIC_V2_MODEL_PATH / "base_model_config_shared_parameters.txt",

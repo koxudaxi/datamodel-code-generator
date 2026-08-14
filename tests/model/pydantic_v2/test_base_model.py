@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 import inspect
 import textwrap
+from collections import defaultdict
 from itertools import product
 from pathlib import Path
 
@@ -19,7 +20,11 @@ from datamodel_code_generator.model.pydantic_v2.base_model import (
     DataModelField,
     _construct_parser_simple_field,
 )
-from datamodel_code_generator.model.runtime_validation import RequiredGroupsRule, SchemaRuntimeValidation
+from datamodel_code_generator.model.runtime_validation import (
+    RequiredGroupsRule,
+    SchemaRuntimeValidation,
+    _make_internal_schema_runtime_validation,
+)
 from datamodel_code_generator.parser.base import Parser, _get_builtin_pydantic_v2_field_constructor
 from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
 from datamodel_code_generator.reference import Reference
@@ -31,7 +36,7 @@ JSON_SCHEMA_DATA_PATH = Path(__file__).parents[2] / "data" / "jsonschema"
 
 
 def _schema_runtime_validation() -> SchemaRuntimeValidation:
-    return SchemaRuntimeValidation(
+    return _make_internal_schema_runtime_validation(
         required_groups=[
             RequiredGroupsRule(
                 keyword="oneOf",
@@ -63,8 +68,14 @@ def test_base_model_methods_render_once_after_all_fields() -> None:
 @pytest.mark.allow_direct_assert
 def test_schema_runtime_validation_base_inheritance_detects_transitive_base() -> None:
     """Detect inherited runtime validation bases through non-runtime intermediate models."""
-    runtime_base = BaseModel(fields=[], reference=Reference(name="RuntimeBase", path="#/RuntimeBase"))
-    runtime_base.extra_template_data["schema_runtime_validation"] = _schema_runtime_validation()
+    runtime_base = BaseModel(
+        fields=[],
+        reference=Reference(name="RuntimeBase", path="#/RuntimeBase"),
+        extra_template_data=defaultdict(
+            dict,
+            {"#/RuntimeBase": {"schema_runtime_validation": _schema_runtime_validation()}},
+        ),
+    )
 
     intermediate = BaseModel(
         fields=[],
@@ -87,8 +98,14 @@ def test_schema_runtime_validation_base_inheritance_detects_transitive_base() ->
 @pytest.mark.allow_direct_assert
 def test_schema_runtime_validation_helpers_are_gated_by_parser_option() -> None:
     """Avoid scanning and rendering runtime helpers for the normal Pydantic v2 path."""
-    runtime_model = BaseModel(fields=[], reference=Reference(name="RuntimeModel", path="#/RuntimeModel"))
-    runtime_model.extra_template_data["schema_runtime_validation"] = _schema_runtime_validation()
+    runtime_model = BaseModel(
+        fields=[],
+        reference=Reference(name="RuntimeModel", path="#/RuntimeModel"),
+        extra_template_data=defaultdict(
+            dict,
+            {"#/RuntimeModel": {"schema_runtime_validation": _schema_runtime_validation()}},
+        ),
+    )
 
     assert not BaseModel.render_module_code([runtime_model])
 
