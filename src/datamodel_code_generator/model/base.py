@@ -1663,6 +1663,21 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
                 return custom_template_file_path
         return template_file_path
 
+    def _render(self, *args: Any, **kwargs: Any) -> str:
+        """Render project-owned built-ins without loading Jinja."""
+        if (
+            args
+            or self._custom_template_dir is not None
+            or not type(self).__module__.startswith("datamodel_code_generator.model.")
+        ):
+            return super()._render(*args, **kwargs)
+
+        from datamodel_code_generator.model._compiled_templates import get_builtin_renderer  # noqa: PLC0415
+
+        if renderer := get_builtin_renderer(self.TEMPLATE_FILE_PATH):
+            return renderer(**kwargs)
+        return super()._render(**kwargs)
+
     @cached_property
     def template(self) -> Template:
         """Get the Jinja2 template with custom directory support for includes."""

@@ -745,21 +745,30 @@ class BaseModel(BaseModelBase):
             (model.custom_template_dir for model in models if model.custom_template_dir is not None),
             None,
         )
+        runtime_validations = [model.extra_template_data["schema_runtime_validation"] for model in runtime_models]
+        context = {
+            "schema_runtime_validation_base_class_name": base_class_name,
+            "has_pattern_properties": any(
+                runtime_validation.pattern_properties for runtime_validation in runtime_validations
+            ),
+            "has_required_groups": any(
+                runtime_validation.required_groups for runtime_validation in runtime_validations
+            ),
+            "has_conditional_required": any(
+                runtime_validation.conditional_required for runtime_validation in runtime_validations
+            ),
+        }
+        if custom_template_dir is None and cls.__module__.startswith("datamodel_code_generator.model."):
+            from datamodel_code_generator.model._compiled_templates import get_builtin_renderer  # noqa: PLC0415
+
+            if renderer := get_builtin_renderer(cls.SCHEMA_RUNTIME_VALIDATION_HELPERS_TEMPLATE_FILE_PATH):
+                return renderer(**context)
+
         template = _get_template_with_custom_dir(
             Path(cls.SCHEMA_RUNTIME_VALIDATION_HELPERS_TEMPLATE_FILE_PATH),
             custom_template_dir,
         )
-        runtime_validations = [model.extra_template_data["schema_runtime_validation"] for model in runtime_models]
-        return template.render(
-            schema_runtime_validation_base_class_name=base_class_name,
-            has_pattern_properties=any(
-                runtime_validation.pattern_properties for runtime_validation in runtime_validations
-            ),
-            has_required_groups=any(runtime_validation.required_groups for runtime_validation in runtime_validations),
-            has_conditional_required=any(
-                runtime_validation.conditional_required for runtime_validation in runtime_validations
-            ),
-        )
+        return template.render(**context)
 
     @classmethod
     def _inherits_schema_runtime_validation_base(cls, model: DataModel, *, seen: set[str]) -> bool:

@@ -48,9 +48,10 @@ class {{ class_name }}({%- if schema_runtime_validation_use_base -%}{{ schema_ru
 
 {% endif %}
     {%- endif %}
-{%- for method in methods -%}
-    {{ method }}
 {%- endfor -%}
+{%- for method in methods %}
+
+    {{ method }}
 {%- endfor -%}
 {%- if prepared_validators %}
 {% for v in prepared_validators %}
