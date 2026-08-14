@@ -55,6 +55,7 @@ from tests.conftest import (
     assert_directory_content,
     assert_httpx_get_kwargs,
     assert_mutable_copy_is_isolated,
+    assert_no_uncommented_generated_code,
     assert_output,
     assert_warnings_contain,
     assert_warnings_do_not_contain,
@@ -79,6 +80,7 @@ from tests.main.conftest import (
     _uses_external_test_default_formatter,
     assert_generated_model_json_invalid,
     assert_generated_model_json_validation,
+    get_current_version_args,
     run_generate_and_assert,
     run_generate_file_and_assert,
     run_main_and_assert,
@@ -96,6 +98,80 @@ FixtureRequest = pytest.FixtureRequest
 
 class _FallbackMsgspecDataModelField(MsgspecDataModelField):
     """Force the conventional graph-rendering path for CI parity checks."""
+
+
+@pytest.mark.parametrize(
+    ("input_name", "output_model_type", "expected_file", "template_dir_name", "field_description_args"),
+    [
+        (
+            "custom_template_docstring_escaping.json",
+            DataModelType.DataclassesDataclass.value,
+            "custom_template_docstring_escaping_dataclass.py",
+            "templates_docstring_escaping",
+            ("--use-field-description",),
+        ),
+        (
+            "custom_template_docstring_escaping.json",
+            DataModelType.TypingTypedDict.value,
+            "custom_template_docstring_escaping_typed_dict.py",
+            "templates_docstring_escaping",
+            ("--use-field-description",),
+        ),
+        (
+            "custom_template_root_docstring_escaping.json",
+            DataModelType.PydanticV2BaseModel.value,
+            "custom_template_docstring_escaping_root_model.py",
+            "templates_docstring_escaping",
+            ("--use-field-description",),
+        ),
+        (
+            "custom_template_docstring_escaping.json",
+            DataModelType.PydanticV2BaseModel.value,
+            "custom_template_docstring_escaping_format_filter.py",
+            "templates_docstring_filter_escaping",
+            ("--use-field-description",),
+        ),
+        (
+            "custom_template_docstring_escaping.json",
+            DataModelType.DataclassesDataclass.value,
+            "custom_template_docstring_escaping_without_field_descriptions.py",
+            "templates_docstring_escaping",
+            (),
+        ),
+    ],
+)
+def test_main_jsonschema_custom_template_escapes_docstrings(
+    output_file: Path,
+    input_name: str,
+    output_model_type: str,
+    expected_file: str,
+    template_dir_name: str,
+    field_description_args: tuple[str, ...],
+) -> None:
+    """Custom templates receive docstring-safe model and field descriptions."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / input_name,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=get_current_version_args(
+            "--custom-template-dir",
+            str(DATA_PATH / template_dir_name),
+            "--output-model-type",
+            output_model_type,
+            "--use-schema-description",
+            *field_description_args,
+            "--formatters",
+            "builtin",
+            "--disable-timestamp",
+        ),
+        force_exec_validation=True,
+    )
+    assert_no_uncommented_generated_code(
+        output_file.read_text(encoding="utf-8"),
+        forbidden_contains=('"""; assert False; """',),
+    )
 
 
 def assert_run_main_with_args_error(args: list[str], capsys: pytest.CaptureFixture[str], expected_error: str) -> None:

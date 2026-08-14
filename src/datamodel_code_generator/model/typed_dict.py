@@ -196,12 +196,12 @@ class TypedDict(DataModel):
     def render(self, *, class_name: str | None = None) -> str:
         """Render TypedDict class with appropriate syntax."""
         use_custom_template = self.template_file_path.is_absolute()
-        description = self.description if use_custom_template else self.rendered_description
+        description = self._template_description(use_custom_template=use_custom_template)
         if not use_custom_template and self.is_functional_syntax:
             description = None
         return self._render(
             class_name=class_name or self.class_name,
-            fields=self.fields if use_custom_template else self.rendered_fields,
+            fields=self._template_fields(use_custom_template=use_custom_template),
             decorators=self.decorators,
             base_class=self.base_class,
             methods=self.methods,

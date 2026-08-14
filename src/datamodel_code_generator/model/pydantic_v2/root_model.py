@@ -104,7 +104,7 @@ class RootModel(BaseModel):
     def render(self, *, class_name: str | None = None) -> str:
         """Render the RootModel and validate custom sequence templates when needed."""
         use_custom_template = self.template_file_path.is_absolute()
-        fields = self.fields if use_custom_template else self.rendered_fields
+        fields = self._template_fields(use_custom_template=use_custom_template)
         if fields:
             _ = fields[0].type_hint
         self._sync_config_items()
@@ -117,9 +117,7 @@ class RootModel(BaseModel):
             decorators=self.decorators,
             base_class=self.base_class,
             methods=self.methods,
-            description=self.description
-            if use_custom_template or not self.FORMAT_DESCRIPTION_AS_DOCSTRING
-            else self.rendered_description,
+            description=self._template_description(use_custom_template=use_custom_template),
             dataclass_arguments=self.dataclass_arguments,
             path=self.path,
             **extra_template_data,

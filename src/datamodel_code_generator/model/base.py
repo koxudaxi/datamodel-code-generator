@@ -43,7 +43,7 @@ from datamodel_code_generator.types import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Collection, Iterator, Mapping
+    from collections.abc import Callable, Collection, Iterator, Mapping, Sequence
 
     from jinja2 import Environment, Template
 
@@ -146,6 +146,12 @@ def _annotation_typing_import_names(annotation: str) -> frozenset[str]:
     )
 
 
+class _EscapedDocstring(str):  # noqa: FURB189
+    """Marker for values already escaped for a generated Python docstring."""
+
+    __slots__ = ()
+
+
 def escape_docstring(value: str | None) -> str | None:
     r"""Escape special characters in a docstring to prevent syntax errors.
 
@@ -161,8 +167,12 @@ def escape_docstring(value: str | None) -> str | None:
     """
     if value is None:
         return None
-    # Escape backslashes first, then triple quotes
-    return value.replace("\\", "\\\\").replace('"""', '\\"\\"\\"')
+    if isinstance(value, _EscapedDocstring):
+        return value
+    # Escape backslashes first, then triple quotes. Retain the original string
+    # when no escaping is needed so custom-template fast paths stay allocation-free.
+    escaped = value.replace("\\", "\\\\").replace('"""', '\\"\\"\\"')
+    return _EscapedDocstring(escaped) if escaped != value else value
 
 
 def _ends_with_unescaped_quote(value: str) -> bool:
@@ -1847,17 +1857,55 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
             extra_template_data = _safe_extra_template_data(self.extra_template_data)
         return self._render(
             class_name=class_name or self.class_name,
-            fields=self.fields if use_custom_template else self.rendered_fields,
+            fields=self._template_fields(use_custom_template=use_custom_template),
             decorators=self.decorators,
             base_class=self.base_class,
             methods=self.methods,
-            description=self.description
-            if use_custom_template or not self.FORMAT_DESCRIPTION_AS_DOCSTRING
-            else self.rendered_description,
+            description=self._template_description(use_custom_template=use_custom_template),
             dataclass_arguments=self.dataclass_arguments,
             path=self.path,
             **extra_template_data,
         )
+
+    @property
+    def _custom_template_fields(self) -> Sequence[DataModelFieldBase | _RenderedDataModelField]:
+        """Return custom-template fields, allocating proxies only when escaping changes a docstring."""
+        if not any(
+            field.use_field_description or field.use_field_description_example or field.use_inline_field_description
+            for field in self.fields
+        ):
+            return self.fields
+
+        rendered_fields: list[DataModelFieldBase | _RenderedDataModelField] | None = None
+        for index, field in enumerate(self.fields):
+            if (docstring := field.docstring) is None or (
+                escaped_docstring := escape_docstring(docstring)
+            ) == docstring:
+                if rendered_fields is not None:
+                    rendered_fields.append(field)
+                continue
+
+            if rendered_fields is None:
+                rendered_fields = []
+                rendered_fields.extend(self.fields[:index])
+            rendered_fields.append(_RenderedDataModelField(field, escaped_docstring or ""))
+        return self.fields if rendered_fields is None else rendered_fields
+
+    def _template_fields(self, *, use_custom_template: bool) -> Sequence[DataModelFieldBase | _RenderedDataModelField]:
+        """Return fields in the representation expected by the selected template."""
+        match use_custom_template:
+            case True:
+                return self._custom_template_fields
+            case False:
+                return self.rendered_fields
+
+    def _template_description(self, *, use_custom_template: bool) -> str | None:
+        """Return a description safe for the selected template convention."""
+        if use_custom_template:
+            return escape_docstring(self.description)
+        if not self.FORMAT_DESCRIPTION_AS_DOCSTRING:
+            return self.description
+        return self.rendered_description
 
     @property
     def use_single_line_docstring(self) -> bool:
