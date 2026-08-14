@@ -10,6 +10,7 @@ import re
 from collections import defaultdict
 from functools import lru_cache
 from pathlib import Path
+from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 from warnings import warn
 
@@ -69,6 +70,7 @@ from datamodel_code_generator.types import chain_as_tuple
 
 if TYPE_CHECKING:
     from jinja2 import Template
+    from typing_extensions import TypedDict, Unpack
 
     from datamodel_code_generator.reference import Reference
     from datamodel_code_generator.types import DataType
@@ -557,6 +559,73 @@ class DataModelField(_PydanticBaseDataModelField):
 _LOOKAROUND_PATTERN: re.Pattern[str] = re.compile(r"\(\?<?[=!]")
 
 
+if TYPE_CHECKING:
+
+    class _ParserSimpleFieldData(TypedDict, total=False):
+        name: str | None
+        default: object | None
+        required: bool
+        alias: str | None
+        validation_aliases: list[str] | None
+        serialization_alias: str | None
+        data_type: DataType
+        constraints: Constraints | dict[str, object] | None
+        strip_default_none: bool
+        nullable: bool | None
+        extras: dict[str, object] | None
+        use_annotated: bool
+        use_serialize_as_any: bool
+        has_default: bool
+        use_field_description: bool
+        use_field_description_example: bool
+        use_inline_field_description: bool
+        const: bool
+        original_name: str | None
+        use_default_kwarg: bool
+        use_missing_sentinel: bool
+        type_has_null: bool | None
+        read_only: bool
+        write_only: bool
+        use_frozen_field: bool
+        use_serialization_alias: bool
+        use_default_factory_for_optional_nested_models: bool
+        use_default_with_required: bool
+
+
+_PARSER_SIMPLE_FIELD_DEFAULTS = MappingProxyType({
+    name: None if field_info.is_required() or field_info.default_factory is not None else field_info.default
+    for name, field_info in DataModelField.model_fields.items()
+})
+_PARSER_SIMPLE_FIELD_HAS_PRIVATE_STATE = DataModelField.__pydantic_post_init__ is not None
+_SET_PARSER_FIELD_ATTRIBUTE = object.__setattr__
+
+
+def _construct_parser_simple_field(**data: Unpack[_ParserSimpleFieldData]) -> DataModelField:
+    """Construct a parser-normalized simple field without Pydantic validation."""
+    match (
+        data.get("constraints"),
+        data.get("extras"),
+        data.get("const", False),
+    ):
+        case (None, None | {} as extras, False) if not extras and "data_type" in data:
+            pass
+        case _:
+            return DataModelField(**data)
+
+    # Keep Pydantic's private instance layout in this one compatibility boundary.
+    values = _PARSER_SIMPLE_FIELD_DEFAULTS.copy()
+    values.update(data)
+    values["extras"] = {}
+    field = object.__new__(DataModelField)
+    _SET_PARSER_FIELD_ATTRIBUTE(field, "__dict__", values)
+    _SET_PARSER_FIELD_ATTRIBUTE(field, "__pydantic_fields_set__", set(data))
+    _SET_PARSER_FIELD_ATTRIBUTE(field, "__pydantic_extra__", None)
+    _SET_PARSER_FIELD_ATTRIBUTE(field, "__pydantic_private__", {} if _PARSER_SIMPLE_FIELD_HAS_PRIVATE_STATE else None)
+    if (data_type := field.data_type).reference or data_type.data_types:
+        data_type.parent = field
+    return field
+
+
 def has_lookaround_pattern(
     fields: list[DataModelFieldBase],
     *,
@@ -676,21 +745,30 @@ class BaseModel(BaseModelBase):
             (model.custom_template_dir for model in models if model.custom_template_dir is not None),
             None,
         )
+        runtime_validations = [model.extra_template_data["schema_runtime_validation"] for model in runtime_models]
+        context = {
+            "schema_runtime_validation_base_class_name": base_class_name,
+            "has_pattern_properties": any(
+                runtime_validation.pattern_properties for runtime_validation in runtime_validations
+            ),
+            "has_required_groups": any(
+                runtime_validation.required_groups for runtime_validation in runtime_validations
+            ),
+            "has_conditional_required": any(
+                runtime_validation.conditional_required for runtime_validation in runtime_validations
+            ),
+        }
+        if custom_template_dir is None and cls.__module__.startswith("datamodel_code_generator.model."):
+            from datamodel_code_generator.model._compiled_templates import get_builtin_renderer  # noqa: PLC0415
+
+            if renderer := get_builtin_renderer(cls.SCHEMA_RUNTIME_VALIDATION_HELPERS_TEMPLATE_FILE_PATH):
+                return renderer(**context)
+
         template = _get_template_with_custom_dir(
             Path(cls.SCHEMA_RUNTIME_VALIDATION_HELPERS_TEMPLATE_FILE_PATH),
             custom_template_dir,
         )
-        runtime_validations = [model.extra_template_data["schema_runtime_validation"] for model in runtime_models]
-        return template.render(
-            schema_runtime_validation_base_class_name=base_class_name,
-            has_pattern_properties=any(
-                runtime_validation.pattern_properties for runtime_validation in runtime_validations
-            ),
-            has_required_groups=any(runtime_validation.required_groups for runtime_validation in runtime_validations),
-            has_conditional_required=any(
-                runtime_validation.conditional_required for runtime_validation in runtime_validations
-            ),
-        )
+        return template.render(**context)
 
     @classmethod
     def _inherits_schema_runtime_validation_base(cls, model: DataModel, *, seen: set[str]) -> bool:

@@ -1964,6 +1964,121 @@ def _finalize_builtin_code(code: str, *, string_normalization: bool) -> str:
     return f"{formatted_code}\n"
 
 
+def _generated_import_prefix_end(lines: list[str]) -> int | None:
+    """Return the end of a simple generated import prefix, or None when unsupported."""
+    line_index = 0
+    import_end = 0
+    while line_index < len(lines):
+        line = lines[line_index]
+        if not line:
+            line_index += 1
+            continue
+        if not line.startswith(("from ", "import ")):
+            stripped_line = line.lstrip()
+            return None if not import_end and stripped_line.startswith(("#", "'''", '"""')) else import_end
+
+        bracket_depth = 0
+        while line_index < len(lines):
+            import_line = lines[line_index]
+            bracket_depth += import_line.count("(") - import_line.count(")")
+            line_index += 1
+            if bracket_depth <= 0:
+                import_end = line_index
+                break
+        else:
+            return None
+    return import_end
+
+
+def _try_apply_builtin_generated_formatter(  # noqa: PLR0911, PLR0913
+    code: str,
+    *,
+    line_length: int,
+    known_first_party: frozenset[str],
+    wrap_string_literal: bool,
+    string_normalization: bool,
+    python_version: PythonVersion | None,
+) -> str | None:
+    """Format trusted generated code without parsing the complete module."""
+    if wrap_string_literal or string_normalization:
+        return None
+    if python_version is not None and python_version.version_key > sys.version_info[:2]:
+        return None
+
+    lines: list[str] = []
+    for source_line in _split_python_lines(code):
+        line = source_line.rstrip()
+        if (
+            len(line) > line_length  # noqa: PLR0916
+            or "ConfigDict(" in line
+            or "TypeAlias" in line
+            or "TypedDict(" in line
+            or "if TYPE_CHECKING:" in line
+            or "'''" in line
+            or '"""' in line
+        ):
+            return None
+        lines.append(line)
+
+    while lines and not lines[-1]:
+        lines.pop()
+    if not lines:
+        return ""
+    if (import_end := _generated_import_prefix_end(lines)) is None:
+        return None
+    if not import_end:
+        return _finalize_builtin_code("\n".join(lines), string_normalization=False)
+
+    try:
+        import_tree = ast.parse("\n".join(lines[:import_end]))
+    except SyntaxError:
+        return None
+    if not (import_nodes := _iter_module_import_nodes(import_tree)) or len(import_nodes) != len(import_tree.body):
+        return None
+
+    import_block = _build_builtin_import_block(import_nodes, line_length, lines, known_first_party)
+    body_start = import_end
+    while body_start < len(lines) and not lines[body_start]:
+        body_start += 1
+    del lines[:body_start]
+    if not lines:
+        return _finalize_builtin_code(import_block, string_normalization=False)
+    body = "\n".join(lines)
+    separator = "\n\n\n" if body.startswith(("class ", "def ", "async def ", "@")) else "\n\n"
+    return _finalize_builtin_code(f"{import_block}{separator}{body}", string_normalization=False)
+
+
+def _apply_builtin_generated_formatter(  # noqa: PLR0913
+    code: str,
+    *,
+    line_length: int = DEFAULT_LINE_LENGTH,
+    known_first_party: frozenset[str] = DEFAULT_KNOWN_FIRST_PARTY,
+    wrap_string_literal: bool = False,
+    string_normalization: bool = False,
+    python_version: PythonVersion | None = None,
+) -> str:
+    """Format generator-owned source, falling back for unsupported code."""
+    if (
+        formatted := _try_apply_builtin_generated_formatter(
+            code,
+            line_length=line_length,
+            known_first_party=known_first_party,
+            wrap_string_literal=wrap_string_literal,
+            string_normalization=string_normalization,
+            python_version=python_version,
+        )
+    ) is not None:
+        return formatted
+    return apply_builtin_formatter(
+        code,
+        line_length=line_length,
+        known_first_party=known_first_party,
+        wrap_string_literal=wrap_string_literal,
+        string_normalization=string_normalization,
+        python_version=python_version,
+    )
+
+
 def apply_builtin_formatter(  # noqa: PLR0913
     code: str,
     *,

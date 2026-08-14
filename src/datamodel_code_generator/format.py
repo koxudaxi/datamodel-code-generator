@@ -562,6 +562,7 @@ class CodeFormatter:
         self.encoding = encoding
         self.use_type_checking_imports = use_type_checking_imports
         self.python_version = python_version
+        self._formatting_generated_code = False
 
         has_external_formatter = bool(EXTERNAL_FORMATTERS.intersection(formatters))
         if Formatter.BUILTIN in formatters and has_external_formatter:
@@ -711,10 +712,28 @@ class CodeFormatter:
         code: str,
     ) -> str:
         """Apply all configured formatters to the code string."""
+        return self._format_code(code, generated=self._formatting_generated_code)
+
+    def _format_generated_code(self, code: str) -> str:
+        """Apply formatters to source rendered by the built-in generators."""
+        previous_generated = self._formatting_generated_code
+        self._formatting_generated_code = True
+        try:
+            return self.format_code(code)
+        finally:
+            self._formatting_generated_code = previous_generated
+
+    def _format_code(self, code: str, *, generated: bool) -> str:
         if Formatter.ISORT in self.formatters:
             code = self.apply_isort(code)
         if self.use_builtin_formatter:
-            code = self.apply_builtin_formatter(
+            formatter = self.apply_builtin_formatter
+            match generated:
+                case True:
+                    formatter = _builtin_formatter_attr("_apply_builtin_generated_formatter")
+                case _:
+                    pass
+            code = formatter(
                 code,
                 line_length=self.builtin_line_length,
                 known_first_party=self.builtin_known_first_party,

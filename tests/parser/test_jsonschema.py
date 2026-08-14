@@ -11,18 +11,21 @@ from collections import Counter
 from copy import deepcopy
 from ipaddress import ip_address
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union
 
 import pydantic
 import pytest
 import yaml
 
+import datamodel_code_generator._builtin_formatter as builtin_formatter
 from datamodel_code_generator import (
     AllOfMergeMode,
     DataModelType,
     Error,
+    Formatter,
     PythonVersion,
     ReadOnlyWriteOnlyModelType,
+    YamlValue,
 )
 from datamodel_code_generator._python_type_annotation import PythonTypeRuntimeSymbol
 from datamodel_code_generator.http import _get_http_stack, _get_httpx
@@ -65,6 +68,8 @@ from datamodel_code_generator.types import ANY, DataType
 from tests.conftest import assert_output
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from pytest_mock import MockerFixture
 
 DATA_PATH: Path = Path(__file__).parents[1] / "data" / "jsonschema"
@@ -72,6 +77,105 @@ DATA_PATH: Path = Path(__file__).parents[1] / "data" / "jsonschema"
 
 def _json_schema_object(data: dict[str, Any]) -> JsonSchemaObject:
     return JsonSchemaObject.model_validate(data)
+
+
+def test_generated_formatter_mode_only_enabled_for_builtin() -> None:
+    """Keep no-formatter and external-formatter output outside generated fast-path dispatch."""
+    model_types = get_data_model_types(
+        DataModelType.PydanticV2BaseModel,
+        target_python_version=PythonVersion.PY_310,
+    )
+    input_path = DATA_PATH / "user.json"
+    formatted_cases: list[str] = []
+    for name, formatters in (
+        ("none", []),
+        ("black", [Formatter.BLACK]),
+        ("builtin", [Formatter.BUILTIN]),
+    ):
+        parser = JsonSchemaParser(
+            input_path,
+            base_path=input_path.parent,
+            data_model_type=model_types.data_model,
+            data_model_root_type=model_types.root_model,
+            data_model_field_type=model_types.field_model,
+            data_type_manager_type=model_types.data_type_manager,
+            dump_resolve_reference_action=model_types.dump_resolve_reference_action,
+            formatters=formatters,
+            target_python_version=PythonVersion.PY_310,
+        )
+        output = parser.parse()
+        fast_path = vars(parser)["_uses_standard_generation_templates"]
+        formatted_cases.append(f"[{name} fast_path={fast_path}]\n{output}")
+
+    assert_output(
+        "\n".join(formatted_cases),
+        DATA_PATH / "generated_formatter_modes.snapshot",
+    )
+
+
+def test_builtin_formatter_falls_back_for_custom_class_name_generator(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep invalid custom names on the full formatter's syntax-error path."""
+
+    def invalid_class_name(_: str) -> str:
+        return "Bad-Name"
+
+    model_types = get_data_model_types(
+        DataModelType.PydanticV2BaseModel,
+        target_python_version=PythonVersion.PY_311,
+    )
+    input_path = DATA_PATH / "user.json"
+    parser = JsonSchemaParser(
+        input_path,
+        base_path=input_path.parent,
+        data_model_type=model_types.data_model,
+        data_model_root_type=model_types.root_model,
+        data_model_field_type=model_types.field_model,
+        data_type_manager_type=model_types.data_type_manager,
+        dump_resolve_reference_action=model_types.dump_resolve_reference_action,
+        custom_class_name_generator=invalid_class_name,
+        formatters=[Formatter.BUILTIN],
+        target_python_version=PythonVersion.PY_311,
+    )
+
+    monkeypatch.setattr(
+        builtin_formatter,
+        "_apply_builtin_generated_formatter",
+        lambda *_args, **_kwargs: pytest.fail("custom class-name hook reached generated formatter fast path"),
+    )
+    output = parser.parse()
+    assert_output(output, DATA_PATH / "builtin_formatter_custom_class_name.snapshot")
+
+
+def test_builtin_formatter_falls_back_for_custom_resolve_reference_action(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep custom trailing source on the full formatter's syntax-error path."""
+
+    def invalid_resolve_reference_action(_: Iterable[str]) -> str:
+        return "BROKEN = ("
+
+    model_types = get_data_model_types(
+        DataModelType.PydanticV2BaseModel,
+        target_python_version=PythonVersion.PY_311,
+    )
+    input_path = DATA_PATH / "self_reference.json"
+    parser = JsonSchemaParser(
+        input_path,
+        base_path=input_path.parent,
+        data_model_type=model_types.data_model,
+        data_model_root_type=model_types.root_model,
+        data_model_field_type=model_types.field_model,
+        data_type_manager_type=model_types.data_type_manager,
+        dump_resolve_reference_action=invalid_resolve_reference_action,
+        formatters=[Formatter.BUILTIN],
+        target_python_version=PythonVersion.PY_311,
+    )
+
+    monkeypatch.setattr(
+        builtin_formatter,
+        "_apply_builtin_generated_formatter",
+        lambda *_args, **_kwargs: pytest.fail("custom resolve hook reached generated formatter fast path"),
+    )
+    output = parser.parse()
+    assert_output(output, DATA_PATH / "builtin_formatter_custom_resolve_action.snapshot")
 
 
 @pytest.fixture(autouse=True)
@@ -623,6 +727,7 @@ def test_get_ref_data_type_uses_cached_validated_definition_facts(mocker: Mocker
 
     load_ref_schema_object.assert_not_called()
     assert parser._ref_data_type_facts["#/$defs/User"] == (None, True)
+    assert parser._false_schema_refs is None
     assert "user: Optional[User]" in dump_templates(list(parser.results))
 
 
@@ -635,6 +740,180 @@ def test_get_ref_data_type_falls_back_when_facts_are_not_cached(mocker: MockerFi
     parser.get_ref_data_type("#/$defs/User")
 
     load_ref_schema_object.assert_called_once_with("#/$defs/User")
+
+
+def test_local_ref_false_schema_reuses_validated_facts() -> None:
+    """Reuse local false facts only after the standard schema validation completed."""
+    parser = JsonSchemaParser("")
+    parser.raw_obj = {
+        "$defs": {
+            "Never": False,
+            "Allowed": True,
+            "Text": {"type": "string"},
+        }
+    }
+
+    assert parser._uses_builtin_false_ref_facts()
+    assert parser._is_local_ref_false_schema("#/$defs/Never", use_builtin_facts=True)
+    for ref in ("#/$defs/Never", "#/$defs/Allowed", "#/$defs/Text"):
+        resolved_ref = parser.model_resolver.resolve_ref(ref)
+        parser._cache_ref_data_type_facts(resolved_ref, parser._load_ref_schema_object(ref))
+    assert parser._false_schema_refs == {"#/$defs/Never"}
+    assert parser._false_schema_refs <= parser._ref_data_type_facts.keys()
+
+    parser.raw_obj["$defs"] = {"Never": True, "Allowed": False, "Text": False}
+    assert parser._is_local_ref_false_schema("#/$defs/Never", use_builtin_facts=True)
+    assert not parser._is_local_ref_false_schema("#/$defs/Allowed", use_builtin_facts=True)
+    assert not parser._is_local_ref_false_schema("#/$defs/Text", use_builtin_facts=True)
+    assert parser._false_schema_refs is not None
+    parser._false_schema_refs.remove("#/$defs/Never")
+    assert not parser._is_local_ref_false_schema("#/$defs/Never", use_builtin_facts=True)
+
+
+def test_local_ref_false_schema_falls_back_when_facts_are_missing() -> None:
+    """Keep the validation path when a local ref was not already parsed."""
+
+    class LoaderTrackingParser(JsonSchemaParser):
+        loaded_refs: ClassVar[list[str]] = []
+
+        def _load_ref_schema_object(self, ref: str) -> JsonSchemaObject:
+            type(self).loaded_refs.append(ref)
+            return super()._load_ref_schema_object(ref)
+
+    LoaderTrackingParser.loaded_refs = []
+    parser = LoaderTrackingParser("")
+    parser.raw_obj = {"$defs": {"Never": False}}
+
+    assert not parser._uses_builtin_false_ref_facts()
+    assert parser._is_local_ref_false_schema("#/$defs/Never", use_builtin_facts=False)
+    assert LoaderTrackingParser.loaded_refs == ["#/$defs/Never"]
+
+
+def test_local_ref_false_schema_facts_fall_back_for_custom_hooks(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep custom loader, validator, and schema construction hooks observable."""
+
+    class LoaderOverrideParser(JsonSchemaParser):
+        loaded_refs: ClassVar[list[str]] = []
+
+        def _load_ref_schema_object(self, ref: str) -> JsonSchemaObject:
+            type(self).loaded_refs.append(ref)
+            return super()._load_ref_schema_object(ref)
+
+    class ValidatorOverrideParser(JsonSchemaParser):
+        validated_paths: ClassVar[list[list[str]]] = []
+
+        def _validate_schema_object(
+            self,
+            raw: dict[str, YamlValue] | YamlValue,
+            path: list[str],
+        ) -> JsonSchemaObject:
+            type(self).validated_paths.append(path)
+            return super()._validate_schema_object(raw, path)
+
+    class RawLoaderOverrideParser(JsonSchemaParser):
+        loaded_refs: ClassVar[list[str]] = []
+
+        def _get_ref_raw_schema(self, resolved_ref: str) -> dict[str, YamlValue] | YamlValue:
+            type(self).loaded_refs.append(resolved_ref)
+            return super()._get_ref_raw_schema(resolved_ref)
+
+    class CustomSchema(JsonSchemaObject):
+        constructed: ClassVar[int] = 0
+
+        def model_post_init(self, context: Any, /) -> None:
+            type(self).constructed += 1
+            super().model_post_init(context)
+
+    class SchemaOverrideParser(JsonSchemaParser):
+        SCHEMA_OBJECT_TYPE = CustomSchema
+
+    LoaderOverrideParser.loaded_refs = []
+    ValidatorOverrideParser.validated_paths = []
+    RawLoaderOverrideParser.loaded_refs = []
+    CustomSchema.constructed = 0
+    for parser_type in (
+        LoaderOverrideParser,
+        ValidatorOverrideParser,
+        RawLoaderOverrideParser,
+        SchemaOverrideParser,
+    ):
+        parser = parser_type("")
+        parser.raw_obj = {"$defs": {"Never": False}}
+
+        assert not parser._uses_builtin_false_ref_facts()
+        assert parser._is_local_ref_false_schema("#/$defs/Never", use_builtin_facts=False)
+
+    assert LoaderOverrideParser.loaded_refs == ["#/$defs/Never"]
+    assert ValidatorOverrideParser.validated_paths == [["#/$defs/Never"]]
+    assert RawLoaderOverrideParser.loaded_refs == ["#/$defs/Never"]
+    assert CustomSchema.constructed == 1
+
+    instance_calls: list[str] = []
+    parser = JsonSchemaParser("")
+    parser.raw_obj = {"$defs": {"Never": False}}
+
+    def instance_loader(ref: str) -> JsonSchemaObject:
+        instance_calls.append(ref)
+        return JsonSchemaParser._load_ref_schema_object(parser, ref)
+
+    monkeypatch.setattr(parser, "_load_ref_schema_object", instance_loader)
+
+    assert not parser._uses_builtin_false_ref_facts()
+    assert parser._is_local_ref_false_schema("#/$defs/Never", use_builtin_facts=False)
+    assert instance_calls == ["#/$defs/Never"]
+
+
+def test_local_ref_false_schema_preserves_custom_fact_cache_output() -> None:
+    """Do not let a custom cache transform change false-ref branch selection."""
+
+    class FactCacheOverrideParser(JsonSchemaParser):
+        cached_refs: ClassVar[list[str]] = []
+
+        def _cache_ref_data_type_facts(self, resolved_ref: str, obj: JsonSchemaObject) -> None:
+            type(self).cached_refs.append(resolved_ref)
+            super()._cache_ref_data_type_facts(resolved_ref, obj)
+            if self._false_schema_refs is not None:
+                self._false_schema_refs.discard(resolved_ref)
+
+    FactCacheOverrideParser.cached_refs = []
+    parser = FactCacheOverrideParser(
+        json.dumps({
+            "title": "Payload",
+            "type": "object",
+            "properties": {
+                "value": {
+                    "anyOf": [
+                        {"$ref": "#/$defs/Never"},
+                        {"type": "string"},
+                    ]
+                }
+            },
+            "$defs": {"Never": False},
+        })
+    )
+
+    parser.parse(format_=False)
+
+    assert not parser._uses_builtin_false_ref_facts()
+    assert "value: Optional[str] = None" in dump_templates(list(parser.results))
+    assert FactCacheOverrideParser.cached_refs == ["#", "#/$defs/Never", "#/$defs/Never"]
+
+
+def test_local_ref_false_schema_fast_path_matches_validation_path() -> None:
+    """Keep generated output identical to repeated reference validation."""
+
+    class ValidationPathParser(JsonSchemaParser):
+        def _uses_builtin_false_ref_facts(self) -> bool:
+            return False
+
+    source = (DATA_PATH / "false_reference_fast_path.json").read_text()
+    outputs: list[str] = []
+    for parser_type in (ValidationPathParser, JsonSchemaParser):
+        parser = parser_type(source)
+        parser.parse(format_=False)
+        outputs.append(dump_templates(list(parser.results)))
+
+    assert outputs[0] == outputs[1]
 
 
 def test_resolve_local_ref_path_caches_safe_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

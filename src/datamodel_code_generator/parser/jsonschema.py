@@ -131,6 +131,26 @@ JsonSchemaConstraintKey = Literal[
 JsonSchemaConstraintValue = int | float | str | bool
 JsonSchemaDataTypeKwargValue = JsonSchemaConstraintValue
 TaggedUnionValue = Union[int, str]  # noqa: UP007
+
+
+def _update_false_schema_refs(
+    false_schema_refs: set[str] | None,
+    resolved_ref: str,
+    *,
+    is_false: bool,
+) -> set[str] | None:
+    """Record only false refs; the regular fact cache proves all other refs were validated."""
+    match is_false:
+        case True:
+            if false_schema_refs is None:
+                false_schema_refs = set()
+            false_schema_refs.add(resolved_ref)
+        case _:
+            if false_schema_refs is not None:
+                false_schema_refs.discard(resolved_ref)
+    return false_schema_refs
+
+
 _MIN_UNION_VARIANT_LITERAL_VALUES = 2
 _NUMBER_CONSTRAINT_KEYS: tuple[JsonSchemaConstraintKey, ...] = (
     "minimum",
@@ -1079,6 +1099,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self._dynamic_anchor_index: dict[tuple[str, ...], dict[str, str]] = {}
         self._recursive_anchor_index: dict[tuple[str, ...], list[str]] = {}
         self._ref_data_type_facts: dict[str, tuple[Any, bool]] = {}
+        self._false_schema_refs: set[str] | None = None
         self._inherited_schema_cache: dict[str, JsonSchemaObject] = {}
         self._inherited_schema_ancestor_cache: dict[str, frozenset[str]] = {}
         self._inherited_schema_linearization_cache: dict[tuple[str, ...], tuple[str, ...]] = {}
@@ -2619,7 +2640,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if original_field_name is not None and field_name is not None
             else None
         )
-        return self.data_model_field_type(
+        return self._data_model_field_constructor(
             name=field_name,
             default=effective_default,
             data_type=field_type,
@@ -2708,7 +2729,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         extras = self.get_field_extras(field)
         read_only = self._resolve_field_flag(field, "readOnly")
         write_only = self._resolve_field_flag(field, "writeOnly")
-        model_field = self.data_model_field_type(
+        model_field = self._data_model_field_constructor(
             name=field_name,
             default=default_value,
             data_type=field_type,
@@ -2882,6 +2903,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             obj.extras.get("x-python-import"),
             obj.type == "null" or (self.strict_nullable and obj.nullable is True),
         )
+        self._false_schema_refs = _update_false_schema_refs(
+            self._false_schema_refs,
+            resolved_ref,
+            is_false=obj.is_boolean_schema_false,
+        )
 
     def get_ref_data_type(self, ref: str) -> DataType:
         """Get a data type from a reference string.
@@ -2903,6 +2929,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 ref_schema.type == "null" or (self.strict_nullable and ref_schema.nullable is True),
             )
             self._ref_data_type_facts[resolved_ref] = facts
+            self._false_schema_refs = _update_false_schema_refs(
+                self._false_schema_refs,
+                resolved_ref,
+                is_false=ref_schema.is_boolean_schema_false,
+            )
         x_python_import, is_optional = facts
         if isinstance(x_python_import, dict) and (full_path := self._get_x_python_import_path(x_python_import)):
             import_ = Import.from_full_path(full_path)
@@ -3446,6 +3477,35 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         """Load a JsonSchemaObject from a $ref using standard resolve/load pipeline."""
         resolved_ref = self.model_resolver.resolve_ref(ref)
         return self._validate_schema_object(self._get_ref_raw_schema(resolved_ref), [resolved_ref])
+
+    def _uses_builtin_false_ref_facts(self) -> bool:
+        """Return whether cached local false-ref facts preserve parser hooks."""
+        if self.SCHEMA_OBJECT_TYPE is not JsonSchemaObject:
+            return False
+        if getattr(self._cache_ref_data_type_facts, "__func__", None) is not _BUILTIN_REF_FACT_CACHER:
+            return False
+        if getattr(self._get_ref_raw_schema, "__func__", None) is not _BUILTIN_REF_RAW_SCHEMA_LOADER:
+            return False
+        if getattr(self._load_ref_schema_object, "__func__", None) is not _BUILTIN_REF_SCHEMA_LOADER:
+            return False
+        return getattr(self._validate_schema_object, "__func__", None) is _BUILTIN_SCHEMA_VALIDATOR
+
+    def _is_local_ref_false_schema(
+        self,
+        ref: str,
+        *,
+        use_builtin_facts: bool,
+    ) -> bool:
+        """Return whether a local ref targets false without repeating default validation."""
+        if not use_builtin_facts:
+            return self._load_ref_schema_object(ref).is_boolean_schema_false
+
+        resolved_ref = self.model_resolver.resolve_ref(ref)
+        if (false_schema_refs := self._false_schema_refs) is not None and resolved_ref in false_schema_refs:
+            return True
+        if resolved_ref in self._ref_data_type_facts:
+            return False
+        return self._load_ref_schema_object(ref).is_boolean_schema_false
 
     def _anchor_ref_path(self, root_key: tuple[str, ...], path: list[str]) -> str:  # noqa: PLR6301
         """Return the local ref path for an anchor under the current root."""
@@ -5975,6 +6035,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         base_object = obj.model_dump(exclude={target_attribute_name, "title"}, exclude_unset=True, by_alias=True)
         combined_schemas: list[JsonSchemaObject] = []
         refs = []
+        use_builtin_false_ref_facts: bool | None = None
         for index, target_attribute in enumerate(getattr(obj, target_attribute_name, [])):
             if self._is_false_schema_item(target_attribute):
                 continue
@@ -5983,8 +6044,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 continue
             if target_attribute.ref:
                 if target_attribute.ref_type == JSONReference.LOCAL:
-                    ref_schema = self._load_ref_schema_object(target_attribute.ref)
-                    if ref_schema.is_boolean_schema_false:
+                    if use_builtin_false_ref_facts is None:
+                        use_builtin_false_ref_facts = self._uses_builtin_false_ref_facts()
+                    if self._is_local_ref_false_schema(
+                        target_attribute.ref,
+                        use_builtin_facts=use_builtin_false_ref_facts,
+                    ):
                         continue
                 if target_attribute.has_ref_with_schema_keywords and not target_attribute.is_ref_with_nullable_only:
                     merged_attr = self._merge_ref_with_schema(target_attribute)
@@ -9639,3 +9704,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     reserved_refs = set(self.reserved_refs.get(key) or [])
                     if previous_reserved_refs == reserved_refs:
                         break
+
+
+# Snapshot the default hooks after JsonSchemaParser is fully defined. The local
+# false-ref fact fast path is disabled for any parser that customizes a loader.
+_BUILTIN_REF_RAW_SCHEMA_LOADER = JsonSchemaParser._get_ref_raw_schema  # noqa: SLF001
+_BUILTIN_REF_SCHEMA_LOADER = JsonSchemaParser._load_ref_schema_object  # noqa: SLF001
+_BUILTIN_SCHEMA_VALIDATOR = JsonSchemaParser._validate_schema_object  # noqa: SLF001
+_BUILTIN_REF_FACT_CACHER = JsonSchemaParser._cache_ref_data_type_facts  # noqa: SLF001

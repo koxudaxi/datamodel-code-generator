@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -9,7 +10,9 @@ from typing import Any
 from unittest.mock import Mock
 
 import pytest
+from typing_extensions import TypedDict, Unpack
 
+from datamodel_code_generator._format_types import PythonVersion
 from datamodel_code_generator.imports import (
     IMPORT_ANNOTATED,
     IMPORT_ANY,
@@ -54,6 +57,7 @@ from datamodel_code_generator.model.imports import (
     IMPORT_MSGSPEC_UNSETTYPE,
 )
 from datamodel_code_generator.model.msgspec import DataModelField as MsgspecDataModelField
+from datamodel_code_generator.model.msgspec import DataTypeManager as MsgspecDataTypeManager
 from datamodel_code_generator.model.msgspec import Struct as MsgspecStruct
 from datamodel_code_generator.model.msgspec import import_extender
 from datamodel_code_generator.model.pydantic_base import DataModelField as PydanticBaseDataModelField
@@ -1381,10 +1385,28 @@ def test_pydantic_v2_nested_discriminator_still_imports_field() -> None:
     assert IMPORT_FIELD in field.imports
 
 
-def _msgspec_field(data_type: DataType, **kwargs: Any) -> MsgspecDataModelField:
-    field = MsgspecDataModelField(name="value", data_type=data_type, required=False, **kwargs)
+class _MsgspecFieldKwargs(TypedDict, total=False):
+    nullable: bool
+    default: str
+    has_default: bool
+    type_has_null: bool
+    extras: dict[str, int]
+    use_annotated: bool
+
+
+def _msgspec_field(
+    data_type: DataType,
+    *,
+    required: bool = False,
+    **kwargs: Unpack[_MsgspecFieldKwargs],
+) -> MsgspecDataModelField:
+    field = MsgspecDataModelField(name="value", data_type=data_type, required=required, **kwargs)
     MsgspecStruct(fields=[field], reference=Reference(path="Model", original_name="Model", name="Model"))
     return field
+
+
+class _FallbackMsgspecField(MsgspecDataModelField):
+    pass
 
 
 def test_msgspec_unset_type_hint_uses_structured_ordered_union() -> None:
@@ -1408,6 +1430,259 @@ def test_msgspec_unset_type_hint_handles_empty_and_simple_types() -> None:
     none_field = _msgspec_field(DataType(is_optional=True))
     assert none_field.type_hint == "Union[None, UnsetType]"
     assert none_field.imports == (IMPORT_MSGSPEC_UNSETTYPE, IMPORT_UNION, IMPORT_MSGSPEC_UNSET)
+
+
+@pytest.mark.parametrize(
+    "python_version",
+    list(PythonVersion),
+)
+@pytest.mark.parametrize("use_union_operator", [False, True], ids=["typing-union", "union-operator"])
+@pytest.mark.parametrize(
+    ("field_kwargs", "has_forward_reference"),
+    [
+        pytest.param({}, False, id="implicit-nullability"),
+        pytest.param({"nullable": False}, False, id="explicit-non-null"),
+        pytest.param({"default": "value", "has_default": True}, False, id="schema-default"),
+        pytest.param({}, True, id="forward-reference"),
+    ],
+)
+def test_msgspec_simple_unset_fast_path_matches_graph_fallback(
+    python_version: PythonVersion,
+    use_union_operator: bool,
+    field_kwargs: _MsgspecFieldKwargs,
+    has_forward_reference: bool,
+) -> None:
+    """CI compares every supported target with the graph fallback as the source of truth."""
+    manager = MsgspecDataTypeManager(
+        python_version=python_version,
+        use_standard_collections=True,
+        use_generic_container_types=True,
+        use_union_operator=use_union_operator,
+        treat_dot_as_module=True,
+        use_serialize_as_any=True,
+    )
+    for data_type in (
+        manager.data_type(type="str"),
+        manager.data_type(type="int"),
+        manager.data_type.from_import(IMPORT_DECIMAL),
+    ):
+        fast_field = _msgspec_field(deepcopy(data_type), **field_kwargs)
+        assert fast_field.parent is not None
+        fast_field.parent.has_forward_reference = has_forward_reference
+        fallback_field = _FallbackMsgspecField(
+            name="value",
+            data_type=deepcopy(data_type),
+            required=False,
+            **field_kwargs,
+        )
+        fallback_model = MsgspecStruct(
+            fields=[fallback_field],
+            reference=Reference(path="FallbackModel", name="FallbackModel"),
+        )
+        fallback_model.has_forward_reference = has_forward_reference
+
+        assert fast_field._get_simple_unset_type_hint() is not None
+        assert fallback_field._get_simple_unset_type_hint() is None
+        assert fast_field.type_hint == fallback_field.type_hint
+        assert fast_field.imports == fallback_field.imports
+        assert len(fast_field.imports) == len(set(fast_field.imports))
+
+
+@pytest.mark.parametrize(
+    ("import_", "expected_imports"),
+    [
+        pytest.param(
+            IMPORT_MSGSPEC_UNSETTYPE,
+            (IMPORT_MSGSPEC_UNSETTYPE, IMPORT_UNION, IMPORT_MSGSPEC_UNSET),
+            id="existing-unset",
+        ),
+        pytest.param(
+            IMPORT_UNION,
+            (IMPORT_UNION, IMPORT_MSGSPEC_UNSETTYPE, IMPORT_MSGSPEC_UNSET),
+            id="existing-union",
+        ),
+    ],
+)
+def test_msgspec_simple_unset_fast_path_deduplicates_trailing_imports(
+    import_: Import,
+    expected_imports: tuple[Import, ...],
+) -> None:
+    """Direct rendering retains ordered imports already supplied by the leaf."""
+    field = _msgspec_field(DataType(type="str", import_=import_))
+
+    assert field._get_simple_unset_type_hint() == "Union[str, UnsetType]"
+    assert field.imports == expected_imports
+
+
+@pytest.mark.parametrize(
+    "data_type",
+    [
+        pytest.param(DataType(), id="empty"),
+        pytest.param(DataType(type=NONE), id="none"),
+        pytest.param(DataType(type="str", is_optional=True), id="optional"),
+        pytest.param(DataType(data_types=[DataType(type="str"), DataType(type="int")]), id="union"),
+        pytest.param(DataType(data_types=[DataType(type="str")]), id="single-child"),
+        *[
+            pytest.param(DataType(**{flag: True}), id=f"bare-{flag.removeprefix('is_').replace('_', '-')}")
+            for flag in ("is_list", "is_dict", "is_set", "is_frozen_set", "is_mapping", "is_sequence", "is_tuple")
+        ],
+        pytest.param(DataType(type="str", is_list=True), id="typed-list"),
+        pytest.param(DataType(type="str", is_mapping=True), id="typed-mapping"),
+        pytest.param(DataType(is_list=True, data_types=[DataType(type="str")]), id="nested-container"),
+        pytest.param(
+            DataType(data_types=[DataType(type="str"), DataType(type=NONE)]),
+            id="nested-optional-union",
+        ),
+        pytest.param(DataType(reference=Reference(path="#/Referenced", name="Referenced")), id="reference"),
+        pytest.param(DataType(type="Custom", is_custom_type=True), id="custom-type"),
+        pytest.param(DataType(type="constr", is_func=True, kwargs={"min_length": 1}), id="function-kwargs"),
+        pytest.param(DataType(type="str", alias="Alias"), id="alias"),
+        pytest.param(DataType(literals=["value"]), id="literal"),
+        pytest.param(DataType(enum_member_literals=[("Status", "ready")]), id="enum-literal"),
+        pytest.param(DataType(type="str", discriminator="kind"), id="discriminator"),
+        pytest.param(DataType.from_import(IMPORT_MSGSPEC_UNSETTYPE), id="already-unset"),
+        pytest.param(
+            DataType(
+                is_dict=True, data_types=[DataType(type="str")], dict_key=DataType(type="Custom", is_custom_type=True)
+            ),
+            id="custom-dict-key",
+        ),
+        pytest.param(DataType(type="Annotated[str, Meta(gt=0)]"), id="raw-annotation"),
+        pytest.param(DataType(type="Custom[str]"), id="raw-generic"),
+        pytest.param(DataType(type="Optional"), id="typing-optional-identifier"),
+        pytest.param(DataType(type="Annotated"), id="typing-annotated-identifier"),
+        pytest.param(DataType(type="str", alias="Annotated[str, Meta(gt=0)]"), id="raw-alias"),
+        pytest.param(
+            DataType(is_list=True, data_types=[DataType(type="Annotated[str, Meta(gt=0)]")]),
+            id="nested-raw-annotation",
+        ),
+    ],
+)
+def test_msgspec_simple_unset_fast_path_falls_back_for_complex_data_types(data_type: DataType) -> None:
+    """Complex data types keep the exact graph-based hint and import behavior."""
+    original = deepcopy(data_type)
+    field = _msgspec_field(data_type)
+    fallback_field = _FallbackMsgspecField(name="value", data_type=original, required=False)
+    MsgspecStruct(fields=[fallback_field], reference=Reference(path="FallbackModel", name="FallbackModel"))
+
+    assert field._get_simple_unset_type_hint() is None
+    assert field.type_hint == fallback_field.type_hint
+    assert field.imports == fallback_field.imports
+
+
+@pytest.mark.parametrize(
+    ("nested", "expected_type_hint"),
+    [
+        (False, "Union[Optional[NullableModel], UnsetType]"),
+        (True, "Union[List[Optional[NullableModel]], UnsetType]"),
+    ],
+)
+def test_msgspec_simple_unset_fast_path_does_not_mutate_nullable_reference(
+    nested: bool,
+    expected_type_hint: str,
+) -> None:
+    """Nullable references remain isolated in top-level and nested fallback copies."""
+    reference = Reference(path="#/NullableModel", name="NullableModel")
+    MsgspecStruct(reference=reference, fields=[], nullable=True)
+    child = DataType(reference=reference)
+    field = _msgspec_field(DataType(is_list=True, data_types=[child]) if nested else child)
+
+    assert field._get_simple_unset_type_hint() is None
+    assert field.type_hint == expected_type_hint
+    assert IMPORT_OPTIONAL in field.imports
+    assert child.is_optional is False
+
+
+def test_msgspec_simple_unset_fast_path_falls_back_for_nested_optional_union() -> None:
+    """A nested unordered None union does not mutate the caller-owned graph."""
+    child = DataType(data_types=[DataType(type="str"), DataType(type=NONE)])
+    field = _msgspec_field(DataType(is_list=True, data_types=[child]))
+
+    assert child.is_optional is False
+    assert field._get_simple_unset_type_hint() is None
+    assert field.type_hint == "Union[List[Optional[str]], UnsetType]"
+    assert IMPORT_OPTIONAL in field.imports
+    assert child.is_optional is False
+
+
+def test_msgspec_simple_unset_fast_path_falls_back_for_explicit_type_null() -> None:
+    """A parser-declared null member remains in the graph-rendered annotation."""
+    field = _msgspec_field(
+        DataType(type="str"),
+        nullable=False,
+        type_has_null=True,
+    )
+
+    assert field._get_simple_unset_type_hint() is None
+    assert field.type_hint == "Union[str, None, UnsetType]"
+    assert field.imports == (IMPORT_MSGSPEC_UNSETTYPE, IMPORT_UNION, IMPORT_MSGSPEC_UNSET)
+
+
+def test_msgspec_simple_unset_fast_path_falls_back_for_annotated_field() -> None:
+    """Annotated msgspec fields retain metadata-aware graph rendering."""
+    field = _msgspec_field(
+        DataType(type="str"),
+        extras={"max_length": 5},
+        use_annotated=True,
+    )
+
+    assert field._get_simple_unset_type_hint() is None
+    assert field.type_hint == "Union[str, UnsetType]"
+    assert field.annotated == "Union[Annotated[str, Meta(max_length=5)], UnsetType]"
+
+
+def test_msgspec_simple_unset_fast_path_supports_custom_template() -> None:
+    """Custom templates observe the same field values without forcing a graph copy."""
+    baseline = _msgspec_field(DataType(type="str"))
+    field = MsgspecDataModelField(name="value", data_type=DataType(type="str"), required=False)
+    MsgspecStruct(
+        fields=[field],
+        reference=Reference(path="Model", original_name="Model", name="Model"),
+        custom_template_dir=Path("custom-templates"),
+    )
+
+    assert field._get_simple_unset_type_hint() == "Union[str, UnsetType]"
+    assert (field.type_hint, field.imports, field.annotated, field.field, field.data_type.type_hint) == (
+        baseline.type_hint,
+        baseline.imports,
+        baseline.annotated,
+        baseline.field,
+        baseline.data_type.type_hint,
+    )
+
+
+def test_msgspec_simple_unset_fast_path_falls_back_for_subclasses() -> None:
+    """External field, model, and data type subclasses retain virtual behavior."""
+
+    class CustomMsgspecField(MsgspecDataModelField):
+        pass
+
+    class CustomMsgspecStruct(MsgspecStruct):
+        pass
+
+    class CustomDataType(DataType):
+        pass
+
+    SpoofedContextDataType = type(
+        "ContextDataType",
+        (DataType,),
+        {"__module__": DataType.__module__},
+    )
+
+    fields = [
+        CustomMsgspecField(name="value", data_type=DataType(type="str"), required=False),
+        MsgspecDataModelField(name="value", data_type=DataType(type="str"), required=False),
+        _msgspec_field(CustomDataType(type="str")),
+        _msgspec_field(SpoofedContextDataType(type="str")),
+    ]
+    MsgspecStruct(fields=fields[:1], reference=Reference(path="FieldModel", name="FieldModel"))
+    CustomMsgspecStruct(
+        fields=fields[1:2],
+        reference=Reference(path="StructModel", name="StructModel"),
+    )
+
+    assert all(field._get_simple_unset_type_hint() is None for field in fields)
+    assert {field.type_hint for field in fields} == {"Union[str, UnsetType]"}
 
 
 def test_msgspec_unset_import_is_limited_to_struct_fields() -> None:

@@ -678,17 +678,24 @@ jobs:
           exit "$failed"
         env:
           UV_PYTHON_PREFERENCE: "only-managed"
+      - name: Check compiled templates
+        id: compiled-templates
+        continue-on-error: true
+        run: tox exec -e type -- python scripts/compile_builtin_templates.py --check
       - name: Fail if any check suite failed
         if: always()
         run: |
           setup_outcome='${{ steps.setup-check-suites.outcome }}'
           run_outcome='${{ steps.run-check-suites.outcome }}'
+          compiled_templates_outcome='${{ steps.compiled-templates.outcome }}'
 
           echo "setup check suites: ${setup_outcome}"
           echo "run check suites: ${run_outcome}"
+          echo "compiled templates: ${compiled_templates_outcome}"
 
           [ "${setup_outcome}" = "success" ] || exit 1
           [ "${run_outcome}" = "success" ] || exit 1
+          [ "${compiled_templates_outcome}" = "success" ] || exit 1
 
   e2e:
     name: e2e

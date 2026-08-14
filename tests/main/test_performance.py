@@ -22,7 +22,13 @@ from pathlib import Path
 
 import pytest
 
-from datamodel_code_generator import DataModelType, Formatter, InputFileType, ModuleSplitMode, generate
+from datamodel_code_generator import DataModelType, Formatter, InputFileType, ModuleSplitMode, YamlValue, generate
+from datamodel_code_generator.model.msgspec import DataModelField as MsgspecDataModelField
+from datamodel_code_generator.model.msgspec import DataTypeManager as MsgspecDataTypeManager
+from datamodel_code_generator.model.msgspec import Struct as MsgspecStruct
+from datamodel_code_generator.model.pydantic_v2.base_model import _construct_parser_simple_field
+from datamodel_code_generator.reference import PydanticFieldNameResolver, Reference
+from datamodel_code_generator.types import DataType
 
 PERFORMANCE_DATA_PATH: Path = Path(__file__).parent.parent / "data" / "performance"
 EXPECTED_STARTUP_MEASUREMENT_CASES = {
@@ -35,6 +41,57 @@ EXPECTED_STARTUP_MEASUREMENT_CASES = {
     "cli-schema-generation",
     "cli-schema-structured-output",
 }
+
+
+@pytest.fixture(scope="module")
+def simple_pydantic_v2_data_types() -> list[DataType]:
+    """Prepare normalized types outside the field-construction benchmark."""
+    return [DataType(type="str") for _ in range(5000)]
+
+
+@pytest.fixture(scope="module")
+def ordinary_pydantic_field_names() -> tuple[str, ...]:
+    """Prepare resolver inputs outside the name-resolution benchmark."""
+    return tuple(f"field_{index}" for index in range(5000))
+
+
+@pytest.fixture(scope="module")
+def simple_msgspec_unset_fields() -> list[MsgspecDataModelField]:
+    """Prepare parser-style msgspec fields outside the measured rendering call."""
+    data_type = MsgspecDataTypeManager().data_type
+    fields = [
+        MsgspecDataModelField(name=f"field_{index}", data_type=data_type(type="str"), required=False)
+        for index in range(5000)
+    ]
+    MsgspecStruct(
+        reference=Reference(path="MsgspecPerformance", name="MsgspecPerformance"),
+        fields=fields,
+    )
+    return fields
+
+
+@pytest.fixture(scope="module")
+def false_reference_performance_schema() -> dict[str, YamlValue]:
+    """Prepare repeated local false references outside CodSpeed's measured call."""
+    field_count = 500
+    return {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "FalseReferencePerformance",
+        "type": "object",
+        "properties": {
+            f"value_{index}": {
+                "anyOf": [
+                    {"$ref": "#/$defs/Never"},
+                    {"$ref": "#/$defs/Value"},
+                ]
+            }
+            for index in range(field_count)
+        },
+        "$defs": {
+            "Never": False,
+            "Value": {"type": "string"},
+        },
+    }
 
 
 def _build_inherited_required_performance_schema(
@@ -170,6 +227,24 @@ def test_perf_inherited_required_fields(
 
 
 @pytest.mark.perf
+@pytest.mark.benchmark
+def test_perf_false_reference_validation(
+    false_reference_performance_schema: dict[str, YamlValue],
+) -> None:
+    """Track literal-false local reference handling without formatter work."""
+    result = generate(
+        false_reference_performance_schema,
+        input_file_type=InputFileType.JsonSchema,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        formatters=[],
+        disable_timestamp=True,
+    )
+    assert isinstance(result, str)
+    assert "class FalseReferencePerformance(BaseModel):" in result
+    assert result.endswith("    value_499: Value | None = None")
+
+
+@pytest.mark.perf
 @pytest.mark.parametrize(
     ("args", "expected_text"),
     [
@@ -212,6 +287,43 @@ def test_perf_startup_measurement_script() -> None:
         assert case["runs"] == 1
         assert case["median_ms"] >= 0
         assert case["importtime_top"]
+
+
+@pytest.mark.perf
+@pytest.mark.benchmark
+def test_perf_simple_pydantic_v2_field_construction(simple_pydantic_v2_data_types: list[DataType]) -> None:
+    """Benchmark parser-owned construction without a timing threshold."""
+    fields = [
+        _construct_parser_simple_field(name=f"field_{index}", data_type=data_type)
+        for index, data_type in enumerate(simple_pydantic_v2_data_types)
+    ]
+    assert len(fields) == len(simple_pydantic_v2_data_types)
+    assert fields[-1].name == "field_4999"
+
+
+@pytest.mark.perf
+@pytest.mark.benchmark
+def test_perf_pydantic_field_name_resolution(ordinary_pydantic_field_names: tuple[str, ...]) -> None:
+    """Benchmark ordinary Pydantic field-name resolution without parser work."""
+    resolver = PydanticFieldNameResolver()
+    resolved_name = ""
+    for field_name in ordinary_pydantic_field_names:
+        resolved_name = resolver.get_valid_name(field_name)
+
+    assert resolved_name == "field_4999"
+
+
+@pytest.mark.perf
+@pytest.mark.benchmark
+def test_perf_simple_msgspec_unset_field_rendering(
+    simple_msgspec_unset_fields: list[MsgspecDataModelField],
+) -> None:
+    """Benchmark simple unset annotations and imports without a timing threshold."""
+    rendered = [(field.type_hint, field.imports) for field in simple_msgspec_unset_fields]
+
+    assert len(rendered) == len(simple_msgspec_unset_fields)
+    assert rendered[-1][0] == "Union[str, UnsetType]"
+    assert tuple(import_.import_ for import_ in rendered[-1][1]) == ("UnsetType", "Union", "UNSET")
 
 
 @pytest.mark.perf
@@ -535,6 +647,22 @@ def test_perf_openapi_large(tmp_path: Path) -> None:
     )
     content = output_file.read_text()
     # Verify we generated Entity models
+    assert content.count("class Entity") >= 300
+
+
+@pytest.mark.perf
+@pytest.mark.benchmark
+def test_perf_openapi_large_pydantic_v2_builtin(tmp_path: Path) -> None:
+    """Track built-in formatting performance for a large OpenAPI document."""
+    output_file = tmp_path / "output.py"
+    generate(
+        input_=PERFORMANCE_DATA_PATH / "openapi_large.yaml",
+        input_file_type=InputFileType.OpenAPI,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        formatters=[Formatter.BUILTIN],
+    )
+    content = output_file.read_text()
     assert content.count("class Entity") >= 300
 
 

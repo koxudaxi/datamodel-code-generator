@@ -66,6 +66,7 @@ UI_PROVIDED_OPTIONS = {
 # (network access, optional extras, and local Python modules). Everything else is classified
 # dynamically from the GenerateConfig schema by _option_support() below.
 BROWSER_UNAVAILABLE_OPTIONS = {
+    "custom_template_dir": "Custom Jinja2 templates are not available in the browser playground.",
     "url": "Remote input URLs are not fetched by the browser playground.",
     "input_model": "Python module imports are not available in the browser playground.",
     "allow_remote_refs": "Resolving remote $refs needs network access.",
