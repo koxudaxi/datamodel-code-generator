@@ -33,7 +33,7 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-extras --group benchmark
       - name: Run benchmarks
-        uses: CodSpeedHQ/action@0ca9cbbf4623b599a6c3ed4fc8a922942705d9f1 # v4
+        uses: CodSpeedHQ/action@4296e51e7041e24dadb86d1d6e8b9320d223dbe8 # v4
         with:
           token: ${{ secrets.CODSPEED_TOKEN }}
           run: .venv/bin/pytest tests/main/test_performance.py --codspeed
