@@ -1972,6 +1972,91 @@ def test_import_overrides_apply_to_additional_imports(output_file: Path) -> None
     )
 
 
+def test_generate_config_accepts_additional_imports(output_file: Path) -> None:
+    """Keep documented bare and dotted imports available through the public config API."""
+    config = GenerateConfig(
+        input_file_type=InputFileType.JsonSchema,
+        additional_imports=["collections"],
+        disable_timestamp=True,
+        formatters=[Formatter.BUILTIN],
+        output=output_file,
+    )
+    generate(JSON_SCHEMA_DATA_PATH / "person.json", config=config)
+    assert_file_content(output_file, "additional_imports_generate_config.py")
+
+
+@pytest.mark.parametrize(
+    ("import_path", "expected_paths"),
+    [
+        (" collections.deque ", ["collections.deque"]),
+        (" café.モジュール ", ["café.モジュール"]),
+        (None, None),
+    ],
+)
+@pytest.mark.allow_direct_assert
+def test_generate_config_normalizes_valid_additional_imports(
+    import_path: str | None,
+    expected_paths: list[str] | None,
+) -> None:
+    """Accept whitespace-padded and Unicode Python identifiers through GenerateConfig."""
+    additional_imports = None if import_path is None else [import_path]
+    assert GenerateConfig(additional_imports=additional_imports).additional_imports == expected_paths
+
+
+@pytest.mark.parametrize(
+    "import_path",
+    [
+        "from.collections",
+        "collections.deque; INJECTION_MARKER = 1",
+        "collections.deque\nINJECTION_MARKER = 1",
+    ],
+)
+def test_generate_config_rejects_invalid_additional_imports(import_path: str) -> None:
+    """Reject non-import syntax before a public config can generate source."""
+    with pytest.raises(Error, match="additional_imports must be a Python import path composed of identifiers"):
+        GenerateConfig(additional_imports=[import_path])
+
+
+def test_generate_revalidates_mutated_additional_imports() -> None:
+    """Retain import-path validation when a caller mutates a public config object."""
+    config = GenerateConfig(input_file_type=InputFileType.JsonSchema)
+    config.additional_imports = ["collections.deque\nINJECTION_MARKER = 1"]
+    with pytest.raises(Error, match="additional_imports must be a Python import path composed of identifiers"):
+        generate(JSON_SCHEMA_DATA_PATH / "person.json", config=config)
+
+
+def test_main_rejects_additional_import_injection(output_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Reject CLI import values that would otherwise escape the generated import block."""
+    invalid_import_path = (DATA_PATH / "config" / "additional_imports_invalid.txt").read_text(encoding="utf-8").strip()
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--additional-imports", invalid_import_path],
+        expected_exit=Exit.ERROR,
+        output_should_not_exist=True,
+    )
+    assert_output(capsys.readouterr().err, EXPECTED_MAIN_PATH / "additional_imports_invalid.txt")
+
+
+def test_main_rejects_additional_import_injection_in_extra_template_data(
+    output_file: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Reject extra template data import values before source generation starts."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--extra-template-data",
+            str(DATA_PATH / "config" / "additional_imports_injection_extra_template_data.json"),
+        ],
+        expected_exit=Exit.ERROR,
+        output_should_not_exist=True,
+    )
+    assert_output(capsys.readouterr().err, EXPECTED_MAIN_PATH / "additional_imports_invalid.txt")
+
+
 @pytest.mark.cli_doc(
     options=["--type-overrides"],
     option_description="""Replace schema model types with custom Python types via JSON mapping.

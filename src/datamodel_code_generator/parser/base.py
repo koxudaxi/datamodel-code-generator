@@ -2408,12 +2408,12 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         return "<input>"
 
     def _append_additional_imports(self, additional_imports: list[str] | None) -> None:
-        if additional_imports is None:
-            additional_imports = []
+        if not additional_imports:
+            return
 
-        for additional_import_string in additional_imports:
-            if additional_import_string is None:  # pragma: no cover
-                continue
+        from datamodel_code_generator.base_config import _validate_additional_import_paths  # noqa: PLC0415
+
+        for additional_import_string in _validate_additional_import_paths(additional_imports) or []:
             new_import = Import.from_full_path(additional_import_string)
             self.imports.append(new_import)
 
