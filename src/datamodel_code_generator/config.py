@@ -18,7 +18,7 @@ from datamodel_code_generator._format_types import (
     PythonVersion,
     PythonVersionMin,
 )
-from datamodel_code_generator.base_config import BaseGenerateConfig
+from datamodel_code_generator.base_config import BaseGenerateConfig, _validate_additional_import_paths
 from datamodel_code_generator.enums import (
     DEFAULT_SHARED_MODULE_NAME,
     AliasGenerator,
@@ -266,6 +266,12 @@ class ParserConfig(BaseModel):
     target_pydantic_version: TargetPydanticVersion | None = None
     default_value_overrides: Mapping[str, Any] | None = None
     external_ref_mapping: dict[str, str] | None = None
+
+    @field_validator("additional_imports")
+    @classmethod
+    def validate_additional_imports(cls, value: list[str] | None) -> list[str] | None:
+        """Require additional imports to be safe Python import paths."""
+        return _validate_additional_import_paths(value)
 
     _validate_schema_validator_base_class_name = field_validator("schema_validator_base_class_name")(
         validate_schema_validator_base_class_name

@@ -603,7 +603,7 @@ def test_main_graphql_additional_imports_merged(output_file: Path) -> None:
             "--extra-template-data",
             str(GRAPHQL_DATA_PATH / "additional-imports-partial.json"),
             "--additional-imports",
-            "datetime.date,mymodule.myclass.MyCustomPythonClass",
+            " datetime.date, mymodule.myclass.MyCustomPythonClass ",
         ],
     )
 

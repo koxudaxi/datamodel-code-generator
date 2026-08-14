@@ -1961,6 +1961,12 @@ def test_additional_imports() -> None:
     assert new_parser.imports["collections"] == {"deque"}
 
 
+def test_additional_imports_reject_invalid_import_path() -> None:
+    """Reject direct parser configuration that could inject generated statements."""
+    with pytest.raises(Error, match="additional_imports must be a Python import path composed of identifiers"):
+        JsonSchemaParser(source="", additional_imports=["collections.deque\nINJECTION_MARKER = 1"])
+
+
 def test_no_additional_imports() -> None:
     """Test that not additional imports are not affecting imports container."""
     new_parser = JsonSchemaParser(

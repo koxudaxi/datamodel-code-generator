@@ -11,7 +11,7 @@ from collections.abc import Sequence  # noqa: TC003 - used at runtime by Pydanti
 from pathlib import Path  # noqa: TC003 - used at runtime by Pydantic
 from typing import TYPE_CHECKING, Any, TypeAlias
 
-from pydantic import BaseModel, ConfigDict, PrivateAttr, model_validator
+from pydantic import BaseModel, ConfigDict, PrivateAttr, field_validator, model_validator
 from typing_extensions import Self
 
 from datamodel_code_generator._format_types import (
@@ -51,6 +51,21 @@ if TYPE_CHECKING:
     from datamodel_code_generator.preset_names import PresetName as PresetNameValue
 else:
     PresetNameValue: TypeAlias = str
+
+
+def _validate_additional_import_paths(value: list[str] | None) -> list[str] | None:
+    """Validate user-provided imports before they reach generated source."""
+    if value is None:
+        return None
+
+    from datamodel_code_generator import Error  # noqa: PLC0415
+    from datamodel_code_generator.validators import _validate_python_import_path  # noqa: PLC0415
+
+    try:
+        return [_validate_python_import_path(import_path.strip()) for import_path in value]
+    except ValueError as exc:
+        msg = f"additional_imports {exc}"
+        raise Error(msg) from None
 
 
 class BaseGenerateConfig(BaseModel):
@@ -237,6 +252,12 @@ class BaseGenerateConfig(BaseModel):
     schema_version: str | None = None
     schema_version_mode: VersionMode | None = None
     external_ref_mapping: dict[str, str] | None = None
+
+    @field_validator("additional_imports")
+    @classmethod
+    def validate_additional_imports(cls, value: list[str] | None) -> list[str] | None:
+        """Require additional imports to be safe Python import paths."""
+        return _validate_additional_import_paths(value)
 
     @model_validator(mode="after")
     def normalize_schema_validator_type(self) -> Self:

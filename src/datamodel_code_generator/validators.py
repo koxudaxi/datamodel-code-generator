@@ -45,6 +45,14 @@ def _validate_dotted_python_identifier_path(value: str) -> str:
     return value
 
 
+def _validate_python_import_path(value: str) -> str:
+    """Validate an import path with an optional dotted symbol suffix."""
+    if not value or any(not _is_python_identifier(part) for part in value.split(".")):
+        msg = f"must be a Python import path composed of identifiers: {value!r}"
+        raise ValueError(msg)
+    return value
+
+
 class ValidatorDefinition(BaseModel):
     """Definition of a single validator."""
 
