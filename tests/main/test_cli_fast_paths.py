@@ -390,6 +390,58 @@ def _run_schema_runtime_validation_helper_probe() -> dict[str, Any]:
     )
 
 
+def _run_playground_builtin_template_probe() -> dict[str, Any]:
+    return _run_probe(
+        textwrap.dedent(
+            """
+            import importlib.abc
+            import importlib.util
+            import json
+            import sys
+            from pathlib import Path
+
+            from scripts.build_playground_assets import build_metadata
+
+            class BlockBrowserTemplatePackages(importlib.abc.MetaPathFinder):
+                def find_spec(self, fullname, path=None, target=None):
+                    if fullname.partition(".")[0] in {"jinja2", "markupsafe"}:
+                        raise ModuleNotFoundError(f"{fullname} is not installed in the browser runtime")
+                    return None
+
+            sys.meta_path.insert(0, BlockBrowserTemplatePackages())
+            runtime_path = Path("docs/assets/playground/runtime.py")
+            spec = importlib.util.spec_from_file_location("playground_runtime", runtime_path)
+            if spec is None or spec.loader is None:
+                raise RuntimeError("Could not load playground runtime")
+            runtime = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(runtime)
+
+            metadata = build_metadata()
+            runtime.set_ui_metadata(json.dumps(metadata))
+            result = json.loads(
+                runtime.generate_in_browser(
+                    runtime.sample_schema("jsonschema"),
+                    "jsonschema",
+                    json.dumps({"custom_template_dir": "templates"}),
+                )
+            )
+            custom_template = next(option for option in metadata["options"] if option["dest"] == "custom_template_dir")
+            cli_options = runtime.build_cli_options(
+                json.dumps({"custom_template_dir": "templates"}),
+                "jsonschema",
+            )
+            print(json.dumps({
+                "custom_template_browser_supported": custom_template["browser_supported"],
+                "custom_template_ignored": "--custom-template-dir" not in cli_options,
+                "generated_person": result["ok"] and "class Pet(BaseModel):" in result["output"],
+                "imported_jinja2": "jinja2" in sys.modules,
+                "imported_markupsafe": "markupsafe" in sys.modules,
+            }, indent=2, sort_keys=True))
+            """
+        )
+    )
+
+
 def _run_input_model_type_transport_probe() -> dict[str, Any]:
     return _run_probe(
         textwrap.dedent(
@@ -760,6 +812,17 @@ def test_schema_runtime_validation_module_helper_skips_jinja_in_a_fresh_process(
     assert_output(
         f"{json.dumps(result, indent=2, sort_keys=True)}\n",
         ROOT / "tests/data/expected/main/cli_fast_paths/schema_runtime_validation_helper.txt",
+    )
+
+
+@pytest.mark.skipif(sys.version_info < (3, 11), reason="The Playground runtime targets Pyodide Python 3.14")
+def test_playground_builtin_generation_skips_jinja_and_custom_templates() -> None:
+    """The browser runtime uses compiled templates and filters custom template input."""
+    result = _run_playground_builtin_template_probe()
+
+    assert_output(
+        f"{json.dumps(result, indent=2, sort_keys=True)}\n",
+        ROOT / "tests/data/expected/main/cli_fast_paths/playground_builtin_templates.txt",
     )
 
 
