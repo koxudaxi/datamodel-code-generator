@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 from typing import TYPE_CHECKING
 
 import black
@@ -155,6 +156,47 @@ def test_main_graphql_custom_scalar_types(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="custom_scalar_types.py",
         extra_args=["--extra-template-data", str(GRAPHQL_DATA_PATH / "custom-scalar-types.json")],
+    )
+
+
+def test_main_graphql_builtin_scalar_template_data_is_non_executing(output_file: Path) -> None:
+    """Built-in scalar aliases serialize executable-looking public type data."""
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "builtin-template-data.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="builtin_template_data.py",
+        extra_args=[
+            "--disable-timestamp",
+            "--extra-template-data",
+            str(GRAPHQL_DATA_PATH / "builtin-template-data.json"),
+        ],
+    )
+    unsafe_import_calls = [
+        node
+        for node in ast.walk(ast.parse(output_file.read_text(encoding="utf-8")))
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "__import__"
+    ]
+    if unsafe_import_calls:  # pragma: no cover - reports the precise generated-source regression
+        pytest.fail(f"Generated scalar type executed public template data: {unsafe_import_calls!r}")
+
+
+def test_main_graphql_custom_scalar_template_data_remains_raw(output_file: Path) -> None:
+    """Trusted custom scalar templates retain their raw ``py_type`` context."""
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "builtin-template-data.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="custom_template_data.py",
+        extra_args=[
+            "--disable-timestamp",
+            "--extra-template-data",
+            str(GRAPHQL_DATA_PATH / "builtin-template-data.json"),
+            "--custom-template-dir",
+            str(GRAPHQL_DATA_PATH.parent / "templates_scalar_template_data"),
+        ],
     )
 
 

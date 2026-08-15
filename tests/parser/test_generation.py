@@ -169,7 +169,7 @@ def test_generation_index_does_not_use_metadata_collection_truthiness() -> None:
 
     assert {
         "reference_classes": store.index.reference_classes_for_model(model),
-        "typed_dict_kwargs": model.extra_template_data["typed_dict_kwargs"],
+        "typed_dict_kwargs": model._internal_template_data["typed_dict_kwargs"],
     } == snapshot({
         "reference_classes": frozenset({"Metadata"}),
         "typed_dict_kwargs": {"extra_items": "'Metadata'"},

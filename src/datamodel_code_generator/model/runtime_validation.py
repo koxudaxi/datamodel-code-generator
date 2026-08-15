@@ -12,6 +12,8 @@ InputNames: TypeAlias = tuple[str, ...]
 RequiredGroup: TypeAlias = tuple[InputNames, ...]
 RequiredGroups: TypeAlias = tuple[RequiredGroup, ...]
 Condition: TypeAlias = tuple[tuple[InputNames, tuple[object, ...]], ...]
+_INTERNAL_SCHEMA_RUNTIME_VALIDATION_TOKEN = object()
+_INTERNAL_SCHEMA_RUNTIME_VALIDATION_ERROR = "internal schema runtime validation must be created by the parser"
 
 
 @dataclass(frozen=True)
@@ -66,3 +68,45 @@ class SchemaRuntimeValidation:
     def data_types(self) -> tuple[DataType, ...]:
         """Return all generated data types referenced by runtime rules."""
         return tuple(data_type for rule in self.pattern_properties for data_type in rule.data_types)
+
+
+class _InternalSchemaRuntimeValidation(SchemaRuntimeValidation):
+    """A parser-owned runtime-validation value safe for built-in templates."""
+
+    __slots__ = ()
+
+    def __init__(
+        self,
+        token: object,
+        *,
+        pattern_properties: list[PatternPropertiesRule] | None = None,
+        required_groups: list[RequiredGroupsRule] | None = None,
+        conditional_required: list[ConditionalRequiredRule] | None = None,
+    ) -> None:
+        if token is not _INTERNAL_SCHEMA_RUNTIME_VALIDATION_TOKEN:
+            raise TypeError(_INTERNAL_SCHEMA_RUNTIME_VALIDATION_ERROR)
+        super().__init__(
+            pattern_properties=[] if pattern_properties is None else pattern_properties,
+            required_groups=[] if required_groups is None else required_groups,
+            conditional_required=[] if conditional_required is None else conditional_required,
+        )
+
+
+def _make_internal_schema_runtime_validation(
+    *,
+    pattern_properties: list[PatternPropertiesRule] | None = None,
+    required_groups: list[RequiredGroupsRule] | None = None,
+    conditional_required: list[ConditionalRequiredRule] | None = None,
+) -> SchemaRuntimeValidation:
+    """Create parser-owned runtime validation metadata for built-in rendering."""
+    return _InternalSchemaRuntimeValidation(
+        _INTERNAL_SCHEMA_RUNTIME_VALIDATION_TOKEN,
+        pattern_properties=pattern_properties,
+        required_groups=required_groups,
+        conditional_required=conditional_required,
+    )
+
+
+def _is_internal_schema_runtime_validation(value: object) -> bool:
+    """Return whether a value was created by the parser-owned factory."""
+    return isinstance(value, _InternalSchemaRuntimeValidation)

@@ -5,6 +5,7 @@ Generates Python models using msgspec.Struct for high-performance serialization.
 
 from __future__ import annotations
 
+import keyword
 from functools import wraps
 from math import isfinite
 from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, Optional, TypeVar
@@ -23,7 +24,11 @@ from datamodel_code_generator.model.imports import (
 )
 from datamodel_code_generator.model.type_alias import TypeAliasBase
 from datamodel_code_generator.model.types import DataTypeManager as _DataTypeManager
-from datamodel_code_generator.python_literal import represent_python_value
+from datamodel_code_generator.python_literal import (
+    _normalize_string,
+    represent_python_value,
+    represent_untrusted_python_value,
+)
 from datamodel_code_generator.reference import ModelType
 from datamodel_code_generator.types import (
     NONE,
@@ -169,12 +174,42 @@ class Struct(DataModel):
             treat_dot_as_module=treat_dot_as_module,
         )
         self.extra_template_data.setdefault("base_class_kwargs", {})
+        self._set_internal_template_data("base_class_kwargs", {})
         if self.keyword_only:
             self.add_base_class_kwarg("kw_only", "True")
 
     def add_base_class_kwarg(self, name: str, value: str) -> None:
         """Add keyword argument to base class constructor."""
         self.extra_template_data["base_class_kwargs"][name] = value
+        self._internal_template_data["base_class_kwargs"][name] = value
+
+    def _builtin_template_data(self) -> dict[str, Any]:
+        """Serialize user msgspec options while retaining generator-owned syntax."""
+        template_data = super()._builtin_template_data()
+        raw_base_class_kwargs = self.extra_template_data.get("base_class_kwargs")
+        base_class_kwargs: dict[str, str] = {}
+        if isinstance(raw_base_class_kwargs, dict):
+            for key, value in raw_base_class_kwargs.items():
+                if not isinstance(key, str):
+                    continue
+                normalized_key = _normalize_string(key)
+                if not normalized_key.isidentifier() or keyword.iskeyword(normalized_key):
+                    continue
+                base_class_kwargs[normalized_key] = represent_untrusted_python_value(value)
+        base_class_kwargs.update(self._internal_template_data["base_class_kwargs"])
+        return {**template_data, "base_class_kwargs": base_class_kwargs}
+
+    def _custom_template_data(self) -> dict[str, Any]:
+        """Preserve legacy raw msgspec options for trusted custom templates."""
+        template_data = super()._custom_template_data()
+        raw_base_class_kwargs = self.extra_template_data.get("base_class_kwargs")
+        internal_base_class_kwargs = self._internal_template_data["base_class_kwargs"]
+        if not isinstance(raw_base_class_kwargs, dict):
+            return {**template_data, "base_class_kwargs": raw_base_class_kwargs}
+        return {
+            **template_data,
+            "base_class_kwargs": {**raw_base_class_kwargs, **internal_base_class_kwargs},
+        }
 
     def apply_discriminator_tag(self, field: DataModelFieldBase, field_name: str, value: Any) -> None:
         """Configure msgspec's tag and exclude the discriminator from instance fields."""

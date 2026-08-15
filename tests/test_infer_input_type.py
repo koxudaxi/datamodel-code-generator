@@ -102,6 +102,10 @@ def test_infer_input_type() -> None:  # noqa: PLR0912
         if file.name.endswith((
             "external_child.json",
             "external_child.yaml",
+            "extra_data_builtin_template_config.json",
+            "extra_data_builtin_template_msgspec.json",
+            "extra_data_builtin_template_reserved.json",
+            "extra_data_builtin_template_typed_dict.json",
             "extra_data_msgspec.json",
             "field_validators_config.json",
             "field_validators_multi_fields_config.json",

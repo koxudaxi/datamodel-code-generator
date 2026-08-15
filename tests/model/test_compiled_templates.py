@@ -42,7 +42,7 @@ from datamodel_code_generator.model.base import (
     TEMPLATE_DIR,
     DataModel,
     TemplateBase,
-    _safe_extra_template_data,
+    _safe_dataclass_arguments,
     get_template,
 )
 from datamodel_code_generator.model.dataclass import DataClass
@@ -53,7 +53,11 @@ from datamodel_code_generator.model.pydantic_v2.dataclass import DataClass as Py
 from datamodel_code_generator.model.pydantic_v2.dataclass import DataModelField as PydanticDataclassField
 from datamodel_code_generator.model.pydantic_v2.root_model import RootModel
 from datamodel_code_generator.model.pydantic_v2.root_model_type_alias import RootModelTypeAlias
-from datamodel_code_generator.model.runtime_validation import RequiredGroupsRule, SchemaRuntimeValidation
+from datamodel_code_generator.model.runtime_validation import (
+    RequiredGroupsRule,
+    SchemaRuntimeValidation,
+    _make_internal_schema_runtime_validation,
+)
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType
 from scripts._template_compiler.inventory import inventory_templates, iter_template_paths
@@ -76,14 +80,18 @@ def _model_context(model: DataModel) -> dict[str, Any]:
         "base_class": model.base_class,
         "methods": model.methods,
         "description": model.rendered_description if model.FORMAT_DESCRIPTION_AS_DOCSTRING else model.description,
-        "dataclass_arguments": model.dataclass_arguments,
+        "dataclass_arguments": (
+            _safe_dataclass_arguments(model.dataclass_arguments)
+            if model.USES_DATACLASS_ARGUMENTS
+            else model.dataclass_arguments
+        ),
         "path": model.path,
-        **_safe_extra_template_data(model.extra_template_data),
+        **model._builtin_template_data(),
     }
 
 
 def _runtime_validation() -> SchemaRuntimeValidation:
-    return SchemaRuntimeValidation(
+    return _make_internal_schema_runtime_validation(
         required_groups=[
             RequiredGroupsRule(
                 keyword="oneOf",
@@ -142,6 +150,7 @@ def _template_context(path: Path) -> dict[str, Any]:
         "comment": 'comment \\ " {braces}\nnext',
         "config": config,
         "config_items": [("extra", "'allow'")],
+        "_safe_config_items": [("frozen", "True")],
         "dataclass_arguments": {"frozen": True, "repr": False},
         "decorators": ["@decorator"],
         "description": '"""description こんにちは \\ \\" {braces}\nnext"""',
@@ -973,13 +982,13 @@ def test_model_rendering_uses_generated_renderers_with_real_model_objects() -> N
             dict,
             {
                 pydantic_reference.path: {
-                    "class_body_lines": ["marker = {'braces': '{}'}"],
                     "unused_extension_data": {"still": "accepted"},
                 }
             },
         ),
     )
     pydantic_model.methods.append('def generated(self) -> str:\n        return "ok"')
+    pydantic_model._set_internal_template_data("class_body_lines", ["marker = {'braces': '{}'}"])
     dataclass_reference = _reference("DataclassModel")
     dataclass_model = DataClass(
         fields=[
@@ -1063,6 +1072,15 @@ def test_template_base_extension_seams_and_unknown_templates_stay_on_jinja(tmp_p
     template_path = tmp_path / "unknown.jinja2"
     template_path.write_text("unknown {{ class_name }}: {{ future_extension }}\n", encoding="utf-8")
     ProjectOwnedUnknownTemplate.TEMPLATE_FILE_PATH = str(template_path)
+    absolute_template_path = tmp_path / "absolute.jinja2"
+    absolute_template_path.write_text(
+        "absolute {{ class_name }}: {{ class_body_lines | join(', ') }}\n",
+        encoding="utf-8",
+    )
+
+    class ExternalAbsoluteTemplate(BaseModel):
+        TEMPLATE_FILE_PATH = str(absolute_template_path)
+
     custom_template_dir = tmp_path / "custom" / "pydantic_v2"
     custom_template_dir.mkdir(parents=True)
     custom_template_dir.joinpath("BaseModel.jinja2").write_text(
@@ -1092,12 +1110,19 @@ def test_template_base_extension_seams_and_unknown_templates_stay_on_jinja(tmp_p
         custom_template_dir=custom_template_dir.parent,
         extra_template_data=defaultdict(dict, {custom_reference.path: {"future_extension": "accepted"}}),
     )
+    absolute_reference = _reference("Absolute")
+    absolute = ExternalAbsoluteTemplate(
+        fields=[],
+        reference=absolute_reference,
+        extra_template_data=defaultdict(dict, {absolute_reference.path: {"class_body_lines": ["raw template data"]}}),
+    )
     output = "\n".join((
         DirectTemplate().render(),
         external.render(),
         external_jinja.render(),
         unknown.render(),
         custom.render(),
+        absolute.render(),
         positional._render(positional_context),
     ))
     assert_output(output + "\n", EXPECTED_PATH / "extension_seams.txt")

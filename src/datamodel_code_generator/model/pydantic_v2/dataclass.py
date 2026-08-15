@@ -26,6 +26,8 @@ from datamodel_code_generator.model.pydantic_v2.base_model import (
     DataModelField as DataModelFieldV2,
 )
 from datamodel_code_generator.model.pydantic_v2.base_model import (
+    _config_dict_items,
+    _safe_config_dict_items,
     has_lookaround_pattern,
 )
 from datamodel_code_generator.model.pydantic_v2.imports import (
@@ -38,6 +40,7 @@ from datamodel_code_generator.model.pydantic_v2.version import (
 )
 
 has_field_assignment = _dataclass_module.has_field_assignment
+_SAFE_CONFIG_ITEMS_TEMPLATE_DATA_KEY = "_safe_config_items"
 
 
 def _has_pydantic_dataclass_field_assignment(field: DataModelFieldBase) -> bool:
@@ -154,10 +157,16 @@ class DataClass(_DataclassReuseMixin, DataModel):
             config_attributes_v2=self._CONFIG_ATTRIBUTES_V2,
             config_attributes_v2_11=self._CONFIG_ATTRIBUTES_V2_11,
         )
+        if config_items := _config_dict_items(self.extra_template_data.get("config")):
+            config_parameters.update(config_items)
 
         if config_parameters:
             self._additional_imports.append(IMPORT_CONFIG_DICT)
             self.extra_template_data["config"] = config_parameters
+            self._set_internal_template_data(
+                _SAFE_CONFIG_ITEMS_TEMPLATE_DATA_KEY,
+                _safe_config_dict_items(config_parameters),
+            )
 
         self._lookaround_regex_engine_checked = False
 
@@ -175,6 +184,10 @@ class DataClass(_DataclassReuseMixin, DataModel):
         # Merge into any config from __init__; a duplicate ConfigDict import is deduped on render.
         config = self.extra_template_data.setdefault("config", {})
         config["regex_engine"] = '"python-re"'
+        self._set_internal_template_data(
+            _SAFE_CONFIG_ITEMS_TEMPLATE_DATA_KEY,
+            _safe_config_dict_items(config),
+        )
         self._additional_imports.append(IMPORT_CONFIG_DICT)
         self.clear_imports_cache()
 

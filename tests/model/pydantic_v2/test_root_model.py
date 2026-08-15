@@ -294,7 +294,7 @@ def test_root_model_renders_existing_config_object() -> None:
     assert 'regex_engine="python-re",' in rendered
     assert isinstance(root_model.extra_template_data["config"], ConfigDict)
     assert root_model.extra_template_data["config"].dict(exclude_unset=True) == {"regex_engine": '"python-re"'}
-    assert _CONFIG_ITEMS_TEMPLATE_DATA_KEY in root_model.extra_template_data
+    assert _CONFIG_ITEMS_TEMPLATE_DATA_KEY in root_model._internal_template_data
 
 
 def test_root_model_renders_late_config_dict() -> None:
@@ -315,11 +315,24 @@ def test_root_model_renders_late_config_dict() -> None:
 
     assert "model_config = ConfigDict(" in rendered
     assert 'regex_engine="python-re",' in rendered
-    assert _CONFIG_ITEMS_TEMPLATE_DATA_KEY in root_model.extra_template_data
+    assert _CONFIG_ITEMS_TEMPLATE_DATA_KEY in root_model._internal_template_data
 
 
-def test_root_model_rebuilds_stale_config_items() -> None:
-    """RootModel rebuilds stale config_items before rendering ConfigDict."""
+def test_root_model_include_only_custom_dir_keeps_builtin_context_safe(tmp_path: Path) -> None:
+    """A custom include directory does not make the built-in RootModel context raw."""
+    root_model = RootModel(
+        fields=[DataModelFieldBase(name="root", data_type=DataType(type="str"), required=True)],
+        reference=Reference(name="Root", path="Root"),
+        custom_template_dir=tmp_path,
+        extra_template_data=defaultdict(dict, {"Root": {"config_items": [("x", "True")]}}),
+    )
+
+    with pytest.raises(Error, match="config_items is reserved"):
+        root_model.render()
+
+
+def test_root_model_rejects_external_config_items() -> None:
+    """Built-in RootModel rendering reserves its code-bearing config items."""
     root_model = RootModel(
         fields=[
             DataModelFieldBase(
@@ -340,10 +353,5 @@ def test_root_model_rebuilds_stale_config_items() -> None:
         ),
     )
 
-    rendered = root_model.render()
-
-    assert "model_config = ConfigDict(" in rendered
-    assert 'regex_engine="python-re",' in rendered
-    assert isinstance(root_model.extra_template_data["config"], ConfigDict)
-    assert root_model.extra_template_data["config"].dict(exclude_unset=True) == {"regex_engine": '"python-re"'}
-    assert root_model.extra_template_data[_CONFIG_ITEMS_TEMPLATE_DATA_KEY] == [("regex_engine", '"python-re"')]
+    with pytest.raises(Error, match="config_items is reserved"):
+        root_model.render()

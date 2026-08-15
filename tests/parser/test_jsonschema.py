@@ -38,7 +38,7 @@ from datamodel_code_generator.model.pydantic_v2.root_model import RootModel
 from datamodel_code_generator.model.runtime_validation import (
     ConditionalRequiredRule,
     PatternPropertiesRule,
-    SchemaRuntimeValidation,
+    _make_internal_schema_runtime_validation,
 )
 from datamodel_code_generator.model.type_alias import TypeAlias
 from datamodel_code_generator.parser.base import (
@@ -1573,9 +1573,9 @@ def test_apply_root_model_sequence_interface_adds_sequence_helpers(
 
     rendered = root_model.render()
     assert root_model.methods == []
-    assert root_model.extra_template_data["sequence_base_class"] == f"Sequence[{expected_item_hint}]"
-    assert root_model.extra_template_data["sequence_item_type"] == expected_item_hint
-    assert root_model.extra_template_data["sequence_slice_type"] == expected_slice_hint
+    assert root_model._internal_template_data["sequence_base_class"] == f"Sequence[{expected_item_hint}]"
+    assert root_model._internal_template_data["sequence_item_type"] == expected_item_hint
+    assert root_model._internal_template_data["sequence_slice_type"] == expected_slice_hint
     assert f", Sequence[{expected_item_hint}]):" in rendered.splitlines()[0]
     assert f"def __iter__(self) -> Iterator[{expected_item_hint}]" in rendered
     assert f"def __getitem__(self, index: SupportsIndex) -> {expected_item_hint}" in rendered
@@ -4489,7 +4489,7 @@ def test_request_response_runtime_validation_is_copied_filtered_and_retargeted()
     ):
         model = models[f"Container{suffix}"]
         child = models[f"Child{suffix}"]
-        runtime = model.extra_template_data["schema_runtime_validation"]
+        runtime = model._internal_template_data["schema_runtime_validation"]
         pattern_rule = runtime.pattern_properties[0]
         pattern_type = pattern_rule.pattern_properties[0][1]
         additional_type = pattern_rule.additional_property_type
@@ -4527,13 +4527,15 @@ def test_request_response_runtime_validation_copy_handles_empty_optional_parts()
     )
     pattern_source_path = "#/PatternSource"
     pattern_target_path = "#/PatternTarget"
-    parser.extra_template_data[pattern_source_path]["schema_runtime_validation"] = SchemaRuntimeValidation(
-        pattern_properties=[
-            PatternPropertiesRule(
-                declared_properties=("kept", "removed"),
-                pattern_properties=(("^x", DataType(type="str")),),
-            )
-        ]
+    parser.extra_template_data[pattern_source_path]["schema_runtime_validation"] = (
+        _make_internal_schema_runtime_validation(
+            pattern_properties=[
+                PatternPropertiesRule(
+                    declared_properties=("kept", "removed"),
+                    pattern_properties=(("^x", DataType(type="str")),),
+                )
+            ]
+        )
     )
 
     parser._copy_schema_runtime_validation_for_variant(
@@ -4549,14 +4551,16 @@ def test_request_response_runtime_validation_copy_handles_empty_optional_parts()
 
     conditional_source_path = "#/ConditionalSource"
     conditional_target_path = "#/ConditionalTarget"
-    parser.extra_template_data[conditional_source_path]["schema_runtime_validation"] = SchemaRuntimeValidation(
-        conditional_required=[
-            ConditionalRequiredRule(
-                condition=((("removed",), ("value",)),),
-                then_groups=((("kept",),),),
-                else_groups=(),
-            )
-        ]
+    parser.extra_template_data[conditional_source_path]["schema_runtime_validation"] = (
+        _make_internal_schema_runtime_validation(
+            conditional_required=[
+                ConditionalRequiredRule(
+                    condition=((("removed",), ("value",)),),
+                    then_groups=((("kept",),),),
+                    else_groups=(),
+                )
+            ]
+        )
     )
 
     parser._copy_schema_runtime_validation_for_variant(

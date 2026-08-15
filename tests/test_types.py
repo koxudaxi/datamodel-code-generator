@@ -9,7 +9,14 @@ import pytest
 
 from datamodel_code_generator.imports import IMPORT_ANY, IMPORT_TUPLE
 from datamodel_code_generator.parser._math_imports import add_math_imports_for_non_finite_literals
-from datamodel_code_generator.python_literal import PythonCode, represent_python_value
+from datamodel_code_generator.python_literal import (
+    PythonCode,
+    _normalize_string,
+    is_safe_public_type_name,
+    represent_python_value,
+    represent_untrusted_public_type_name,
+    represent_untrusted_python_value,
+)
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import (
     DataType,
@@ -292,6 +299,77 @@ def test_python_literal_helpers_render_code_and_tuple_values() -> None:
     assert represent_python_value((raw,)) == "(datetime_module.date.fromisoformat('2026-01-01'),)"
     assert represent_python_value((1, "two")) == "(1, 'two')"
     assert represent_python_value(set()) == "set()"
+    assert represent_untrusted_python_value(raw) == "'2026-01-01'"
+    assert represent_untrusted_python_value({"items": [raw], "single": (raw,)}) == (
+        "{'items': ['2026-01-01'], 'single': ('2026-01-01',)}"
+    )
+    assert represent_untrusted_python_value(None) == "None"
+    assert represent_untrusted_python_value(1.5) == "1.5"
+    assert represent_python_value(float("nan")) == "float('nan')"
+    assert represent_untrusted_python_value({"values": {"a", "b"}, "empty": set()}) == (
+        "{'values': {'a', 'b'}, 'empty': set()}"
+    )
+
+    class StringOnly:
+        def __str__(self) -> str:
+            return "not code"
+
+    assert represent_untrusted_python_value(StringOnly()) == "'not code'"
+    assert is_safe_public_type_name("datetime.date")
+    assert not is_safe_public_type_name("list[str] | None")
+    assert not is_safe_public_type_name("__import__('os')")
+    assert not is_safe_public_type_name("class")
+    assert not is_safe_public_type_name(object())
+    assert represent_untrusted_public_type_name("datetime.date") == "datetime.date"
+    assert represent_untrusted_public_type_name(PythonCode("__import__('os').system('id')")) == (
+        "\"__import__('os').system('id')\""
+    )
+
+    class HostileTypeName(str):  # noqa: FURB189, SLOT000 - intentionally exercises hostile string subclasses
+        def split(
+            self, *_: object, **__: object
+        ) -> list[str]:  # pragma: no cover - the serializer must bypass this override
+            return ["str"]
+
+        def __str__(self) -> str:  # pragma: no cover - the serializer must bypass this override
+            return "__import__('os').system('marker') or str"
+
+    hostile_type_name = HostileTypeName("__import__('os').system('marker') or str")
+    safe_type_name = HostileTypeName("str")
+    assert type(_normalize_string(safe_type_name)) is str
+    assert not is_safe_public_type_name(hostile_type_name)
+    assert represent_untrusted_public_type_name(hostile_type_name) == "\"__import__('os').system('marker') or str\""
+
+    class EvilInt(int):
+        def __repr__(self) -> str:  # pragma: no cover - the serializer must bypass this override
+            return "__import__('os').system('marker')"
+
+    class EvilFloat(float):
+        def __repr__(self) -> str:  # pragma: no cover - the serializer must bypass this override
+            return "__import__('os').system('marker')"
+
+    class EvilList(list[object]):  # noqa: FURB189 - intentionally exercises hostile container subclasses
+        def __repr__(self) -> str:  # pragma: no cover - the serializer must bypass this override
+            return "__import__('os').system('marker')"
+
+    class EvilTuple(tuple[object, ...]):  # noqa: SLOT001 - intentionally exercises hostile container subclasses
+        def __repr__(self) -> str:  # pragma: no cover - the serializer must bypass this override
+            return "__import__('os').system('marker')"
+
+    class EvilDict(dict[object, object]):  # noqa: FURB189 - intentionally exercises hostile container subclasses
+        def __repr__(self) -> str:  # pragma: no cover - the serializer must bypass this override
+            return "__import__('os').system('marker')"
+
+    class EvilSet(set[object]):
+        def __repr__(self) -> str:  # pragma: no cover - the serializer must bypass this override
+            return "__import__('os').system('marker')"
+
+    assert represent_untrusted_python_value(EvilInt(1)) == "1"
+    assert represent_untrusted_python_value(EvilFloat(float("nan"))) == "float('nan')"
+    assert represent_untrusted_python_value(EvilList([EvilInt(1)])) == "[1]"
+    assert represent_untrusted_python_value(EvilTuple((EvilInt(1),))) == "(1,)"
+    assert represent_untrusted_python_value(EvilDict({"value": EvilInt(1)})) == "{'value': 1}"
+    assert represent_untrusted_python_value(EvilSet({EvilInt(1)})) == "{1}"
 
 
 def test_add_math_imports_inserts_after_generated_header() -> None:

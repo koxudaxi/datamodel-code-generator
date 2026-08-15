@@ -80,7 +80,6 @@ from tests.main.conftest import (
     _uses_external_test_default_formatter,
     assert_generated_model_json_invalid,
     assert_generated_model_json_validation,
-    get_current_version_args,
     run_generate_and_assert,
     run_generate_file_and_assert,
     run_main_and_assert,
@@ -155,7 +154,9 @@ def test_main_jsonschema_custom_template_escapes_docstrings(
         input_file_type="jsonschema",
         assert_func=assert_file_content,
         expected_file=expected_file,
-        extra_args=get_current_version_args(
+        extra_args=[
+            "--target-python-version",
+            "3.10",
             "--custom-template-dir",
             str(DATA_PATH / template_dir_name),
             "--output-model-type",
@@ -165,7 +166,7 @@ def test_main_jsonschema_custom_template_escapes_docstrings(
             "--formatters",
             "builtin",
             "--disable-timestamp",
-        ),
+        ],
         force_exec_validation=True,
     )
     assert_no_uncommented_generated_code(

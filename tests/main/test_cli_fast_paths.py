@@ -359,12 +359,12 @@ def _run_schema_runtime_validation_helper_probe() -> dict[str, Any]:
             from datamodel_code_generator.model.pydantic_v2.base_model import BaseModel
             from datamodel_code_generator.model.runtime_validation import (
                 RequiredGroupsRule,
-                SchemaRuntimeValidation,
+                _make_internal_schema_runtime_validation,
             )
             from datamodel_code_generator.reference import Reference
 
             reference = Reference(name="RuntimeModel", path="RuntimeModel")
-            validation = SchemaRuntimeValidation(
+            validation = _make_internal_schema_runtime_validation(
                 required_groups=[RequiredGroupsRule(keyword="oneOf", groups=((("value",),),))]
             )
             model = BaseModel(

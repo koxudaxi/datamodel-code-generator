@@ -6,6 +6,8 @@ with support for Field() constraints and ConfigDict.
 
 from __future__ import annotations
 
+import json
+import keyword
 import re
 from collections import defaultdict
 from functools import lru_cache
@@ -64,7 +66,14 @@ from datamodel_code_generator.model.pydantic_v2.version import (
     PYDANTIC_V2_FIELD_DEPRECATED_NEEDS_JSON_SCHEMA_EXTRA,
     _get_dict_key_reference_classes_capability,
 )
-from datamodel_code_generator.model.runtime_validation import SchemaRuntimeValidation
+from datamodel_code_generator.model.runtime_validation import (
+    SchemaRuntimeValidation,
+    _is_internal_schema_runtime_validation,
+)
+from datamodel_code_generator.python_literal import (
+    _normalize_string,
+    represent_untrusted_python_value,
+)
 from datamodel_code_generator.reference import ModelResolver, ModelType
 from datamodel_code_generator.types import chain_as_tuple
 
@@ -116,6 +125,8 @@ _ALIAS_GENERATOR_INTERNAL_KEY = "_alias_generator"
 _NO_ALIAS_INTERNAL_KEY = "_no_alias"
 _MISSING_SENTINEL = "MISSING"
 _CONFIG_ITEMS_TEMPLATE_DATA_KEY = "config_items"
+_MIN_QUOTED_STRING_LENGTH = 2
+_LEGACY_CONFIG_LITERAL_STRINGS: frozenset[str] = frozenset({"False", "None", "True"})
 _LEGACY_PYDANTIC_EXTRA_TEMPLATE_PATTERN = re.compile(
     r"{%-?\s*(?:if|elif)\s+(?:not\s+)?field\.use_pydantic_extra_annotation_assignment\b"
 )
@@ -220,8 +231,10 @@ def _alias_generator_name(value: Any) -> str | None:
     match value:
         case AliasGenerator():
             generator_name = value.value
-        case str() if value in _ALIAS_GENERATOR_IMPORTS:
-            generator_name = value
+        case str():
+            normalized_value = _normalize_string(value)
+            if normalized_value in _ALIAS_GENERATOR_IMPORTS:
+                generator_name = normalized_value
     return generator_name
 
 
@@ -249,6 +262,58 @@ def _config_dict_items(config: Any) -> list[tuple[str, Any]]:
         return []
     values = dump(exclude_unset=True)
     return list(values.items()) if isinstance(values, dict) else []
+
+
+def _safe_config_value(value: Any) -> str:
+    """Serialize a ConfigDict value without treating a user string as Python."""
+    return represent_untrusted_python_value(value)
+
+
+def _decode_legacy_quoted_config_string(value: str) -> str:
+    """Decode the simple quoted strings emitted by older template-data files.
+
+    This is deliberately not a Python-literal parser.  Existing configuration
+    fixtures use ``'allow'`` and ``"python-re"`` spellings; accepting only
+    an unescaped matching quote preserves those values while strings with escape
+    syntax remain ordinary data and are safely serialized below.
+    """
+    if (
+        len(value) >= _MIN_QUOTED_STRING_LENGTH
+        and value[0] == value[-1]
+        and value[0] in {"'", '"'}
+        and "\\" not in value[1:-1]
+    ):
+        return value[1:-1]
+    return value
+
+
+def _safe_config_dict_items(config: Any) -> list[tuple[str, str]]:
+    """Return Python-source-safe ConfigDict arguments for built-in templates."""
+    safe_items: list[tuple[str, str]] = []
+    for field_name, value in _config_dict_items(config):
+        if not isinstance(field_name, str):
+            continue
+        normalized_field_name = _normalize_string(field_name)
+        if not normalized_field_name.isidentifier() or keyword.iskeyword(normalized_field_name):
+            continue
+        normalized_value = _normalize_string(value) if isinstance(value, str) else value
+        if normalized_field_name == _ALIAS_GENERATOR_TEMPLATE_DATA_KEY and (
+            name := _alias_generator_name(normalized_value)
+        ):
+            safe_items.append((normalized_field_name, name))
+            continue
+        if isinstance(normalized_value, str) and normalized_value in _LEGACY_CONFIG_LITERAL_STRINGS:
+            safe_items.append((normalized_field_name, normalized_value))
+            continue
+        if isinstance(normalized_value, str):
+            normalized_value = _decode_legacy_quoted_config_string(normalized_value)
+        rendered_value = _safe_config_value(normalized_value)
+        if normalized_field_name == "regex_engine" and isinstance(normalized_value, str):
+            # Keep the existing double-quoted spelling for generated regex
+            # engine settings while escaping every string character safely.
+            rendered_value = json.dumps(normalized_value, ensure_ascii=False)
+        safe_items.append((normalized_field_name, rendered_value))
+    return safe_items
 
 
 _PYDANTIC_V2_BASE_FIELD_KEYS: frozenset[str] = frozenset({
@@ -719,33 +784,43 @@ class BaseModel(BaseModelBase):
         runtime_models: list[DataModel] = [
             model
             for model in models
-            if isinstance(
-                model.extra_template_data.get("schema_runtime_validation"),
-                SchemaRuntimeValidation,
+            if _is_internal_schema_runtime_validation(
+                model._internal_template_data.get("schema_runtime_validation")  # noqa: SLF001
             )
-            and model.extra_template_data["schema_runtime_validation"]
+            and model._internal_template_data["schema_runtime_validation"]  # noqa: SLF001
         ]
         if not runtime_models:
             return ""
 
+        configured_base_class_name = runtime_models[0].extra_template_data.get("schema_validator_base_class_name")
+        normalized_base_class_name = (
+            _normalize_string(configured_base_class_name) if isinstance(configured_base_class_name, str) else None
+        )
         base_class_name = (
-            runtime_models[0].extra_template_data.get("schema_validator_base_class_name")
-            or cls.SCHEMA_RUNTIME_VALIDATION_BASE_CLASS_NAME
+            normalized_base_class_name
+            if (
+                normalized_base_class_name is not None
+                and normalized_base_class_name.isidentifier()
+                and not keyword.iskeyword(normalized_base_class_name)
+            )
+            else cls.SCHEMA_RUNTIME_VALIDATION_BASE_CLASS_NAME
         )
         for model in runtime_models:
-            model.extra_template_data["schema_runtime_validation_base_class_name"] = base_class_name
-            model.extra_template_data[
-                "schema_runtime_validation_use_base"
-            ] = not cls._inherits_schema_runtime_validation_base(
+            uses_base_class = not cls._inherits_schema_runtime_validation_base(
                 model,
                 seen=set(),
             )
+            model._set_internal_template_data("schema_runtime_validation_base_class_name", base_class_name)  # noqa: SLF001
+            model._set_internal_template_data("schema_runtime_validation_use_base", uses_base_class)  # noqa: SLF001
 
         custom_template_dir = next(
             (model.custom_template_dir for model in models if model.custom_template_dir is not None),
             None,
         )
-        runtime_validations = [model.extra_template_data["schema_runtime_validation"] for model in runtime_models]
+        runtime_validations = [
+            model._internal_template_data["schema_runtime_validation"]  # noqa: SLF001
+            for model in runtime_models
+        ]
         context = {
             "schema_runtime_validation_base_class_name": base_class_name,
             "has_pattern_properties": any(
@@ -781,11 +856,10 @@ class BaseModel(BaseModelBase):
                 continue
             base_model = base_class.reference.source
             if (
-                isinstance(
-                    base_model.extra_template_data.get("schema_runtime_validation"),
-                    SchemaRuntimeValidation,
+                _is_internal_schema_runtime_validation(
+                    base_model._internal_template_data.get("schema_runtime_validation")  # noqa: SLF001
                 )
-                and base_model.extra_template_data["schema_runtime_validation"]
+                and base_model._internal_template_data["schema_runtime_validation"]  # noqa: SLF001
             ):
                 return True
             if cls._inherits_schema_runtime_validation_base(base_model, seen=seen):
@@ -874,20 +948,24 @@ class BaseModel(BaseModelBase):
             from datamodel_code_generator.model.pydantic_v2 import ConfigDict  # noqa: PLC0415
 
             self.extra_template_data["config"] = ConfigDict.model_validate(config_parameters)
-            self.extra_template_data[_CONFIG_ITEMS_TEMPLATE_DATA_KEY] = _config_dict_items(
-                self.extra_template_data["config"]
+            self._set_internal_template_data(
+                _CONFIG_ITEMS_TEMPLATE_DATA_KEY,
+                _safe_config_dict_items(self.extra_template_data["config"]),
             )
             self._additional_imports.append(IMPORT_CONFIG_DICT)
         else:
             self.extra_template_data.pop("config", None)
-            self.extra_template_data.pop(_CONFIG_ITEMS_TEMPLATE_DATA_KEY, None)
+            self._pop_internal_template_data(_CONFIG_ITEMS_TEMPLATE_DATA_KEY)
 
         self._process_schema_runtime_validation()
         self._process_validators()
 
     def _get_schema_runtime_validation(self) -> SchemaRuntimeValidation | None:
+        internal_runtime_validation = self._internal_template_data.get("schema_runtime_validation")
+        if _is_internal_schema_runtime_validation(internal_runtime_validation) and internal_runtime_validation:
+            return internal_runtime_validation
         runtime_validation = self.extra_template_data.get("schema_runtime_validation")
-        if isinstance(runtime_validation, SchemaRuntimeValidation) and runtime_validation:
+        if _is_internal_schema_runtime_validation(runtime_validation) and runtime_validation:
             return runtime_validation
         return None
 
@@ -896,7 +974,8 @@ class BaseModel(BaseModelBase):
         runtime_validation = self._get_schema_runtime_validation()
         if runtime_validation is None:
             return
-        self.extra_template_data["schema_runtime_validation"] = runtime_validation
+        self.extra_template_data.pop("schema_runtime_validation", None)
+        self._set_internal_template_data("schema_runtime_validation", runtime_validation)
         if runtime_validation.pattern_properties:
             self.extra_template_data["force_extra_allow"] = True
 
@@ -962,7 +1041,7 @@ class BaseModel(BaseModelBase):
             self._additional_imports.append(Import.from_full_path(function_path))
 
         if prepared_validators:
-            self.extra_template_data["prepared_validators"] = prepared_validators
+            self._set_internal_template_data("prepared_validators", prepared_validators)
             self._additional_imports.append(IMPORT_FIELD_VALIDATOR)
             self._additional_imports.append(IMPORT_ANY)
 
