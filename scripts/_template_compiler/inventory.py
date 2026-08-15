@@ -158,15 +158,24 @@ def _resolve_template_path(template_dir: Path, path: Path) -> Path:
 
     try:
         resolved_path = path.resolve(strict=True)
+        resolved_template_dir = template_dir.resolve(strict=True)
     except FileNotFoundError:
         raise _template_source_error(
             display_path,
             "template source does not exist",
             _MISSING_TEMPLATE_SOURCE_GUIDANCE,
         ) from None
+    except (OSError, RuntimeError) as error:
+        detail = repr(error)
+        if isinstance(error, OSError) and (strerror := error.strerror):
+            detail = strerror
+        raise _template_source_error(
+            display_path,
+            f"template source cannot be resolved ({detail})",
+        ) from None
 
     try:
-        resolved_path.relative_to(template_dir.resolve(strict=True))
+        resolved_path.relative_to(resolved_template_dir)
     except ValueError:
         raise _template_source_error(
             display_path,
