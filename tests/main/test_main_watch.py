@@ -300,6 +300,12 @@ def _write_watch_cli_input_and_wait(
     _wait_for_watch_cli(process, stdout_lines, stderr_lines, condition_after_write, description)
 
 
+def _replace_watch_input(path: Path, content: str) -> None:
+    update = path.with_name(f"{path.stem}-update{path.suffix}")
+    update.write_text(content, encoding="utf-8")
+    update.replace(path)
+
+
 def _lines_contain(lines: list[str], expected_text: str) -> bool:
     return any(expected_text in line for line in lines)
 
@@ -3490,8 +3496,8 @@ def test_batch_watch_nested_dependency_reruns_full_batch_without_output_loop(tmp
         assert_output(
             second_metadata.read_text(encoding="utf-8"), PROJECT_ROOT / "tests/data/expected/main_kr/jobs/stale.py"
         )
-        child_file.write_text(
-            (WATCH_DATA_PATH / "nested_ref/child_changed.json").read_text(encoding="utf-8"), encoding="utf-8"
+        _replace_watch_input(
+            child_file, (WATCH_DATA_PATH / "nested_ref/child_changed.json").read_text(encoding="utf-8")
         )
         _wait_for_watch_cli(
             process,
