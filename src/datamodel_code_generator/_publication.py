@@ -13,6 +13,7 @@ import os
 import shutil
 import stat
 import tempfile
+import time
 from contextlib import suppress
 from pathlib import Path
 from secrets import token_hex
@@ -26,8 +27,26 @@ if TYPE_CHECKING:
 # binds its Windows accessors at import time, so patching os does not exercise
 # path-based fallback operations consistently.
 _unlink = os.unlink
-_replace = os.replace
 _rmdir = os.rmdir
+
+_REPLACE_ATTEMPTS = 10
+_REPLACE_RETRY_DELAY_SECONDS = 0.05
+# ERROR_ACCESS_DENIED / ERROR_SHARING_VIOLATION: Windows refuses to replace a target another
+# process (a reader, an indexer) briefly holds open, so the swap is retried before giving up.
+_TRANSIENT_REPLACE_WINERRORS = frozenset({5, 32})
+
+
+def _replace(src: str | Path, dst: str | Path, *, src_dir_fd: int | None = None, dst_dir_fd: int | None = None) -> None:
+    for _attempt in range(_REPLACE_ATTEMPTS - 1):
+        try:
+            os.replace(src, dst, src_dir_fd=src_dir_fd, dst_dir_fd=dst_dir_fd)
+        except PermissionError as exc:
+            if getattr(exc, "winerror", None) not in _TRANSIENT_REPLACE_WINERRORS:
+                raise
+            time.sleep(_REPLACE_RETRY_DELAY_SECONDS)
+        else:
+            return
+    os.replace(src, dst, src_dir_fd=src_dir_fd, dst_dir_fd=dst_dir_fd)
 
 
 class PublicationAnchor(NamedTuple):
