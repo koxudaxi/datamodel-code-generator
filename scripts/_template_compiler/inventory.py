@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import stat
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -103,6 +105,10 @@ KNOWN_MAPPING_DOT_ACCESSES = frozenset({
     ("pydantic_v2/BaseModel.jinja2", "v", "method_name"),
     ("pydantic_v2/BaseModel.jinja2", "v", "function_name"),
 })
+_TEMPLATE_SOURCE_GUIDANCE = "update the standalone template compiler or move the source under the template directory"
+_MISSING_TEMPLATE_SOURCE_GUIDANCE = "update the standalone template compiler or remove the broken template path"
+_INVALID_TEMPLATE_SOURCE_GUIDANCE = "update the standalone template compiler or remove the invalid template path"
+_TEMPLATE_OPEN_FLAGS = os.O_RDONLY | getattr(os, "O_NONBLOCK", 0)
 
 
 @dataclass(frozen=True)
@@ -125,7 +131,94 @@ class TemplateInventory:
 
 
 def iter_template_paths(template_dir: Path) -> tuple[Path, ...]:
-    return tuple(sorted(template_dir.rglob("*.jinja2"), key=lambda path: path.relative_to(template_dir).as_posix()))
+    paths = tuple(sorted(template_dir.rglob("*.jinja2"), key=lambda path: path.relative_to(template_dir).as_posix()))
+    for path in paths:
+        _resolve_template_path(template_dir, path)
+    return paths
+
+
+def _template_source_error(
+    display_path: str,
+    message: str,
+    guidance: str = _TEMPLATE_SOURCE_GUIDANCE,
+) -> ValueError:
+    return ValueError(f"{display_path}: {message}; {guidance}")
+
+
+def _template_display_path(template_dir: Path, path: Path) -> str:
+    try:
+        return path.relative_to(template_dir).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def _resolve_template_path(template_dir: Path, path: Path) -> Path:
+    """Resolve a template source while keeping it inside the template root."""
+    display_path = _template_display_path(template_dir, path)
+
+    try:
+        resolved_path = path.resolve(strict=True)
+        resolved_template_dir = template_dir.resolve(strict=True)
+    except FileNotFoundError:
+        raise _template_source_error(
+            display_path,
+            "template source does not exist",
+            _MISSING_TEMPLATE_SOURCE_GUIDANCE,
+        ) from None
+    except (OSError, RuntimeError) as error:
+        detail = repr(error)
+        if isinstance(error, OSError) and (strerror := error.strerror):
+            detail = strerror
+        raise _template_source_error(
+            display_path,
+            f"template source cannot be resolved ({detail})",
+        ) from None
+
+    try:
+        resolved_path.relative_to(resolved_template_dir)
+    except ValueError:
+        raise _template_source_error(
+            display_path,
+            "template source resolves outside the template root",
+        ) from None
+
+    if not resolved_path.is_file():
+        raise _template_source_error(
+            display_path,
+            "template source is not a file",
+            _INVALID_TEMPLATE_SOURCE_GUIDANCE,
+        )
+    return resolved_path
+
+
+def _read_template_source(template_dir: Path, path: Path) -> str:
+    """Read a template through a descriptor matching a verified source.
+
+    A source path can be replaced after canonical containment validation.  The
+    validated target's identity is captured before opening the original path,
+    then compared with the descriptor before any bytes are read.  Reading that
+    descriptor keeps a later symlink swap from changing the source.
+    """
+    display_path = _template_display_path(template_dir, path)
+    resolved_path = _resolve_template_path(template_dir, path)
+    try:
+        source_stat = resolved_path.lstat()
+    except FileNotFoundError:
+        raise _template_source_error(display_path, "template source changed during validation; retry") from None
+    if not stat.S_ISREG(source_stat.st_mode):
+        raise _template_source_error(display_path, "template source changed during validation; retry")
+
+    try:
+        # A race may still replace the source with a FIFO.  Non-blocking mode
+        # is available on POSIX; it is a no-op where the flag is unavailable.
+        descriptor = os.open(path, _TEMPLATE_OPEN_FLAGS)
+    except OSError as error:
+        raise _template_source_error(display_path, f"template source cannot be opened ({error.strerror})") from None
+
+    with os.fdopen(descriptor, encoding="utf-8") as source_file:
+        if not os.path.samestat(source_stat, os.fstat(source_file.fileno())):
+            raise _template_source_error(display_path, "template source changed during validation; retry")
+        return source_file.read()
 
 
 def build_environment() -> Environment:
@@ -310,7 +403,7 @@ def inventory_templates(template_dir: Path, environment: Environment | None = No
     templates: dict[Path, nodes.Template] = {}
     for path in iter_template_paths(template_dir):
         relative_path = path.relative_to(template_dir)
-        ast = env.parse(path.read_text(encoding="utf-8"))
+        ast = env.parse(_read_template_source(template_dir, path))
         templates[relative_path] = ast
         _validate_scoped_assignments(relative_path, ast)
         _validate_macro_local_captures(relative_path, ast)
@@ -363,10 +456,11 @@ def inventory_templates(template_dir: Path, environment: Environment | None = No
                 if not isinstance(node.template, nodes.Const) or not isinstance(node.template.value, str):
                     raise _unsupported(relative_path, node, "include", "dynamic include")
                 _record(values["includes"], node.template.value, relative_path, node)
-                include_path = (template_dir / relative_path.parent / node.template.value).resolve()
-                if not include_path.is_file() or template_dir.resolve() not in include_path.parents:
-                    raise _unsupported(relative_path, node, "include", node.template.value)
-                include_graph[relative_path].add(include_path.relative_to(template_dir.resolve()))
+                include_path = _resolve_template_path(
+                    template_dir,
+                    template_dir / relative_path.parent / node.template.value,
+                )
+                include_graph[relative_path].add(include_path.relative_to(template_dir.resolve(strict=True)))
             elif isinstance(node, (nodes.Import, nodes.FromImport, nodes.Extends)):
                 construct = type(node).__name__
                 _record(values["imports_and_inheritance"], construct, relative_path, node)

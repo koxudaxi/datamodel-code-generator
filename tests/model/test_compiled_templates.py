@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import io
+import os
 from collections import defaultdict
 from dataclasses import fields as dataclass_fields
 from functools import cached_property
@@ -60,7 +61,8 @@ from datamodel_code_generator.model.runtime_validation import (
 )
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType
-from scripts._template_compiler.inventory import inventory_templates, iter_template_paths
+from scripts._template_compiler import build_environment, compile_template
+from scripts._template_compiler import inventory as template_compiler_inventory
 from tests.conftest import assert_output
 
 ROOT = Path(__file__).parents[2]
@@ -187,7 +189,7 @@ def _template_context(path: Path) -> dict[str, Any]:
 
 def _render_all_builtin_templates(*, compiled: bool) -> str:
     rendered: list[str] = []
-    for path in iter_template_paths(TEMPLATE_DIR):
+    for path in template_compiler_inventory.iter_template_paths(TEMPLATE_DIR):
         relative_path = path.relative_to(TEMPLATE_DIR)
         context = _template_context(relative_path)
         if compiled:
@@ -753,13 +755,19 @@ def _runtime_edge_output() -> str:
 
 def test_template_inventory_is_derived_from_all_builtin_sources() -> None:
     """The checked-in inventory records every currently supported template feature."""
-    inventory = inventory_templates(TEMPLATE_DIR)
-    template_paths = "\n".join(path.relative_to(TEMPLATE_DIR).as_posix() for path in iter_template_paths(TEMPLATE_DIR))
+    inventory = template_compiler_inventory.inventory_templates(TEMPLATE_DIR)
+    template_paths = "\n".join(
+        path.relative_to(TEMPLATE_DIR).as_posix()
+        for path in template_compiler_inventory.iter_template_paths(TEMPLATE_DIR)
+    )
     features = "\n".join(
         f"{field.name}:{f' {values}' if (values := ', '.join(sorted(getattr(inventory, field.name)))) else ''}"
         for field in dataclass_fields(inventory)
     )
-    output = f"template count: {len(iter_template_paths(TEMPLATE_DIR))}\n{template_paths}\n\n{features}\n"
+    output = (
+        f"template count: {len(template_compiler_inventory.iter_template_paths(TEMPLATE_DIR))}\n"
+        f"{template_paths}\n\n{features}\n"
+    )
     assert_output(
         output,
         EXPECTED_PATH / "inventory.txt",
@@ -778,7 +786,7 @@ def test_inventory_rejects_new_features_with_path_line_and_compiler_guidance(tmp
             "update the standalone template compiler"
         ),
     ):
-        inventory_templates(tmp_path)
+        template_compiler_inventory.inventory_templates(tmp_path)
 
 
 def test_inventory_rejects_unknown_filter_with_actionable_diagnostic(tmp_path: Path) -> None:
@@ -790,7 +798,7 @@ def test_inventory_rejects_unknown_filter_with_actionable_diagnostic(tmp_path: P
         ValueError,
         match=r"unknown_filter\.jinja2:1: unsupported Jinja filter 'upper'; update the standalone template compiler",
     ):
-        inventory_templates(tmp_path)
+        template_compiler_inventory.inventory_templates(tmp_path)
 
 
 @pytest.mark.parametrize(
@@ -840,7 +848,7 @@ def test_inventory_rejects_unsafe_supported_shapes(
     tmp_path.joinpath(filename).write_text(source, encoding="utf-8")
 
     with pytest.raises(ValueError, match=diagnostic):
-        inventory_templates(tmp_path)
+        template_compiler_inventory.inventory_templates(tmp_path)
 
 
 def test_inventory_rejects_include_capture_of_parent_macro(tmp_path: Path) -> None:
@@ -858,7 +866,177 @@ def test_inventory_rejects_include_capture_of_parent_macro(tmp_path: Path) -> No
             r"update the standalone template compiler"
         ),
     ):
-        inventory_templates(tmp_path)
+        template_compiler_inventory.inventory_templates(tmp_path)
+
+
+@pytest.mark.skipif(os.name == "nt", reason="symlink creation requires elevated privileges")
+def test_inventory_rejects_template_source_symlink_outside_root(tmp_path: Path) -> None:
+    """Template discovery must not read a source reached through an escaping symlink."""
+    template_dir = tmp_path / "templates"
+    template_dir.mkdir()
+    outside_template = tmp_path / "outside.jinja2"
+    outside_template.write_text("outside\n", encoding="utf-8")
+    template_dir.joinpath("linked.jinja2").symlink_to(outside_template)
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"linked\.jinja2: template source resolves outside the template root; "
+            r"update the standalone template compiler or move the source under the template directory"
+        ),
+    ):
+        template_compiler_inventory.inventory_templates(template_dir)
+
+
+@pytest.mark.skipif(os.name == "nt", reason="symlink creation requires elevated privileges")
+def test_inventory_accepts_template_source_symlink_within_root(tmp_path: Path) -> None:
+    """A source alias remains valid when its resolved target stays inside the template root."""
+    source = tmp_path / "source.jinja2"
+    source.write_text("safe\n", encoding="utf-8")
+    tmp_path.joinpath("linked.jinja2").symlink_to(source)
+
+    template_compiler_inventory.inventory_templates(tmp_path)
+
+
+@pytest.mark.skipif(os.name == "nt", reason="symlink creation requires elevated privileges")
+def test_inventory_rejects_broken_template_source_symlink(tmp_path: Path) -> None:
+    """Broken source aliases fail with an actionable compiler diagnostic."""
+    tmp_path.joinpath("broken.jinja2").symlink_to(tmp_path / "missing.jinja2")
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"broken\.jinja2: template source does not exist; "
+            r"update the standalone template compiler or remove the broken template path"
+        ),
+    ):
+        template_compiler_inventory.inventory_templates(tmp_path)
+
+
+@pytest.mark.parametrize(
+    ("error", "expected_name"),
+    [
+        pytest.param(
+            PermissionError(13, "permission denied"),
+            "template_source_permission_error.txt",
+            id="os-error",
+        ),
+        pytest.param(
+            RuntimeError("symlink loop"),
+            "template_source_runtime_error.txt",
+            id="runtime-error",
+        ),
+    ],
+)
+def test_inventory_normalizes_template_source_resolution_errors(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    error: OSError | RuntimeError,
+    expected_name: str,
+) -> None:
+    """Resolution failures retain the source location and compiler guidance."""
+    tmp_path.joinpath("template.jinja2").write_text("safe\n", encoding="utf-8")
+
+    def fail_resolve(*_: Any, **__: Any) -> Path:
+        raise error
+
+    with monkeypatch.context() as path_patch:
+        path_patch.setattr(Path, "resolve", fail_resolve)
+        with pytest.raises(
+            ValueError,
+            match=r"template\.jinja2: template source cannot be resolved",
+        ) as exc_info:
+            template_compiler_inventory.inventory_templates(tmp_path)
+    assert_output(f"{exc_info.value}\n", EXPECTED_PATH / expected_name)
+
+
+def test_inventory_rejects_template_source_directory(tmp_path: Path) -> None:
+    """A directory whose name matches the source suffix is not a template file."""
+    tmp_path.joinpath("directory.jinja2").mkdir()
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"directory\.jinja2: template source is not a file; "
+            r"update the standalone template compiler or remove the invalid template path"
+        ),
+    ):
+        template_compiler_inventory.inventory_templates(tmp_path)
+
+
+@pytest.mark.skipif(os.name == "nt", reason="symlink creation requires elevated privileges")
+def test_template_source_read_keeps_the_verified_descriptor_after_symlink_swap(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """A swap after validation cannot redirect the actual template read outside the root."""
+    template = tmp_path / "template.jinja2"
+    template.write_text("safe\n", encoding="utf-8")
+    outside_template = tmp_path / "outside.jinja2"
+    outside_template.write_text("outside\n", encoding="utf-8")
+    original_samestat = os.path.samestat
+    swapped = False
+
+    def swap_after_validation(first: os.stat_result, second: os.stat_result) -> bool:
+        nonlocal swapped
+        template.unlink()
+        template.symlink_to(outside_template)
+        swapped = True
+        return original_samestat(first, second)
+
+    monkeypatch.setattr(os.path, "samestat", swap_after_validation)
+
+    content = template_compiler_inventory._read_template_source(tmp_path, template)
+    assert_output(
+        f"content: {content!r}\nswapped: {swapped}\n",
+        EXPECTED_PATH / "template_source_verified_descriptor.txt",
+    )
+
+
+@pytest.mark.skipif(os.name == "nt", reason="symlink creation requires elevated privileges")
+def test_template_source_read_rejects_symlink_swapped_after_validation(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """A swap between containment validation and open is rejected before reading."""
+    template = tmp_path / "template.jinja2"
+    template.write_text("safe\n", encoding="utf-8")
+    outside_template = tmp_path / "outside.jinja2"
+    outside_template.write_text("outside\n", encoding="utf-8")
+    original_resolver = template_compiler_inventory._resolve_template_path
+    swapped = False
+
+    def validate_then_swap(template_dir: Path, path: Path) -> Path:
+        nonlocal swapped
+        resolved_path = original_resolver(template_dir, path)
+        template.unlink()
+        template.symlink_to(outside_template)
+        swapped = True
+        return resolved_path
+
+    monkeypatch.setattr(template_compiler_inventory, "_resolve_template_path", validate_then_swap)
+
+    with pytest.raises(ValueError, match=r"template source changed during validation; retry"):
+        template_compiler_inventory._read_template_source(tmp_path, template)
+    assert_output(f"swapped: {swapped}\n", EXPECTED_PATH / "template_source_swap_rejected.txt")
+
+
+def test_compile_template_rejects_static_include_outside_template_root(tmp_path: Path) -> None:
+    """Static include escapes use the same guarded source-path diagnostic."""
+    template_dir = tmp_path / "templates"
+    template_dir.mkdir()
+    template_dir.joinpath("parent.jinja2").write_text("{% include '../outside.jinja2' %}", encoding="utf-8")
+    tmp_path.joinpath("outside.jinja2").write_text("outside\n", encoding="utf-8")
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"parent\.jinja2:1: invalid static include '\.\./outside\.jinja2': "
+            r"\.\./outside\.jinja2: template source resolves outside the template root; "
+            r"update the standalone template compiler or move the source under the template directory"
+        ),
+    ):
+        compile_template(template_dir, Path("parent.jinja2"), build_environment())
 
 
 def test_compiler_rejects_generated_module_name_collisions() -> None:
