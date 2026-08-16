@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
 from enum import Enum
 from typing import Literal
 
@@ -38,7 +39,7 @@ class InlineTokenList(RootModel[list[InlineTokenListEnum]]):
 
 
 class NumericFacet(Enum):
-    number_1_5 = 1.5
+    number_1_5 = Decimal('1.5')
 
 
 class TextAlias(RootModel[str]):

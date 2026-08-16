@@ -170,6 +170,21 @@ def test_main_xmlschema_fixed_decimal(output_file: Path) -> None:
     )
 
 
+def test_main_xmlschema_decimal_enum_default(output_file: Path) -> None:
+    """Render Decimal enum members and their member default with required imports."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "decimal_enum_default.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        extra_args=["--set-default-enum-member"],
+        assert_func=assert_file_content,
+        expected_file="decimal_enum_default.py",
+        force_exec_validation=True,
+        importable_module_name="generated_xml_decimal_enum_default",
+        importable_module_attribute="Model",
+    )
+
+
 def test_main_xmlschema_special_float_defaults(output_file: Path) -> None:
     """Generate non-finite float defaults from XML Schema lexical values."""
     run_main_and_assert(

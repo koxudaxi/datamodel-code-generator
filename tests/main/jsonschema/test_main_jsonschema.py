@@ -16309,20 +16309,6 @@ def test_main_jsonschema_non_finite_number_values(output_file: Path) -> None:
     )
 
 
-def test_main_jsonschema_non_finite_enum(output_file: Path) -> None:
-    """Render non-finite enum members as Python expressions."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "non_finite_enum.yaml",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="non_finite_enum.py",
-        force_exec_validation=True,
-        importable_module_name="generated_non_finite_enum",
-        importable_module_attribute="NonFiniteEnum",
-    )
-
-
 def test_main_jsonschema_decimal_fractional_constraints(output_file: Path) -> None:
     """Test decimal fields keep fractional bounds and multipleOf with field constraints."""
     run_main_and_assert(

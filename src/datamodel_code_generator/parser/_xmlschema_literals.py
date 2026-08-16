@@ -9,7 +9,7 @@ from decimal import Decimal
 from math import isfinite
 from typing import Any
 
-from datamodel_code_generator.imports import Import
+from datamodel_code_generator.imports import IMPORT_DECIMAL, Import
 from datamodel_code_generator.python_literal import _safe_non_finite_float
 
 XML_DATE_PATTERN = re.compile(r"^(?P<date>-?\d{4,}-\d{2}-\d{2})(?:Z|[+-]\d{2}:\d{2})?$")
@@ -35,6 +35,8 @@ class _PythonExpression:
 
 
 def _collect_python_expression_imports(value: Any) -> tuple[Import, ...]:
+    if isinstance(value, Decimal):
+        return (IMPORT_DECIMAL,)
     if isinstance(value, _PythonExpression):
         return value.imports
     if isinstance(value, dict):
