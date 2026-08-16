@@ -365,6 +365,23 @@ def test_main_xmlschema_type_element_symbol_spaces(output_file: Path) -> None:
     )
 
 
+def test_main_xmlschema_type_alias_with_field_description_py312(output_file: Path) -> None:
+    """Keep words in XML Schema field documentation out of math imports."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "type_alias_with_field_description.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_file_content,
+        expected_file="type_alias_with_field_description_py312.py",
+        extra_args=[
+            "--use-type-alias",
+            "--target-python-version",
+            "3.12",
+            "--use-field-description",
+        ],
+    )
+
+
 def test_main_xmlschema_model_groups_and_wildcards(output_file: Path) -> None:
     """Generate models for repeating model groups, defaults, fixed values, and wildcards."""
     run_main_and_assert(

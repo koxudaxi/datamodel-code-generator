@@ -1,0 +1,2 @@
+value = inf
+other = nan

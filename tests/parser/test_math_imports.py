@@ -2,152 +2,62 @@
 
 from __future__ import annotations
 
-import ast
-from unittest.mock import MagicMock
+from pathlib import Path
+
+import pytest
 
 from datamodel_code_generator.parser._math_imports import (
     add_math_imports_for_non_finite_literals,
     apply_math_imports_to_parse_result,
 )
+from datamodel_code_generator.parser.base import Result
+from tests.conftest import assert_output, assert_parser_modules
+
+DATA_PATH = Path(__file__).parents[1] / "data" / "math_imports"
+INPUT_PATH = DATA_PATH / "input"
+EXPECTED_PATH = DATA_PATH / "expected"
 
 
-def test_add_math_imports_for_non_finite_literals_basic() -> None:
-    """Test injecting math imports for both inf and nan literals."""
-    code = """from pydantic import BaseModel
+@pytest.mark.parametrize(
+    "case",
+    [
+        "basic",
+        "branches",
+        "clean",
+        "existing_import",
+        "nested_scope",
+        "no_match",
+        "invalid_syntax",
+        "scope_resolution",
+        "function_annotation",
+        "header_boundaries",
+        "pep695_literal",
+        "pep695_local_name",
+        "pep695_type_alias_name",
+        "pep695_existing_import",
+    ],
+)
+def test_add_math_imports_for_non_finite_literals(case: str) -> None:
+    """Resolve only unbound generated literals and preserve module headers."""
+    body = (INPUT_PATH / f"{case}.py").read_text(encoding="utf-8")
 
-class Item(BaseModel):
-    max_val: float = inf
-    min_val: float = -inf
-    missing: float = nan
-"""
-    result = add_math_imports_for_non_finite_literals(code)
-    assert result.startswith("from math import inf, nan\n")
-    assert "max_val: float = inf" in result
-
-
-def test_add_math_imports_single_inf() -> None:
-    """Test injecting math import for only inf."""
-    code = """from pydantic import BaseModel
-
-class Item(BaseModel):
-    max_val: float = inf
-"""
-    result = add_math_imports_for_non_finite_literals(code)
-    assert result.startswith("from math import inf\n")
-
-
-def test_add_math_imports_single_nan() -> None:
-    """Test injecting math import for only nan."""
-    code = """from pydantic import BaseModel
-
-class Item(BaseModel):
-    missing: float = nan
-"""
-    result = add_math_imports_for_non_finite_literals(code)
-    assert result.startswith("from math import nan\n")
+    assert_output(add_math_imports_for_non_finite_literals(body), EXPECTED_PATH / f"{case}.py")
 
 
-def test_add_math_imports_no_non_finite() -> None:
-    """Test that code without non-finite literals is unchanged."""
-    code = """from pydantic import BaseModel
+def test_apply_math_imports_to_parse_result_modules() -> None:
+    """Apply imports to every generated module without mocks."""
+    modules = {
+        ("non_finite.py",): Result(body=(INPUT_PATH / "basic.py").read_text(encoding="utf-8")),
+        ("clean.py",): Result(body=(INPUT_PATH / "clean.py").read_text(encoding="utf-8")),
+    }
 
-class Item(BaseModel):
-    val: float = 1.0
-"""
-    result = add_math_imports_for_non_finite_literals(code)
-    assert result == code
+    apply_math_imports_to_parse_result(modules)
 
-
-def test_add_math_imports_ignores_comments_and_docstrings() -> None:
-    """Test that inf/nan inside comments, docstrings, and strings do not trigger imports."""
-    code = """# Model handling inf and nan cases
-\"\"\"Docstring discussing nan and inf limits.\"\"\"
-from pydantic import BaseModel, Field
-
-class Item(BaseModel):
-    name: str = Field(description="Handles nan gracefully without inf")
-"""
-    result = add_math_imports_for_non_finite_literals(code)
-    assert "from math import" not in result
-    assert result == code
+    assert_parser_modules(modules, EXPECTED_PATH / "modules")
 
 
-def test_add_math_imports_ignores_field_name_store_context() -> None:
-    """Test that fields named inf or nan do not trigger math imports."""
-    code = """from pydantic import BaseModel
+def test_apply_math_imports_to_parse_result_string() -> None:
+    """Apply imports to a single generated module body."""
+    body = (INPUT_PATH / "basic.py").read_text(encoding="utf-8")
 
-class Item(BaseModel):
-    inf: float = 1.0
-    nan: int = 0
-"""
-    result = add_math_imports_for_non_finite_literals(code)
-    assert "from math import" not in result
-    assert result == code
-
-
-def test_add_math_imports_with_module_docstring_and_future_import() -> None:
-    """Test that math imports are placed after __future__ imports when docstrings are present."""
-    code = """\"\"\"Module documentation.\"\"\"
-
-from __future__ import annotations
-
-from pydantic import BaseModel
-
-class Item(BaseModel):
-    max_val: float = inf
-"""
-    result = add_math_imports_for_non_finite_literals(code)
-    assert "from __future__ import annotations\n\nfrom math import inf" in result
-    ast.parse(result)
-
-
-def test_add_math_imports_existing_imports() -> None:
-    """Test that fully imported math names are not duplicated."""
-    code = """from math import inf, nan
-from pydantic import BaseModel
-
-class Item(BaseModel):
-    max_val: float = inf
-    missing: float = nan
-"""
-    result = add_math_imports_for_non_finite_literals(code)
-    assert result.count("from math import") == 1
-    assert result == code
-
-
-def test_add_math_imports_existing_partial_import() -> None:
-    """Test that missing non-finite names are imported alongside existing imports."""
-    code = """from math import inf
-from pydantic import BaseModel
-
-class Item(BaseModel):
-    max_val: float = inf
-    missing: float = nan
-"""
-    result = add_math_imports_for_non_finite_literals(code)
-    assert "from math import nan" in result
-    assert "from math import inf" in result
-    assert "from math import inf, nan" not in result
-
-
-def test_apply_math_imports_to_parse_result_str() -> None:
-    """Test applying math imports to a single string parse result."""
-    code = "val: float = inf\n"
-    result = apply_math_imports_to_parse_result(code)
-    assert isinstance(result, str)
-    assert result.startswith("from math import inf\n")
-
-
-def test_apply_math_imports_to_parse_result_dict() -> None:
-    """Test applying math imports across module dictionary results."""
-    item1 = MagicMock()
-    item1.body = "val: float = nan\n"
-    item2 = MagicMock()
-    item2.body = "name: str = 'clean'\n"
-
-    result_dict = {("mod1",): item1, ("mod2",): item2}
-    result = apply_math_imports_to_parse_result(result_dict)
-
-    assert isinstance(result, dict)
-    assert result["mod1",].body.startswith("from math import nan\n")
-    assert result["mod2",].body == "name: str = 'clean'\n"
+    assert_output(apply_math_imports_to_parse_result(body), EXPECTED_PATH / "basic.py")

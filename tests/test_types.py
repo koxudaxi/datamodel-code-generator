@@ -377,7 +377,7 @@ def test_add_math_imports_inserts_after_generated_header() -> None:
     body = "# generated\nfrom __future__ import annotations\n\nvalue = inf\n"
 
     assert add_math_imports_for_non_finite_literals(body) == (
-        "# generated\nfrom __future__ import annotations\n\nfrom math import inf\nvalue = inf"
+        "# generated\nfrom __future__ import annotations\n\nfrom math import inf\nvalue = inf\n"
     )
 
 
