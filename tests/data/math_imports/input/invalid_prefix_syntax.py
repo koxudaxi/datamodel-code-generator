@@ -1,3 +1,0 @@
-value = inf
-if True:
-    ?

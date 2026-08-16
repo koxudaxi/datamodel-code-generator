@@ -1,3 +1,0 @@
-from math import inf
-value = inf
-(

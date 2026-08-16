@@ -1,1 +1,0 @@
-'from math import nan\r\nfrom math import inf\r\n\r\ntype Alias = tuple[inf, nan]\r\n\r\n'

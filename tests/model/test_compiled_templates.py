@@ -107,7 +107,7 @@ def _field(*, name: str = "value", type_hint: str = "str") -> SimpleNamespace:
     return SimpleNamespace(
         name=name,
         key=name,
-        default="'value'",
+        default="value",
         field=None,
         type_hint=type_hint,
         base_type_hint=type_hint,
@@ -120,7 +120,7 @@ def _field(*, name: str = "value", type_hint: str = "str") -> SimpleNamespace:
         has_default_factory_in_field=False,
         required=True,
         use_default_with_required=False,
-        represented_default="None",
+        represented_default="'value'",
         strip_default_none=False,
         data_type=SimpleNamespace(is_optional=False),
         extras={"is_classvar": False},

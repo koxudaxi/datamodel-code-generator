@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, ClassVar
 import pytest
 
 from datamodel_code_generator.imports import IMPORT_ANY, IMPORT_TUPLE
-from datamodel_code_generator.parser._math_imports import add_math_imports_for_non_finite_literals
 from datamodel_code_generator.python_literal import (
     PythonCode,
     _normalize_string,
@@ -370,29 +369,6 @@ def test_python_literal_helpers_render_code_and_tuple_values() -> None:
     assert represent_untrusted_python_value(EvilTuple((EvilInt(1),))) == "(1,)"
     assert represent_untrusted_python_value(EvilDict({"value": EvilInt(1)})) == "{'value': 1}"
     assert represent_untrusted_python_value(EvilSet({EvilInt(1)})) == "{1}"
-
-
-def test_add_math_imports_inserts_after_generated_header() -> None:
-    """Test non-finite math imports are inserted after headers and future imports."""
-    body = "# generated\nfrom __future__ import annotations\n\nvalue = inf\n"
-
-    assert add_math_imports_for_non_finite_literals(body) == (
-        "# generated\nfrom __future__ import annotations\n\nfrom math import inf\nvalue = inf\n"
-    )
-
-
-def test_add_math_imports_keeps_existing_import() -> None:
-    """Test non-finite math imports are not duplicated."""
-    body = "from math import inf, nan\n\nvalue = inf\nother = nan\n"
-
-    assert add_math_imports_for_non_finite_literals(body) == body
-
-
-def test_add_math_imports_ignores_non_literal_matches() -> None:
-    """Test non-finite math imports ignore strings, attributes, and longer names."""
-    body = "label = 'inf'\nvalue = math.nan\nname = infinite\n"
-
-    assert add_math_imports_for_non_finite_literals(body) == body
 
 
 def test_decimal_detection_and_integer_constraint_edges() -> None:

@@ -16,6 +16,7 @@ from tests.conftest import assert_mutable_copy_is_isolated, assert_output
 from tests.main.conftest import (
     BACKEND_GOLDEN_CASES,
     BACKEND_GOLDEN_TARGET_ARGS,
+    DATA_PATH,
     EXPECTED_PROTOBUF_PATH,
     PROTOBUF_DATA_PATH,
     _generated_model,
@@ -171,6 +172,24 @@ def test_main_protobuf_spec_proto2(output_file: Path) -> None:
         extra_args=["--schema-version", "proto2"],
         assert_func=assert_file_content,
         expected_file="spec_proto2.py",
+    )
+
+
+def test_main_protobuf_custom_template_non_finite_raw(output_file: Path) -> None:
+    """Keep non-finite defaults valid in legacy raw custom templates."""
+    run_main_and_assert(
+        input_path=PROTOBUF_DATA_PATH / "spec_proto2.proto",
+        output_path=output_file,
+        input_file_type="protobuf",
+        extra_args=[
+            "--schema-version",
+            "proto2",
+            "--custom-template-dir",
+            str(DATA_PATH / "templates_non_finite_raw"),
+        ],
+        assert_func=assert_file_content,
+        expected_file="custom_template_non_finite_raw.py",
+        force_exec_validation=True,
     )
 
 

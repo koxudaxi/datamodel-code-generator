@@ -31,7 +31,7 @@ from datamodel_code_generator.imports import (
     IMPORT_UNION,
     Import,
 )
-from datamodel_code_generator.python_literal import _normalize_string, represent_python_value
+from datamodel_code_generator.python_literal import _NonFiniteFloat, _normalize_string, represent_python_value
 from datamodel_code_generator.reference import Reference, _BaseModel
 from datamodel_code_generator.types import (
     ANY,
@@ -1223,7 +1223,17 @@ def _set_nested_model_default_factory_order(
             model.__dict__[_NESTED_MODEL_DEFAULT_FACTORY_RECURSIVE_PATHS_KEY] = recursive_paths
 
 
-def _build_environment(loader: Any, *, auto_reload: bool = True) -> Environment:
+def _finalize_custom_template_value(value: Any) -> Any:
+    """Keep parser-provided non-finite floats valid in legacy raw templates."""
+    return repr(value) if isinstance(value, _NonFiniteFloat) else value
+
+
+def _build_environment(
+    loader: Any,
+    *,
+    auto_reload: bool = True,
+    finalize_custom_values: bool = False,
+) -> Environment:
     """Build a Jinja environment with built-in filters."""
     from jinja2 import Environment, select_autoescape  # noqa: PLC0415
 
@@ -1231,6 +1241,7 @@ def _build_environment(loader: Any, *, auto_reload: bool = True) -> Environment:
         loader=loader,
         autoescape=select_autoescape(["html", "xml"]),
         auto_reload=auto_reload,
+        finalize=_finalize_custom_template_value if finalize_custom_values else None,
     )
     env.filters["escape_docstring"] = escape_docstring  # For old custom templates
     env.filters["format_docstring"] = format_docstring
@@ -1257,7 +1268,11 @@ def _get_environment(template_subdir: Path, custom_template_dir: Path | None) ->
     loaders.append(FileSystemLoader(str(TEMPLATE_DIR / template_subdir)))
 
     loader: ChoiceLoader | FileSystemLoader = ChoiceLoader(loaders) if len(loaders) > 1 else loaders[0]
-    return _build_environment(loader, auto_reload=has_custom_loader)
+    return _build_environment(
+        loader,
+        auto_reload=has_custom_loader,
+        finalize_custom_values=has_custom_loader,
+    )
 
 
 @lru_cache
@@ -1338,7 +1353,7 @@ def _get_environment_with_absolute_path(absolute_template_dir: Path, builtin_sub
         FileSystemLoader(str(absolute_template_dir)),
         FileSystemLoader(str(TEMPLATE_DIR / builtin_subdir)),
     ]
-    return _build_environment(ChoiceLoader(loaders))
+    return _build_environment(ChoiceLoader(loaders), finalize_custom_values=True)
 
 
 @lru_cache

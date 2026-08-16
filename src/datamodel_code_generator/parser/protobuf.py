@@ -19,8 +19,8 @@ from warnings import warn
 from typing_extensions import Unpack
 
 from datamodel_code_generator import Error, ProtobufVersion, SchemaParseError, VersionMode
-from datamodel_code_generator.parser._math_imports import apply_math_imports_to_parse_result
 from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+from datamodel_code_generator.python_literal import _safe_non_finite_float
 from datamodel_code_generator.util import record_watch_dependency
 
 if TYPE_CHECKING:
@@ -652,7 +652,7 @@ class _ProtobufDescriptorConverter:
 
             return text_encoding.CUnescape(value)
         if field.type in {TYPE_DOUBLE, TYPE_FLOAT}:
-            return float(value)
+            return _safe_non_finite_float(float(value))
         if field.type in {
             TYPE_INT32,
             TYPE_INT64,
@@ -685,10 +685,6 @@ class ProtobufParser(JsonSchemaParser):
     ) -> None:
         """Initialize the Protobuf parser with JSON Schema parser configuration."""
         super().__init__(source=source, config=config, **options)
-
-    def parse(self, *args: Any, **kwargs: Any) -> str | dict[tuple[str, ...], Any]:
-        """Parse Protocol Buffers schemas and add imports for non-finite defaults."""
-        return apply_math_imports_to_parse_result(super().parse(*args, **kwargs))
 
     def _compile_descriptor_set(self) -> tuple[Any, frozenset[str]]:
         protoc, well_known_include = _load_grpc_tools()

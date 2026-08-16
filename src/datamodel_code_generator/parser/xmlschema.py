@@ -26,7 +26,6 @@ from datamodel_code_generator._format_types import DatetimeClassType
 from datamodel_code_generator.enums import VersionMode, XMLSchemaVersion
 from datamodel_code_generator.parser import _xmlschema_literals
 from datamodel_code_generator.parser._convert_common import _copy_schema, _namespace_name, _unique_name
-from datamodel_code_generator.parser._math_imports import apply_math_imports_to_parse_result
 from datamodel_code_generator.parser._xmlschema_detection import (
     XML_SCHEMA_NAMESPACE,
     XML_SCHEMA_TAG,
@@ -1547,10 +1546,6 @@ class XMLSchemaParser(JsonSchemaParser):
                 config_updates: dict[str, Any] = {"target_datetime_class": DatetimeClassType.Awaredatetime}
                 config = config.model_copy(update=config_updates)
         super().__init__(source=source, config=config, **options)
-
-    def parse(self, *args: Any, **kwargs: Any) -> str | dict[tuple[str, ...], Any]:
-        """Parse XML Schema and add imports for non-finite float literals."""
-        return apply_math_imports_to_parse_result(super().parse(*args, **kwargs))
 
     def _source_from_xml_path(self, path: Path) -> Source:
         relative_path = path.relative_to(self.base_path)

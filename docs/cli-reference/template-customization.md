@@ -979,7 +979,7 @@ to the templates.
         {%- if field.required %}
         {{ field.name }}: {{ field.type_hint }}
         {%- else %}
-        {{ field.name }}: {{ field.type_hint }} = {{ field.default }}
+        {{ field.name }}: {{ field.type_hint }} = {{ field.represented_default }}
         {%- endif %}
         {%- if field.docstring %}
         """

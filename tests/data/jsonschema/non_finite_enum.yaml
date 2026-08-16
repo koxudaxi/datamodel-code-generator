@@ -1,0 +1,6 @@
+title: NonFiniteEnum
+type: number
+enum:
+  - .inf
+  - -.inf
+  - .nan

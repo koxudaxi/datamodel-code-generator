@@ -6,10 +6,11 @@ import contextlib
 import datetime as datetime_module
 import re
 from decimal import Decimal
-from math import inf, isfinite, nan
+from math import isfinite
 from typing import Any
 
 from datamodel_code_generator.imports import Import
+from datamodel_code_generator.python_literal import _safe_non_finite_float
 
 XML_DATE_PATTERN = re.compile(r"^(?P<date>-?\d{4,}-\d{2}-\d{2})(?:Z|[+-]\d{2}:\d{2})?$")
 DAY_TIME_DURATION_PATTERN = re.compile(
@@ -49,16 +50,14 @@ def _safe_float(value: str) -> float | None:
         number = float(value)
     except ValueError:
         return None
-    if isfinite(number):
-        return number
     match value:
         case "INF" | "+INF":
-            return inf
+            return _safe_non_finite_float(number)
         case "-INF":
-            return -inf
+            return _safe_non_finite_float(number)
         case "NaN":
-            return nan
-    return None
+            return _safe_non_finite_float(number)
+    return number if isfinite(number) else None
 
 
 def _safe_bool(value: str) -> bool | None:

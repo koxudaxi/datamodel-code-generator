@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import cached_property, lru_cache
+from math import isnan
 from typing import TYPE_CHECKING, Any, ClassVar, Optional
 
 from datamodel_code_generator.imports import IMPORT_ANY, IMPORT_ENUM, IMPORT_INT_ENUM, IMPORT_STR_ENUM, Import
@@ -26,6 +27,7 @@ _FLOAT: str = "float"
 _BYTES: str = "bytes"
 _STR: str = "str"
 _JSON_NUMBER_KEY = object()
+_JSON_NAN_KEY = object()
 
 escape_characters = str.maketrans({
     "\u0000": r"\x00",  # Null byte
@@ -105,7 +107,7 @@ def _json_value_key(value: Any) -> tuple[object, Any] | None:
     if isinstance(value, bool):
         return bool, value
     if isinstance(value, (int, float)):
-        return _JSON_NUMBER_KEY, value
+        return _JSON_NUMBER_KEY, _JSON_NAN_KEY if isinstance(value, float) and isnan(value) else value
     try:
         hash(value)
     except TypeError:

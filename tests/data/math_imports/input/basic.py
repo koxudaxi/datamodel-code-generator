@@ -1,2 +1,0 @@
-value = inf
-other = nan

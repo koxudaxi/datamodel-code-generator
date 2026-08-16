@@ -2,21 +2,17 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 import pytest
 
 from datamodel_code_generator.parser import _xmlschema_literals
-from datamodel_code_generator.parser.base import Result
-from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
 from datamodel_code_generator.parser.xmlschema import (
     _XMLSCHEMA_LITERAL_REEXPORTS,
     DAY_TIME_DURATION_PATTERN,
     IMPORT_DATETIME_MODULE,
     XML_DATE_PATTERN,
     XSD_WHITESPACE_CHARS,
-    XMLSchemaParser,
     _collect_python_expression_imports,
     _datetime_expression,
     _normalize_timezone,
@@ -211,40 +207,3 @@ def test_collect_python_expression_imports_from_dict_values() -> None:
 
     assert expression is not None
     assert _collect_python_expression_imports({"eventDate": expression}) == expression.imports
-
-
-@pytest.mark.allow_direct_assert
-def test_parse_adds_non_finite_float_imports_to_module_results(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Add math imports for non-finite defaults in modular parser results."""
-    modules = {
-        ("models.py",): Result(body="class Model:\n    value: float = -inf"),
-        ("other.py",): Result(body="class Other:\n    value: float = nan"),
-        ("bounds.py",): Result(
-            body=(
-                "from pydantic import BaseModel, confloat\n"
-                "\n"
-                "\n"
-                "class Bounds(BaseModel):\n"
-                "    value: confloat(ge=-inf, lt=inf) | None = None"
-            )
-        ),
-    }
-
-    def parse(_self: JsonSchemaParser, *_args: Any, **_kwargs: Any) -> dict[tuple[str, ...], Result]:
-        return modules
-
-    monkeypatch.setattr(JsonSchemaParser, "parse", parse)
-
-    result = XMLSchemaParser(Path("schema.xsd")).parse()
-
-    assert result is modules
-    assert modules["bounds.py",].body == (
-        "from math import inf\n"
-        "from pydantic import BaseModel, confloat\n"
-        "\n"
-        "\n"
-        "class Bounds(BaseModel):\n"
-        "    value: confloat(ge=-inf, lt=inf) | None = None"
-    )
-    assert modules["models.py",].body == "from math import inf\nclass Model:\n    value: float = -inf"
-    assert modules["other.py",].body == "from math import nan\nclass Other:\n    value: float = nan"
