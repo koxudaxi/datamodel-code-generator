@@ -153,10 +153,14 @@ def _get_required_non_finite_imports_from_tree(tree: ast.Module) -> int:  # noqa
                 if node.value is not None:
                     visit(node.value)
                 visit(node.target)
-            case ast.AugAssign(target=ast.Name()):
-                resolve(_NON_FINITE_NAMES.get(node.target.id, 0))
+            case ast.AugAssign():
+                if not isinstance(target := node.target, ast.Name):
+                    visit(target)
+                    visit(node.value)
+                    return
+                resolve(_NON_FINITE_NAMES.get(target.id, 0))
                 visit(node.value)
-                bind(node.target.id)
+                bind(target.id)
             case ast.Import():
                 for alias in node.names:
                     bind(alias.asname or alias.name.partition(".")[0])

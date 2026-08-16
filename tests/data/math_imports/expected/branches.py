@@ -4,6 +4,7 @@ if condition:
 else:
     from math import nan
 conditional = inf
+holder.inf += nan
 
 
 @nan
