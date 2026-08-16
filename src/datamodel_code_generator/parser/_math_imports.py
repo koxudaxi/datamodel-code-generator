@@ -26,23 +26,23 @@ def _function_scope(arguments: ast.arguments, body: list[ast.stmt], kind: str = 
     def collect(node: ast.AST) -> None:  # noqa: PLR0911, PLR0912
         nonlocal bound, global_names, nonlocal_names
         match node:
-            case ast.Global(names=names):
-                for name in names:
+            case ast.Global(names=global_declarations):
+                for name in global_declarations:
                     global_names |= _NON_FINITE_NAMES.get(name, 0)
                 return
-            case ast.Nonlocal(names=names):
-                for name in names:
+            case ast.Nonlocal(names=nonlocal_declarations):
+                for name in nonlocal_declarations:
                     nonlocal_names |= _NON_FINITE_NAMES.get(name, 0)
                 return
             case ast.Name(id=name, ctx=(ast.Store() | ast.Del())):
                 bound |= _NON_FINITE_NAMES.get(name, 0)
                 return
-            case ast.Import(names=names):
-                for alias in names:
+            case ast.Import(names=import_aliases):
+                for alias in import_aliases:
                     bound |= _NON_FINITE_NAMES.get(alias.asname or alias.name.partition(".")[0], 0)
                 return
-            case ast.ImportFrom(names=names):
-                for alias in names:
+            case ast.ImportFrom(names=from_import_aliases):
+                for alias in from_import_aliases:
                     if alias.name != "*":
                         bound |= _NON_FINITE_NAMES.get(alias.asname or alias.name, 0)
                 return
@@ -128,24 +128,24 @@ def _get_required_non_finite_imports_from_tree(tree: ast.Module) -> int:  # noqa
                 resolve(_NON_FINITE_NAMES.get(name, 0))
             case ast.Name(id=name, ctx=(ast.Store() | ast.Del())):
                 bind(name)
-            case ast.Assign(value=value, targets=targets):
-                visit(value)
-                for target in targets:
+            case ast.Assign(value=assigned_value, targets=assignment_targets):
+                visit(assigned_value)
+                for target in assignment_targets:
                     visit(target)
-            case ast.AnnAssign(annotation=annotation, value=value, target=target):
-                visit(annotation)
-                if value is not None:
-                    visit(value)
-                visit(target)
-            case ast.AugAssign(target=ast.Name(id=name), value=value):
+            case ast.AnnAssign(annotation=assigned_annotation, value=annotated_value, target=annotated_target):
+                visit(assigned_annotation)
+                if annotated_value is not None:
+                    visit(annotated_value)
+                visit(annotated_target)
+            case ast.AugAssign(target=ast.Name(id=name), value=augmented_value):
                 resolve(_NON_FINITE_NAMES.get(name, 0))
-                visit(value)
+                visit(augmented_value)
                 bind(name)
-            case ast.Import(names=names):
-                for alias in names:
+            case ast.Import(names=import_aliases):
+                for alias in import_aliases:
                     bind(alias.asname or alias.name.partition(".")[0])
-            case ast.ImportFrom(module=module, names=names):
-                for alias in names:
+            case ast.ImportFrom(module=module, names=from_import_aliases):
+                for alias in from_import_aliases:
                     if alias.name == "*" and module == "math":
                         scopes[-1].bound |= _INF | _NAN
                     elif alias.name != "*":
