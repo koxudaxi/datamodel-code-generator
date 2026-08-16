@@ -378,6 +378,8 @@ def test_main_xmlschema_type_alias_with_field_description_py312(output_file: Pat
             "--target-python-version",
             "3.12",
             "--use-field-description",
+            "--formatters",
+            "builtin",
         ],
     )
 
