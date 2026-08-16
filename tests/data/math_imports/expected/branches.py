@@ -26,6 +26,10 @@ async def examples(
         raise RuntimeError
     except RuntimeError as nan:
         pass
+    try:
+        raise ValueError
+    except ValueError:
+        pass
     def inf():
         pass
     class nan:

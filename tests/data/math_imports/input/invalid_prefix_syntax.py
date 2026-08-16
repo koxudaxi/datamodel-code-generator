@@ -1,0 +1,3 @@
+value = inf
+if True:
+    ?

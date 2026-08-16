@@ -17,39 +17,41 @@ class _Scope:
     bound: int = 0
     global_names: int = 0
     nonlocal_names: int = 0
+    static_bound: int = 0
 
 
-def _function_scope(arguments: ast.arguments, body: list[ast.stmt], kind: str = "function") -> _Scope:
-    """Collect only non-finite bindings local to a function-like scope."""
+def _body_scope_bindings(body: list[ast.stmt]) -> tuple[int, int, int]:
+    """Collect non-finite bindings declared directly in a lexical scope body."""
     bound = global_names = nonlocal_names = 0
 
     def collect(node: ast.AST) -> None:  # noqa: PLR0911, PLR0912
         nonlocal bound, global_names, nonlocal_names
         match node:
-            case ast.Global(names=global_declarations):
-                for name in global_declarations:
+            case ast.Global():
+                for name in node.names:
                     global_names |= _NON_FINITE_NAMES.get(name, 0)
                 return
-            case ast.Nonlocal(names=nonlocal_declarations):
-                for name in nonlocal_declarations:
+            case ast.Nonlocal():
+                for name in node.names:
                     nonlocal_names |= _NON_FINITE_NAMES.get(name, 0)
                 return
-            case ast.Name(id=name, ctx=(ast.Store() | ast.Del())):
-                bound |= _NON_FINITE_NAMES.get(name, 0)
+            case ast.Name(ctx=(ast.Store() | ast.Del())):
+                bound |= _NON_FINITE_NAMES.get(node.id, 0)
                 return
-            case ast.Import(names=import_aliases):
-                for alias in import_aliases:
+            case ast.Import():
+                for alias in node.names:
                     bound |= _NON_FINITE_NAMES.get(alias.asname or alias.name.partition(".")[0], 0)
                 return
-            case ast.ImportFrom(names=from_import_aliases):
-                for alias in from_import_aliases:
+            case ast.ImportFrom():
+                for alias in node.names:
                     if alias.name != "*":
                         bound |= _NON_FINITE_NAMES.get(alias.asname or alias.name, 0)
                 return
-            case ast.ExceptHandler(name=name):
-                bound |= _NON_FINITE_NAMES.get(name, 0)
-            case ast.FunctionDef(name=name) | ast.AsyncFunctionDef(name=name) | ast.ClassDef(name=name):
-                bound |= _NON_FINITE_NAMES.get(name, 0)
+            case ast.ExceptHandler():
+                if node.name is not None:
+                    bound |= _NON_FINITE_NAMES.get(node.name, 0)
+            case ast.FunctionDef() | ast.AsyncFunctionDef() | ast.ClassDef():
+                bound |= _NON_FINITE_NAMES.get(node.name, 0)
                 return
             case ast.Lambda() | ast.ListComp() | ast.SetComp() | ast.DictComp() | ast.GeneratorExp():
                 return
@@ -58,15 +60,21 @@ def _function_scope(arguments: ast.arguments, body: list[ast.stmt], kind: str = 
         for child in ast.iter_child_nodes(node):
             collect(child)
 
+    for statement in body:
+        collect(statement)
+    return bound & ~(global_names | nonlocal_names), global_names, nonlocal_names
+
+
+def _function_scope(arguments: ast.arguments, body: list[ast.stmt], kind: str = "function") -> _Scope:
+    """Collect only non-finite bindings local to a function-like scope."""
+    bound, global_names, nonlocal_names = _body_scope_bindings(body)
     for argument in (*arguments.posonlyargs, *arguments.args, *arguments.kwonlyargs):
         bound |= _NON_FINITE_NAMES.get(argument.arg, 0)
     if arguments.vararg is not None:
         bound |= _NON_FINITE_NAMES.get(arguments.vararg.arg, 0)
     if arguments.kwarg is not None:
         bound |= _NON_FINITE_NAMES.get(arguments.kwarg.arg, 0)
-    for statement in body:
-        collect(statement)
-    return _Scope(kind, bound & ~(global_names | nonlocal_names), global_names, nonlocal_names)
+    return _Scope(kind, bound, global_names, nonlocal_names)
 
 
 def _get_required_non_finite_imports_from_tree(tree: ast.Module) -> int:  # noqa: PLR0915
@@ -87,8 +95,16 @@ def _get_required_non_finite_imports_from_tree(tree: ast.Module) -> int:  # noqa
                         return
                     class_visible = False
                 case "class":
+                    if class_visible and names & scope.global_names:
+                        missing |= names & ~scopes[0].bound
+                        return
                     if class_visible and names & scope.bound:
                         return
+                    if class_visible and names & scope.static_bound:
+                        missing |= names & ~scopes[0].bound
+                        return
+                    # A nested class cannot resolve names through an outer class body.
+                    class_visible = False
                 case "module":  # pragma: no branch - module lookup always returns
                     missing |= names & ~scope.bound
                     return
@@ -122,82 +138,78 @@ def _get_required_non_finite_imports_from_tree(tree: ast.Module) -> int:  # noqa
             visit(value)
         scopes.pop()
 
-    def visit(node: ast.AST) -> None:  # noqa: PLR0912, PLR0914, PLR0915
+    def visit(node: ast.AST) -> None:  # noqa: PLR0912, PLR0915
         match node:
-            case ast.Name(id=name, ctx=ast.Load()):
-                resolve(_NON_FINITE_NAMES.get(name, 0))
-            case ast.Name(id=name, ctx=(ast.Store() | ast.Del())):
-                bind(name)
-            case ast.Assign(value=assigned_value, targets=assignment_targets):
-                visit(assigned_value)
-                for target in assignment_targets:
+            case ast.Name(ctx=ast.Load()):
+                resolve(_NON_FINITE_NAMES.get(node.id, 0))
+            case ast.Name(ctx=(ast.Store() | ast.Del())):
+                bind(node.id)
+            case ast.Assign():
+                visit(node.value)
+                for target in node.targets:
                     visit(target)
-            case ast.AnnAssign(annotation=assigned_annotation, value=annotated_value, target=annotated_target):
-                visit(assigned_annotation)
-                if annotated_value is not None:
-                    visit(annotated_value)
-                visit(annotated_target)
-            case ast.AugAssign(target=ast.Name(id=name), value=augmented_value):
-                resolve(_NON_FINITE_NAMES.get(name, 0))
-                visit(augmented_value)
-                bind(name)
-            case ast.Import(names=import_aliases):
-                for alias in import_aliases:
+            case ast.AnnAssign():
+                visit(node.annotation)
+                if node.value is not None:
+                    visit(node.value)
+                visit(node.target)
+            case ast.AugAssign(target=ast.Name()):
+                resolve(_NON_FINITE_NAMES.get(node.target.id, 0))
+                visit(node.value)
+                bind(node.target.id)
+            case ast.Import():
+                for alias in node.names:
                     bind(alias.asname or alias.name.partition(".")[0])
-            case ast.ImportFrom(module=module, names=from_import_aliases):
-                for alias in from_import_aliases:
-                    if alias.name == "*" and module == "math":
+            case ast.ImportFrom():
+                for alias in node.names:
+                    if alias.name == "*" and node.module == "math":
                         scopes[-1].bound |= _INF | _NAN
                     elif alias.name != "*":
                         bind(alias.asname or alias.name)
-            case ast.If(test=test, body=body, orelse=orelse):
-                visit(test)
+            case ast.If():
+                visit(node.test)
                 bound = scopes[-1].bound
-                for statement in body:
+                for statement in node.body:
                     visit(statement)
                 scopes[-1].bound = bound
-                for statement in orelse:
+                for statement in node.orelse:
                     visit(statement)
                 scopes[-1].bound = bound
-            case (
-                ast.FunctionDef(name=name, args=arguments, body=body, decorator_list=decorators, returns=returns)
-                | ast.AsyncFunctionDef(name=name, args=arguments, body=body, decorator_list=decorators, returns=returns)
-            ):
-                for decorator in decorators:
+            case ast.FunctionDef() | ast.AsyncFunctionDef():
+                for decorator in node.decorator_list:
                     visit(decorator)
-                visit_arguments(arguments)
-                if returns is not None:
-                    visit(returns)
-                bind(name)
-                scopes.append(_function_scope(arguments, body))
-                for statement in body:
+                visit_arguments(node.args)
+                if node.returns is not None:
+                    visit(node.returns)
+                bind(node.name)
+                scopes.append(_function_scope(node.args, node.body))
+                for statement in node.body:
                     visit(statement)
                 scopes.pop()
-            case ast.Lambda(args=arguments, body=body):
-                visit_arguments(arguments)
-                scopes.append(_function_scope(arguments, [], "lambda"))
-                visit(body)
+            case ast.Lambda():
+                visit_arguments(node.args)
+                scopes.append(_function_scope(node.args, [], "lambda"))
+                visit(node.body)
                 scopes.pop()
-            case ast.ClassDef(name=name, bases=bases, keywords=keywords, body=body, decorator_list=decorators):
-                for decorator in decorators:
+            case ast.ClassDef():
+                for decorator in node.decorator_list:
                     visit(decorator)
-                for base in bases:
+                for base in node.bases:
                     visit(base)
-                for keyword in keywords:
+                for keyword in node.keywords:
                     visit(keyword.value)
-                bind(name)
-                scopes.append(_Scope("class"))
-                for statement in body:
+                bind(node.name)
+                static_bound = static_global_names = 0
+                if any(scope.kind in {"function", "lambda"} for scope in scopes):
+                    static_bound, static_global_names, _ = _body_scope_bindings(node.body)
+                scopes.append(_Scope("class", global_names=static_global_names, static_bound=static_bound))
+                for statement in node.body:
                     visit(statement)
                 scopes.pop()
-            case (
-                ast.ListComp(generators=generators, elt=element)
-                | ast.SetComp(generators=generators, elt=element)
-                | ast.GeneratorExp(generators=generators, elt=element)
-            ):
-                visit_comprehension(generators, (element,))
-            case ast.DictComp(generators=generators, key=key, value=value):
-                visit_comprehension(generators, (key, value))
+            case ast.ListComp() | ast.SetComp() | ast.GeneratorExp():
+                visit_comprehension(node.generators, (node.elt,))
+            case ast.DictComp():
+                visit_comprehension(node.generators, (node.key, node.value))
             case _:
                 for child in ast.iter_child_nodes(node):
                     visit(child)
@@ -211,23 +223,25 @@ def _pep695_type_alias_loads(body: str, placeholder_body: str) -> dict[int, int]
     import tokenize  # noqa: PLC0415
     from io import StringIO  # noqa: PLC0415
 
-    lines = body.splitlines(keepends=True)
-    placeholder_lines = placeholder_body.splitlines(keepends=True)
+    lines = body.splitlines()
+    placeholder_lines = placeholder_body.splitlines()
     names_by_line: dict[int, int] = {}
     line_index = 0
     while line_index < len(lines):
-        if lines[line_index] == placeholder_lines[line_index]:
+        if line_index < len(placeholder_lines) and lines[line_index] == placeholder_lines[line_index]:
             line_index += 1
             continue
         start_line = line_index
         source_lines: list[str] = []
-        while line_index < len(lines) and lines[line_index] != placeholder_lines[line_index]:
+        while line_index < len(lines) and (
+            line_index >= len(placeholder_lines) or lines[line_index] != placeholder_lines[line_index]
+        ):
             source_lines.append(lines[line_index])
             line_index += 1
         right_hand_side = False
         previous = ""
         try:
-            for token in tokenize.generate_tokens(StringIO("".join(source_lines)).readline):
+            for token in tokenize.generate_tokens(StringIO("\n".join(source_lines)).readline):
                 match token.type:
                     case tokenize.OP if token.string == "=":
                         right_hand_side = True
@@ -252,24 +266,60 @@ def _restore_pep695_type_alias_loads(tree: ast.Module, names_by_line: dict[int, 
         )
 
 
+def _parse_prefix(body: str) -> tuple[ast.Module | None, int]:
+    """Parse a source prefix and return its error line when it is incomplete."""
+    try:
+        return ast.parse(body), 0
+    except SyntaxError as syntax_error:
+        return None, syntax_error.lineno or 1
+
+
+def _parse_valid_prefix(body: str, syntax_error: SyntaxError) -> ast.Module | None:
+    """Return the largest prefix before a syntax error that still parses."""
+    lines = body.splitlines(keepends=True)
+    end_line = min((syntax_error.lineno or 1) - 1, len(lines))
+    while end_line:
+        tree, error_line = _parse_prefix("".join(lines[:end_line]))
+        if tree is not None:
+            return tree
+        end_line = min(end_line - 1, error_line - 1)
+    return None
+
+
 def _get_required_non_finite_imports(body: str) -> tuple[int, ast.Module | None]:
     if "inf" not in body and "nan" not in body:
         return 0, None
     try:
         tree = ast.parse(body)
-    except SyntaxError:
+    except SyntaxError as syntax_error:
+        prefix_tree = _parse_valid_prefix(body, syntax_error)
+        source_lines = body.splitlines()
+        syntax_line_index = (syntax_error.lineno or 1) - 1
+        syntax_line = "".join(source_lines[syntax_line_index : syntax_line_index + 1])
+        if (
+            prefix_tree is not None
+            and (missing_names := _get_required_non_finite_imports_from_tree(prefix_tree))
+            and not syntax_line.lstrip().startswith("type ")
+        ):
+            return missing_names, prefix_tree
+
         from datamodel_code_generator._builtin_formatter import (  # noqa: PLC0415
             _replace_pep695_type_aliases_with_placeholders,
         )
 
-        if (placeholder_body := _replace_pep695_type_aliases_with_placeholders(body)).splitlines() == body.splitlines():
-            return 0, None
-        try:
-            tree = ast.parse(placeholder_body)
-        except SyntaxError:  # pragma: no cover - unsupported target syntax is left untouched
-            return 0, None
-        _restore_pep695_type_alias_loads(tree, _pep695_type_alias_loads(body, placeholder_body))
-        return _get_required_non_finite_imports_from_tree(tree), tree
+        placeholder_body = _replace_pep695_type_aliases_with_placeholders(body)
+        if placeholder_body.splitlines() != body.splitlines():
+            try:
+                tree = ast.parse(placeholder_body)
+            except SyntaxError as placeholder_syntax_error:
+                tree = _parse_valid_prefix(placeholder_body, placeholder_syntax_error)
+                if tree is not None:
+                    _restore_pep695_type_alias_loads(tree, _pep695_type_alias_loads(body, placeholder_body))
+                    return _get_required_non_finite_imports_from_tree(tree), tree
+            else:
+                _restore_pep695_type_alias_loads(tree, _pep695_type_alias_loads(body, placeholder_body))
+                return _get_required_non_finite_imports_from_tree(tree), tree
+        return 0, None
     return _get_required_non_finite_imports_from_tree(tree), tree
 
 

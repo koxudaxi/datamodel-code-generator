@@ -23,18 +23,27 @@ EXPECTED_PATH = DATA_PATH / "expected"
     [
         "basic",
         "branches",
+        "class_in_function_closure",
+        "class_in_function_global_binding",
+        "class_in_function_static_binding",
         "clean",
         "existing_import",
+        "invalid_empty_prefix",
         "nested_scope",
+        "nested_class",
         "no_match",
         "invalid_syntax",
+        "invalid_prefix_syntax",
         "scope_resolution",
         "function_annotation",
         "header_boundaries",
+        "pep695_empty_prefix",
+        "pep695_existing_import",
+        "pep695_invalid_syntax",
         "pep695_literal",
         "pep695_local_name",
+        "pep695_prefix_load",
         "pep695_type_alias_name",
-        "pep695_existing_import",
     ],
 )
 def test_add_math_imports_for_non_finite_literals(case: str) -> None:
@@ -61,3 +70,10 @@ def test_apply_math_imports_to_parse_result_string() -> None:
     body = (INPUT_PATH / "basic.py").read_text(encoding="utf-8")
 
     assert_output(apply_math_imports_to_parse_result(body), EXPECTED_PATH / "basic.py")
+
+
+def test_add_math_imports_pep695_preserves_crlf_and_trailing_blank_line() -> None:
+    """Keep CRLF output exact while resolving PEP 695 aliases on Python 3.11."""
+    body = f"{(INPUT_PATH / 'pep695_crlf.py').read_text(encoding='utf-8')}\n".replace("\n", "\r\n")
+
+    assert_output(f"{add_math_imports_for_non_finite_literals(body)!r}\n", EXPECTED_PATH / "pep695_crlf.txt")
