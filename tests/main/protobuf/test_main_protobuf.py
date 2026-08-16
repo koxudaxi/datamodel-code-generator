@@ -8,10 +8,11 @@ from typing import TYPE_CHECKING, Any, cast
 
 import black
 import pytest
+import yaml
 
 from datamodel_code_generator import DataModelType, Error, InputFileType, generate, infer_input_type
 from datamodel_code_generator.__main__ import Exit
-from datamodel_code_generator.parser.protobuf import WELL_KNOWN_SCHEMAS, convert_protobuf_schema_data
+from datamodel_code_generator.parser.protobuf import WELL_KNOWN_SCHEMAS, ProtobufParser, convert_protobuf_schema_data
 from tests.conftest import assert_mutable_copy_is_isolated, assert_output
 from tests.main.conftest import (
     BACKEND_GOLDEN_CASES,
@@ -149,6 +150,39 @@ def test_convert_protobuf_schema_data_isolates_well_known_schema_templates() -> 
     finally:
         WELL_KNOWN_SCHEMAS.clear()
         WELL_KNOWN_SCHEMAS.update(original_templates)
+
+
+def test_convert_protobuf_schema_data_preserves_yaml_safe_non_finite_defaults() -> None:
+    """Keep public Protocol Buffers conversion results serializable by PyYAML."""
+    proto = (PROTOBUF_DATA_PATH / "spec_proto2.proto").read_text(encoding="utf-8")
+    converted_schemas = (
+        convert_protobuf_schema_data(proto),
+        ProtobufParser(proto).convert_to_json_schema_data(),
+    )
+
+    assert_output(
+        "".join(
+            yaml.safe_dump(
+                [
+                    schema["definitions"]["example__spec__proto2__SpecProto2"]["properties"][field_name]["default"]
+                    for field_name in ("pos_inf", "neg_inf", "not_a_number")
+                ],
+                sort_keys=False,
+            )
+            for schema in converted_schemas
+        ),
+        EXPECTED_PROTOBUF_PATH / "converted_non_finite_defaults.txt",
+    )
+
+
+def test_protobuf_parser_renders_non_finite_defaults() -> None:
+    """Render source-safe non-finite defaults through the internal parser path."""
+    parser = ProtobufParser(DATA_PATH / "parser/protobuf/non_finite_defaults.proto")
+
+    assert_output(
+        f"{parser.parse(format_=False)}\n",
+        DATA_PATH / "expected/parser/protobuf/non_finite_defaults.py",
+    )
 
 
 def test_main_protobuf_spec_proto3(output_file: Path) -> None:

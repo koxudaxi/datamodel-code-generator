@@ -9,7 +9,7 @@ from decimal import Decimal
 from math import isfinite
 from typing import Any
 
-from datamodel_code_generator.imports import IMPORT_DECIMAL, Import
+from datamodel_code_generator.imports import Import
 from datamodel_code_generator.python_literal import _safe_non_finite_float
 
 XML_DATE_PATTERN = re.compile(r"^(?P<date>-?\d{4,}-\d{2}-\d{2})(?:Z|[+-]\d{2}:\d{2})?$")
@@ -35,8 +35,6 @@ class _PythonExpression:
 
 
 def _collect_python_expression_imports(value: Any) -> tuple[Import, ...]:
-    if isinstance(value, Decimal):
-        return (IMPORT_DECIMAL,)
     if isinstance(value, _PythonExpression):
         return value.imports
     if isinstance(value, dict):
@@ -46,7 +44,7 @@ def _collect_python_expression_imports(value: Any) -> tuple[Import, ...]:
     return ()
 
 
-def _safe_float(value: str) -> float | None:
+def _safe_float(value: str, *, source_safe_non_finite: bool = False) -> float | None:
     value = value.strip(XSD_WHITESPACE_CHARS)
     try:
         number = float(value)
@@ -54,11 +52,11 @@ def _safe_float(value: str) -> float | None:
         return None
     match value:
         case "INF" | "+INF":
-            return _safe_non_finite_float(number)
+            return _safe_non_finite_float(number) if source_safe_non_finite else number
         case "-INF":
-            return _safe_non_finite_float(number)
+            return _safe_non_finite_float(number) if source_safe_non_finite else number
         case "NaN":
-            return _safe_non_finite_float(number)
+            return _safe_non_finite_float(number) if source_safe_non_finite else number
     return number if isfinite(number) else None
 
 

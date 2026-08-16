@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Optional
 from datamodel_code_generator.imports import IMPORT_ANY, IMPORT_ENUM, IMPORT_INT_ENUM, IMPORT_STR_ENUM, Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.base import UNDEFINED, BaseClassDataType
+from datamodel_code_generator.python_literal import _semantic_value_text
 from datamodel_code_generator.types import DataType, Types
 
 if TYPE_CHECKING:
@@ -206,7 +207,9 @@ class Enum(DataModel):
             if field.default is None:
                 continue
             member_value = get_raw_enum_member_value(field.default)
-            coerced.setdefault(member_value if isinstance(member_value, str) else str(member_value), field)
+            coerced.setdefault(
+                member_value if isinstance(member_value, str) else _semantic_value_text(member_value), field
+            )
         return coerced
 
     def find_member(self, value: Any, *, coerce_strings: bool = False) -> Member | None:

@@ -384,28 +384,30 @@ class AsyncAPIParser(OpenAPIParser):
                 context = self._schema_context_for_converted_schema(converted_schema, path)
                 return [self._schema(name, converted_schema, context.root_parts, context, parse_as_file=True)]
             case "protobuf":
-                from datamodel_code_generator.parser.protobuf import convert_protobuf_schema_data  # noqa: PLC0415
+                from datamodel_code_generator.parser.protobuf import _convert_protobuf_schema_data  # noqa: PLC0415
 
                 context = self._current_asyncapi_context()
                 return self._iter_converted_schema_schemas(
                     name,
-                    convert_protobuf_schema_data(
+                    _convert_protobuf_schema_data(
                         raw_schema,
                         base_path=context.base_path,
                         encoding=self.encoding,
+                        source_safe_non_finite=True,
                     ),
                     path,
                 )
             case "xmlschema":
-                from datamodel_code_generator.parser.xmlschema import convert_xml_schema_data  # noqa: PLC0415
+                from datamodel_code_generator.parser.xmlschema import _convert_xml_schema_data  # noqa: PLC0415
 
                 context = self._current_asyncapi_context()
                 return self._iter_converted_schema_schemas(
                     name,
-                    convert_xml_schema_data(
+                    _convert_xml_schema_data(
                         raw_schema,
                         base_path=context.base_path,
                         encoding=self.encoding,
+                        source_safe_non_finite=True,
                     ),
                     path,
                     include_root_schema=True,

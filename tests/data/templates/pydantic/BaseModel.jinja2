@@ -9,7 +9,7 @@ class {{ class_name }}({{ base_class }}):{% if comment is defined %}  # {{ comme
     {%- if field.required %}
     {{ field.name }}: {{ field.type_hint }}
     {%- else %}
-    {{ field.name }}: {{ field.type_hint }} = {{ field.represented_default }}
+    {{ field.name }}: {{ field.type_hint }} = {{ field.default }}
     {%- endif %}
     {%- if field.docstring %}
     """

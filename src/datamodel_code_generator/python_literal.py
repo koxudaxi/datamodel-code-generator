@@ -38,13 +38,18 @@ class _NonFiniteFloat(float):
         return "float('inf')" if self > 0 else "float('-inf')"
 
     def __str__(self) -> str:
-        """Retain built-in float text for parser-internal semantic formatting."""
-        return float.__repr__(self)
+        """Render a valid Python expression for templates that stringify values."""
+        return repr(self)
 
 
 def _safe_non_finite_float(value: float) -> float:
     """Preserve regular floats while making non-finite parser values source-safe."""
     return _NonFiniteFloat(value) if not isfinite(value) else value
+
+
+def _semantic_value_text(value: object) -> str:
+    """Return parser-internal text without source-literal replacements."""
+    return repr(float(value)) if isinstance(value, _NonFiniteFloat) else str(value)
 
 
 _INTERNAL_TYPE_EXPRESSION_TOKEN = object()

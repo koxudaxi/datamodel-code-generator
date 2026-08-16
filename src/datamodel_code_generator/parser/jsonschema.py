@@ -90,6 +90,7 @@ from datamodel_code_generator.parser.base import (
     title_to_class_name,
 )
 from datamodel_code_generator.parser.schema_version import get_data_formats
+from datamodel_code_generator.python_literal import _semantic_value_text
 from datamodel_code_generator.reference import (
     SPECIAL_PATH_MARKER,
     ModelType,
@@ -8508,11 +8509,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _get_field_name_from_dict_enum(cls, enum_part: dict[str, Any], index: int) -> str:
         """Extract field name from dict enum value using title, name, or const keys."""
         if enum_part.get("title"):
-            return str(enum_part["title"])
+            return _semantic_value_text(enum_part["title"])
         if enum_part.get("name"):
-            return str(enum_part["name"])
+            return _semantic_value_text(enum_part["name"])
         if "const" in enum_part:
-            return str(enum_part["const"])
+            return _semantic_value_text(enum_part["const"])
         return f"value_{index}"
 
     def parse_enum(  # noqa: PLR0912, PLR0915
@@ -8554,14 +8555,18 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 case _:
                     default = enum_part
             if obj.type == "string" or isinstance(enum_part, str):
-                field_name = enum_names[i] if enum_names and i < len(enum_names) and enum_names[i] else str(enum_part)
+                field_name = (
+                    enum_names[i]
+                    if enum_names and i < len(enum_names) and enum_names[i]
+                    else _semantic_value_text(enum_part)
+                )
             elif enum_names and i < len(enum_names) and enum_names[i]:
                 field_name = enum_names[i]
             elif isinstance(enum_part, dict):
                 field_name = self._get_field_name_from_dict_enum(enum_part, i)
             else:
                 prefix = obj.type if isinstance(obj.type, str) else type(enum_part).__name__
-                field_name = f"{prefix}_{enum_part}"
+                field_name = f"{prefix}_{_semantic_value_text(enum_part)}"
             field_name = self.model_resolver.get_valid_field_name(
                 field_name, excludes=exclude_field_names, model_type=ModelType.ENUM
             )
