@@ -38,6 +38,7 @@ EXPECTED_PATH = DATA_PATH / "expected"
         "function_annotation",
         "header_boundaries",
         "pep695_empty_prefix",
+        "pep695_consecutive_scopes",
         "pep695_existing_import",
         "pep695_invalid_syntax",
         "pep695_literal",

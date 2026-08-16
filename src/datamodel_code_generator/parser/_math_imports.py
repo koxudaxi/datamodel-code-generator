@@ -236,9 +236,11 @@ def _pep695_type_alias_loads(body: str, placeholder_body: str) -> dict[int, int]
             line_index += 1
             continue
         start_line = line_index
-        source_lines: list[str] = []
+        source_lines = [lines[line_index]]
+        line_index += 1
         while line_index < len(lines) and (
-            line_index >= len(placeholder_lines) or lines[line_index] != placeholder_lines[line_index]
+            line_index >= len(placeholder_lines)
+            or (lines[line_index] != placeholder_lines[line_index] and not placeholder_lines[line_index].strip())
         ):
             source_lines.append(lines[line_index])
             line_index += 1
