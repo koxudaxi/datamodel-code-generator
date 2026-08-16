@@ -2,6 +2,11 @@ name: Docs
 
 on:
   pull_request:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/data/release-benchmarks.json'
+      - '.github/workflows/docs.yaml'
   release:
     types: [published]
   workflow_dispatch:
@@ -24,7 +29,7 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]' && secrets.CLOUDFLARE_ACCOUNT_ID || '' }}
 
   build-production:
-    if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'push' || github.event_name == 'release' || github.event_name == 'workflow_dispatch'
     uses: ./.github/workflows/docs-deploy.yaml
     with:
       checkout_ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.sha }}
