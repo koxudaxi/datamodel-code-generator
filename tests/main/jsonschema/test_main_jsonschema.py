@@ -16495,6 +16495,41 @@ def test_main_dataclass_non_finite_number_values(output_file: Path) -> None:
 
 
 @pytest.mark.parametrize(
+    ("output_model_type", "expected_file", "module_name"),
+    [
+        (
+            DataModelType.PydanticV2Dataclass.value,
+            "pydantic_v2_dataclass_non_finite_number_values.py",
+            "generated_pydantic_v2_dataclass_non_finite_number_values",
+        ),
+        (
+            DataModelType.TypingTypedDict.value,
+            "typed_dict_non_finite_number_values.py",
+            "generated_typed_dict_non_finite_number_values",
+        ),
+    ],
+)
+def test_main_jsonschema_non_finite_number_values_remaining_backends(
+    output_model_type: str,
+    expected_file: str,
+    module_name: str,
+    output_file: Path,
+) -> None:
+    """Keep every remaining built-in backend valid for non-finite schemas."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "non_finite_number_values.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", output_model_type],
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        force_exec_validation=True,
+        importable_module_name=module_name,
+        importable_module_attribute="Model",
+    )
+
+
+@pytest.mark.parametrize(
     ("output_model", "module_name", "expected_file"),
     [
         (

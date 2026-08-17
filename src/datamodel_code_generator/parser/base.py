@@ -89,6 +89,7 @@ from datamodel_code_generator.parser._graph import stable_toposort
 from datamodel_code_generator.parser._scc import find_circular_sccs, strongly_connected_components
 from datamodel_code_generator.parser.generation import GenerationIndex, GenerationStore, set_model_base_classes
 from datamodel_code_generator.parser.schema_version import SchemaFeaturesT
+from datamodel_code_generator.python_literal import _semantic_value_text
 from datamodel_code_generator.reference import ModelResolver, ModelType, Reference, split_module_name
 from datamodel_code_generator.types import ANY, NONE, DataType, DataTypeManager
 from datamodel_code_generator.util import camel_to_snake, record_watch_dependency
@@ -2774,7 +2775,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     if member and member.field.name:
                         enum_member_literals.append((enum_class_name, member.field.name))
                     else:  # pragma: no cover
-                        enum_member_literals.append((enum_class_name, str(value)))
+                        enum_member_literals.append((enum_class_name, _semantic_value_text(value)))
                 data_type = self.data_type(enum_member_literals=enum_member_literals)
                 if enum_source.module_path != discriminator_model.module_path:  # pragma: no cover
                     imports.append(Import.from_full_path(enum_source.name))

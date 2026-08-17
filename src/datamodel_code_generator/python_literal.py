@@ -26,6 +26,32 @@ class PythonCode(str):  # noqa: FURB189 - must behave as str for regex consumers
         return self.code
 
 
+class _NonFiniteFloat(float):
+    """A parser-owned non-finite float with a source-safe representation."""
+
+    __slots__ = ()
+
+    def __repr__(self) -> str:
+        """Render a valid Python expression without changing numeric semantics."""
+        if isnan(self):
+            return "float('nan')"
+        return "float('inf')" if self > 0 else "float('-inf')"
+
+    def __str__(self) -> str:
+        """Render a valid Python expression for templates that stringify values."""
+        return repr(self)
+
+
+def _safe_non_finite_float(value: float) -> float:
+    """Preserve regular floats while making non-finite parser values source-safe."""
+    return _NonFiniteFloat(value) if not isfinite(value) else value
+
+
+def _semantic_value_text(value: object) -> str:
+    """Return parser-internal text without source-literal replacements."""
+    return repr(float(value)) if isinstance(value, _NonFiniteFloat) else str(value)
+
+
 _INTERNAL_TYPE_EXPRESSION_TOKEN = object()
 _INTERNAL_TYPE_EXPRESSION_ERROR = "internal type expressions must be created by the parser"
 

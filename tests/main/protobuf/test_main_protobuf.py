@@ -8,14 +8,16 @@ from typing import TYPE_CHECKING, Any, cast
 
 import black
 import pytest
+import yaml
 
 from datamodel_code_generator import DataModelType, Error, InputFileType, generate, infer_input_type
 from datamodel_code_generator.__main__ import Exit
-from datamodel_code_generator.parser.protobuf import WELL_KNOWN_SCHEMAS, convert_protobuf_schema_data
+from datamodel_code_generator.parser.protobuf import WELL_KNOWN_SCHEMAS, ProtobufParser, convert_protobuf_schema_data
 from tests.conftest import assert_mutable_copy_is_isolated, assert_output
 from tests.main.conftest import (
     BACKEND_GOLDEN_CASES,
     BACKEND_GOLDEN_TARGET_ARGS,
+    DATA_PATH,
     EXPECTED_PROTOBUF_PATH,
     PROTOBUF_DATA_PATH,
     _generated_model,
@@ -150,6 +152,39 @@ def test_convert_protobuf_schema_data_isolates_well_known_schema_templates() -> 
         WELL_KNOWN_SCHEMAS.update(original_templates)
 
 
+def test_convert_protobuf_schema_data_preserves_yaml_safe_non_finite_defaults() -> None:
+    """Keep public Protocol Buffers conversion results serializable by PyYAML."""
+    proto = (PROTOBUF_DATA_PATH / "spec_proto2.proto").read_text(encoding="utf-8")
+    converted_schemas = (
+        convert_protobuf_schema_data(proto),
+        ProtobufParser(proto).convert_to_json_schema_data(),
+    )
+
+    assert_output(
+        "".join(
+            yaml.safe_dump(
+                [
+                    schema["definitions"]["example__spec__proto2__SpecProto2"]["properties"][field_name]["default"]
+                    for field_name in ("pos_inf", "neg_inf", "not_a_number")
+                ],
+                sort_keys=False,
+            )
+            for schema in converted_schemas
+        ),
+        EXPECTED_PROTOBUF_PATH / "converted_non_finite_defaults.txt",
+    )
+
+
+def test_protobuf_parser_renders_non_finite_defaults() -> None:
+    """Render source-safe non-finite defaults through the internal parser path."""
+    parser = ProtobufParser(DATA_PATH / "parser/protobuf/non_finite_defaults.proto")
+
+    assert_output(
+        f"{parser.parse(format_=False)}\n",
+        DATA_PATH / "expected/parser/protobuf/non_finite_defaults.py",
+    )
+
+
 def test_main_protobuf_spec_proto3(output_file: Path) -> None:
     """Generate models for proto3 constructs from the language specification."""
     run_main_and_assert(
@@ -171,6 +206,24 @@ def test_main_protobuf_spec_proto2(output_file: Path) -> None:
         extra_args=["--schema-version", "proto2"],
         assert_func=assert_file_content,
         expected_file="spec_proto2.py",
+    )
+
+
+def test_main_protobuf_custom_template_non_finite_raw(output_file: Path) -> None:
+    """Keep non-finite defaults valid in legacy raw custom templates."""
+    run_main_and_assert(
+        input_path=PROTOBUF_DATA_PATH / "spec_proto2.proto",
+        output_path=output_file,
+        input_file_type="protobuf",
+        extra_args=[
+            "--schema-version",
+            "proto2",
+            "--custom-template-dir",
+            str(DATA_PATH / "templates_non_finite_raw"),
+        ],
+        assert_func=assert_file_content,
+        expected_file="custom_template_non_finite_raw.py",
+        force_exec_validation=True,
     )
 
 

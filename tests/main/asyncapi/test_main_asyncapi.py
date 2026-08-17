@@ -11,6 +11,8 @@ import pytest
 
 from datamodel_code_generator import InputFileType, inferred_message
 from datamodel_code_generator.__main__ import Exit
+from datamodel_code_generator.parser.asyncapi import AsyncAPIParser
+from tests.conftest import assert_output
 from tests.main.asyncapi.conftest import assert_file_content
 from tests.main.conftest import (
     ASYNC_API_DATA_PATH,
@@ -269,6 +271,28 @@ def test_main_asyncapi_xml_schema_format(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="xml_schema_format.py",
         extra_args=PY310_TARGET_ARGS,
+    )
+
+
+def test_main_asyncapi_non_finite_embedded_schemas(output_file: Path) -> None:
+    """Render source-safe non-finite defaults from embedded schema formats."""
+    run_main_and_assert(
+        input_path=ASYNC_API_DATA_PATH / "non_finite_embedded_schemas.yaml",
+        output_path=output_file,
+        input_file_type="asyncapi",
+        assert_func=assert_file_content,
+        expected_file="non_finite_embedded_schemas.py",
+        force_exec_validation=True,
+    )
+
+
+def test_asyncapi_parser_renders_non_finite_embedded_schemas() -> None:
+    """Render embedded schema defaults without a subprocess boundary."""
+    parser = AsyncAPIParser(ASYNC_API_DATA_PATH / "non_finite_embedded_schemas.yaml")
+
+    assert_output(
+        f"{parser.parse(format_=False)}\n",
+        DATA_PATH / "expected/parser/asyncapi/non_finite_embedded_schemas.py",
     )
 
 

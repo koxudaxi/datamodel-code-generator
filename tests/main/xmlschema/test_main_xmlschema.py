@@ -6,6 +6,7 @@ import codecs
 from typing import TYPE_CHECKING
 
 import pytest
+import yaml
 
 from datamodel_code_generator import InputFileType
 from datamodel_code_generator.__main__ import Exit
@@ -14,11 +15,13 @@ from datamodel_code_generator.parser.xmlschema import (
     _clear_xml_schema_data_cache,
     _load_xml_schema_data_from_path,
     _read_xml_text,
+    convert_xml_schema_data,
 )
 from tests.conftest import assert_output
 from tests.main.conftest import (
     BACKEND_GOLDEN_CASES,
     BACKEND_GOLDEN_TARGET_ARGS,
+    DATA_PATH,
     EXPECTED_XML_SCHEMA_PATH,
     XML_SCHEMA_DATA_PATH,
     assert_path_cache_evicts_lru_entries,
@@ -39,6 +42,16 @@ def test_main_xmlschema_purchase_order(output_file: Path) -> None:
         input_file_type="xmlschema",
         assert_func=assert_file_content,
         expected_file="purchase_order.py",
+    )
+
+
+def test_convert_xml_schema_data_preserves_yaml_safe_non_finite_defaults() -> None:
+    """Keep public XML Schema conversion results serializable by PyYAML."""
+    converted = convert_xml_schema_data((XML_SCHEMA_DATA_PATH / "non_finite_enum.xsd").read_text(encoding="utf-8"))
+
+    assert_output(
+        yaml.safe_dump(converted["definitions"]["NonFinite"]["enum"], sort_keys=False),
+        EXPECTED_XML_SCHEMA_PATH / "converted_non_finite_defaults.txt",
     )
 
 
@@ -101,6 +114,7 @@ def test_load_xml_schema_data_from_path_evicts_lru_entries(tmp_path: Path, monke
         "xmlschema_version": None,
         "schema_version_mode": None,
         "use_xmlschema_datetime_default": False,
+        "source_safe_non_finite": True,
     }
 
     def load_schema_data(path: Path, encoding: str) -> object:  # noqa: ARG001
@@ -177,6 +191,61 @@ def test_main_xmlschema_special_float_defaults(output_file: Path) -> None:
         input_file_type="xmlschema",
         assert_func=assert_file_content,
         expected_file="special_float_defaults.py",
+    )
+
+
+def test_main_xmlschema_custom_template_non_finite_raw(output_file: Path) -> None:
+    """Keep XML non-finite defaults valid in legacy raw custom templates."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "special_float_defaults.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        extra_args=["--custom-template-dir", str(DATA_PATH / "templates_non_finite_raw")],
+        assert_func=assert_file_content,
+        expected_file="custom_template_non_finite_raw.py",
+        force_exec_validation=True,
+    )
+
+
+def test_main_xmlschema_custom_template_non_finite_raw_list(output_file: Path) -> None:
+    """Keep nested XML non-finite defaults valid in raw custom templates."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "non_finite_list_default.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        extra_args=["--custom-template-dir", str(DATA_PATH / "templates_non_finite_raw")],
+        assert_func=assert_file_content,
+        expected_file="custom_template_non_finite_raw_list.py",
+        force_exec_validation=True,
+    )
+
+
+def test_main_xmlschema_non_finite_enum(output_file: Path) -> None:
+    """Keep non-finite enum member names and values valid."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "non_finite_enum.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_file_content,
+        expected_file="non_finite_enum.py",
+        force_exec_validation=True,
+        importable_module_name="generated_xml_non_finite_enum",
+        importable_module_attribute="NonFinite",
+    )
+
+
+def test_main_xmlschema_non_finite_inline_enum_default(output_file: Path) -> None:
+    """Resolve a NaN default to its non-finite inline enum member."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "non_finite_inline_enum_default.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        extra_args=["--set-default-enum-member"],
+        assert_func=assert_file_content,
+        expected_file="non_finite_inline_enum_default.py",
+        force_exec_validation=True,
+        importable_module_name="generated_xml_non_finite_inline_enum_default",
+        importable_module_attribute="Model",
     )
 
 
@@ -362,6 +431,25 @@ def test_main_xmlschema_type_element_symbol_spaces(output_file: Path) -> None:
         input_file_type="xmlschema",
         assert_func=assert_file_content,
         expected_file="type_element_symbol_spaces.py",
+    )
+
+
+def test_main_xmlschema_type_alias_with_field_description_py312(output_file: Path) -> None:
+    """Render a PEP 695 alias and field description through structured generation."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "type_alias_with_field_description.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_file_content,
+        expected_file="type_alias_with_field_description_py312.py",
+        extra_args=[
+            "--use-type-alias",
+            "--target-python-version",
+            "3.12",
+            "--use-field-description",
+            "--formatters",
+            "builtin",
+        ],
     )
 
 

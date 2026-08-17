@@ -19,8 +19,8 @@ from warnings import warn
 from typing_extensions import Unpack
 
 from datamodel_code_generator import Error, ProtobufVersion, SchemaParseError, VersionMode
-from datamodel_code_generator.parser._math_imports import apply_math_imports_to_parse_result
 from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+from datamodel_code_generator.python_literal import _safe_non_finite_float
 from datamodel_code_generator.util import record_watch_dependency
 
 if TYPE_CHECKING:
@@ -254,6 +254,26 @@ def convert_protobuf_schema_data(
     encoding: str = "utf-8",
 ) -> dict[str, Any]:
     """Convert a Protocol Buffers schema source to JSON Schema data."""
+    return _convert_protobuf_schema_data(
+        raw_schema,
+        base_path=base_path,
+        protobuf_version=protobuf_version,
+        schema_version_mode=schema_version_mode,
+        encoding=encoding,
+        source_safe_non_finite=False,
+    )
+
+
+def _convert_protobuf_schema_data(  # noqa: PLR0913
+    raw_schema: Any,
+    *,
+    base_path: Path | None = None,
+    protobuf_version: ProtobufVersion | None = None,
+    schema_version_mode: VersionMode | None = None,
+    encoding: str = "utf-8",
+    source_safe_non_finite: bool,
+) -> dict[str, Any]:
+    """Convert Protocol Buffers data for a parser that may need source-safe float values."""
     if not isinstance(raw_schema, str):
         msg = "Protocol Buffers schemaFormat requires a .proto schema string"
         raise Error(msg)
@@ -264,7 +284,7 @@ def convert_protobuf_schema_data(
         schema_version_mode=schema_version_mode,
         encoding=encoding,
     )
-    return parser.convert_to_json_schema_data()
+    return parser._convert_to_json_schema_data(source_safe_non_finite=source_safe_non_finite)  # noqa: SLF001
 
 
 def _extract_default_option(options: str) -> str | None:
@@ -393,10 +413,12 @@ class _ProtobufDescriptorConverter:
         protobuf_version: ProtobufVersion | None,
         schema_version_mode: VersionMode | None,
         input_file_names: frozenset[str],
+        source_safe_non_finite: bool,
     ) -> None:
         self.protobuf_version = protobuf_version
         self.schema_version_mode = schema_version_mode or VersionMode.Lenient
         self.input_file_names = input_file_names
+        self.source_safe_non_finite = source_safe_non_finite
         self.definitions: dict[str, dict[str, Any]] = {}
         self.enums: dict[str, Any] = {}
         self.messages: dict[str, Any] = {}
@@ -642,8 +664,7 @@ class _ProtobufDescriptorConverter:
             return enum.value[0].name if enum and enum.value else None
         return PROTO2_DEFAULTS.get(field.type)
 
-    @staticmethod
-    def _parse_default(field: Any) -> Any:
+    def _parse_default(self, field: Any) -> Any:
         value = field.default_value
         if field.type == TYPE_BOOL:
             return value == "true"
@@ -652,7 +673,8 @@ class _ProtobufDescriptorConverter:
 
             return text_encoding.CUnescape(value)
         if field.type in {TYPE_DOUBLE, TYPE_FLOAT}:
-            return float(value)
+            number = float(value)
+            return _safe_non_finite_float(number) if self.source_safe_non_finite else number
         if field.type in {
             TYPE_INT32,
             TYPE_INT64,
@@ -685,10 +707,6 @@ class ProtobufParser(JsonSchemaParser):
     ) -> None:
         """Initialize the Protobuf parser with JSON Schema parser configuration."""
         super().__init__(source=source, config=config, **options)
-
-    def parse(self, *args: Any, **kwargs: Any) -> str | dict[tuple[str, ...], Any]:
-        """Parse Protocol Buffers schemas and add imports for non-finite defaults."""
-        return apply_math_imports_to_parse_result(super().parse(*args, **kwargs))
 
     def _compile_descriptor_set(self) -> tuple[Any, frozenset[str]]:
         protoc, well_known_include = _load_grpc_tools()
@@ -782,18 +800,23 @@ class ProtobufParser(JsonSchemaParser):
 
     def convert_to_json_schema_data(self) -> dict[str, Any]:
         """Convert Protocol Buffers input sources into JSON Schema data."""
+        return self._convert_to_json_schema_data(source_safe_non_finite=False)
+
+    def _convert_to_json_schema_data(self, *, source_safe_non_finite: bool) -> dict[str, Any]:
+        """Convert Protocol Buffers input sources for an internal parser consumer."""
         config = cast("ProtobufParserConfig", self.config)
         descriptor_set, input_file_names = self._compile_descriptor_set()
         converter = _ProtobufDescriptorConverter(
             protobuf_version=config.protobuf_version,
             schema_version_mode=config.schema_version_mode,
             input_file_names=input_file_names,
+            source_safe_non_finite=source_safe_non_finite,
         )
         return converter.convert(descriptor_set)
 
     def parse_raw(self) -> None:
         """Parse all Protocol Buffers input sources into data models."""
-        raw_obj = self.convert_to_json_schema_data()
+        raw_obj = self._convert_to_json_schema_data(source_safe_non_finite=True)
         source = next(self.iter_source)
         source.raw_data = raw_obj
         self.raw_obj = raw_obj
