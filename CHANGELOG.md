@@ -5,6 +5,38 @@ This changelog is automatically generated from GitHub Releases.
 
 ---
 
+## [0.74.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.74.0) - 2026-08-17
+
+## Breaking Changes
+
+### Code Generation Changes
+* Non-finite float values now render as structural `float(...)` expressions - Generated code for non-finite floats (`inf`, `-inf`, `nan`) from Protocol Buffers, XML Schema, and AsyncAPI-embedded schemas — as field defaults, constraint bounds, list items, and enum values — now renders inline as `float('inf')`, `float('-inf')`, and `float('nan')` instead of emitting bare `inf`/`nan` literals with an injected `from math import inf, nan` header. Users relying on the previous output (e.g. snapshot/golden tests, or importing `inf`/`nan` from the generated module) will see different generated code (#3770)
+
+```python
+# Before
+from math import inf
+
+class Model(BaseModel):
+    value: float | None = inf
+
+# After
+class Model(BaseModel):
+    value: float | None = float('inf')
+```
+
+## What's Changed
+* Update CHANGELOG for 0.73.0 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3767
+* Update release benchmark data by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3768
+* Deploy release benchmark data updates by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3771
+* fix(parser): render non-finite values structurally by @Aryan-Pardeshi in https://github.com/koxudaxi/datamodel-code-generator/pull/3770
+
+## New Contributors
+* @Aryan-Pardeshi made their first contribution in https://github.com/koxudaxi/datamodel-code-generator/pull/3770
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.73.0...0.74.0
+
+---
+
 ## [0.73.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.73.0) - 2026-08-15
 
 ## Breaking Changes
