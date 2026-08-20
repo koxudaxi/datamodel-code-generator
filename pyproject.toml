@@ -308,7 +308,6 @@ ini_options.assert_helper_direct_assert_exempt_files = [
 ]
 
 [tool.coverage]
-run.dynamic_context = "none"
 run.omit = [
   "*/_types/*",
   "tests/cli_doc/*",
@@ -318,6 +317,7 @@ run.omit = [
   "tests/main/test_memory.py",
   "tests/main/test_performance.py",
 ]
+run.dynamic_context = "none"
 run.parallel = true
 run.plugins = [
   "covdefaults",
