@@ -8,15 +8,13 @@ from typing import Any, ClassVar
 from pydantic import BaseModel, Field, RootModel, model_validator
 
 
-class _JsonSchemaRuntimeValidationBase(BaseModel):
+class _JsonSchemaRuntimeValidationBaseCore(BaseModel):
     __json_schema_one_of_required_groups__: ClassVar[tuple[Any, ...]] = ()
     __json_schema_any_of_required_groups__: ClassVar[tuple[Any, ...]] = ()
-    __json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = ()
 
     @model_validator(mode='before')
     @classmethod
     def _validate_json_schema_runtime_rules(cls, data: Any) -> Any:
-        data = cls._validate_json_schema_property_count(data)
         data = cls._validate_json_schema_required_groups(
             data,
             required_group_rules=cls.__json_schema_one_of_required_groups__,
@@ -55,6 +53,11 @@ class _JsonSchemaRuntimeValidationBase(BaseModel):
                 )
         return data
 
+
+class _JsonSchemaRuntimeValidationBase(BaseModel):
+    __json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = ()
+
+    @model_validator(mode='before')
     @classmethod
     def _validate_json_schema_property_count(cls, data: Any) -> Any:
         if not (rule := cls.__json_schema_property_count_rule__):
@@ -71,36 +74,26 @@ class _JsonSchemaRuntimeValidationBase(BaseModel):
 
 
 class BaseCount(_JsonSchemaRuntimeValidationBase):
-    __json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = (
-        1,
-        4,
-    )
-
+    __json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = (1, 4)
     base: str | None = None
 
 
 class ComposedCount(BaseCount):
-    __json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = (
-        2,
-        3,
-    )
-
+    __json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = (2, 3)
     child: str | None = None
 
 
 class CountOnlyDerived(BaseCount):
-    __json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = (
-        2,
-        3,
-    )
+    __json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = (2, 3)
+
+
+class RefSiblingCount(BaseCount):
+    __json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = (3, 4)
+    child: str | None = None
 
 
 class NestedCount(_JsonSchemaRuntimeValidationBase):
-    __json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = (
-        1,
-        None,
-    )
-
+    __json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = (1, None)
     value: str | None = None
 
 
@@ -109,11 +102,7 @@ class NoOpMinimum(BaseModel):
 
 
 class ZeroMaximum(_JsonSchemaRuntimeValidationBase):
-    __json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = (
-        None,
-        0,
-    )
-
+    __json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = (None, 0)
     value: str | None = None
 
 
@@ -121,7 +110,7 @@ class PropertyBag(RootModel[dict[str, int]]):
     root: dict[str, int] = Field(..., max_length=2, min_length=1)
 
 
-class RequiredChoice(_JsonSchemaRuntimeValidationBase):
+class RequiredChoice(_JsonSchemaRuntimeValidationBaseCore):
     __json_schema_one_of_required_groups__: ClassVar[tuple[Any, ...]] = (
         ((('left',),), (('right',),)),
     )
@@ -131,11 +120,7 @@ class RequiredChoice(_JsonSchemaRuntimeValidationBase):
 
 
 class DirectCount(_JsonSchemaRuntimeValidationBase):
-    __json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = (
-        2,
-        3,
-    )
-
+    __json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = (2, 3)
     name: str | None = None
     label: str | None = None
     child: NestedCount | None = None

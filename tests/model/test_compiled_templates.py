@@ -55,6 +55,7 @@ from datamodel_code_generator.model.pydantic_v2.dataclass import DataModelField 
 from datamodel_code_generator.model.pydantic_v2.root_model import RootModel
 from datamodel_code_generator.model.pydantic_v2.root_model_type_alias import RootModelTypeAlias
 from datamodel_code_generator.model.runtime_validation import (
+    PropertyCountRule,
     RequiredGroupsRule,
     SchemaRuntimeValidation,
     _make_internal_schema_runtime_validation,
@@ -100,6 +101,12 @@ def _runtime_validation() -> SchemaRuntimeValidation:
                 groups=((("first",),),),
             )
         ]
+    )
+
+
+def _property_count_runtime_validation() -> SchemaRuntimeValidation:
+    return _make_internal_schema_runtime_validation(
+        property_count=PropertyCountRule(min_properties=1),
     )
 
 
@@ -159,7 +166,6 @@ def _template_context(path: Path) -> dict[str, Any]:
         "fields": [first_field, second_field],
         "has_conditional_required": True,
         "has_pattern_properties": True,
-        "has_property_count": False,
         "has_required_groups": True,
         "is_functional_syntax": path.name in {"TypedDict.jinja2", "TypedDictFunction.jinja2"},
         "methods": ['def generated(self) -> str:\n        return "ok"'],
@@ -177,7 +183,6 @@ def _template_context(path: Path) -> dict[str, Any]:
         "schema_runtime_validation": SimpleNamespace(
             conditional_required=(rule,),
             pattern_properties=(rule,),
-            property_count=None,
             required_groups=(rule,),
         ),
         "schema_runtime_validation_base_class_name": "_RuntimeBase",
@@ -302,7 +307,6 @@ def _template_branch_cases() -> tuple[tuple[str, Path, dict[str, Any]], ...]:  #
         "class_body_lines": [],
         "schema_runtime_validation": SimpleNamespace(
             pattern_properties=(),
-            property_count=None,
             required_groups=(any_of_rule,),
             conditional_required=(),
         ),
@@ -324,7 +328,6 @@ def _template_branch_cases() -> tuple[tuple[str, Path, dict[str, Any]], ...]:  #
         "class_body_lines": [],
         "schema_runtime_validation": SimpleNamespace(
             pattern_properties=(multiple_pattern_rule,),
-            property_count=None,
             required_groups=(),
             conditional_required=(),
         ),
@@ -509,7 +512,6 @@ def _template_branch_cases() -> tuple[tuple[str, Path, dict[str, Any]], ...]:  #
                 **namespace_after_empty,
                 "schema_runtime_validation": SimpleNamespace(
                     pattern_properties=(),
-                    property_count=None,
                     required_groups=(SimpleNamespace(keyword="oneOf", groups=((("one",),),)),),
                     conditional_required=(),
                 ),
@@ -523,7 +525,6 @@ def _template_branch_cases() -> tuple[tuple[str, Path, dict[str, Any]], ...]:  #
                 "description": '"""prior"""',
                 "schema_runtime_validation": SimpleNamespace(
                     pattern_properties=(),
-                    property_count=None,
                     required_groups=(SimpleNamespace(keyword="anyOf", groups=((("any",),),)),),
                     conditional_required=(),
                 ),
@@ -536,22 +537,8 @@ def _template_branch_cases() -> tuple[tuple[str, Path, dict[str, Any]], ...]:  #
                 **namespace_after_empty,
                 "schema_runtime_validation": SimpleNamespace(
                     pattern_properties=(),
-                    property_count=None,
                     required_groups=(),
                     conditional_required=(SimpleNamespace(condition=(), then_groups=(), else_groups=()),),
-                ),
-            },
-        ),
-        (
-            "schema_property_count_without_prior",
-            schema_path,
-            {
-                **namespace_after_empty,
-                "schema_runtime_validation": SimpleNamespace(
-                    pattern_properties=(),
-                    property_count=SimpleNamespace(min_properties=1, max_properties=2),
-                    required_groups=(),
-                    conditional_required=(),
                 ),
             },
         ),
@@ -562,17 +549,6 @@ def _template_branch_cases() -> tuple[tuple[str, Path, dict[str, Any]], ...]:  #
                 has_pattern_properties=False,
                 has_required_groups=False,
                 has_conditional_required=False,
-                has_property_count=False,
-            ),
-        ),
-        (
-            "schema_helpers_property_count",
-            *context_for(
-                "pydantic_v2/schema_runtime_validation_helpers.jinja2",
-                has_pattern_properties=False,
-                has_required_groups=False,
-                has_conditional_required=False,
-                has_property_count=True,
             ),
         ),
         (
@@ -1437,6 +1413,39 @@ def test_module_runtime_validation_helper_uses_generated_or_custom_jinja_rendere
     custom = BaseModel.render_module_code([custom_model])
     assert_output(f"{custom}\n", EXPECTED_PATH / "module_helper_custom_template.txt")
 
+
+def test_module_property_count_runtime_validation_helper_uses_custom_jinja_renderer(tmp_path: Path) -> None:
+    """Keep property-only runtime validation compatible with a custom helper template."""
+    custom_dir = tmp_path / "pydantic_v2"
+    custom_dir.mkdir()
+    custom_dir.joinpath("schema_runtime_validation_helpers.jinja2").write_text(
+        "class {{ schema_runtime_validation_base_class_name }}(BaseModel):\n    custom_helper = True\n",
+        encoding="utf-8",
+    )
+    property_count_reference = _reference("PropertyCountRuntimeModel")
+    property_count_model = BaseModel(
+        fields=[],
+        reference=property_count_reference,
+        custom_template_dir=tmp_path,
+        extra_template_data=defaultdict(
+            dict,
+            {
+                property_count_reference.path: {
+                    "schema_runtime_validation": _property_count_runtime_validation(),
+                    "schema_runtime_validation_enabled": True,
+                }
+            },
+        ),
+    )
+    property_count_custom = BaseModel.render_module_code([property_count_model])
+    assert_output(
+        property_count_custom,
+        EXPECTED_PATH / "module_helper_property_count_custom_template.txt",
+    )
+
+
+def test_module_runtime_validation_helper_gates() -> None:
+    """Do not render helper code when runtime validation is unavailable or disabled."""
     disabled_model = BaseModel(fields=[], reference=_reference("DisabledRuntimeModel"))
     enabled_without_runtime_reference = _reference("EnabledWithoutRuntimeModel")
     enabled_without_runtime_model = BaseModel(

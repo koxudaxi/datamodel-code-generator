@@ -5181,7 +5181,14 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 module_imports=ctx.imports,
             )
 
-    def _finalize_modules(
+    def _prepare_schema_runtime_validation_module_code(self, contexts: list[ModuleContext]) -> None:
+        """Plan opt-in module helpers before their imports are collected."""
+        for ctx in contexts:
+            if not any(model.extra_template_data.get("schema_runtime_validation_enabled") for model in ctx.models):
+                continue
+            self.data_model_type.prepare_module_code(ctx.models)
+
+    def _finalize_modules(  # noqa: PLR0912
         self,
         contexts: list[ModuleContext],
         unused_models: list[DataModel],
@@ -5193,6 +5200,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.__mark_set_item_models_hashable(all_models)
         self.__apply_generic_base_class(contexts)
         self._finalize_bound_python_type_imports(contexts)
+        if self.generate_schema_validators:
+            self._prepare_schema_runtime_validation_module_code(contexts)
         model_imports = {model: model.imports for ctx in contexts for model in ctx.models}
 
         for ctx in contexts:

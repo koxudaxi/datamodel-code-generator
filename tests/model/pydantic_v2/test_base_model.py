@@ -13,7 +13,11 @@ import pytest
 
 from datamodel_code_generator import DataModelType, Formatter
 from datamodel_code_generator.config import JSONSchemaParserConfig
+from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import _rebuild_model_with_datamodel_namespace, get_data_model_types
+from datamodel_code_generator.model.pydantic_v2._schema_runtime_validation import (
+    plan_schema_runtime_validation_bases,
+)
 from datamodel_code_generator.model.pydantic_v2.base_model import (
     BaseModel,
     Constraints,
@@ -21,6 +25,8 @@ from datamodel_code_generator.model.pydantic_v2.base_model import (
     _construct_parser_simple_field,
 )
 from datamodel_code_generator.model.runtime_validation import (
+    PatternPropertiesRule,
+    PropertyCountRule,
     RequiredGroupsRule,
     SchemaRuntimeValidation,
     _make_internal_schema_runtime_validation,
@@ -43,6 +49,12 @@ def _schema_runtime_validation() -> SchemaRuntimeValidation:
                 groups=((("value",),),),
             )
         ]
+    )
+
+
+def _property_count_schema_runtime_validation() -> SchemaRuntimeValidation:
+    return _make_internal_schema_runtime_validation(
+        property_count=PropertyCountRule(min_properties=1),
     )
 
 
@@ -112,6 +124,183 @@ def test_schema_runtime_validation_helpers_are_gated_by_parser_option() -> None:
     runtime_model.extra_template_data["schema_runtime_validation_enabled"] = True
 
     assert "_JsonSchemaRuntimeValidationBase" in BaseModel.render_module_code([runtime_model])
+
+
+@pytest.mark.allow_direct_assert
+def test_property_count_class_body_line_is_idempotent() -> None:
+    """Render repeated module code without duplicating a model's property-count rule."""
+    runtime_model = BaseModel(
+        fields=[],
+        reference=Reference(name="RuntimeModel", path="#/RuntimeModel"),
+        extra_template_data=defaultdict(
+            dict,
+            {"#/RuntimeModel": {"schema_runtime_validation": _property_count_schema_runtime_validation()}},
+        ),
+    )
+    runtime_model.extra_template_data["schema_runtime_validation_enabled"] = True
+
+    first = BaseModel.render_module_code([runtime_model])
+    second = BaseModel.render_module_code([runtime_model])
+
+    assert first == second
+    assert runtime_model.render().count("__json_schema_property_count_rule__") == 1
+
+
+@pytest.mark.allow_direct_assert
+def test_property_count_inherited_capability_skips_unused_local_helper() -> None:
+    """Avoid emitting a local helper when an external grandparent already supplies it."""
+    property_parent = BaseModel(
+        fields=[],
+        reference=Reference(name="PropertyParent", path="#/PropertyParent"),
+        extra_template_data=defaultdict(
+            dict,
+            {"#/PropertyParent": {"schema_runtime_validation": _property_count_schema_runtime_validation()}},
+        ),
+    )
+    intermediate = BaseModel(
+        fields=[],
+        reference=Reference(name="Intermediate", path="#/Intermediate"),
+        base_classes=[property_parent.reference],
+    )
+    property_child = BaseModel(
+        fields=[],
+        reference=Reference(name="PropertyChild", path="#/PropertyChild"),
+        base_classes=[intermediate.reference],
+        extra_template_data=defaultdict(
+            dict,
+            {"#/PropertyChild": {"schema_runtime_validation": _property_count_schema_runtime_validation()}},
+        ),
+    )
+    property_child.extra_template_data["schema_runtime_validation_enabled"] = True
+
+    assert not BaseModel.render_module_code([property_child])
+    assert not property_child._internal_template_data["schema_runtime_validation_use_base"]
+
+
+@pytest.mark.allow_direct_assert
+def test_schema_runtime_validation_base_planner_handles_cyclic_models() -> None:
+    """Stop capability planning at a malformed generated-model inheritance cycle."""
+
+    class RuntimeModel:
+        def __init__(self) -> None:
+            self.base_models: list[RuntimeModel] = []
+
+    first = RuntimeModel()
+    second = RuntimeModel()
+    first.base_models = [second]
+    second.base_models = [first]
+    runtime_validation = _schema_runtime_validation()
+
+    result = plan_schema_runtime_validation_bases(
+        [first],
+        {id(first): runtime_validation, id(second): runtime_validation},
+        get_base_models=lambda model: model.base_models,
+        get_external_capabilities=lambda _model: (False, False),
+        get_model_requirements=lambda _model, _validation: (True, False),
+    )
+
+    assert result == {id(first): (False, False), id(second): (True, False)}
+
+
+@pytest.mark.allow_direct_assert
+def test_property_count_inherits_external_core_pattern_type_import() -> None:
+    """Keep local pattern class-variable types importable without a local core helper."""
+    external_core = BaseModel(
+        fields=[],
+        reference=Reference(name="ExternalCore", path="#/ExternalCore"),
+        extra_template_data=defaultdict(
+            dict,
+            {
+                "#/ExternalCore": {
+                    "schema_runtime_validation": _make_internal_schema_runtime_validation(
+                        pattern_properties=[
+                            PatternPropertiesRule(
+                                declared_properties=(),
+                                pattern_properties=(("^value", DataType(type="str")),),
+                            )
+                        ]
+                    )
+                }
+            },
+        ),
+    )
+    imported_type = DataType.from_import(Import.from_full_path("external_types.ExternalValue"))
+    property_child = BaseModel(
+        fields=[],
+        reference=Reference(name="PropertyChild", path="#/PropertyChild"),
+        base_classes=[external_core.reference],
+        extra_template_data=defaultdict(
+            dict,
+            {
+                "#/PropertyChild": {
+                    "schema_runtime_validation": _make_internal_schema_runtime_validation(
+                        pattern_properties=[
+                            PatternPropertiesRule(
+                                declared_properties=(),
+                                pattern_properties=(("^value", imported_type),),
+                            )
+                        ],
+                        property_count=PropertyCountRule(min_properties=1),
+                    )
+                }
+            },
+        ),
+    )
+    property_child.extra_template_data["schema_runtime_validation_enabled"] = True
+
+    BaseModel.render_module_code([property_child])
+
+    assert Import.from_full_path("external_types.ExternalValue") in property_child.imports
+
+
+@pytest.mark.allow_direct_assert
+def test_property_count_core_helper_name_avoids_model_collision() -> None:
+    """Keep a synthetic mixed-runtime helper distinct from generated or imported base names."""
+    colliding_model = BaseModel(
+        fields=[],
+        reference=Reference(
+            name="_JsonSchemaRuntimeValidationBaseCore",
+            path="#/JsonSchemaRuntimeValidationBaseCore",
+        ),
+    )
+    external_model = BaseModel(
+        fields=[],
+        reference=Reference(
+            name="_JsonSchemaRuntimeValidationBaseCore2",
+            path="#/ExternalJsonSchemaRuntimeValidationBaseCore2",
+        ),
+    )
+    inheriting_model = BaseModel(
+        fields=[],
+        reference=Reference(name="InheritingModel", path="#/InheritingModel"),
+        base_classes=[external_model.reference],
+    )
+    imported_model_class = BaseModel(
+        fields=[],
+        reference=Reference(
+            name="_JsonSchemaRuntimeValidationBaseCore3",
+            path="#/ExternalJsonSchemaRuntimeValidationBaseCore3",
+        ),
+    )
+    imported_model = BaseModel(
+        fields=[
+            DataModelField(
+                name="external",
+                data_type=DataType(reference=imported_model_class.reference),
+                required=True,
+            )
+        ],
+        reference=Reference(name="ImportedModel", path="#/ImportedModel"),
+    )
+
+    assert (
+        BaseModel._get_unique_schema_runtime_validation_base_class_name(
+            "_JsonSchemaRuntimeValidationBase",
+            "Core",
+            [colliding_model, inheriting_model, imported_model],
+        )
+        == "_JsonSchemaRuntimeValidationBaseCore4"
+    )
 
 
 @pytest.mark.allow_direct_assert

@@ -40,6 +40,22 @@
         }
       ]
     },
+    "RefSiblingCount": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BaseCount",
+          "minProperties": 3
+        },
+        {
+          "type": "object",
+          "properties": {
+            "child": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
     "DirectCount": {
       "type": "object",
       "minProperties": 2,

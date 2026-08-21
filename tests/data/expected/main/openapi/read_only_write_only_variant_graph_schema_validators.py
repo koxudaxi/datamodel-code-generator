@@ -8,14 +8,12 @@ from typing import Any, ClassVar
 from pydantic import BaseModel, model_validator
 
 
-class _JsonSchemaRuntimeValidationBase(BaseModel):
+class _JsonSchemaRuntimeValidationBaseCore(BaseModel):
     __json_schema_conditional_required__: ClassVar[tuple[Any, ...]] = ()
-    __json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = ()
 
     @model_validator(mode='before')
     @classmethod
     def _validate_json_schema_runtime_rules(cls, data: Any) -> Any:
-        data = cls._validate_json_schema_property_count(data)
         data = cls._validate_json_schema_conditional_required(data)
         return data
 
@@ -39,6 +37,11 @@ class _JsonSchemaRuntimeValidationBase(BaseModel):
                 raise ValueError('Conditional required properties are missing')
         return data
 
+
+class _JsonSchemaRuntimeValidationBase(_JsonSchemaRuntimeValidationBaseCore):
+    __json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = ()
+
+    @model_validator(mode='before')
     @classmethod
     def _validate_json_schema_property_count(cls, data: Any) -> Any:
         if not (rule := cls.__json_schema_property_count_rule__):
@@ -63,17 +66,14 @@ class ApiReadOnlyLeafResponseModel(BaseModel):
 
 
 class ApiConditionalEnvelopeRequestModel(_JsonSchemaRuntimeValidationBase):
+    __json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = (2, 2)
+
     __json_schema_conditional_required__: ClassVar[tuple[Any, ...]] = (
         {
             'condition': ((('kind',), ('metric',)),),
             'then_required_groups': ((('metricLeaf',),),),
             'else_required_groups': ((('noteLeaf',),),),
         },
-    )
-
-    __json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = (
-        2,
-        2,
     )
 
     kind: str
@@ -82,17 +82,14 @@ class ApiConditionalEnvelopeRequestModel(_JsonSchemaRuntimeValidationBase):
 
 
 class ApiConditionalEnvelopeResponseModel(_JsonSchemaRuntimeValidationBase):
+    __json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = (2, 2)
+
     __json_schema_conditional_required__: ClassVar[tuple[Any, ...]] = (
         {
             'condition': ((('kind',), ('metric',)),),
             'then_required_groups': ((('metricLeaf',),),),
             'else_required_groups': ((('noteLeaf',),),),
         },
-    )
-
-    __json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = (
-        2,
-        2,
     )
 
     kind: str

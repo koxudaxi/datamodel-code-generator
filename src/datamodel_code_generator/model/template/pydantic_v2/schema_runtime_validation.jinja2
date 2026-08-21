@@ -63,14 +63,4 @@
     )
 {{ '\n' }}
 {%- endif %}
-{%- if schema_runtime_validation.property_count %}
-{%- if schema_validator_state.has_prior %}
-{{ '\n' }}
-{%- endif %}
-    __json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = (
-        {{ schema_runtime_validation.property_count.min_properties|repr }},
-        {{ schema_runtime_validation.property_count.max_properties|repr }},
-    )
-{{ '\n' }}
-{%- endif %}
 {%- endif %}

@@ -1123,6 +1123,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self._rw_model_variant_requirement_cache: dict[tuple[str, str], bool] = {}
         self._rw_model_variant_references: dict[tuple[str, str], Reference] = {}
         self._local_ref_path_cache: dict[Path, Path] = {}
+        if self.generate_schema_validators:
+            self._property_count_rule_cache: dict[int, tuple[JsonSchemaObject, PropertyCountRule | None]] = {}
         self.field_keys: set[str] = {
             *DEFAULT_FIELD_KEYS,
             *self.field_extra_keys,
@@ -6184,10 +6186,55 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     def _has_property_count_validator(self, obj: JsonSchemaObject) -> bool:
         """Return whether an object or its allOf sources constrain property counts."""
-        return any(
-            (source.minProperties is not None and source.minProperties > 0) or source.maxProperties is not None
-            for source in self._iter_schema_validation_sources(obj)
+        return self._get_property_count_rule(obj) is not None
+
+    def _get_property_count_rule(self, obj: JsonSchemaObject) -> PropertyCountRule | None:
+        """Aggregate one immutable count rule and cache it for this parse only."""
+        if not self.generate_schema_validators:
+            return None
+        cache_key = id(obj)
+        if (cached := self._property_count_rule_cache.get(cache_key)) is not None and cached[0] is obj:
+            return cached[1]
+
+        min_properties: int | None = None
+        max_properties: int | None = None
+        for source in self._iter_property_count_validation_sources(obj):
+            match source.minProperties:
+                case int() as source_minimum if source_minimum > 0:
+                    min_properties = source_minimum if min_properties is None else max(min_properties, source_minimum)
+                case _:
+                    pass
+            if (source_maximum := source.maxProperties) is not None:
+                max_properties = source_maximum if max_properties is None else min(max_properties, source_maximum)
+        rule = (
+            PropertyCountRule(min_properties=min_properties, max_properties=max_properties)
+            if min_properties is not None or max_properties is not None
+            else None
         )
+        self._property_count_rule_cache[cache_key] = obj, rule
+        return rule
+
+    def _iter_property_count_validation_sources(
+        self,
+        obj: JsonSchemaObject,
+        visited_refs: frozenset[str] = frozenset(),
+    ) -> Iterator[JsonSchemaObject]:
+        """Yield count constraints from allOf, preserving JSON Schema $ref siblings."""
+        yield obj
+        for item in obj.allOf:
+            if not isinstance(item, JsonSchemaObject):
+                continue
+            if not item.ref:
+                yield from self._iter_property_count_validation_sources(item, visited_refs)
+                continue
+            yield item
+            resolved_ref = self.model_resolver.resolve_ref(item.ref)
+            if resolved_ref in visited_refs:
+                continue
+            yield from self._iter_property_count_validation_sources(
+                self._load_ref_schema_object(item.ref),
+                visited_refs | {resolved_ref},
+            )
 
     def _should_parse_object_with_schema_validators(self, obj: JsonSchemaObject) -> bool:
         if not self.generate_schema_validators:
@@ -6401,22 +6448,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     def _add_property_count_validator(self, reference_path: str, obj: JsonSchemaObject) -> None:
         """Add raw-object property-count rules from this schema and its allOf sources."""
-        min_properties: int | None = None
-        max_properties: int | None = None
-        for source in self._iter_schema_validation_sources(obj):
-            match source.minProperties:
-                case int() as source_minimum if source_minimum > 0:
-                    min_properties = source_minimum if min_properties is None else max(min_properties, source_minimum)
-                case _:
-                    pass
-            if (source_maximum := source.maxProperties) is not None:
-                max_properties = source_maximum if max_properties is None else min(max_properties, source_maximum)
-        if min_properties is None and max_properties is None:
+        if (property_count_rule := self._get_property_count_rule(obj)) is None:
             return
-        self._schema_runtime_validation(reference_path).property_count = PropertyCountRule(
-            min_properties=min_properties,
-            max_properties=max_properties,
-        )
+        self._schema_runtime_validation(reference_path).property_count = property_count_rule
 
     def _get_conditional_predicate(
         self,

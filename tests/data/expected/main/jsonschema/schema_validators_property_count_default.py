@@ -18,6 +18,10 @@ class CountOnlyDerived(BaseCount):
     pass
 
 
+class RefSiblingCount(BaseCount):
+    child: str | None = None
+
+
 class NestedCount(BaseModel):
     value: str | None = None
 

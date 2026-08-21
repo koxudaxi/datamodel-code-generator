@@ -81,6 +81,9 @@ if TYPE_CHECKING:
     from jinja2 import Template
     from typing_extensions import TypedDict, Unpack
 
+    from datamodel_code_generator.model.pydantic_v2._schema_runtime_validation import (
+        SchemaRuntimeValidationModulePlan,
+    )
     from datamodel_code_generator.reference import Reference
     from datamodel_code_generator.types import DataType
 
@@ -732,6 +735,9 @@ class BaseModel(BaseModelBase):
         "pydantic_v2/schema_runtime_validation_helpers.jinja2"
     )
     SCHEMA_RUNTIME_VALIDATION_BASE_CLASS_NAME: ClassVar[str] = "_JsonSchemaRuntimeValidationBase"
+    _SCHEMA_RUNTIME_VALIDATION_MODULE_PLAN_CACHE_KEY: ClassVar[str] = "_schema_runtime_validation_module_plan"
+    _CORE_VALIDATION_BASE_MARKER: ClassVar[str] = "_core_validation_base"
+    _PROPERTY_COUNT_VALIDATION_BASE_MARKER: ClassVar[str] = "_property_count_validation_base"
     BASE_CLASS: ClassVar[str] = "pydantic.BaseModel"
     BASE_CLASS_NAME: ClassVar[str] = "BaseModel"
     BASE_CLASS_ALIAS: ClassVar[str] = "_BaseModel"
@@ -776,21 +782,55 @@ class BaseModel(BaseModelBase):
         return TypeAliasTypeBackport
 
     @classmethod
+    def prepare_module_code(cls, models: list[DataModel]) -> None:
+        """Plan shared schema validation helpers before imports are collected."""
+        cls._get_schema_runtime_validation_module_plan(models)
+
+    @classmethod
     def render_module_code(cls, models: list[DataModel]) -> str:
-        """Render shared schema runtime validation helpers for the module."""
-        if not models or not models[0].extra_template_data.get("schema_runtime_validation_enabled"):
+        """Render shared schema runtime validation helpers for the module once."""
+        if (module_plan := cls._get_schema_runtime_validation_module_plan(models)) is None:
             return ""
 
-        runtime_models: list[DataModel] = [
-            model
-            for model in models
-            if _is_internal_schema_runtime_validation(
-                model._internal_template_data.get("schema_runtime_validation")  # noqa: SLF001
+        _runtime_models, runtime_validations = cls._get_schema_runtime_validation_models(models)
+        if not module_plan.has_property_count:
+            return cls._render_core_schema_runtime_validation_helpers(
+                module_plan.base_class_name,
+                runtime_validations,
+                models,
             )
-            and model._internal_template_data["schema_runtime_validation"]  # noqa: SLF001
-        ]
-        if not runtime_models:
+        helper_base_class_names = dict(module_plan.helper_base_class_names)
+        if not helper_base_class_names:
             return ""
+        return cls._render_property_count_validation_helpers(
+            helper_base_class_names,
+            runtime_validations,
+            models,
+        )
+
+    @classmethod
+    def _get_schema_runtime_validation_module_plan(
+        cls,
+        models: list[DataModel],
+    ) -> SchemaRuntimeValidationModulePlan | None:
+        """Build one compact helper plan, reusing it for the final renderer."""
+        if not models or not models[0].extra_template_data.get("schema_runtime_validation_enabled"):
+            return None
+
+        from datamodel_code_generator.model.pydantic_v2._schema_runtime_validation import (  # noqa: PLC0415
+            SchemaRuntimeValidationModulePlan,
+            plan_schema_runtime_validation_bases,
+        )
+
+        if isinstance(
+            module_plan := models[0].__dict__.get(cls._SCHEMA_RUNTIME_VALIDATION_MODULE_PLAN_CACHE_KEY),
+            SchemaRuntimeValidationModulePlan,
+        ):
+            return module_plan
+
+        runtime_models, runtime_validations = cls._get_schema_runtime_validation_models(models)
+        if not runtime_models:
+            return None
 
         configured_base_class_name = runtime_models[0].extra_template_data.get("schema_validator_base_class_name")
         normalized_base_class_name = (
@@ -805,22 +845,307 @@ class BaseModel(BaseModelBase):
             )
             else cls.SCHEMA_RUNTIME_VALIDATION_BASE_CLASS_NAME
         )
-        for model in runtime_models:
-            uses_base_class = not cls._inherits_schema_runtime_validation_base(
-                model,
-                seen=set(),
+        runtime_validation_by_model = {
+            id(model): runtime_validations[index] for index, model in enumerate(runtime_models)
+        }
+        has_property_count = any(runtime_validation.property_count for runtime_validation in runtime_validations)
+        if not has_property_count:
+            for model in runtime_models:
+                model._set_internal_template_data(  # noqa: SLF001
+                    "schema_runtime_validation_base_class_name",
+                    base_class_name,
+                )
+                model._set_internal_template_data(  # noqa: SLF001
+                    "schema_runtime_validation_use_base",
+                    not cls._inherits_schema_runtime_validation_base(model, seen=set()),
+                )
+            cls._add_schema_runtime_validation_helper_imports(
+                runtime_models[0],
+                runtime_validations,
+                has_local_core_helper=True,
             )
-            model._set_internal_template_data("schema_runtime_validation_base_class_name", base_class_name)  # noqa: SLF001
-            model._set_internal_template_data("schema_runtime_validation_use_base", uses_base_class)  # noqa: SLF001
+            module_plan = SchemaRuntimeValidationModulePlan(base_class_name, has_property_count=False)
+            models[0].__dict__[cls._SCHEMA_RUNTIME_VALIDATION_MODULE_PLAN_CACHE_KEY] = module_plan
+            return module_plan
 
-        custom_template_dir = next(
-            (model.custom_template_dir for model in models if model.custom_template_dir is not None),
-            None,
+        missing_capabilities_by_model = plan_schema_runtime_validation_bases(
+            runtime_models,
+            runtime_validation_by_model,
+            get_base_models=cls._get_schema_runtime_validation_base_models,
+            get_external_capabilities=cls._get_external_schema_runtime_validation_capabilities,
+            get_model_requirements=cls._get_schema_runtime_validation_requirements,
         )
+        helper_capabilities = frozenset(missing_capabilities_by_model.values()) - {(False, False)}
+        if not helper_capabilities:
+            for model in runtime_models:
+                cls._set_schema_runtime_validation_base(model, None, (False, False))
+            module_plan = SchemaRuntimeValidationModulePlan(base_class_name, has_property_count=True)
+            models[0].__dict__[cls._SCHEMA_RUNTIME_VALIDATION_MODULE_PLAN_CACHE_KEY] = module_plan
+            return module_plan
+
+        helper_base_class_names = cls._get_schema_runtime_validation_base_class_names(
+            base_class_name,
+            helper_capabilities,
+            models,
+        )
+        for model in runtime_models:
+            missing_capabilities = missing_capabilities_by_model[id(model)]
+            cls._set_schema_runtime_validation_base(
+                model,
+                helper_base_class_names.get(missing_capabilities),
+                missing_capabilities,
+            )
+        cls._add_schema_runtime_validation_helper_imports(
+            runtime_models[0],
+            runtime_validations,
+            has_local_core_helper=any(capabilities[0] for capabilities in helper_base_class_names),
+        )
+        module_plan = SchemaRuntimeValidationModulePlan(
+            base_class_name,
+            has_property_count=True,
+            helper_base_class_names=tuple(helper_base_class_names.items()),
+        )
+        models[0].__dict__[cls._SCHEMA_RUNTIME_VALIDATION_MODULE_PLAN_CACHE_KEY] = module_plan
+        return module_plan
+
+    def invalidate_render_caches(self) -> None:
+        """Clear the compact module plan with the model's other render caches."""
+        super().invalidate_render_caches()
+        self.__dict__.pop(self._SCHEMA_RUNTIME_VALIDATION_MODULE_PLAN_CACHE_KEY, None)
+
+    @staticmethod
+    def _get_schema_runtime_validation_models(
+        models: list[DataModel],
+    ) -> tuple[list[DataModel], list[SchemaRuntimeValidation]]:
+        """Return parser-owned runtime-validation models and their metadata."""
+        runtime_models = [
+            model
+            for model in models
+            if _is_internal_schema_runtime_validation(
+                model._internal_template_data.get("schema_runtime_validation")  # noqa: SLF001
+            )
+            and model._internal_template_data["schema_runtime_validation"]  # noqa: SLF001
+        ]
         runtime_validations = [
             model._internal_template_data["schema_runtime_validation"]  # noqa: SLF001
             for model in runtime_models
         ]
+        return runtime_models, runtime_validations
+
+    @classmethod
+    def _add_schema_runtime_validation_helper_imports(
+        cls,
+        model: DataModel,
+        runtime_validations: list[SchemaRuntimeValidation],
+        *,
+        has_local_core_helper: bool,
+    ) -> None:
+        """Add imports only when this module renders a shared runtime helper."""
+        additional_imports = model._additional_imports  # noqa: SLF001
+        for import_ in (IMPORT_MODEL_VALIDATOR, IMPORT_ANY, IMPORT_CLASSVAR, IMPORT_BASE_MODEL):
+            if import_ not in additional_imports:
+                additional_imports.append(import_)
+        if has_local_core_helper and any(
+            runtime_validation.pattern_properties for runtime_validation in runtime_validations
+        ):
+            for import_ in (Import(import_="re"), IMPORT_TYPE_ADAPTER):
+                if import_ not in additional_imports:
+                    additional_imports.append(import_)
+        model.clear_imports_cache()
+
+    @staticmethod
+    def _has_core_schema_runtime_validation(runtime_validation: SchemaRuntimeValidation) -> bool:
+        """Return whether a validation needs the existing template-rendered helper."""
+        return bool(
+            runtime_validation.pattern_properties
+            or runtime_validation.required_groups
+            or runtime_validation.conditional_required
+        )
+
+    @staticmethod
+    def _get_schema_runtime_validation_base_models(model: DataModel) -> list[DataModel]:
+        """Return generated model bases that can supply runtime-validation helpers."""
+        return [
+            base_class.reference.source
+            for base_class in model.base_classes
+            if base_class.reference and isinstance(base_class.reference.source, DataModel)
+        ]
+
+    @classmethod
+    def _get_external_schema_runtime_validation_capabilities(cls, model: DataModel) -> tuple[bool, bool]:
+        """Return capabilities supplied by a model from another generated module."""
+        internal_template_data = model._internal_template_data  # noqa: SLF001
+        runtime_validation = internal_template_data.get("schema_runtime_validation")
+        if isinstance(runtime_validation, SchemaRuntimeValidation) and _is_internal_schema_runtime_validation(
+            runtime_validation
+        ):
+            core = cls._has_core_schema_runtime_validation(runtime_validation)
+            property_count = bool(runtime_validation.property_count)
+        else:
+            core = property_count = False
+        return (
+            core or bool(internal_template_data.get(cls._CORE_VALIDATION_BASE_MARKER)),
+            property_count or bool(internal_template_data.get(cls._PROPERTY_COUNT_VALIDATION_BASE_MARKER)),
+        )
+
+    @classmethod
+    def _set_schema_runtime_validation_base(
+        cls,
+        model: DataModel,
+        base_class_name: str | None,
+        capabilities: tuple[bool, bool],
+    ) -> None:
+        """Record the one local helper base, if any, used by a generated model."""
+        if base_class_name is not None:
+            model._set_internal_template_data("schema_runtime_validation_base_class_name", base_class_name)  # noqa: SLF001
+        uses_base_class = capabilities != (False, False)
+        model._set_internal_template_data("schema_runtime_validation_use_base", uses_base_class)  # noqa: SLF001
+        model._set_internal_template_data(cls._CORE_VALIDATION_BASE_MARKER, capabilities[0])  # noqa: SLF001
+        model._set_internal_template_data(cls._PROPERTY_COUNT_VALIDATION_BASE_MARKER, capabilities[1])  # noqa: SLF001
+
+    @classmethod
+    def _get_schema_runtime_validation_requirements(
+        cls,
+        model: DataModel,
+        runtime_validation: SchemaRuntimeValidation,
+    ) -> tuple[bool, bool]:
+        """Return the helper capabilities required by one generated model."""
+        return (
+            cls._has_core_schema_runtime_validation(runtime_validation)
+            or (bool(runtime_validation.property_count) and cls._has_custom_schema_runtime_validation_helper(model)),
+            bool(runtime_validation.property_count),
+        )
+
+    @classmethod
+    def _has_custom_schema_runtime_validation_helper(cls, model: DataModel) -> bool:
+        """Return whether this model overrides the shared schema-validator helper template."""
+        return bool(
+            model.custom_template_dir
+            and (model.custom_template_dir / cls.SCHEMA_RUNTIME_VALIDATION_HELPERS_TEMPLATE_FILE_PATH).is_file()
+        )
+
+    @classmethod
+    def _get_schema_runtime_validation_base_class_names(
+        cls,
+        base_class_name: str,
+        helper_capabilities: frozenset[tuple[bool, bool]],
+        models: list[DataModel],
+    ) -> dict[tuple[bool, bool], str]:
+        """Allocate at most one shared helper for each missing capability set."""
+        if (True, True) in helper_capabilities:
+            primary_capabilities = (True, True)
+        elif (False, True) in helper_capabilities:
+            primary_capabilities = (False, True)
+        else:
+            primary_capabilities = (True, False)
+        base_class_names = {primary_capabilities: base_class_name}
+        reserved_names = {base_class_name}
+        for capabilities, suffix in (
+            ((True, False), "Core"),
+            ((False, True), "PropertyCount"),
+            ((True, True), "Combined"),
+        ):
+            if capabilities not in helper_capabilities or capabilities == primary_capabilities:
+                continue
+            base_class_names[capabilities] = cls._get_unique_schema_runtime_validation_base_class_name(
+                base_class_name,
+                suffix,
+                models,
+                reserved_names,
+            )
+            reserved_names.add(base_class_names[capabilities])
+        return base_class_names
+
+    @staticmethod
+    def _get_unique_schema_runtime_validation_base_class_name(
+        base_class_name: str,
+        suffix: str,
+        models: list[DataModel],
+        reserved_names: set[str] | None = None,
+    ) -> str:
+        """Choose a synthetic helper name that cannot collide with generated models."""
+        class_names = {model.class_name for model in models}
+        class_names.update(
+            base_class.reference.source.class_name
+            for model in models
+            for base_class in model.base_classes
+            if base_class.reference and isinstance(base_class.reference.source, DataModel)
+        )
+        class_names.update(
+            data_type.reference.source.class_name
+            for model in models
+            for field in model.fields
+            for data_type in field.data_type.all_data_types
+            if data_type.reference and isinstance(data_type.reference.source, DataModel)
+        )
+        if reserved_names:
+            class_names.update(reserved_names)
+        candidate = f"{base_class_name}{suffix}"
+        number = 2
+        while candidate in class_names:
+            candidate = f"{base_class_name}{suffix}{number}"
+            number += 1
+        return candidate
+
+    @classmethod
+    def _render_property_count_validation_helpers(
+        cls,
+        helper_base_class_names: dict[tuple[bool, bool], str],
+        runtime_validations: list[SchemaRuntimeValidation],
+        models: list[DataModel],
+    ) -> str:
+        """Render only the shared helpers needed for local missing capabilities."""
+        from datamodel_code_generator.model.pydantic_v2._schema_runtime_validation import (  # noqa: PLC0415
+            render_property_count_validation_base,
+        )
+
+        core_runtime_validations = [
+            runtime_validation
+            for runtime_validation in runtime_validations
+            if cls._has_core_schema_runtime_validation(runtime_validation)
+        ]
+        requires_combined_base = (True, True) in helper_base_class_names
+        core_base_class_name = helper_base_class_names.get((True, False))
+        if requires_combined_base and core_base_class_name is None:
+            core_base_class_name = cls._get_unique_schema_runtime_validation_base_class_name(
+                helper_base_class_names[True, True],
+                "Core",
+                models,
+                set(helper_base_class_names.values()),
+            )
+
+        helpers: list[str] = []
+        if core_base_class_name is not None:
+            helpers.append(
+                cls._render_core_schema_runtime_validation_helpers(
+                    core_base_class_name,
+                    core_runtime_validations,
+                    models,
+                ).rstrip()
+            )
+        if (property_base_class_name := helper_base_class_names.get((False, True))) is not None:
+            helpers.append(render_property_count_validation_base(property_base_class_name, "BaseModel"))
+        if (combined_base_class_name := helper_base_class_names.get((True, True))) is not None:
+            helpers.append(
+                render_property_count_validation_base(
+                    combined_base_class_name,
+                    cast("str", core_base_class_name),
+                )
+            )
+        return "\n\n\n".join(helpers) + "\n"
+
+    @classmethod
+    def _render_core_schema_runtime_validation_helpers(
+        cls,
+        base_class_name: str,
+        runtime_validations: list[SchemaRuntimeValidation],
+        models: list[DataModel],
+    ) -> str:
+        """Render the unchanged core runtime-validation helper template."""
+        custom_template_dir = next(
+            (model.custom_template_dir for model in models if model.custom_template_dir is not None),
+            None,
+        )
         context = {
             "schema_runtime_validation_base_class_name": base_class_name,
             "has_pattern_properties": any(
@@ -832,7 +1157,6 @@ class BaseModel(BaseModelBase):
             "has_conditional_required": any(
                 runtime_validation.conditional_required for runtime_validation in runtime_validations
             ),
-            "has_property_count": any(runtime_validation.property_count for runtime_validation in runtime_validations),
         }
         if custom_template_dir is None and cls.__module__.startswith("datamodel_code_generator.model."):
             from datamodel_code_generator.model._compiled_templates import get_builtin_renderer  # noqa: PLC0415
@@ -986,13 +1310,16 @@ class BaseModel(BaseModelBase):
         if runtime_validation is None:
             return
 
-        self._additional_imports.append(IMPORT_MODEL_VALIDATOR)
-        self._additional_imports.append(IMPORT_ANY)
-        self._additional_imports.append(IMPORT_CLASSVAR)
-        self._additional_imports.append(IMPORT_BASE_MODEL)
-        if runtime_validation.pattern_properties:
-            self._additional_imports.append(Import(import_="re"))
-            self._additional_imports.append(IMPORT_TYPE_ADAPTER)
+        if (property_count_rule := runtime_validation.property_count) is not None:
+            from datamodel_code_generator.model.pydantic_v2._schema_runtime_validation import (  # noqa: PLC0415
+                render_property_count_rule,
+            )
+
+            property_count_line = render_property_count_rule(property_count_rule)
+            if property_count_line not in self._internal_template_data.get("class_body_lines", ()):
+                self._append_internal_template_data("class_body_lines", property_count_line)
+            self._additional_imports.append(IMPORT_ANY)
+            self._additional_imports.append(IMPORT_CLASSVAR)
 
         for data_type in runtime_validation.data_types:
             self._additional_imports.extend(data_type.all_imports)

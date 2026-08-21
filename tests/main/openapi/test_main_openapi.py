@@ -8804,6 +8804,13 @@ def test_main_openapi_read_only_write_only_variant_graph_schema_validators(
         expected_attribute_path=("payload", "metricLeaf", "id"),
         expected_attribute_value=1,
     )
+    assert_generated_model_json_invalid(
+        output_file,
+        module_name="read_only_write_only_variant_graph_validator_response_property_count",
+        model_name="ApiConditionalForwardWrapperResponseModel",
+        invalid_json='{"payload":{"kind":"metric","metricLeaf":{"id":1},"extra":true}}',
+        expected_error_type="value_error",
+    )
     assert_generated_model_json_validation(
         output_file,
         module_name="read_only_write_only_variant_graph_validator_request_property_count",

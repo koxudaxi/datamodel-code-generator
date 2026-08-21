@@ -1956,6 +1956,10 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         """Render shared code that should be emitted once per generated module."""
         return ""
 
+    @classmethod
+    def prepare_module_code(cls, models: list[DataModel]) -> None:
+        """Prepare shared module metadata before imports are collected."""
+
     @property
     def custom_template_dir(self) -> Path | None:
         """Return the custom template directory used by this model."""
