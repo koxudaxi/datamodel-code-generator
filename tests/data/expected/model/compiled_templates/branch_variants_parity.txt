@@ -865,12 +865,46 @@ next"""
 
 
 
+=== schema_property_count_without_prior
+
+    __json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = (
+        1,
+        2,
+    )
+
+
+
 === schema_helpers_without_optional_rules
 class _RuntimeBase(BaseModel):
 
     @model_validator(mode='before')
     @classmethod
     def _validate_json_schema_runtime_rules(cls, data: Any) -> Any:
+        return data
+
+
+
+
+=== schema_helpers_property_count
+class _RuntimeBase(BaseModel):
+    __json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = ()
+
+    @model_validator(mode='before')
+    @classmethod
+    def _validate_json_schema_runtime_rules(cls, data: Any) -> Any:
+        data = cls._validate_json_schema_property_count(data)
+        return data
+
+    @classmethod
+    def _validate_json_schema_property_count(cls, data: Any) -> Any:
+        if not (rule := cls.__json_schema_property_count_rule__) or not isinstance(data, dict):
+            return data
+        property_count = len(data)
+        min_properties, max_properties = rule
+        if min_properties is not None and property_count < min_properties:
+            raise ValueError(f'Expected at least {min_properties} properties')
+        if max_properties is not None and property_count > max_properties:
+            raise ValueError(f'Expected at most {max_properties} properties')
         return data
 
 

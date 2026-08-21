@@ -233,6 +233,8 @@ def test_schema_validator_helpers_disabled() -> None:
     parser = JsonSchemaParser("", generate_schema_validators=False)
     obj = JsonSchemaObject.model_validate({
         "type": "object",
+        "minProperties": 1,
+        "maxProperties": 2,
         "properties": {"a": {"type": "string"}},
         "oneOf": [{"required": ["a"]}],
     })

@@ -10,10 +10,12 @@ from pydantic import BaseModel, model_validator
 
 class _JsonSchemaRuntimeValidationBase(BaseModel):
     __json_schema_conditional_required__: ClassVar[tuple[Any, ...]] = ()
+    __json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = ()
 
     @model_validator(mode='before')
     @classmethod
     def _validate_json_schema_runtime_rules(cls, data: Any) -> Any:
+        data = cls._validate_json_schema_property_count(data)
         data = cls._validate_json_schema_conditional_required(data)
         return data
 
@@ -37,6 +39,18 @@ class _JsonSchemaRuntimeValidationBase(BaseModel):
                 raise ValueError('Conditional required properties are missing')
         return data
 
+    @classmethod
+    def _validate_json_schema_property_count(cls, data: Any) -> Any:
+        if not (rule := cls.__json_schema_property_count_rule__) or not isinstance(data, dict):
+            return data
+        property_count = len(data)
+        min_properties, max_properties = rule
+        if min_properties is not None and property_count < min_properties:
+            raise ValueError(f'Expected at least {min_properties} properties')
+        if max_properties is not None and property_count > max_properties:
+            raise ValueError(f'Expected at most {max_properties} properties')
+        return data
+
 
 class ApiReadOnlyLeafRequestModel(BaseModel):
     pass
@@ -55,6 +69,11 @@ class ApiConditionalEnvelopeRequestModel(_JsonSchemaRuntimeValidationBase):
         },
     )
 
+    __json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = (
+        2,
+        2,
+    )
+
     kind: str
     metricLeaf: ApiReadOnlyLeafRequestModel | None = None
     noteLeaf: ApiReadOnlyLeafRequestModel | None = None
@@ -67,6 +86,11 @@ class ApiConditionalEnvelopeResponseModel(_JsonSchemaRuntimeValidationBase):
             'then_required_groups': ((('metricLeaf',),),),
             'else_required_groups': ((('noteLeaf',),),),
         },
+    )
+
+    __json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = (
+        2,
+        2,
     )
 
     kind: str

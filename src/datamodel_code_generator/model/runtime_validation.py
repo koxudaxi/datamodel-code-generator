@@ -52,6 +52,14 @@ class ConditionalRequiredRule:
     else_groups: RequiredGroups
 
 
+@dataclass(frozen=True, slots=True)
+class PropertyCountRule:
+    """Runtime rule for JSON Schema object property-count bounds."""
+
+    min_properties: int | None = None
+    max_properties: int | None = None
+
+
 @dataclass
 class SchemaRuntimeValidation:
     """Schema-derived runtime validation rules for a generated model."""
@@ -59,10 +67,11 @@ class SchemaRuntimeValidation:
     pattern_properties: list[PatternPropertiesRule] = field(default_factory=list)
     required_groups: list[RequiredGroupsRule] = field(default_factory=list)
     conditional_required: list[ConditionalRequiredRule] = field(default_factory=list)
+    property_count: PropertyCountRule | None = None
 
     def __bool__(self) -> bool:
         """Return whether any runtime validation rule is registered."""
-        return bool(self.pattern_properties or self.required_groups or self.conditional_required)
+        return bool(self.pattern_properties or self.required_groups or self.conditional_required or self.property_count)
 
     @property
     def data_types(self) -> tuple[DataType, ...]:
@@ -82,6 +91,7 @@ class _InternalSchemaRuntimeValidation(SchemaRuntimeValidation):
         pattern_properties: list[PatternPropertiesRule] | None = None,
         required_groups: list[RequiredGroupsRule] | None = None,
         conditional_required: list[ConditionalRequiredRule] | None = None,
+        property_count: PropertyCountRule | None = None,
     ) -> None:
         if token is not _INTERNAL_SCHEMA_RUNTIME_VALIDATION_TOKEN:
             raise TypeError(_INTERNAL_SCHEMA_RUNTIME_VALIDATION_ERROR)
@@ -89,6 +99,7 @@ class _InternalSchemaRuntimeValidation(SchemaRuntimeValidation):
             pattern_properties=[] if pattern_properties is None else pattern_properties,
             required_groups=[] if required_groups is None else required_groups,
             conditional_required=[] if conditional_required is None else conditional_required,
+            property_count=property_count,
         )
 
 
@@ -97,6 +108,7 @@ def _make_internal_schema_runtime_validation(
     pattern_properties: list[PatternPropertiesRule] | None = None,
     required_groups: list[RequiredGroupsRule] | None = None,
     conditional_required: list[ConditionalRequiredRule] | None = None,
+    property_count: PropertyCountRule | None = None,
 ) -> SchemaRuntimeValidation:
     """Create parser-owned runtime validation metadata for built-in rendering."""
     return _InternalSchemaRuntimeValidation(
@@ -104,6 +116,7 @@ def _make_internal_schema_runtime_validation(
         pattern_properties=pattern_properties,
         required_groups=required_groups,
         conditional_required=conditional_required,
+        property_count=property_count,
     )
 
 

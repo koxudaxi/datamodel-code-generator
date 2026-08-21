@@ -159,6 +159,7 @@ def _template_context(path: Path) -> dict[str, Any]:
         "fields": [first_field, second_field],
         "has_conditional_required": True,
         "has_pattern_properties": True,
+        "has_property_count": False,
         "has_required_groups": True,
         "is_functional_syntax": path.name in {"TypedDict.jinja2", "TypedDictFunction.jinja2"},
         "methods": ['def generated(self) -> str:\n        return "ok"'],
@@ -176,6 +177,7 @@ def _template_context(path: Path) -> dict[str, Any]:
         "schema_runtime_validation": SimpleNamespace(
             conditional_required=(rule,),
             pattern_properties=(rule,),
+            property_count=None,
             required_groups=(rule,),
         ),
         "schema_runtime_validation_base_class_name": "_RuntimeBase",
@@ -300,6 +302,7 @@ def _template_branch_cases() -> tuple[tuple[str, Path, dict[str, Any]], ...]:  #
         "class_body_lines": [],
         "schema_runtime_validation": SimpleNamespace(
             pattern_properties=(),
+            property_count=None,
             required_groups=(any_of_rule,),
             conditional_required=(),
         ),
@@ -321,6 +324,7 @@ def _template_branch_cases() -> tuple[tuple[str, Path, dict[str, Any]], ...]:  #
         "class_body_lines": [],
         "schema_runtime_validation": SimpleNamespace(
             pattern_properties=(multiple_pattern_rule,),
+            property_count=None,
             required_groups=(),
             conditional_required=(),
         ),
@@ -505,6 +509,7 @@ def _template_branch_cases() -> tuple[tuple[str, Path, dict[str, Any]], ...]:  #
                 **namespace_after_empty,
                 "schema_runtime_validation": SimpleNamespace(
                     pattern_properties=(),
+                    property_count=None,
                     required_groups=(SimpleNamespace(keyword="oneOf", groups=((("one",),),)),),
                     conditional_required=(),
                 ),
@@ -518,6 +523,7 @@ def _template_branch_cases() -> tuple[tuple[str, Path, dict[str, Any]], ...]:  #
                 "description": '"""prior"""',
                 "schema_runtime_validation": SimpleNamespace(
                     pattern_properties=(),
+                    property_count=None,
                     required_groups=(SimpleNamespace(keyword="anyOf", groups=((("any",),),)),),
                     conditional_required=(),
                 ),
@@ -530,8 +536,22 @@ def _template_branch_cases() -> tuple[tuple[str, Path, dict[str, Any]], ...]:  #
                 **namespace_after_empty,
                 "schema_runtime_validation": SimpleNamespace(
                     pattern_properties=(),
+                    property_count=None,
                     required_groups=(),
                     conditional_required=(SimpleNamespace(condition=(), then_groups=(), else_groups=()),),
+                ),
+            },
+        ),
+        (
+            "schema_property_count_without_prior",
+            schema_path,
+            {
+                **namespace_after_empty,
+                "schema_runtime_validation": SimpleNamespace(
+                    pattern_properties=(),
+                    property_count=SimpleNamespace(min_properties=1, max_properties=2),
+                    required_groups=(),
+                    conditional_required=(),
                 ),
             },
         ),
@@ -542,6 +562,17 @@ def _template_branch_cases() -> tuple[tuple[str, Path, dict[str, Any]], ...]:  #
                 has_pattern_properties=False,
                 has_required_groups=False,
                 has_conditional_required=False,
+                has_property_count=False,
+            ),
+        ),
+        (
+            "schema_helpers_property_count",
+            *context_for(
+                "pydantic_v2/schema_runtime_validation_helpers.jinja2",
+                has_pattern_properties=False,
+                has_required_groups=False,
+                has_conditional_required=False,
+                has_property_count=True,
             ),
         ),
         (
