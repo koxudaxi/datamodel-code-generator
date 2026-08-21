@@ -284,6 +284,18 @@ def test_schema_validator_property_count_helper_stops_at_visited_ref() -> None:
     assert [source.maxProperties for source in sources] == [None, None, None, 4]
 
 
+def test_clear_inherited_field_caches_releases_property_count_rules() -> None:
+    """Release opt-in property-count aggregation cache with parser-owned temporary state."""
+    parser = JsonSchemaParser("", generate_schema_validators=True)
+    parser._get_property_count_rule(JsonSchemaObject.model_validate({"minProperties": 2}))
+
+    assert parser._property_count_rule_cache
+
+    parser._clear_inherited_field_caches()
+
+    assert not parser._property_count_rule_cache
+
+
 def test_schema_runtime_validation_module_preparation_skips_empty_modules() -> None:
     """Avoid planning work for modules without opt-in runtime metadata."""
     parser = JsonSchemaParser("", generate_schema_validators=True)

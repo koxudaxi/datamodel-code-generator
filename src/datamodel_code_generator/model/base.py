@@ -1960,6 +1960,10 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     def prepare_module_code(cls, models: list[DataModel]) -> None:
         """Prepare shared module metadata before imports are collected."""
 
+    @classmethod
+    def invalidate_module_code_cache(cls, models: list[DataModel]) -> None:
+        """Discard parser-owned module planning state after a model rename."""
+
     @property
     def custom_template_dir(self) -> Path | None:
         """Return the custom template directory used by this model."""

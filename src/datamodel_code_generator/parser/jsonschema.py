@@ -1916,6 +1916,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self._inherited_schema_linearization_cache.clear()
         self._inherited_required_cache.clear()
         self._inherited_parent_property_cache.clear()
+        if self.generate_schema_validators:
+            self._property_count_rule_cache.clear()
 
     def _merge_inherited_field_overrides(
         self,

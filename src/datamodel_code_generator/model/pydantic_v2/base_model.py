@@ -864,7 +864,10 @@ class BaseModel(BaseModelBase):
                 runtime_validations,
                 has_local_core_helper=True,
             )
-            module_plan = SchemaRuntimeValidationModulePlan(base_class_name, has_property_count=False)
+            module_plan = SchemaRuntimeValidationModulePlan(
+                base_class_name,
+                has_property_count=False,
+            )
             models[0].__dict__[cls._SCHEMA_RUNTIME_VALIDATION_MODULE_PLAN_CACHE_KEY] = module_plan
             return module_plan
 
@@ -879,7 +882,10 @@ class BaseModel(BaseModelBase):
         if not helper_capabilities:
             for model in runtime_models:
                 cls._set_schema_runtime_validation_base(model, None, (False, False))
-            module_plan = SchemaRuntimeValidationModulePlan(base_class_name, has_property_count=True)
+            module_plan = SchemaRuntimeValidationModulePlan(
+                base_class_name,
+                has_property_count=True,
+            )
             models[0].__dict__[cls._SCHEMA_RUNTIME_VALIDATION_MODULE_PLAN_CACHE_KEY] = module_plan
             return module_plan
 
@@ -912,6 +918,12 @@ class BaseModel(BaseModelBase):
         """Clear the compact module plan with the model's other render caches."""
         super().invalidate_render_caches()
         self.__dict__.pop(self._SCHEMA_RUNTIME_VALIDATION_MODULE_PLAN_CACHE_KEY, None)
+
+    @classmethod
+    def invalidate_module_code_cache(cls, models: list[DataModel]) -> None:
+        """Discard the one module plan after parser-side import collision renames."""
+        if models:
+            models[0].__dict__.pop(cls._SCHEMA_RUNTIME_VALIDATION_MODULE_PLAN_CACHE_KEY, None)
 
     @staticmethod
     def _get_schema_runtime_validation_models(

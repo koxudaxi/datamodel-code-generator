@@ -15097,6 +15097,18 @@ def test_main_jsonschema_generate_schema_validators_property_count(output_file: 
             expected_attribute_path=attribute_path,
             expected_attribute_value=attribute_value,
         )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output_property_count_keywords",
+        model_name="DirectCount",
+        valid_json='{"name":"x","label":"y"}',
+        invalid_json='{"name":"x"}',
+        expected_error_type="value_error",
+        invalid_keyword_arguments=(
+            ({"name": "x"}, "value_error"),
+            ({"name": "x", "label": "y", "first": 1, "second": 2}, "value_error"),
+        ),
+    )
 
 
 def test_main_jsonschema_property_count_default_generation_is_unchanged(output_file: Path) -> None:
@@ -15180,6 +15192,35 @@ def test_main_jsonschema_property_count_root_model_keeps_field_constraints(outpu
         valid_json="{}",
         invalid_json='{"key":1}',
         expected_error_type="too_long",
+    )
+
+
+def test_main_jsonschema_property_count_root_collapse_keeps_helper_imports(output_file: Path) -> None:
+    """Keep property-count helper imports when an earlier runtime RootModel is collapsed."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_validators_property_count_root_collapse.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="schema_validators_property_count_root_collapse.py",
+        extra_args=[
+            "--collapse-root-models",
+            "--generate-schema-validators",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output_property_count_root_collapse",
+        model_name="Survivor",
+        valid_json='{"value":"x"}',
+        invalid_json="{}",
+        expected_error_type="value_error",
     )
 
 

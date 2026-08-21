@@ -3974,12 +3974,14 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         models: list[DataModel],
         imports: Imports,
         scoped_model_resolver: ModelResolver,
-    ) -> None:
+    ) -> bool:
+        """Rename local models shadowing imports and report whether a rename occurred."""
         imported_names = {
             imports.alias[from_][i] if i in imports.alias[from_] and i != imports.alias[from_][i] else i
             for from_, import_ in imports.items()
             for i in import_
         }
+        renamed = False
         for model in models:
             if model.class_name not in imported_names:  # pragma: no cover
                 continue
@@ -3993,6 +3995,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     class_name=True,
                 ).name,
             )
+            renamed = True
+        return renamed
 
     def __alias_shadowed_imports(
         self,
@@ -5188,6 +5192,22 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 continue
             self.data_model_type.prepare_module_code(ctx.models)
 
+    def _sync_schema_runtime_validation_module_imports(  # noqa: PLR6301
+        self,
+        contexts: list[ModuleContext],
+        model_imports: dict[DataModel, tuple[Import, ...]],
+    ) -> None:
+        """Merge imports added by module planning into finalized module imports.
+
+        This remains an instance method because ``snooper_to_methods`` does not
+        preserve inherited static methods on parser subclasses.
+        """
+        for ctx in contexts:
+            for model in ctx.models:
+                prepared_imports = model.imports
+                ctx.imports.append(import_ for import_ in prepared_imports if import_ not in model_imports[model])
+                model_imports[model] = prepared_imports
+
     def _finalize_modules(  # noqa: PLR0912
         self,
         contexts: list[ModuleContext],
@@ -5200,8 +5220,6 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.__mark_set_item_models_hashable(all_models)
         self.__apply_generic_base_class(contexts)
         self._finalize_bound_python_type_imports(contexts)
-        if self.generate_schema_validators:
-            self._prepare_schema_runtime_validation_module_code(contexts)
         model_imports = {model: model.imports for ctx in contexts for model in ctx.models}
 
         for ctx in contexts:
@@ -5214,6 +5232,10 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 imports = module_to_import[module]
                 imports.remove(model_imports.get(unused_model, unused_model.imports))
                 models.remove(unused_model)
+
+        if self.generate_schema_validators:
+            self._prepare_schema_runtime_validation_module_code(contexts)
+            self._sync_schema_runtime_validation_module_imports(contexts, model_imports)
 
         for ctx in contexts:
             used_names = self._collect_used_names_from_models(ctx.models, model_imports)
@@ -5230,8 +5252,22 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 while ctx.imports.counter.get((IMPORT_TYPED_DICT.from_, IMPORT_TYPED_DICT.import_), 0) > 0:
                     ctx.imports.remove(IMPORT_TYPED_DICT)
 
+        renamed_models = False
         for ctx in contexts:
-            self.__change_imported_model_name(ctx.models, ctx.imports, ctx.scoped_model_resolver)
+            renamed_models = (
+                self.__change_imported_model_name(ctx.models, ctx.imports, ctx.scoped_model_resolver) or renamed_models
+            )
+        if self.generate_schema_validators and renamed_models:
+            # Helper-name reservations include referenced models from other modules,
+            # so a rare import collision must invalidate every module plan.
+            for ctx in contexts:
+                self.data_model_type.invalidate_module_code_cache(ctx.models)
+            self._prepare_schema_runtime_validation_module_code(contexts)
+            # Renaming only changes synthetic helper names; capabilities and their
+            # import set stay invariant. Keep snapshots synchronized defensively.
+            self._sync_schema_runtime_validation_module_imports(contexts, model_imports)
+
+        for ctx in contexts:
             self.__set_validate_default_on_fields(
                 ctx.models,
                 can_retain_cache=_can_retain_model_imports_cache(

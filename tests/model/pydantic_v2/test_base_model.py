@@ -158,6 +158,45 @@ def test_property_count_class_body_line_is_idempotent() -> None:
 
 
 @pytest.mark.allow_direct_assert
+def test_schema_runtime_validation_module_plan_tracks_renamed_models() -> None:
+    """Replan synthetic helper names after any model in the module is renamed."""
+    runtime_model = BaseModel(
+        fields=[],
+        reference=Reference(name="RuntimeModel", path="#/RuntimeModel"),
+        extra_template_data=defaultdict(
+            dict,
+            {
+                "#/RuntimeModel": {
+                    "schema_runtime_validation": _make_internal_schema_runtime_validation(
+                        required_groups=_schema_runtime_validation().required_groups,
+                        property_count=PropertyCountRule(min_properties=1),
+                    )
+                }
+            },
+        ),
+    )
+    colliding_model = BaseModel(
+        fields=[],
+        reference=Reference(
+            name="_JsonSchemaRuntimeValidationBaseCore",
+            path="#/JsonSchemaRuntimeValidationBaseCore",
+        ),
+    )
+    runtime_model.extra_template_data["schema_runtime_validation_enabled"] = True
+
+    first = BaseModel.render_module_code([runtime_model, colliding_model])
+    colliding_model.class_name = "RenamedCollision"
+    BaseModel.invalidate_module_code_cache([runtime_model, colliding_model])
+    second = BaseModel.render_module_code([runtime_model, colliding_model])
+
+    assert "class _JsonSchemaRuntimeValidationBaseCore2(BaseModel):" in first
+    assert "class _JsonSchemaRuntimeValidationBaseCore(BaseModel):" in second
+    assert "_JsonSchemaRuntimeValidationBaseCore2" not in second
+    assert "class RenamedCollision(BaseModel):" in colliding_model.render()
+    assert BaseModel.invalidate_module_code_cache([]) is None
+
+
+@pytest.mark.allow_direct_assert
 def test_property_count_inherited_capability_skips_unused_local_helper() -> None:
     """Avoid emitting a local helper when an external grandparent already supplies it."""
     property_parent = BaseModel(

@@ -1365,12 +1365,10 @@ def _model_json_validator(model: Any) -> Callable[[str], Any]:
     return TypeAdapter(model).validate_json
 
 
-def _assert_model_json_invalid(
-    validate_json: Callable[[str], Any], invalid_json: str, expected_error_type: str
-) -> None:
-    """Assert that a generated model JSON validator rejects invalid JSON with the expected error."""
+def _assert_model_json_invalid(validate: Callable[[Any], Any], invalid_data: Any, expected_error_type: str) -> None:
+    """Assert that a generated model validator rejects invalid input with the expected error."""
     with pytest.raises(ValidationError) as exc_info:
-        validate_json(invalid_json)
+        validate(invalid_data)
     errors = exc_info.value.errors()
     if not errors:  # pragma: no cover
         pytest.fail("Expected validation error but got an empty errors list", pytrace=False)
@@ -1394,6 +1392,7 @@ def assert_generated_model_json_validation(
     expected_attribute_value: Any = None,
     expected_keyword_only_fields: Collection[str] | None = None,
     expected_repr: str | None = None,
+    invalid_keyword_arguments: Sequence[tuple[Mapping[str, Any], str]] = (),
 ) -> None:
     """Import a generated module and validate JSON data through a generated Pydantic model or dataclass."""
     with _generated_model(output_path, module_name, model_name) as model:
@@ -1436,6 +1435,8 @@ def assert_generated_model_json_validation(
             pytest.fail(f"Expected repr {expected_repr!r}, got {parsed!r}", pytrace=False)
 
         _assert_model_json_invalid(validate_json, invalid_json, expected_error_type)
+        for keyword_arguments, keyword_error_type in invalid_keyword_arguments:
+            _assert_model_json_invalid(lambda values: model(**values), keyword_arguments, keyword_error_type)
 
 
 def assert_generated_model_json_invalid(
