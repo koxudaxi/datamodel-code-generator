@@ -15136,6 +15136,7 @@ def test_main_jsonschema_unique_items_schema_validators(output_file: Path) -> No
         validated_python_values = (
             model.model_validate({**base_data, "jsonValues": [Decimal(1), Decimal(2)]}).jsonValues,
             model.model_validate({**base_data, "jsonValues": [[Decimal(1)], [Decimal(2)]]}).jsonValues,
+            model.model_validate({**base_data, "jsonValues": [True, Decimal(1)]}).jsonValues,
             model.model_validate({
                 **base_data,
                 "jsonValues": [_ArrayLikeEquality(), _ArrayLikeEquality()],
@@ -15149,15 +15150,20 @@ def test_main_jsonschema_unique_items_schema_validators(output_file: Path) -> No
             "\n".join((
                 f"decimals={validated_python_values[0]!r}",
                 f"nested_decimals={validated_python_values[1]!r}",
-                f"array_like={[type(item).__name__ for item in validated_python_values[2]]!r}",
-                f"raising={[type(item).__name__ for item in validated_python_values[3]]!r}",
+                f"bool_decimal={validated_python_values[2]!r}",
+                f"array_like={[type(item).__name__ for item in validated_python_values[3]]!r}",
+                f"raising={[type(item).__name__ for item in validated_python_values[4]]!r}",
             ))
             + "\n",
             JSON_SCHEMA_DATA_PATH / "unique_items_python_values.snapshot",
         )
         for values in (
             [Decimal(1), Decimal(1)],
+            [Decimal(1), 1],
+            [1, Decimal(1)],
             [[Decimal(1)], [Decimal(1)]],
+            [[Decimal(1)], [1]],
+            [[1], [Decimal(1)]],
             [{"first"}, {"first"}],
         ):
             with pytest.raises(ValidationError, match="Array items must be unique"):

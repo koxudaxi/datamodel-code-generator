@@ -75,8 +75,16 @@ class _JsonSchemaRuntimeValidationBase(BaseModel):
                         raise ValueError('Array items must be unique')
                     else:
                         scalar_items.add(item_key)
+                    if (
+                        structural_items is not None
+                        and (candidates := structural_items.get(cls._json_schema_unique_items_fingerprint(item)))
+                        and any(cls._json_schema_unique_items_equal(item, candidate) for candidate in candidates)
+                    ):
+                        raise ValueError('Array items must be unique')
                 case _:
                     fingerprint = cls._json_schema_unique_items_fingerprint(item)
+                    if scalar_items is not None and cls._json_schema_unique_items_safe_contains(scalar_items, item):
+                        raise ValueError('Array items must be unique')
                     if structural_items is None:
                         structural_items = {fingerprint: [item]}
                         continue
@@ -95,9 +103,9 @@ class _JsonSchemaRuntimeValidationBase(BaseModel):
             case bool() as boolean:
                 return 0x1F if boolean else 0x1D
             case int() | float() as number:
-                return hash(number) ^ 0x2B
+                return hash(number)
             case str() as string:
-                return hash(string) ^ 0x3D
+                return hash(string)
             case list() | tuple() as array:
                 fingerprint = 0x4F
                 for item in array:
@@ -121,9 +129,15 @@ class _JsonSchemaRuntimeValidationBase(BaseModel):
             case bool() as boolean:
                 return isinstance(right, bool) and boolean == right
             case int() | float() as number:
-                return not isinstance(right, bool) and isinstance(right, (int, float)) and number == right
+                if isinstance(right, bool):
+                    return False
+                if isinstance(right, (int, float)):
+                    return number == right
+                return cls._json_schema_unique_items_safe_equal(number, right)
             case str() as string:
-                return isinstance(right, str) and string == right
+                if isinstance(right, str):
+                    return string == right
+                return cls._json_schema_unique_items_safe_equal(string, right)
             case list() | tuple() as array:
                 return (
                     isinstance(right, (list, tuple))
@@ -148,6 +162,15 @@ class _JsonSchemaRuntimeValidationBase(BaseModel):
             return hash(value)
         except Exception:  # noqa: BLE001
             return None
+
+    @classmethod
+    def _json_schema_unique_items_safe_contains(
+        cls, values: set[object], value: Any
+    ) -> bool:
+        try:
+            return value in values
+        except Exception:  # noqa: BLE001
+            return False
 
     @classmethod
     def _json_schema_unique_items_safe_equal(cls, left: Any, right: Any) -> bool:
