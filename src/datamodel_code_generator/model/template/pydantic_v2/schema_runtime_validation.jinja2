@@ -62,9 +62,10 @@
 {%- endfor %}
     )
 {{ '\n' }}
+{%- set schema_validator_state.has_prior = true %}
 {%- endif %}
 {%- if schema_runtime_validation.unique_items %}
-{%- if schema_validator_state.has_prior or schema_runtime_validation.conditional_required %}
+{%- if schema_validator_state.has_prior %}
 {{ '\n' }}
 {%- endif %}
     __json_schema_unique_items__: ClassVar[tuple[Any, ...]] = (

@@ -14,6 +14,7 @@ from collections import defaultdict
 from collections.abc import Callable as ABCCallable
 from collections.abc import Sequence
 from dataclasses import Field as DataclassField
+from decimal import Decimal
 from pathlib import Path, PurePath
 from typing import TYPE_CHECKING, get_args, get_type_hints
 
@@ -96,6 +97,20 @@ if TYPE_CHECKING:
     from datamodel_code_generator.parser.base import Result
 
 FixtureRequest = pytest.FixtureRequest
+
+
+class _ArrayLikeEquality:
+    __hash__ = None
+
+    def __eq__(self, other: object) -> list[bool]:
+        return [isinstance(other, _ArrayLikeEquality)]
+
+
+class _RaisingEquality:
+    __hash__ = None
+
+    def __eq__(self, other: object) -> bool:
+        raise ValueError
 
 
 class _FallbackMsgspecDataModelField(MsgspecDataModelField):
@@ -15112,6 +15127,41 @@ def test_main_jsonschema_unique_items_schema_validators(output_file: Path) -> No
         ),
         expected_error_type="value_error",
     )
+    base_data = {
+        "strings": ["first"],
+        "objects": [{"id": 1, "name": "first"}],
+        "nested": [["first"]],
+    }
+    with _generated_model(output_file, "unique_items_python_values", "UniqueItemsPayload") as model:
+        validated_python_values = (
+            model.model_validate({**base_data, "jsonValues": [Decimal(1), Decimal(2)]}).jsonValues,
+            model.model_validate({**base_data, "jsonValues": [[Decimal(1)], [Decimal(2)]]}).jsonValues,
+            model.model_validate({
+                **base_data,
+                "jsonValues": [_ArrayLikeEquality(), _ArrayLikeEquality()],
+            }).jsonValues,
+            model.model_validate({
+                **base_data,
+                "jsonValues": [_RaisingEquality(), _RaisingEquality()],
+            }).jsonValues,
+        )
+        assert_output(
+            "\n".join((
+                f"decimals={validated_python_values[0]!r}",
+                f"nested_decimals={validated_python_values[1]!r}",
+                f"array_like={[type(item).__name__ for item in validated_python_values[2]]!r}",
+                f"raising={[type(item).__name__ for item in validated_python_values[3]]!r}",
+            ))
+            + "\n",
+            JSON_SCHEMA_DATA_PATH / "unique_items_python_values.snapshot",
+        )
+        for values in (
+            [Decimal(1), Decimal(1)],
+            [[Decimal(1)], [Decimal(1)]],
+            [{"first"}, {"first"}],
+        ):
+            with pytest.raises(ValidationError, match="Array items must be unique"):
+                model.model_validate({**base_data, "jsonValues": values})
 
 
 def test_main_jsonschema_generate_schema_validators_property_count(output_file: Path) -> None:

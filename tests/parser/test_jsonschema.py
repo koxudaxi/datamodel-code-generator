@@ -586,12 +586,15 @@ def test_schema_runtime_validation_copy_filters_unique_items_paths() -> None:
 
 def test_schema_validator_unique_items_paths_cover_composed_input_shapes() -> None:
     """Collect uniqueItems paths for every inline JSON Schema container shape."""
-    parser = JsonSchemaParser("", generate_schema_validators=True)
+    parser = JsonSchemaParser("", collapse_root_models=True, generate_schema_validators=True)
     root_schema = _json_schema_object({
         "allOf": [{"type": "array", "uniqueItems": True}],
-        "items": [{"type": "array", "uniqueItems": True}],
-        "prefixItems": [{"type": "array", "uniqueItems": True}],
-        "properties": {"child": {"type": "array", "uniqueItems": True}},
+        "items": [False, {"type": "array", "uniqueItems": True}],
+        "prefixItems": [False, {"type": "array", "uniqueItems": True}],
+        "properties": {
+            "ignored": False,
+            "child": {"type": "array", "uniqueItems": True},
+        },
     })
     mapping_schema = _json_schema_object({
         "additionalProperties": {"type": "array", "uniqueItems": True},
@@ -600,10 +603,19 @@ def test_schema_validator_unique_items_paths_cover_composed_input_shapes() -> No
     property_schema = _json_schema_object({
         "allOf": [{"type": "object"}],
         "properties": {
+            "unmapped": {"type": "array", "uniqueItems": True},
             "kept": {"type": "array", "uniqueItems": True},
             "ignored": True,
         },
     })
+    visited_reference = _json_schema_object({"$ref": "#/$defs/UniqueValues", "uniqueItems": True})
+    visited_reference_paths = list(
+        parser._iter_unique_items_paths(
+            visited_reference,
+            (),
+            frozenset({parser.model_resolver.resolve_ref(visited_reference.ref)}),
+        )
+    )
 
     parser._add_unique_items_validator("#/Root", root_schema, [], [], is_root_model=True)
     parser._add_unique_items_validator("#/Mapping", mapping_schema, [], [], is_root_model=True)
@@ -622,6 +634,7 @@ def test_schema_validator_unique_items_paths_cover_composed_input_shapes() -> No
             for reference_path in ("#/Root", "#/Mapping", "#/Direct", "#/Properties")
             if (runtime_validation := parser.extra_template_data[reference_path]["schema_runtime_validation"])
         )
+        + f"\n#/VisitedReference: {visited_reference_paths!r}"
         + "\n",
         DATA_PATH / "schema_runtime_unique_items_paths.snapshot",
     )

@@ -75,7 +75,7 @@ class _JsonSchemaRuntimeValidationBase(BaseModel):
                         raise ValueError('Array items must be unique')
                     else:
                         scalar_items.add(item_key)
-                case list() | tuple() | dict():
+                case _:
                     fingerprint = cls._json_schema_unique_items_fingerprint(item)
                     if structural_items is None:
                         structural_items = {fingerprint: [item]}
@@ -109,7 +109,9 @@ class _JsonSchemaRuntimeValidationBase(BaseModel):
                     fingerprint ^= hash(hash(key) ^ cls._json_schema_unique_items_fingerprint(item))
                 return hash(fingerprint ^ len(object_))
             case _:
-                return id(value)
+                if (value_hash := cls._json_schema_unique_items_safe_hash(value)) is not None:
+                    return value_hash
+                return 0x71
 
     @classmethod
     def _json_schema_unique_items_equal(cls, left: Any, right: Any) -> bool:
@@ -126,7 +128,10 @@ class _JsonSchemaRuntimeValidationBase(BaseModel):
                 return (
                     isinstance(right, (list, tuple))
                     and len(array) == len(right)
-                    and all(cls._json_schema_unique_items_equal(item, other) for item, other in zip(array, right))
+                    and all(
+                        cls._json_schema_unique_items_equal(item, other)
+                        for item, other in zip(array, right, strict=True)
+                    )
                 )
             case dict() as object_:
                 if not isinstance(right, dict) or len(object_) != len(right):
@@ -135,7 +140,22 @@ class _JsonSchemaRuntimeValidationBase(BaseModel):
                     key in right and cls._json_schema_unique_items_equal(item, right[key])
                     for key, item in object_.items()
                 )
-        return False
+        return cls._json_schema_unique_items_safe_equal(left, right)
+
+    @classmethod
+    def _json_schema_unique_items_safe_hash(cls, value: Any) -> int | None:
+        try:
+            return hash(value)
+        except Exception:  # noqa: BLE001
+            return None
+
+    @classmethod
+    def _json_schema_unique_items_safe_equal(cls, left: Any, right: Any) -> bool:
+        try:
+            comparison = left == right
+        except Exception:  # noqa: BLE001
+            return False
+        return comparison if type(comparison) is bool else False
 
 
 class UniqueObject(BaseModel):

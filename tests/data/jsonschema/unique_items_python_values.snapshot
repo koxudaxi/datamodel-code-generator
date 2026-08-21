@@ -1,0 +1,4 @@
+decimals=[Decimal('1'), Decimal('2')]
+nested_decimals=[[Decimal('1')], [Decimal('2')]]
+array_like=['_ArrayLikeEquality', '_ArrayLikeEquality']
+raising=['_RaisingEquality', '_RaisingEquality']
