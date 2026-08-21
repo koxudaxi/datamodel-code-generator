@@ -63,4 +63,15 @@
     )
 {{ '\n' }}
 {%- endif %}
+{%- if schema_runtime_validation.unique_items %}
+{%- if schema_validator_state.has_prior or schema_runtime_validation.conditional_required %}
+{{ '\n' }}
+{%- endif %}
+    __json_schema_unique_items__: ClassVar[tuple[Any, ...]] = (
+{%- for rule in schema_runtime_validation.unique_items %}
+        {{ rule.path|repr }},
+{%- endfor %}
+    )
+{{ '\n' }}
+{%- endif %}
 {%- endif %}

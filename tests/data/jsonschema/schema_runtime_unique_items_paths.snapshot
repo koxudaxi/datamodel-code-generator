@@ -1,0 +1,4 @@
+#/Root: [UniqueItemsRule(path=()), UniqueItemsRule(path=(0,)), UniqueItemsRule(path=(('child',),))]
+#/Mapping: [UniqueItemsRule(path=('__json_schema_mapping_values__',))]
+#/Direct: [UniqueItemsRule(path=())]
+#/Properties: [UniqueItemsRule(path=(('kept',),))]

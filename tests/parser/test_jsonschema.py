@@ -24,9 +24,11 @@ from datamodel_code_generator import (
     DataModelType,
     Error,
     Formatter,
+    InputFileType,
     PythonVersion,
     ReadOnlyWriteOnlyModelType,
     YamlValue,
+    generate,
 )
 from datamodel_code_generator._python_type_annotation import PythonTypeRuntimeSymbol
 from datamodel_code_generator.config import JSONSchemaParserConfig
@@ -39,6 +41,7 @@ from datamodel_code_generator.model.pydantic_v2.root_model import RootModel
 from datamodel_code_generator.model.runtime_validation import (
     ConditionalRequiredRule,
     PatternPropertiesRule,
+    UniqueItemsRule,
     _make_internal_schema_runtime_validation,
 )
 from datamodel_code_generator.model.type_alias import TypeAlias
@@ -68,6 +71,7 @@ from datamodel_code_generator.parser.jsonschema import (
 from datamodel_code_generator.reference import SPECIAL_PATH_MARKER, Reference
 from datamodel_code_generator.types import ANY, DataType
 from tests.conftest import assert_output
+from tests.main.conftest import assert_generated_model_json_validation
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -79,6 +83,44 @@ DATA_PATH: Path = Path(__file__).parents[1] / "data" / "jsonschema"
 
 def _json_schema_object(data: dict[str, Any]) -> JsonSchemaObject:
     return JsonSchemaObject.model_validate(data)
+
+
+def test_schema_validator_retains_unique_items_for_collapsed_referenced_root_model(output_file: Path) -> None:
+    """Keep uniqueItems validation when a referenced array root model is collapsed."""
+    generate(
+        {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "Payload",
+            "type": "object",
+            "properties": {"unique-values": {"$ref": "#/$defs/UniqueValues"}},
+            "required": ["unique-values"],
+            "$defs": {
+                "UniqueValues": {
+                    "type": "array",
+                    "uniqueItems": True,
+                    "items": {"type": "integer"},
+                }
+            },
+        },
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        collapse_root_models=True,
+        disable_timestamp=True,
+        formatters=[],
+        generate_schema_validators=True,
+    )
+
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="collapsed_unique_items",
+        model_name="Payload",
+        valid_json='{"unique-values":[1,2]}',
+        invalid_json='{"unique-values":[1,1]}',
+        expected_error_type="value_error",
+        expected_attribute_path=("unique_values",),
+        expected_attribute_value=[1, 2],
+    )
 
 
 def test_generated_formatter_mode_only_enabled_for_builtin() -> None:
@@ -512,6 +554,77 @@ def test_schema_runtime_validation_reuses_existing_instance() -> None:
     runtime_validation = parser._schema_runtime_validation("#/Model")
 
     assert parser._schema_runtime_validation("#/Model") is runtime_validation
+
+
+def test_schema_runtime_validation_copy_filters_unique_items_paths() -> None:
+    """Retain only variant-visible uniqueItems rules without altering their paths."""
+    parser = JsonSchemaParser("")
+    source_path = "#/UniqueItemsSource"
+    target_path = "#/UniqueItemsTarget"
+    parser.extra_template_data[source_path]["schema_runtime_validation"] = _make_internal_schema_runtime_validation(
+        unique_items=[
+            UniqueItemsRule(path=()),
+            UniqueItemsRule(path=(None,)),
+            UniqueItemsRule(path=(("kept",),)),
+            UniqueItemsRule(path=(("removed",),)),
+        ]
+    )
+
+    parser._copy_schema_runtime_validation_for_variant(
+        source_path,
+        target_path,
+        [DataModelFieldBase(name="kept", original_name="kept", data_type=DataType(type="str"))],
+        "Request",
+    )
+
+    runtime_validation = parser.extra_template_data[target_path]["schema_runtime_validation"]
+    assert_output(
+        "\n".join(repr(rule.path) for rule in runtime_validation.unique_items) + "\n",
+        DATA_PATH / "schema_runtime_unique_items_variant.snapshot",
+    )
+
+
+def test_schema_validator_unique_items_paths_cover_composed_input_shapes() -> None:
+    """Collect uniqueItems paths for every inline JSON Schema container shape."""
+    parser = JsonSchemaParser("", generate_schema_validators=True)
+    root_schema = _json_schema_object({
+        "allOf": [{"type": "array", "uniqueItems": True}],
+        "items": [{"type": "array", "uniqueItems": True}],
+        "prefixItems": [{"type": "array", "uniqueItems": True}],
+        "properties": {"child": {"type": "array", "uniqueItems": True}},
+    })
+    mapping_schema = _json_schema_object({
+        "additionalProperties": {"type": "array", "uniqueItems": True},
+    })
+    direct_schema = _json_schema_object({"type": "array", "uniqueItems": True})
+    property_schema = _json_schema_object({
+        "allOf": [{"type": "object"}],
+        "properties": {
+            "kept": {"type": "array", "uniqueItems": True},
+            "ignored": True,
+        },
+    })
+
+    parser._add_unique_items_validator("#/Root", root_schema, [], [], is_root_model=True)
+    parser._add_unique_items_validator("#/Mapping", mapping_schema, [], [], is_root_model=True)
+    parser._add_unique_items_validator("#/Direct", direct_schema, [], [], is_root_model=False)
+    parser._add_unique_items_validator(
+        "#/Properties",
+        property_schema,
+        [DataModelFieldBase(name="kept", original_name="kept", data_type=DataType(type="str"))],
+        [],
+        is_root_model=False,
+    )
+
+    assert_output(
+        "\n".join(
+            f"{reference_path}: {runtime_validation.unique_items!r}"
+            for reference_path in ("#/Root", "#/Mapping", "#/Direct", "#/Properties")
+            if (runtime_validation := parser.extra_template_data[reference_path]["schema_runtime_validation"])
+        )
+        + "\n",
+        DATA_PATH / "schema_runtime_unique_items_paths.snapshot",
+    )
 
 
 def test_schema_validator_pattern_property_helpers_collect_inherited_sources() -> None:

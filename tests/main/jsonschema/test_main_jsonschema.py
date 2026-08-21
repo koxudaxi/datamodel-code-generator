@@ -14885,8 +14885,8 @@ The `--generate-schema-validators` option emits schema-derived model validators
 for object constraints that cannot be represented as type hints alone, including
 minProperties/maxProperties on named object models, patternProperties on
 composed object models, required-only oneOf/anyOf groups, and simple
-if/then/else required-property conditions. This feature is experimental and may
-change as JSON Schema coverage is expanded.""",
+if/then/else required-property conditions, and uniqueItems array validation.
+This feature is experimental and may change as JSON Schema coverage is expanded.""",
     input_schema="jsonschema/schema_validators.json",
     cli_args=[
         "--generate-schema-validators",
@@ -14992,6 +14992,125 @@ def test_main_jsonschema_generate_schema_validators(output_file: Path) -> None:
         expected_error_type="value_error",
         expected_attribute_path=("note",),
         expected_attribute_value="ok",
+    )
+
+
+def test_main_jsonschema_unique_items_schema_validators(output_file: Path) -> None:
+    """Validate uniqueItems arrays without coercing their list values to sets."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "unique_items_schema_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="unique_items_schema_validators.py",
+        extra_args=[
+            "--generate-schema-validators",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-annotated",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="unique_items_strings",
+        model_name="UniqueItemsPayload",
+        valid_json=(
+            '{"strings":["first","second"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first","second"]]}'
+        ),
+        invalid_json=(
+            '{"strings":["first","first"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first","second"]]}'
+        ),
+        expected_error_type="value_error",
+        expected_attribute_path=("strings",),
+        expected_attribute_value=["first", "second"],
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="unique_items_objects",
+        model_name="UniqueItemsPayload",
+        valid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"},{"id":2,"name":"second"}],'
+            '"jsonValues":[true,1],"nested":[["first"]]}'
+        ),
+        invalid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"},{"name":"first","id":1}],'
+            '"jsonValues":[true,1],"nested":[["first"]]}'
+        ),
+        expected_error_type="value_error",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="unique_items_json_equality",
+        model_name="UniqueItemsPayload",
+        valid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first"]]}'
+        ),
+        invalid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[1,1.0],"nested":[["first"]]}'
+        ),
+        expected_error_type="value_error",
+        expected_attribute_path=("jsonValues",),
+        expected_attribute_value=[True, 1],
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="unique_items_nested",
+        model_name="UniqueItemsPayload",
+        valid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first","second"]]}'
+        ),
+        invalid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first","first"]]}'
+        ),
+        expected_error_type="value_error",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="unique_items_root",
+        model_name="RootUniqueItems",
+        valid_json='[true,1,{"first":[1,2]}]',
+        invalid_json="[1,1.0]",
+        expected_error_type="value_error",
+        expected_attribute_path=("root",),
+        expected_attribute_value=[True, 1, {"first": [1, 2]}],
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="unique_items_tuple",
+        model_name="UniqueItemsPayload",
+        valid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first"]],"tupleItems":[["first","second"],"tail"]}'
+        ),
+        invalid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first"]],"tupleItems":[["first","first"],"tail"]}'
+        ),
+        expected_error_type="value_error",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="unique_items_mapping",
+        model_name="UniqueItemsPayload",
+        valid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first"]],"mapping":{"values":["first","second"]}}'
+        ),
+        invalid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first"]],"mapping":{"values":["first","first"]}}'
+        ),
+        expected_error_type="value_error",
     )
 
 

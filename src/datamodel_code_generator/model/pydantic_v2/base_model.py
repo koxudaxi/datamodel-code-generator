@@ -1206,6 +1206,7 @@ class BaseModel(BaseModelBase):
             "has_conditional_required": any(
                 runtime_validation.conditional_required for runtime_validation in runtime_validations
             ),
+            "has_unique_items": any(runtime_validation.unique_items for runtime_validation in runtime_validations),
         }
         if custom_template_dir is None and cls.__module__.startswith("datamodel_code_generator.model."):
             from datamodel_code_generator.model._compiled_templates import get_builtin_renderer  # noqa: PLC0415

@@ -29,6 +29,7 @@ from datamodel_code_generator.model.runtime_validation import (
     PropertyCountRule,
     RequiredGroupsRule,
     SchemaRuntimeValidation,
+    UniqueItemsRule,
     _make_internal_schema_runtime_validation,
 )
 from datamodel_code_generator.parser.base import Parser, _get_builtin_pydantic_v2_field_constructor
@@ -74,6 +75,30 @@ def test_base_model_methods_render_once_after_all_fields() -> None:
     assert_output(
         f"method count: {rendered.count('def generated_method(')}\n\n{rendered}\n",
         EXPECTED_PYDANTIC_V2_MODEL_PATH / "base_model_methods_once.txt",
+    )
+
+
+def test_schema_runtime_validation_unique_items_follows_model_description() -> None:
+    """Render uniqueItems metadata after ordinary class-body template data."""
+    model = BaseModel(
+        fields=[DataModelField(name="values", data_type=DataType(type="str"), required=True)],
+        reference=Reference(name="UniqueItems", path="#/UniqueItems"),
+        description="Unique values.",
+        extra_template_data=defaultdict(
+            dict,
+            {
+                "#/UniqueItems": {
+                    "schema_runtime_validation": _make_internal_schema_runtime_validation(
+                        unique_items=[UniqueItemsRule(path=(("values",),))]
+                    )
+                }
+            },
+        ),
+    )
+
+    assert_output(
+        model.render(),
+        EXPECTED_PYDANTIC_V2_MODEL_PATH / "schema_runtime_unique_items_description.txt",
     )
 
 

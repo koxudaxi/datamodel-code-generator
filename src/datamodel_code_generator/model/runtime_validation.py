@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Literal, TypeAlias
+from typing import TYPE_CHECKING, Final, Literal, TypeAlias
 
 if TYPE_CHECKING:
     from datamodel_code_generator.types import DataType
@@ -12,6 +12,9 @@ InputNames: TypeAlias = tuple[str, ...]
 RequiredGroup: TypeAlias = tuple[InputNames, ...]
 RequiredGroups: TypeAlias = tuple[RequiredGroup, ...]
 Condition: TypeAlias = tuple[tuple[InputNames, tuple[object, ...]], ...]
+UNIQUE_ITEMS_MAPPING_VALUES_PATH_STEP: Final = "__json_schema_mapping_values__"
+UniqueItemsPathStep: TypeAlias = InputNames | int | Literal["__json_schema_mapping_values__"] | None
+UniqueItemsPath: TypeAlias = tuple[UniqueItemsPathStep, ...]
 _INTERNAL_SCHEMA_RUNTIME_VALIDATION_TOKEN = object()
 _INTERNAL_SCHEMA_RUNTIME_VALIDATION_ERROR = "internal schema runtime validation must be created by the parser"
 
@@ -60,6 +63,13 @@ class PropertyCountRule:
     max_properties: int | None = None
 
 
+@dataclass(frozen=True, slots=True)
+class UniqueItemsRule:
+    """Runtime rule for an array's JSON Schema ``uniqueItems`` constraint."""
+
+    path: UniqueItemsPath
+
+
 @dataclass
 class SchemaRuntimeValidation:
     """Schema-derived runtime validation rules for a generated model."""
@@ -68,10 +78,17 @@ class SchemaRuntimeValidation:
     required_groups: list[RequiredGroupsRule] = field(default_factory=list)
     conditional_required: list[ConditionalRequiredRule] = field(default_factory=list)
     property_count: PropertyCountRule | None = None
+    unique_items: list[UniqueItemsRule] = field(default_factory=list)
 
     def __bool__(self) -> bool:
         """Return whether any runtime validation rule is registered."""
-        return bool(self.pattern_properties or self.required_groups or self.conditional_required or self.property_count)
+        return bool(
+            self.pattern_properties
+            or self.required_groups
+            or self.conditional_required
+            or self.property_count
+            or self.unique_items
+        )
 
     @property
     def data_types(self) -> tuple[DataType, ...]:
@@ -92,6 +109,7 @@ class _InternalSchemaRuntimeValidation(SchemaRuntimeValidation):
         required_groups: list[RequiredGroupsRule] | None = None,
         conditional_required: list[ConditionalRequiredRule] | None = None,
         property_count: PropertyCountRule | None = None,
+        unique_items: list[UniqueItemsRule] | None = None,
     ) -> None:
         if token is not _INTERNAL_SCHEMA_RUNTIME_VALIDATION_TOKEN:
             raise TypeError(_INTERNAL_SCHEMA_RUNTIME_VALIDATION_ERROR)
@@ -100,6 +118,7 @@ class _InternalSchemaRuntimeValidation(SchemaRuntimeValidation):
             required_groups=[] if required_groups is None else required_groups,
             conditional_required=[] if conditional_required is None else conditional_required,
             property_count=property_count,
+            unique_items=[] if unique_items is None else unique_items,
         )
 
 
@@ -109,6 +128,7 @@ def _make_internal_schema_runtime_validation(
     required_groups: list[RequiredGroupsRule] | None = None,
     conditional_required: list[ConditionalRequiredRule] | None = None,
     property_count: PropertyCountRule | None = None,
+    unique_items: list[UniqueItemsRule] | None = None,
 ) -> SchemaRuntimeValidation:
     """Create parser-owned runtime validation metadata for built-in rendering."""
     return _InternalSchemaRuntimeValidation(
@@ -117,6 +137,7 @@ def _make_internal_schema_runtime_validation(
         required_groups=required_groups,
         conditional_required=conditional_required,
         property_count=property_count,
+        unique_items=unique_items,
     )
 
 

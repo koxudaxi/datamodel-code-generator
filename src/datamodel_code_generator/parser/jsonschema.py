@@ -62,11 +62,14 @@ from datamodel_code_generator.model.enum import (
     StrEnum,
 )
 from datamodel_code_generator.model.runtime_validation import (
+    UNIQUE_ITEMS_MAPPING_VALUES_PATH_STEP,
     ConditionalRequiredRule,
     PatternPropertiesRule,
     PropertyCountRule,
     RequiredGroupsRule,
     SchemaRuntimeValidation,
+    UniqueItemsPath,
+    UniqueItemsRule,
     _is_internal_schema_runtime_validation,
     _make_internal_schema_runtime_validation,
 )
@@ -2535,11 +2538,21 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             for rule in source.conditional_required
             if all(available_names.intersection(input_names) for input_names, _ in rule.condition)
         ]
+
+        def keeps_unique_items_rule(rule: UniqueItemsRule) -> bool:
+            if not rule.path:
+                return True
+            match rule.path[0]:
+                case tuple() as input_names:
+                    return bool(available_names.intersection(input_names))
+            return True
+
         target = _make_internal_schema_runtime_validation(
             pattern_properties=pattern_properties,
             required_groups=required_groups,
             conditional_required=conditional_required,
             property_count=source.property_count,
+            unique_items=[rule for rule in source.unique_items if keeps_unique_items_rule(rule)],
         )
         if target:
             self.extra_template_data[target_path]["schema_runtime_validation"] = target
@@ -6353,6 +6366,93 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 continue
             yield from self._iter_schema_validation_sources(item, visited_refs)
 
+    def _iter_unique_items_paths(  # noqa: PLR0912
+        self,
+        obj: JsonSchemaObject,
+        path: UniqueItemsPath,
+        visited_refs: frozenset[str] = frozenset(),
+    ) -> Iterator[UniqueItemsPath]:
+        """Yield paths to array schemas that require unique items."""
+        if obj.ref and self.collapse_root_models:
+            resolved_ref = self.model_resolver.resolve_ref(obj.ref)
+            if resolved_ref not in visited_refs:
+                yield from self._iter_unique_items_paths(
+                    self._load_ref_schema_object(obj.ref),
+                    path,
+                    visited_refs | {resolved_ref},
+                )
+        if obj.uniqueItems is True:
+            yield path
+
+        for item in obj.allOf:
+            if isinstance(item, JsonSchemaObject):
+                yield from self._iter_unique_items_paths(item, path, visited_refs)
+
+        match obj.items:
+            case JsonSchemaObject() as item:
+                yield from self._iter_unique_items_paths(item, (*path, None), visited_refs)
+            case list() as items:
+                for index, item in enumerate(items):
+                    if isinstance(item, JsonSchemaObject):
+                        yield from self._iter_unique_items_paths(item, (*path, index), visited_refs)
+
+        if obj.prefixItems:
+            for index, item in enumerate(obj.prefixItems):
+                if isinstance(item, JsonSchemaObject):
+                    yield from self._iter_unique_items_paths(item, (*path, index), visited_refs)
+
+        if isinstance(obj.additionalProperties, JsonSchemaObject) and not obj.properties and not obj.patternProperties:
+            yield from self._iter_unique_items_paths(
+                obj.additionalProperties,
+                (*path, UNIQUE_ITEMS_MAPPING_VALUES_PATH_STEP),
+                visited_refs,
+            )
+        if obj.properties:
+            for property_name, item in obj.properties.items():
+                if isinstance(item, JsonSchemaObject):
+                    yield from self._iter_unique_items_paths(item, (*path, (property_name,)), visited_refs)
+
+    def _add_unique_items_validator(
+        self,
+        reference_path: str,
+        obj: JsonSchemaObject,
+        fields: Sequence[DataModelFieldBase],
+        base_classes: Sequence[Reference],
+        *,
+        is_root_model: bool,
+    ) -> None:
+        """Register ``uniqueItems`` checks as compact paths through raw input data."""
+        paths: list[UniqueItemsPath] = []
+        seen_paths = set[UniqueItemsPath]()
+
+        def add_paths(schema: JsonSchemaObject, path: UniqueItemsPath) -> None:
+            for unique_items_path in self._iter_unique_items_paths(schema, path):
+                if unique_items_path in seen_paths:
+                    continue
+                seen_paths.add(unique_items_path)
+                paths.append(unique_items_path)
+
+        if is_root_model:
+            add_paths(obj, ())
+        else:
+            names_by_property = self._get_input_names_by_property(fields, base_classes)
+            if not obj.properties and not obj.allOf:
+                add_paths(obj, ())
+            for source in self._iter_schema_validation_sources(obj):
+                if not source.properties:
+                    continue
+                for property_name, property_schema in source.properties.items():
+                    if not isinstance(property_schema, JsonSchemaObject):
+                        continue
+                    if (input_names := names_by_property.get(property_name)) is not None:
+                        add_paths(property_schema, (input_names,))
+
+        if not paths:
+            return
+        self._schema_runtime_validation(reference_path).unique_items.extend(
+            UniqueItemsRule(path=path) for path in paths
+        )
+
     def _collect_pattern_property_validators(
         self,
         name: str,
@@ -6533,6 +6633,13 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self._add_conditional_validator(reference_path, obj, names_by_property)
         if include_property_count:
             self._add_property_count_validator(reference_path, obj)
+        self._add_unique_items_validator(
+            reference_path,
+            obj,
+            fields,
+            base_classes,
+            is_root_model=False,
+        )
 
     def _parse_object_common_part(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         self,
@@ -6916,6 +7023,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         default: Any = UNDEFINED,
     ) -> DataModel:
         """Register a root using an internal alternate output representation."""
+        if self.generate_schema_validators:
+            self._add_unique_items_validator(
+                reference.path,
+                obj,
+                fields,
+                [],
+                is_root_model=True,
+            )
         if (
             self.read_only_write_only_model_type == ReadOnlyWriteOnlyModelType.RequestResponse
             and self._fields_reference_rw_model_variant(fields, "Request")
