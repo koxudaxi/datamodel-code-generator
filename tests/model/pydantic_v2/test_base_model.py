@@ -127,6 +127,36 @@ def test_schema_runtime_validation_helpers_are_gated_by_parser_option() -> None:
 
 
 @pytest.mark.allow_direct_assert
+def test_schema_runtime_validation_module_plan_skips_leading_generic_model() -> None:
+    """Find opt-in runtime metadata after an unannotated generated base model."""
+    generic_model = BaseModel.create_base_class_model(
+        config={},
+        reference=Reference(name="BaseModel", path="#/BaseModel"),
+    )
+    assert generic_model is not None
+    runtime_model = BaseModel(
+        fields=[],
+        reference=Reference(name="RuntimeModel", path="#/RuntimeModel"),
+        extra_template_data=defaultdict(
+            dict,
+            {"#/RuntimeModel": {"schema_runtime_validation": _schema_runtime_validation()}},
+        ),
+    )
+    runtime_model.extra_template_data["schema_runtime_validation_enabled"] = True
+    models = [generic_model, runtime_model]
+
+    BaseModel.prepare_module_code(models)
+    first = BaseModel.render_module_code(models)
+    BaseModel.invalidate_module_code_cache(models)
+    BaseModel.prepare_module_code(models)
+    second = BaseModel.render_module_code(models)
+
+    assert "class _JsonSchemaRuntimeValidationBase(BaseModel):" in first
+    assert "class RuntimeModel(_JsonSchemaRuntimeValidationBase):" in runtime_model.render()
+    assert first == second
+
+
+@pytest.mark.allow_direct_assert
 def test_property_count_class_body_line_is_idempotent() -> None:
     """Render repeated module code without duplicating a model's property-count rule."""
     runtime_validation = _make_internal_schema_runtime_validation(

@@ -783,6 +783,13 @@ def test_data_model() -> None:
     assert data_model.render() == "@validate\n@dataclass\nclass test_model:\n    a: str"
 
 
+def test_data_model_module_code_hooks_default_to_noop() -> None:
+    """Keep shared module-code hooks free for model types without helpers."""
+    assert DataModel.get_module_code_insertion_index([]) == 0
+    assert DataModel.prepare_module_code([]) is None
+    assert DataModel.invalidate_module_code_cache([]) is None
+
+
 def test_data_model_custom_base_class_list() -> None:
     """Preserve every explicitly configured custom base class."""
     model = BaseModel(

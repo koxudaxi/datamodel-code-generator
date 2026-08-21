@@ -1957,6 +1957,11 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         return ""
 
     @classmethod
+    def get_module_code_insertion_index(cls, models: list[DataModel]) -> int:  # noqa: ARG003
+        """Return the number of models emitted before shared module code."""
+        return 0
+
+    @classmethod
     def prepare_module_code(cls, models: list[DataModel]) -> None:
         """Prepare shared module metadata before imports are collected."""
 

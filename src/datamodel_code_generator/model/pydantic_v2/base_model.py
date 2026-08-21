@@ -784,7 +784,7 @@ class BaseModel(BaseModelBase):
     @classmethod
     def prepare_module_code(cls, models: list[DataModel]) -> None:
         """Plan shared schema validation helpers before imports are collected."""
-        cls._get_schema_runtime_validation_module_plan(models)
+        cls._get_schema_runtime_validation_module_plan(models, scan_later_models=True)
 
     @classmethod
     def render_module_code(cls, models: list[DataModel]) -> str:
@@ -812,21 +812,26 @@ class BaseModel(BaseModelBase):
     def _get_schema_runtime_validation_module_plan(
         cls,
         models: list[DataModel],
+        *,
+        scan_later_models: bool = False,
     ) -> SchemaRuntimeValidationModulePlan | None:
         """Build one compact helper plan, reusing it for the final renderer."""
-        if not models or not models[0].extra_template_data.get("schema_runtime_validation_enabled"):
+        if not models or (
+            (module_plan := models[0].__dict__.get(cls._SCHEMA_RUNTIME_VALIDATION_MODULE_PLAN_CACHE_KEY)) is None
+            and not models[0].extra_template_data.get("schema_runtime_validation_enabled")
+            and (
+                not scan_later_models
+                or not any(model.extra_template_data.get("schema_runtime_validation_enabled") for model in models[1:])
+            )
+        ):
             return None
+        if module_plan is not None:
+            return cast("SchemaRuntimeValidationModulePlan", module_plan)
 
         from datamodel_code_generator.model.pydantic_v2._schema_runtime_validation import (  # noqa: PLC0415
             SchemaRuntimeValidationModulePlan,
             plan_schema_runtime_validation_bases,
         )
-
-        if isinstance(
-            module_plan := models[0].__dict__.get(cls._SCHEMA_RUNTIME_VALIDATION_MODULE_PLAN_CACHE_KEY),
-            SchemaRuntimeValidationModulePlan,
-        ):
-            return module_plan
 
         runtime_models, runtime_validations = cls._get_schema_runtime_validation_models(models)
         if not runtime_models:
@@ -863,6 +868,7 @@ class BaseModel(BaseModelBase):
                 runtime_models[0],
                 runtime_validations,
                 has_local_core_helper=True,
+                uses_generated_generic_base_class=cls._has_generated_generic_base_class(models),
             )
             module_plan = SchemaRuntimeValidationModulePlan(
                 base_class_name,
@@ -905,6 +911,7 @@ class BaseModel(BaseModelBase):
             runtime_models[0],
             runtime_validations,
             has_local_core_helper=any(capabilities[0] for capabilities in helper_base_class_names),
+            uses_generated_generic_base_class=cls._has_generated_generic_base_class(models),
         )
         module_plan = SchemaRuntimeValidationModulePlan(
             base_class_name,
@@ -913,6 +920,32 @@ class BaseModel(BaseModelBase):
         )
         models[0].__dict__[cls._SCHEMA_RUNTIME_VALIDATION_MODULE_PLAN_CACHE_KEY] = module_plan
         return module_plan
+
+    @classmethod
+    def _has_local_generated_generic_base_class(cls, models: list[DataModel]) -> bool:
+        """Return whether this module renders its configured ``BaseModel`` before helpers."""
+        if not models or models[0].class_name != cls.BASE_CLASS_NAME:
+            return False
+        return models[0].base_class == cls.BASE_CLASS_ALIAS
+
+    @classmethod
+    def _has_generated_generic_base_class(cls, models: list[DataModel]) -> bool:
+        """Return whether local helpers can inherit a generated generic ``BaseModel``."""
+        if cls._has_local_generated_generic_base_class(models):
+            return True
+        return any(
+            isinstance(base_class.reference.source, DataModel)
+            and base_class.reference.source.class_name == cls.BASE_CLASS_NAME
+            and base_class.reference.source.base_class == cls.BASE_CLASS_ALIAS
+            for model in models
+            for base_class in model.base_classes
+            if base_class.reference is not None
+        )
+
+    @classmethod
+    def get_module_code_insertion_index(cls, models: list[DataModel]) -> int:
+        """Emit a generated generic base before helpers that inherit from it."""
+        return 1 if cls._has_local_generated_generic_base_class(models) else 0
 
     def invalidate_render_caches(self) -> None:
         """Clear the compact module plan with the model's other render caches."""
@@ -951,10 +984,14 @@ class BaseModel(BaseModelBase):
         runtime_validations: list[SchemaRuntimeValidation],
         *,
         has_local_core_helper: bool,
+        uses_generated_generic_base_class: bool = False,
     ) -> None:
         """Add imports only when this module renders a shared runtime helper."""
         additional_imports = model._additional_imports  # noqa: SLF001
-        for import_ in (IMPORT_MODEL_VALIDATOR, IMPORT_ANY, IMPORT_CLASSVAR, IMPORT_BASE_MODEL):
+        helper_imports = (IMPORT_MODEL_VALIDATOR, IMPORT_ANY, IMPORT_CLASSVAR)
+        if not uses_generated_generic_base_class:
+            helper_imports += (IMPORT_BASE_MODEL,)
+        for import_ in helper_imports:
             if import_ not in additional_imports:
                 additional_imports.append(import_)
         if has_local_core_helper and any(

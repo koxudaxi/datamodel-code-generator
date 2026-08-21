@@ -5188,8 +5188,6 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
     def _prepare_schema_runtime_validation_module_code(self, contexts: list[ModuleContext]) -> None:
         """Plan opt-in module helpers before their imports are collected."""
         for ctx in contexts:
-            if not any(model.extra_template_data.get("schema_runtime_validation_enabled") for model in ctx.models):
-                continue
             self.data_model_type.prepare_module_code(ctx.models)
 
     def _sync_schema_runtime_validation_module_imports(  # noqa: PLR6301
@@ -5310,7 +5308,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         for module_index, ctx in enumerate(contexts):
             _set_nested_model_default_factory_order(ctx.models, module_index, recursive_paths_by_model)
 
-    def _generate_module_output(  # noqa: PLR0913, PLR0917
+    def _generate_module_output(  # noqa: PLR0912, PLR0913, PLR0917
         self,
         ctx: ModuleContext,
         config: ParseConfig,
@@ -5351,10 +5349,20 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
             module_code = self.data_model_type.render_module_code(ctx.models)
             if module_code:
-                result += [module_code, ""]
-
-            code = dump_templates(ctx.models)
-            result += [code]
+                module_code_insertion_index = self.data_model_type.get_module_code_insertion_index(ctx.models)
+                if module_code_insertion_index:
+                    result += [
+                        dump_templates(ctx.models[:module_code_insertion_index]),
+                        "",
+                        "",
+                        module_code,
+                        "",
+                        dump_templates(ctx.models[module_code_insertion_index:]),
+                    ]
+                else:
+                    result += [module_code, "", dump_templates(ctx.models)]
+            else:
+                result += [dump_templates(ctx.models)]
 
             result += self.__get_resolve_reference_action_parts(
                 ctx.models,

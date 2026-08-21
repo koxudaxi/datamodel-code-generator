@@ -15224,6 +15224,72 @@ def test_main_jsonschema_property_count_root_collapse_keeps_helper_imports(outpu
     )
 
 
+def test_main_jsonschema_property_count_with_generic_base_class(output_file: Path) -> None:
+    """Keep runtime helpers executable before the generated generic base class."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_validators_property_count_root_collapse.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="schema_validators_property_count_root_collapse_generic_base.py",
+        extra_args=[
+            "--collapse-root-models",
+            "--extra-fields",
+            "forbid",
+            "--generate-schema-validators",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-generic-base-class",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output_property_count_generic_base",
+        model_name="Survivor",
+        valid_json='{"value":"x"}',
+        invalid_json="{}",
+        expected_error_type="value_error",
+    )
+
+
+def test_main_jsonschema_property_count_cross_module_with_generic_base_class(output_dir: Path) -> None:
+    """Reuse an imported generic base before runtime helpers in split modules."""
+    expected_directory = EXPECTED_JSON_SCHEMA_PATH / "schema_validators_property_count_cross_module_generic_base"
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_validators_property_count_cross_module",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        output_to_expected=(
+            ("required_parent.py", expected_directory / "required_parent.py"),
+            ("property_parent.py", expected_directory / "property_parent.py"),
+        ),
+        extra_args=[
+            "--extra-fields",
+            "forbid",
+            "--generate-schema-validators",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-generic-base-class",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+        force_exec_validation=True,
+        runtime_validation_module="property_parent",
+        runtime_validation_model_name="PropertyParent",
+        runtime_validation_data={"value": "x", "second": "y"},
+    )
+    with _generated_package_module(output_dir, "property_parent") as module:
+        validate_json = _model_json_validator(module.PropertyParent)
+        _assert_model_json_invalid(validate_json, '{"value":"x"}', "value_error")
+        _assert_model_json_invalid(validate_json, '{"value":"x","second":"y","extra":1}', "extra_forbidden")
+
+
 def test_main_jsonschema_property_count_cross_module_capabilities(output_dir: Path) -> None:
     """Retain property and core validators across module-boundary allOf inheritance."""
     run_main_and_assert(
