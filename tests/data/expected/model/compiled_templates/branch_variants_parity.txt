@@ -897,7 +897,9 @@ class _RuntimeBase(BaseModel):
 
     @classmethod
     def _validate_json_schema_property_count(cls, data: Any) -> Any:
-        if not (rule := cls.__json_schema_property_count_rule__) or not isinstance(data, dict):
+        if not (rule := cls.__json_schema_property_count_rule__):
+            return data
+        if not isinstance(data, dict):
             return data
         property_count = len(data)
         min_properties, max_properties = rule
