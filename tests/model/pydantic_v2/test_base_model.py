@@ -129,17 +129,28 @@ def test_schema_runtime_validation_helpers_are_gated_by_parser_option() -> None:
 @pytest.mark.allow_direct_assert
 def test_property_count_class_body_line_is_idempotent() -> None:
     """Render repeated module code without duplicating a model's property-count rule."""
+    runtime_validation = _make_internal_schema_runtime_validation(
+        pattern_properties=[
+            PatternPropertiesRule(
+                declared_properties=(),
+                pattern_properties=(("^value", DataType(type="str")),),
+            )
+        ],
+        property_count=PropertyCountRule(min_properties=1),
+    )
     runtime_model = BaseModel(
         fields=[],
         reference=Reference(name="RuntimeModel", path="#/RuntimeModel"),
         extra_template_data=defaultdict(
             dict,
-            {"#/RuntimeModel": {"schema_runtime_validation": _property_count_schema_runtime_validation()}},
+            {"#/RuntimeModel": {"schema_runtime_validation": runtime_validation}},
         ),
     )
     runtime_model.extra_template_data["schema_runtime_validation_enabled"] = True
 
     first = BaseModel.render_module_code([runtime_model])
+    runtime_model._process_schema_runtime_validation()
+    runtime_model.invalidate_render_caches()
     second = BaseModel.render_module_code([runtime_model])
 
     assert first == second
