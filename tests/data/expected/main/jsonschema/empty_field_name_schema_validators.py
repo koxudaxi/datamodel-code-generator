@@ -70,7 +70,7 @@ class DirectEmptyPattern(_JsonSchemaRuntimeValidationBase):
 
     __json_schema_pattern_properties__: ClassVar[tuple[Any, ...]] = (
         {
-            'declared_properties': ('', 'field_'),
+            'declared_properties': ('',),
             'rejected_patterns': (),
             'pattern_properties': (('^x_[0-9]+$', int),),
             'additional_property_type': None,
@@ -88,7 +88,7 @@ class InheritedEmptyPattern(_JsonSchemaRuntimeValidationBase, EmptyBase):
 
     __json_schema_pattern_properties__: ClassVar[tuple[Any, ...]] = (
         {
-            'declared_properties': ('', 'field_'),
+            'declared_properties': ('',),
             'rejected_patterns': (),
             'pattern_properties': (('^x_[0-9]+$', int),),
             'additional_property_type': None,

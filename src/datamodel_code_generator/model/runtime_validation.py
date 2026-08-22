@@ -9,11 +9,28 @@ if TYPE_CHECKING:
     from datamodel_code_generator.types import DataType
 
 InputNames: TypeAlias = tuple[str, ...]
+InputNameGroups: TypeAlias = tuple[InputNames, ...]
 RequiredGroup: TypeAlias = tuple[InputNames, ...]
 RequiredGroups: TypeAlias = tuple[RequiredGroup, ...]
 Condition: TypeAlias = tuple[tuple[InputNames, tuple[object, ...]], ...]
 UNIQUE_ITEMS_MAPPING_VALUES_PATH_STEP: Final = "__json_schema_mapping_values__"
-UniqueItemsPathStep: TypeAlias = InputNames | int | Literal["__json_schema_mapping_values__"] | None
+UNIQUE_ITEMS_ARRAY_TAIL_PATH_STEP: Final = "__json_schema_array_tail__"
+UNIQUE_ITEMS_MAPPING_PATTERN_VALUES_PATH_STEP: Final = "__json_schema_mapping_pattern_values__"
+UNIQUE_ITEMS_MAPPING_ADDITIONAL_VALUES_PATH_STEP: Final = "__json_schema_mapping_additional_values__"
+UniqueItemsArrayTailPathStep: TypeAlias = tuple[Literal["__json_schema_array_tail__"], int]
+UniqueItemsMappingPatternPathStep: TypeAlias = tuple[Literal["__json_schema_mapping_pattern_values__"], str, None]
+UniqueItemsMappingAdditionalPathStep: TypeAlias = tuple[
+    Literal["__json_schema_mapping_additional_values__"], InputNameGroups, tuple[str, ...]
+]
+UniqueItemsPathStep: TypeAlias = (
+    InputNames
+    | UniqueItemsArrayTailPathStep
+    | UniqueItemsMappingPatternPathStep
+    | UniqueItemsMappingAdditionalPathStep
+    | int
+    | Literal["__json_schema_mapping_values__"]
+    | None
+)
 UniqueItemsPath: TypeAlias = tuple[UniqueItemsPathStep, ...]
 _INTERNAL_SCHEMA_RUNTIME_VALIDATION_TOKEN = object()
 _INTERNAL_SCHEMA_RUNTIME_VALIDATION_ERROR = "internal schema runtime validation must be created by the parser"
@@ -70,6 +87,17 @@ class UniqueItemsRule:
     path: UniqueItemsPath
 
 
+def unique_items_path_uses_regex(path: UniqueItemsPath) -> bool:
+    """Return whether a compact uniqueItems path needs regex key selection."""
+    for step in path:
+        match step:
+            case (marker, str(), None) if marker == UNIQUE_ITEMS_MAPPING_PATTERN_VALUES_PATH_STEP:
+                return True
+            case (marker, tuple(), tuple()) if marker == UNIQUE_ITEMS_MAPPING_ADDITIONAL_VALUES_PATH_STEP:
+                return True
+    return False
+
+
 @dataclass
 class SchemaRuntimeValidation:
     """Schema-derived runtime validation rules for a generated model."""
@@ -101,7 +129,7 @@ class _InternalSchemaRuntimeValidation(SchemaRuntimeValidation):
 
     __slots__ = ()
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         token: object,
         *,

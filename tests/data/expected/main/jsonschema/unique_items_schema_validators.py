@@ -8,7 +8,7 @@ from typing import Any, ClassVar
 from pydantic import BaseModel, RootModel, model_validator
 
 
-class _JsonSchemaRuntimeValidationBase(BaseModel):
+class _JsonSchemaRuntimeValidationBaseCore(BaseModel):
     __json_schema_unique_items__: ClassVar[tuple[Any, ...]] = ()
 
     @model_validator(mode='before')
@@ -42,6 +42,11 @@ class _JsonSchemaRuntimeValidationBase(BaseModel):
                     return
                 for item in value:
                     cls._validate_json_schema_unique_items_path(item, path, position + 1)
+            case ('__json_schema_array_tail__', int() as start):
+                if not isinstance(value, (list, tuple)) or start >= len(value):
+                    return
+                for index in range(start, len(value)):
+                    cls._validate_json_schema_unique_items_path(value[index], path, position + 1)
             case int() as index:
                 if isinstance(value, (list, tuple)) and index < len(value):
                     cls._validate_json_schema_unique_items_path(value[index], path, position + 1)
@@ -65,6 +70,7 @@ class _JsonSchemaRuntimeValidationBase(BaseModel):
 
         scalar_items: set[object] | None = None
         structural_items: dict[int, list[Any]] | None = None
+        opaque_items: list[Any] | None = None
         for item in value:
             match item:
                 case None | bool() | int() | float() | str():
@@ -81,22 +87,61 @@ class _JsonSchemaRuntimeValidationBase(BaseModel):
                         and any(cls._json_schema_unique_items_equal(item, candidate) for candidate in candidates)
                     ):
                         raise ValueError('Array items must be unique')
-                case _:
+                    if (
+                        not isinstance(item, bool)
+                        and opaque_items is not None
+                        and any(
+                            cls._json_schema_unique_items_equal_in_either_direction(item, candidate)
+                            for candidate in opaque_items
+                        )
+                    ):
+                        raise ValueError('Array items must be unique')
+                    continue
+                case list() | tuple() | dict():
                     fingerprint = cls._json_schema_unique_items_fingerprint(item)
-                    if scalar_items is not None and cls._json_schema_unique_items_safe_contains(scalar_items, item):
-                        raise ValueError('Array items must be unique')
-                    if structural_items is None:
-                        structural_items = {fingerprint: [item]}
-                        continue
-                    if (candidates := structural_items.get(fingerprint)) is None:
-                        structural_items[fingerprint] = [item]
-                        continue
-                    if any(cls._json_schema_unique_items_equal(item, candidate) for candidate in candidates):
-                        raise ValueError('Array items must be unique')
-                    candidates.append(item)
+                case _:
+                    if scalar_items is not None:
+                        for scalar_item in scalar_items:
+                            scalar_candidate = scalar_item[1] if isinstance(scalar_item, tuple) else scalar_item
+                            if not isinstance(scalar_candidate, bool) and cls._json_schema_unique_items_equal_in_either_direction(
+                                item, scalar_candidate
+                            ):
+                                raise ValueError('Array items must be unique')
+                    fingerprint = cls._json_schema_unique_items_fingerprint(item)
+            if fingerprint is None:
+                if structural_items is not None and any(
+                    cls._json_schema_unique_items_equal_in_either_direction(item, candidate)
+                    for candidates in structural_items.values()
+                    for candidate in candidates
+                ):
+                    raise ValueError('Array items must be unique')
+                if opaque_items is not None and any(
+                    cls._json_schema_unique_items_equal_in_either_direction(item, candidate)
+                    for candidate in opaque_items
+                ):
+                    raise ValueError('Array items must be unique')
+                if opaque_items is None:
+                    opaque_items = [item]
+                else:
+                    opaque_items.append(item)
+                continue
+            if opaque_items is not None and any(
+                cls._json_schema_unique_items_equal_in_either_direction(item, candidate)
+                for candidate in opaque_items
+            ):
+                raise ValueError('Array items must be unique')
+            if structural_items is None:
+                structural_items = {fingerprint: [item]}
+                continue
+            if (candidates := structural_items.get(fingerprint)) is None:
+                structural_items[fingerprint] = [item]
+                continue
+            if any(cls._json_schema_unique_items_equal(item, candidate) for candidate in candidates):
+                raise ValueError('Array items must be unique')
+            candidates.append(item)
 
     @classmethod
-    def _json_schema_unique_items_fingerprint(cls, value: Any) -> int:
+    def _json_schema_unique_items_fingerprint(cls, value: Any) -> int | None:
         match value:
             case None:
                 return 0x17
@@ -109,17 +154,19 @@ class _JsonSchemaRuntimeValidationBase(BaseModel):
             case list() | tuple() as array:
                 fingerprint = 0x4F
                 for item in array:
-                    fingerprint = hash((fingerprint * 1000003) ^ cls._json_schema_unique_items_fingerprint(item))
+                    if (item_fingerprint := cls._json_schema_unique_items_fingerprint(item)) is None:
+                        return None
+                    fingerprint = hash((fingerprint * 1000003) ^ item_fingerprint)
                 return hash(fingerprint ^ len(array))
             case dict() as object_:
                 fingerprint = 0x61
                 for key, item in object_.items():
-                    fingerprint ^= hash(hash(key) ^ cls._json_schema_unique_items_fingerprint(item))
+                    if (item_fingerprint := cls._json_schema_unique_items_fingerprint(item)) is None:
+                        return None
+                    fingerprint ^= hash((key, item_fingerprint))
                 return hash(fingerprint ^ len(object_))
             case _:
-                if (value_hash := cls._json_schema_unique_items_safe_hash(value)) is not None:
-                    return value_hash
-                return 0x71
+                return cls._json_schema_unique_items_safe_hash(value)
 
     @classmethod
     def _json_schema_unique_items_equal(cls, left: Any, right: Any) -> bool:
@@ -164,15 +211,6 @@ class _JsonSchemaRuntimeValidationBase(BaseModel):
             return None
 
     @classmethod
-    def _json_schema_unique_items_safe_contains(
-        cls, values: set[object], value: Any
-    ) -> bool:
-        try:
-            return value in values
-        except Exception:  # noqa: BLE001
-            return False
-
-    @classmethod
     def _json_schema_unique_items_safe_equal(cls, left: Any, right: Any) -> bool:
         try:
             comparison = left == right
@@ -180,13 +218,38 @@ class _JsonSchemaRuntimeValidationBase(BaseModel):
             return False
         return comparison if type(comparison) is bool else False
 
+    @classmethod
+    def _json_schema_unique_items_equal_in_either_direction(
+        cls, left: Any, right: Any
+    ) -> bool:
+        return cls._json_schema_unique_items_equal(left, right) or cls._json_schema_unique_items_equal(right, left)
+
+
+class _JsonSchemaRuntimeValidationBase(_JsonSchemaRuntimeValidationBaseCore):
+    __json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = ()
+
+    @model_validator(mode='before')
+    @classmethod
+    def _validate_json_schema_property_count(cls, data: Any) -> Any:
+        if not (rule := cls.__json_schema_property_count_rule__):
+            return data
+        if not isinstance(data, dict):
+            return data
+        property_count = len(data)
+        min_properties, max_properties = rule
+        if min_properties is not None and property_count < min_properties:
+            raise ValueError(f'Expected at least {min_properties} properties')
+        if max_properties is not None and property_count > max_properties:
+            raise ValueError(f'Expected at most {max_properties} properties')
+        return data
+
 
 class UniqueObject(BaseModel):
     id: int
     name: str
 
 
-class RootUniqueItems(_JsonSchemaRuntimeValidationBase, RootModel[list[Any]]):
+class RootUniqueItems(_JsonSchemaRuntimeValidationBaseCore, RootModel[list[Any]]):
     __json_schema_unique_items__: ClassVar[tuple[Any, ...]] = (
         (),
     )
@@ -194,21 +257,57 @@ class RootUniqueItems(_JsonSchemaRuntimeValidationBase, RootModel[list[Any]]):
     root: list[Any]
 
 
-class NestedItem(_JsonSchemaRuntimeValidationBase, RootModel[list[Any]]):
+class NestedItem(_JsonSchemaRuntimeValidationBaseCore, RootModel[list[Any]]):
     __json_schema_unique_items__: ClassVar[tuple[Any, ...]] = (
         (),
     )
 
     root: list[Any]
+
+
+class TupleItemsTailItem(_JsonSchemaRuntimeValidationBaseCore, RootModel[list[Any]]):
+    __json_schema_unique_items__: ClassVar[tuple[Any, ...]] = (
+        (),
+    )
+
+    root: list[Any]
+
+
+class NullableAnyOf(_JsonSchemaRuntimeValidationBaseCore, RootModel[list[int]]):
+    __json_schema_unique_items__: ClassVar[tuple[Any, ...]] = (
+        (),
+    )
+
+    root: list[int]
+
+
+class UnconstrainedArrayAnyOf(
+    _JsonSchemaRuntimeValidationBaseCore,
+    RootModel[list[int]],
+):
+    __json_schema_unique_items__: ClassVar[tuple[Any, ...]] = (
+        (),
+    )
+
+    root: list[int]
+
+
+class NullableOneOf(_JsonSchemaRuntimeValidationBaseCore, RootModel[list[int]]):
+    __json_schema_unique_items__: ClassVar[tuple[Any, ...]] = (
+        (),
+    )
+
+    root: list[int]
 
 
 class UniqueItemsPayload(_JsonSchemaRuntimeValidationBase):
+    __json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = (4, None)
     __json_schema_unique_items__: ClassVar[tuple[Any, ...]] = (
         (('strings',),),
         (('objects',),),
         (('jsonValues',),),
-        (('nested',), None),
         (('tupleItems',), 0),
+        (('tupleItemsTail',), ('__json_schema_array_tail__', 2)),
         (('mapping',), '__json_schema_mapping_values__'),
     )
 
@@ -217,7 +316,11 @@ class UniqueItemsPayload(_JsonSchemaRuntimeValidationBase):
     jsonValues: list[Any]
     nested: list[NestedItem]
     tupleItems: list[Any] | None = None
+    tupleItemsTail: list[list[Any] | str | TupleItemsTailItem] | None = None
     mapping: dict[str, list[Any]] | None = None
+    nullableAnyOf: NullableAnyOf | None = None
+    unconstrainedArrayAnyOf: UnconstrainedArrayAnyOf | list[int] | None = None
+    nullableOneOf: NullableOneOf | None = None
 
 
 class Model(RootModel[UniqueItemsPayload]):

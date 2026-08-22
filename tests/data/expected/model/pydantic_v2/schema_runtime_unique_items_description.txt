@@ -2,11 +2,8 @@ class UniqueItems(BaseModel):
     """
     Unique values.
     """
-
-
     __json_schema_unique_items__: ClassVar[tuple[Any, ...]] = (
         (('values',),),
     )
-
 
     values: str

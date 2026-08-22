@@ -15,6 +15,7 @@ from unittest.mock import Mock
 
 import pytest
 
+from datamodel_code_generator import Error
 from datamodel_code_generator.model import DataModelFieldBase
 from datamodel_code_generator.model._compiled_template_runtime import (
     MISSING,
@@ -58,6 +59,7 @@ from datamodel_code_generator.model.runtime_validation import (
     PropertyCountRule,
     RequiredGroupsRule,
     SchemaRuntimeValidation,
+    UniqueItemsRule,
     _make_internal_schema_runtime_validation,
 )
 from datamodel_code_generator.reference import Reference
@@ -1442,6 +1444,36 @@ def test_module_property_count_runtime_validation_helper_uses_custom_jinja_rende
         property_count_custom,
         EXPECTED_PATH / "module_helper_property_count_custom_template.txt",
     )
+
+
+def test_module_unique_items_runtime_validation_requires_supported_custom_helper(tmp_path: Path) -> None:
+    """Fail clearly instead of emitting a custom helper that silently skips uniqueItems."""
+    custom_dir = tmp_path / "pydantic_v2"
+    custom_dir.mkdir()
+    custom_dir.joinpath("schema_runtime_validation_helpers.jinja2").write_text(
+        "class {{ schema_runtime_validation_base_class_name }}(BaseModel):\n    custom_helper = True\n",
+        encoding="utf-8",
+    )
+    reference = _reference("UniqueItemsRuntimeModel")
+    model = BaseModel(
+        fields=[],
+        reference=reference,
+        custom_template_dir=tmp_path,
+        extra_template_data=defaultdict(
+            dict,
+            {
+                reference.path: {
+                    "schema_runtime_validation": _make_internal_schema_runtime_validation(
+                        unique_items=[UniqueItemsRule(path=())]
+                    ),
+                    "schema_runtime_validation_enabled": True,
+                }
+            },
+        ),
+    )
+
+    with pytest.raises(Error, match="overrides do not yet support generated uniqueItems"):
+        BaseModel.render_module_code([model])
 
 
 def test_module_runtime_validation_helper_gates() -> None:

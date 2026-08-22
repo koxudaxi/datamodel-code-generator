@@ -3,14 +3,58 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any, ClassVar
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, TypeAdapter, model_validator
 
 from .core_parent import CoreParent
 
 
-class _JsonSchemaRuntimeValidationBase(BaseModel):
+class _JsonSchemaRuntimeValidationBaseCore(BaseModel):
+    __json_schema_pattern_properties__: ClassVar[tuple[Any, ...]] = ()
+
+    @model_validator(mode='before')
+    @classmethod
+    def _validate_json_schema_runtime_rules(cls, data: Any) -> Any:
+        data = cls._validate_json_schema_pattern_properties(data)
+        return data
+
+    @classmethod
+    def _validate_json_schema_pattern_properties(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        values = dict(data)
+        for rule in cls.__json_schema_pattern_properties__:
+            for key, value in data.items():
+                if key in rule['declared_properties']:
+                    continue
+                if any(
+                    re.search(pattern, key) for pattern in rule['rejected_patterns']
+                ):
+                    raise ValueError(
+                        f'Property {key!r} is not allowed by patternProperties'
+                    )
+                matched = False
+                for pattern, value_type in rule['pattern_properties']:
+                    if not re.search(pattern, key):
+                        continue
+                    matched = True
+                    value = TypeAdapter(value_type).validate_python(value)
+                if matched:
+                    values[key] = value
+                    continue
+                if rule['additional_property_type'] is not None:
+                    values[key] = TypeAdapter(
+                        rule['additional_property_type']
+                    ).validate_python(value)
+                    continue
+                if not rule['allow_unmatched']:
+                    raise ValueError(f'Unexpected property {key!r}')
+        return values
+
+
+class _JsonSchemaRuntimeValidationBase(_JsonSchemaRuntimeValidationBaseCore):
     __json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = ()
 
     @model_validator(mode='before')

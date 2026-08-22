@@ -30412,6 +30412,10 @@ composed object models, required-only oneOf/anyOf groups, and simple
 if/then/else required-property conditions, and uniqueItems array validation.
 This feature is experimental and may change as JSON Schema coverage is expanded.
 
+When generating uniqueItems validation, do not override
+`pydantic_v2/schema_runtime_validation_helpers.jinja2`; custom helper overrides
+are unsupported and generation fails fast.
+
 !!! tip "Usage"
 
     ```bash

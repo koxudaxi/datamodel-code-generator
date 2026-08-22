@@ -80,6 +80,10 @@ EXCLUDED_FILES: dict[str, str] = {
     "jsonschema/schema_validators_multiple_aliases_property_count.json": (
         "opt-in schema-validator e2e fixture; payload validation intentionally uses default generation"
     ),
+    "jsonschema/unique_items_prefix_items_draft7.json": (
+        "opt-in schema-validator dialect e2e fixture; Draft 7 ignores prefixItems, "
+        "which hypothesis-jsonschema cannot satisfy for generic payload validation"
+    ),
     "jsonschema/unknown_format.json": "unknown format fixture intentionally emits a generator warning",
     "openapi/complex_reference.json": "intentionally invalid JSON fixture",
     "openapi/list.json": "input is JSON data, not an OpenAPI document",
