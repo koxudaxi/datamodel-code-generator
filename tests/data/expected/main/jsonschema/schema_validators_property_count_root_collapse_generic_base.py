@@ -13,6 +13,7 @@ from pydantic import ConfigDict, RootModel, TypeAdapter, model_validator
 class BaseModel(_BaseModel):
     model_config = ConfigDict(
         extra='forbid',
+        frozen=True,
     )
 
 
@@ -94,7 +95,9 @@ class _JsonSchemaRuntimeValidationBase(BaseModel):
 
 
 class DisposableBag(_JsonSchemaRuntimeValidationBaseCore, RootModel[dict[str, Any]]):
-    model_config = ConfigDict(extra=None)
+    model_config = ConfigDict(
+        extra=None,
+    )
 
     __json_schema_pattern_properties__: ClassVar[tuple[Any, ...]] = (
         {

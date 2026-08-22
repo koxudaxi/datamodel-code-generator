@@ -15,6 +15,7 @@ from datamodel_code_generator import DataModelType, Formatter
 from datamodel_code_generator.config import JSONSchemaParserConfig
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import _rebuild_model_with_datamodel_namespace, get_data_model_types
+from datamodel_code_generator.model.pydantic_v2 import ConfigDict
 from datamodel_code_generator.model.pydantic_v2._schema_runtime_validation import (
     plan_schema_runtime_validation_bases,
 )
@@ -220,24 +221,41 @@ def test_property_count_class_body_line_is_idempotent() -> None:
 
 @pytest.mark.allow_direct_assert
 def test_runtime_root_model_extra_config_is_idempotent() -> None:
-    """Avoid duplicating the neutral config or its import when module planning repeats."""
+    """Merge the neutral extra setting into an existing RootModel config once."""
+    plain_runtime_model = RootModel(
+        fields=[DataModelField(name="root", data_type=DataType(type="int"), required=True)],
+        reference=Reference(name="PlainRuntimeRoot", path="#/PlainRuntimeRoot"),
+    )
+    plain_runtime_model._internal_template_data["schema_runtime_validation_use_base"] = True
     runtime_model = RootModel(
         fields=[DataModelField(name="root", data_type=DataType(type="str"), required=True)],
         reference=Reference(name="RuntimeRoot", path="#/RuntimeRoot"),
+        extra_template_data=defaultdict(
+            dict,
+            {"#/RuntimeRoot": {"config": ConfigDict(regex_engine='"python-re"', frozen=True)}},
+        ),
     )
     runtime_model._internal_template_data["schema_runtime_validation_use_base"] = True
 
     BaseModel._neutralize_generic_extra_config_for_runtime_root_models(
-        [runtime_model],
+        [plain_runtime_model, runtime_model],
         uses_generated_generic_base_class=True,
     )
     BaseModel._neutralize_generic_extra_config_for_runtime_root_models(
-        [runtime_model],
+        [plain_runtime_model, runtime_model],
         uses_generated_generic_base_class=True,
     )
 
+    assert plain_runtime_model._additional_imports.count(Import.from_full_path("pydantic.ConfigDict")) == 1
+    plain_rendered = plain_runtime_model.render()
+    assert plain_rendered.count("model_config = ConfigDict(") == 1
+    assert "extra=None," in plain_rendered
     assert runtime_model._additional_imports.count(Import.from_full_path("pydantic.ConfigDict")) == 1
-    assert runtime_model.render().count("model_config = ConfigDict(extra=None)") == 1
+    rendered = runtime_model.render()
+    assert rendered.count("model_config = ConfigDict(") == 1
+    assert 'regex_engine="python-re",' in rendered
+    assert "frozen=True," in rendered
+    assert "extra=None," in rendered
 
 
 @pytest.mark.allow_direct_assert

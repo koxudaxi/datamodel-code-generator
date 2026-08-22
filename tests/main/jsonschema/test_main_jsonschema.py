@@ -15750,6 +15750,35 @@ def test_main_jsonschema_property_count_root_collapse_keeps_helper_imports(outpu
     )
 
 
+def test_main_jsonschema_property_count_ref_survives_root_collapse(output_file: Path) -> None:
+    """Keep map property-count constraints when collapsing a referenced RootModel."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_validators_property_count_ref_collapse.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="schema_validators_property_count_ref_collapse.py",
+        extra_args=[
+            "--collapse-root-models",
+            "--generate-schema-validators",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output_property_count_ref_collapse",
+        model_name="Payload",
+        valid_json='{"values":{"first":1,"second":2}}',
+        invalid_json='{"values":{"only":1}}',
+        expected_error_type="too_short",
+    )
+
+
 def test_main_jsonschema_property_count_with_generic_base_class(output_file: Path) -> None:
     """Keep runtime helpers executable before the generated generic base class."""
     run_main_and_assert(
@@ -15762,6 +15791,7 @@ def test_main_jsonschema_property_count_with_generic_base_class(output_file: Pat
             "--collapse-root-models",
             "--extra-fields",
             "forbid",
+            "--enable-faux-immutability",
             "--generate-schema-validators",
             "--output-model-type",
             "pydantic_v2.BaseModel",
@@ -15788,6 +15818,44 @@ def test_main_jsonschema_property_count_with_generic_base_class(output_file: Pat
         invalid_json='{"item_one":"bad"}',
         expected_error_type="int_parsing",
     )
+
+
+def test_main_jsonschema_runtime_root_merges_generic_base_config(output_dir: Path) -> None:
+    """Retain and import RootModel config when the generic base is external."""
+    expected_directory = EXPECTED_JSON_SCHEMA_PATH / "schema_validators_runtime_root_cross_module"
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_validators_runtime_root_cross_module",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        output_to_expected=(
+            ("a.py", expected_directory / "a.py"),
+            ("z.py", expected_directory / "z.py"),
+        ),
+        extra_args=[
+            "--enable-faux-immutability",
+            "--extra-fields",
+            "forbid",
+            "--generate-schema-validators",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-generic-base-class",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+        force_exec_validation=True,
+        runtime_validation_module="a",
+        runtime_validation_model_name="AModel",
+        runtime_validation_data={"mixed": "alpha"},
+    )
+    with _generated_package_module(output_dir, "a") as module:
+        validate_json = _model_json_validator(module.AModel)
+        parsed = validate_json('{"mixed":"alpha"}')
+        _assert_model_json_invalid(validate_json, '{"mixed":"beta"}', "string_pattern_mismatch")
+        _assert_model_json_invalid(validate_json, '{"mixed":[1,1]}', "value_error")
+        with pytest.raises(ValidationError, match="Instance is frozen"):
+            parsed.mixed.root = [1, 2]
 
 
 def test_main_jsonschema_property_count_cross_module_with_generic_base_class(output_dir: Path) -> None:

@@ -129,6 +129,7 @@ _ALIAS_GENERATOR_INTERNAL_KEY = "_alias_generator"
 _NO_ALIAS_INTERNAL_KEY = "_no_alias"
 _MISSING_SENTINEL = "MISSING"
 _CONFIG_ITEMS_TEMPLATE_DATA_KEY = "config_items"
+_NEUTRALIZE_ROOT_MODEL_EXTRA_CONFIG_TEMPLATE_DATA_KEY = "neutralize_root_model_extra_config"
 _MIN_QUOTED_STRING_LENGTH = 2
 _LEGACY_CONFIG_LITERAL_STRINGS: frozenset[str] = frozenset({"False", "None", "True"})
 _LEGACY_PYDANTIC_EXTRA_TEMPLATE_PATTERN = re.compile(
@@ -1036,18 +1037,18 @@ class BaseModel(BaseModelBase):
         """Keep a runtime helper's generic ``extra`` config off RootModel subclasses."""
         if not uses_generated_generic_base_class:
             return
-        config_line = "model_config = ConfigDict(extra=None)"
         for model in runtime_models:
             if not model.IS_ROOT_MODEL or not model._internal_template_data.get(  # noqa: SLF001
                 "schema_runtime_validation_use_base"
             ):
                 continue
-            class_body_lines = model._internal_template_data.get("class_body_lines", ())  # noqa: SLF001
-            if config_line not in class_body_lines:
-                model._append_internal_template_data("class_body_lines", config_line)  # noqa: SLF001
+            model._set_internal_template_data(  # noqa: SLF001
+                key=_NEUTRALIZE_ROOT_MODEL_EXTRA_CONFIG_TEMPLATE_DATA_KEY,
+                value=True,
+            )
             if IMPORT_CONFIG_DICT not in model._additional_imports:  # noqa: SLF001
                 model._additional_imports.append(IMPORT_CONFIG_DICT)  # noqa: SLF001
-                model.clear_imports_cache()
+            model.invalidate_render_caches()
 
     @staticmethod
     def _has_core_schema_runtime_validation(runtime_validation: SchemaRuntimeValidation) -> bool:

@@ -11,6 +11,7 @@ from datamodel_code_generator import Error
 from datamodel_code_generator.imports import IMPORT_ANY, Import
 from datamodel_code_generator.model.pydantic_v2.base_model import (
     _CONFIG_ITEMS_TEMPLATE_DATA_KEY,
+    _NEUTRALIZE_ROOT_MODEL_EXTRA_CONFIG_TEMPLATE_DATA_KEY,
     BaseModel,
     _config_dict_items,
     _safe_config_dict_items,
@@ -77,7 +78,12 @@ class RootModel(BaseModel):
 
     def _sync_config_items(self) -> None:
         config = self.extra_template_data.get("config")
-        if config_items := _root_model_config_items(config):
+        config_items = _root_model_config_items(config)
+        if self._internal_template_data.get(_NEUTRALIZE_ROOT_MODEL_EXTRA_CONFIG_TEMPLATE_DATA_KEY):
+            config_items.append(("extra", None))
+            if not config:
+                self.extra_template_data["config"] = {"extra": None}
+        if config_items:
             self._set_internal_template_data(
                 _CONFIG_ITEMS_TEMPLATE_DATA_KEY,
                 _safe_config_dict_items(dict(config_items)),
