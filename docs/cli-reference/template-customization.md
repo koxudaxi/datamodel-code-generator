@@ -2900,8 +2900,10 @@ are unsupported and generation fails fast.
         def _validate_json_schema_pattern_properties(cls, data: Any) -> Any:
             if not isinstance(data, dict):
                 return data
-            values = dict(data)
+            values = data
             for rule in cls.__json_schema_pattern_properties__:
+                pattern_adapters = None
+                additional_adapter = None
                 for key, value in data.items():
                     if key in rule['declared_properties']:
                         continue
@@ -2912,18 +2914,31 @@ are unsupported and generation fails fast.
                             f'Property {key!r} is not allowed by patternProperties'
                         )
                     matched = False
-                    for pattern, value_type in rule['pattern_properties']:
+                    for index, (pattern, value_type) in enumerate(
+                        rule['pattern_properties']
+                    ):
                         if not re.search(pattern, key):
                             continue
                         matched = True
-                        value = TypeAdapter(value_type).validate_python(value)
+                        if pattern_adapters is None:
+                            pattern_adapters = {}
+                        if (adapter := pattern_adapters.get(index)) is None:
+                            adapter = TypeAdapter(value_type)
+                            pattern_adapters[index] = adapter
+                        value = adapter.validate_python(value)
                     if matched:
+                        if values is data:
+                            values = dict(data)
                         values[key] = value
                         continue
                     if rule['additional_property_type'] is not None:
-                        values[key] = TypeAdapter(
-                            rule['additional_property_type']
-                        ).validate_python(value)
+                        if additional_adapter is None:
+                            additional_adapter = TypeAdapter(
+                                rule['additional_property_type']
+                            )
+                        if values is data:
+                            values = dict(data)
+                        values[key] = additional_adapter.validate_python(value)
                         continue
                     if not rule['allow_unmatched']:
                         raise ValueError(f'Unexpected property {key!r}')
@@ -3617,8 +3632,10 @@ shared base class that owns schema-derived runtime validators. It is only used w
         def _validate_json_schema_pattern_properties(cls, data: Any) -> Any:
             if not isinstance(data, dict):
                 return data
-            values = dict(data)
+            values = data
             for rule in cls.__json_schema_pattern_properties__:
+                pattern_adapters = None
+                additional_adapter = None
                 for key, value in data.items():
                     if key in rule['declared_properties']:
                         continue
@@ -3629,18 +3646,31 @@ shared base class that owns schema-derived runtime validators. It is only used w
                             f'Property {key!r} is not allowed by patternProperties'
                         )
                     matched = False
-                    for pattern, value_type in rule['pattern_properties']:
+                    for index, (pattern, value_type) in enumerate(
+                        rule['pattern_properties']
+                    ):
                         if not re.search(pattern, key):
                             continue
                         matched = True
-                        value = TypeAdapter(value_type).validate_python(value)
+                        if pattern_adapters is None:
+                            pattern_adapters = {}
+                        if (adapter := pattern_adapters.get(index)) is None:
+                            adapter = TypeAdapter(value_type)
+                            pattern_adapters[index] = adapter
+                        value = adapter.validate_python(value)
                     if matched:
+                        if values is data:
+                            values = dict(data)
                         values[key] = value
                         continue
                     if rule['additional_property_type'] is not None:
-                        values[key] = TypeAdapter(
-                            rule['additional_property_type']
-                        ).validate_python(value)
+                        if additional_adapter is None:
+                            additional_adapter = TypeAdapter(
+                                rule['additional_property_type']
+                            )
+                        if values is data:
+                            values = dict(data)
+                        values[key] = additional_adapter.validate_python(value)
                         continue
                     if not rule['allow_unmatched']:
                         raise ValueError(f'Unexpected property {key!r}')
@@ -3897,8 +3927,10 @@ additional validator backends without adding them in this release.
         def _validate_json_schema_pattern_properties(cls, data: Any) -> Any:
             if not isinstance(data, dict):
                 return data
-            values = dict(data)
+            values = data
             for rule in cls.__json_schema_pattern_properties__:
+                pattern_adapters = None
+                additional_adapter = None
                 for key, value in data.items():
                     if key in rule['declared_properties']:
                         continue
@@ -3909,18 +3941,31 @@ additional validator backends without adding them in this release.
                             f'Property {key!r} is not allowed by patternProperties'
                         )
                     matched = False
-                    for pattern, value_type in rule['pattern_properties']:
+                    for index, (pattern, value_type) in enumerate(
+                        rule['pattern_properties']
+                    ):
                         if not re.search(pattern, key):
                             continue
                         matched = True
-                        value = TypeAdapter(value_type).validate_python(value)
+                        if pattern_adapters is None:
+                            pattern_adapters = {}
+                        if (adapter := pattern_adapters.get(index)) is None:
+                            adapter = TypeAdapter(value_type)
+                            pattern_adapters[index] = adapter
+                        value = adapter.validate_python(value)
                     if matched:
+                        if values is data:
+                            values = dict(data)
                         values[key] = value
                         continue
                     if rule['additional_property_type'] is not None:
-                        values[key] = TypeAdapter(
-                            rule['additional_property_type']
-                        ).validate_python(value)
+                        if additional_adapter is None:
+                            additional_adapter = TypeAdapter(
+                                rule['additional_property_type']
+                            )
+                        if values is data:
+                            values = dict(data)
+                        values[key] = additional_adapter.validate_python(value)
                         continue
                     if not rule['allow_unmatched']:
                         raise ValueError(f'Unexpected property {key!r}')

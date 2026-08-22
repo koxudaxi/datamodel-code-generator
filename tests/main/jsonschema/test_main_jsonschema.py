@@ -14940,7 +14940,7 @@ def test_field_validators_inline_json(output_file: Path) -> None:
 The `--generate-schema-validators` option emits schema-derived model validators
 for object constraints that cannot be represented as type hints alone, including
 minProperties/maxProperties on named object models, patternProperties on
-composed object models, required-only oneOf/anyOf groups, and simple
+composed object models, required-only oneOf/anyOf groups, simple
 if/then/else required-property conditions, and uniqueItems array validation.
 This feature is experimental and may change as JSON Schema coverage is expanded.
 
