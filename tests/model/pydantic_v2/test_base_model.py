@@ -24,6 +24,7 @@ from datamodel_code_generator.model.pydantic_v2.base_model import (
     DataModelField,
     _construct_parser_simple_field,
 )
+from datamodel_code_generator.model.pydantic_v2.root_model import RootModel
 from datamodel_code_generator.model.runtime_validation import (
     PatternPropertiesRule,
     PropertyCountRule,
@@ -215,6 +216,28 @@ def test_property_count_class_body_line_is_idempotent() -> None:
     assert first == second
     assert runtime_model.render().count("__json_schema_property_count_rule__") == 1
     assert runtime_model.render().count("__json_schema_unique_items__") == 1
+
+
+@pytest.mark.allow_direct_assert
+def test_runtime_root_model_extra_config_is_idempotent() -> None:
+    """Avoid duplicating the neutral config or its import when module planning repeats."""
+    runtime_model = RootModel(
+        fields=[DataModelField(name="root", data_type=DataType(type="str"), required=True)],
+        reference=Reference(name="RuntimeRoot", path="#/RuntimeRoot"),
+    )
+    runtime_model._internal_template_data["schema_runtime_validation_use_base"] = True
+
+    BaseModel._neutralize_generic_extra_config_for_runtime_root_models(
+        [runtime_model],
+        uses_generated_generic_base_class=True,
+    )
+    BaseModel._neutralize_generic_extra_config_for_runtime_root_models(
+        [runtime_model],
+        uses_generated_generic_base_class=True,
+    )
+
+    assert runtime_model._additional_imports.count(Import.from_full_path("pydantic.ConfigDict")) == 1
+    assert runtime_model.render().count("model_config = ConfigDict(extra=None)") == 1
 
 
 @pytest.mark.allow_direct_assert
