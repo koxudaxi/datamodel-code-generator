@@ -37,7 +37,7 @@ class _JsonSchemaRuntimeValidationBase(BaseModel):
                     )
                 matched = False
                 for index, (pattern, value_type) in enumerate(
-                    rule['pattern_properties']
+                    rule['pattern_properties'],
                 ):
                     if not re.search(pattern, key):
                         continue
@@ -56,7 +56,7 @@ class _JsonSchemaRuntimeValidationBase(BaseModel):
                 if rule['additional_property_type'] is not None:
                     if additional_adapter is None:
                         additional_adapter = TypeAdapter(
-                            rule['additional_property_type']
+                            rule['additional_property_type'],
                         )
                     if values is data:
                         values = dict(data)

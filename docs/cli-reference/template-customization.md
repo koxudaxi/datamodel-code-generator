@@ -2915,7 +2915,7 @@ are unsupported and generation fails fast.
                         )
                     matched = False
                     for index, (pattern, value_type) in enumerate(
-                        rule['pattern_properties']
+                        rule['pattern_properties'],
                     ):
                         if not re.search(pattern, key):
                             continue
@@ -2934,7 +2934,7 @@ are unsupported and generation fails fast.
                     if rule['additional_property_type'] is not None:
                         if additional_adapter is None:
                             additional_adapter = TypeAdapter(
-                                rule['additional_property_type']
+                                rule['additional_property_type'],
                             )
                         if values is data:
                             values = dict(data)
@@ -3647,7 +3647,7 @@ shared base class that owns schema-derived runtime validators. It is only used w
                         )
                     matched = False
                     for index, (pattern, value_type) in enumerate(
-                        rule['pattern_properties']
+                        rule['pattern_properties'],
                     ):
                         if not re.search(pattern, key):
                             continue
@@ -3666,7 +3666,7 @@ shared base class that owns schema-derived runtime validators. It is only used w
                     if rule['additional_property_type'] is not None:
                         if additional_adapter is None:
                             additional_adapter = TypeAdapter(
-                                rule['additional_property_type']
+                                rule['additional_property_type'],
                             )
                         if values is data:
                             values = dict(data)
@@ -3942,7 +3942,7 @@ additional validator backends without adding them in this release.
                         )
                     matched = False
                     for index, (pattern, value_type) in enumerate(
-                        rule['pattern_properties']
+                        rule['pattern_properties'],
                     ):
                         if not re.search(pattern, key):
                             continue
@@ -3961,7 +3961,7 @@ additional validator backends without adding them in this release.
                     if rule['additional_property_type'] is not None:
                         if additional_adapter is None:
                             additional_adapter = TypeAdapter(
-                                rule['additional_property_type']
+                                rule['additional_property_type'],
                             )
                         if values is data:
                             values = dict(data)

@@ -38,7 +38,9 @@ class _JsonSchemaRuntimeValidationBase(BaseModel):
                         f'Property {key!r} is not allowed by patternProperties'
                     )
                 matched = False
-                for index, (pattern, value_type) in enumerate(rule['pattern_properties']):
+                for index, (pattern, value_type) in enumerate(
+                    rule['pattern_properties'],
+                ):
                     if not re.search(pattern, key):
                         continue
                     matched = True
@@ -55,7 +57,9 @@ class _JsonSchemaRuntimeValidationBase(BaseModel):
                     continue
                 if rule['additional_property_type'] is not None:
                     if additional_adapter is None:
-                        additional_adapter = TypeAdapter(rule['additional_property_type'])
+                        additional_adapter = TypeAdapter(
+                            rule['additional_property_type'],
+                        )
                     if values is data:
                         values = dict(data)
                     values[key] = additional_adapter.validate_python(value)
