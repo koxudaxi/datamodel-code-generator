@@ -228,6 +228,8 @@ components:
           $ref: "#/components/schemas/NegativeA"
     ConditionalEnvelope:
       type: object
+      minProperties: 2
+      maxProperties: 2
       required:
         - kind
       properties:

@@ -55,6 +55,7 @@ from datamodel_code_generator.model.pydantic_v2.dataclass import DataModelField 
 from datamodel_code_generator.model.pydantic_v2.root_model import RootModel
 from datamodel_code_generator.model.pydantic_v2.root_model_type_alias import RootModelTypeAlias
 from datamodel_code_generator.model.runtime_validation import (
+    PropertyCountRule,
     RequiredGroupsRule,
     SchemaRuntimeValidation,
     _make_internal_schema_runtime_validation,
@@ -100,6 +101,12 @@ def _runtime_validation() -> SchemaRuntimeValidation:
                 groups=((("first",),),),
             )
         ]
+    )
+
+
+def _property_count_runtime_validation() -> SchemaRuntimeValidation:
+    return _make_internal_schema_runtime_validation(
+        property_count=PropertyCountRule(min_properties=1),
     )
 
 
@@ -1406,6 +1413,39 @@ def test_module_runtime_validation_helper_uses_generated_or_custom_jinja_rendere
     custom = BaseModel.render_module_code([custom_model])
     assert_output(f"{custom}\n", EXPECTED_PATH / "module_helper_custom_template.txt")
 
+
+def test_module_property_count_runtime_validation_helper_uses_custom_jinja_renderer(tmp_path: Path) -> None:
+    """Keep property-only runtime validation compatible with a custom helper template."""
+    custom_dir = tmp_path / "pydantic_v2"
+    custom_dir.mkdir()
+    custom_dir.joinpath("schema_runtime_validation_helpers.jinja2").write_text(
+        "class {{ schema_runtime_validation_base_class_name }}(BaseModel):\n    custom_helper = True\n",
+        encoding="utf-8",
+    )
+    property_count_reference = _reference("PropertyCountRuntimeModel")
+    property_count_model = BaseModel(
+        fields=[],
+        reference=property_count_reference,
+        custom_template_dir=tmp_path,
+        extra_template_data=defaultdict(
+            dict,
+            {
+                property_count_reference.path: {
+                    "schema_runtime_validation": _property_count_runtime_validation(),
+                    "schema_runtime_validation_enabled": True,
+                }
+            },
+        ),
+    )
+    property_count_custom = BaseModel.render_module_code([property_count_model])
+    assert_output(
+        property_count_custom,
+        EXPECTED_PATH / "module_helper_property_count_custom_template.txt",
+    )
+
+
+def test_module_runtime_validation_helper_gates() -> None:
+    """Do not render helper code when runtime validation is unavailable or disabled."""
     disabled_model = BaseModel(fields=[], reference=_reference("DisabledRuntimeModel"))
     enabled_without_runtime_reference = _reference("EnabledWithoutRuntimeModel")
     enabled_without_runtime_model = BaseModel(

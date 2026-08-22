@@ -32,6 +32,11 @@ from datamodel_code_generator.model.pydantic_v2.dataclass import DataClass as Py
 from datamodel_code_generator.model.pydantic_v2.dataclass import DataModelField as PydanticDataclassField
 from datamodel_code_generator.model.pydantic_v2.root_model import RootModel
 from datamodel_code_generator.model.pydantic_v2.root_model_type_alias import RootModelTypeAlias
+from datamodel_code_generator.model.runtime_validation import (
+    PropertyCountRule,
+    RequiredGroupsRule,
+    _make_internal_schema_runtime_validation,
+)
 from datamodel_code_generator.model.type_alias import TypeAlias, TypeAliasTypeBackport, TypeStatement
 from datamodel_code_generator.parser.base import (
     _DEFERRED_INHERITED_CLASS_KEY,
@@ -40,6 +45,7 @@ from datamodel_code_generator.parser.base import (
     _RAW_SCHEMA_DEFAULT_KEY,
     Child,
     HashableComparable,
+    ModuleContext,
     Parser,
     T,
     _apply_constructor_field_adjustments,
@@ -1878,6 +1884,72 @@ def test_collapse_root_models_preserves_root_model_used_by_other_modules() -> No
     assert local_type.reference is inner_reference
     assert external_type.reference is root_reference
     assert unused_models == []
+
+
+def test_finalize_modules_plans_schema_helpers_after_root_collapse() -> None:
+    """Attach shared helper imports to a surviving runtime model after a root model is removed."""
+    parser = C(
+        data_model_type=BaseModel,
+        data_model_root_type=RootModel,
+        data_model_field_type=DataModelField,
+        base_class="Base",
+        source="",
+        generate_schema_validators=True,
+    )
+    collapsed_root = RootModel(
+        fields=[DataModelField(data_type=DataType(type="str"))],
+        reference=Reference(path="Root", original_name="Root", name="Root"),
+    )
+    collapsed_root._set_internal_template_data(
+        "schema_runtime_validation",
+        _make_internal_schema_runtime_validation(property_count=PropertyCountRule(min_properties=1)),
+    )
+    collapsed_root.extra_template_data["schema_runtime_validation_enabled"] = True
+    surviving_model = BaseModel(
+        fields=[
+            DataModelField(
+                name="external",
+                data_type=DataType.from_import(Import.from_full_path("external._JsonSchemaRuntimeValidationBaseCore")),
+            )
+        ],
+        reference=Reference(
+            path="Surviving",
+            original_name="_JsonSchemaRuntimeValidationBaseCore",
+            name="_JsonSchemaRuntimeValidationBaseCore",
+        ),
+    )
+    surviving_model._set_internal_template_data(
+        "schema_runtime_validation",
+        _make_internal_schema_runtime_validation(
+            required_groups=[RequiredGroupsRule(keyword="oneOf", groups=((("external",),),))],
+            property_count=PropertyCountRule(min_properties=1),
+        ),
+    )
+    surviving_model.extra_template_data["schema_runtime_validation_enabled"] = True
+    models = [collapsed_root, surviving_model]
+    imports = Imports()
+    context = ModuleContext(
+        module=("output.py",),
+        module_key=("output.py",),
+        models=models,
+        is_init=False,
+        imports=imports,
+        scoped_model_resolver=parser.model_resolver,
+    )
+
+    parser._finalize_modules(
+        [context],
+        [collapsed_root],
+        {collapsed_root: (("output.py",), models)},
+        {("output.py",): imports},
+    )
+
+    assert models == [surviving_model]
+    assert surviving_model.class_name != "_JsonSchemaRuntimeValidationBaseCore"
+    assert Import.from_full_path("pydantic.model_validator") in surviving_model.imports
+    rendered_module_code = BaseModel.render_module_code(models)
+    assert "class _JsonSchemaRuntimeValidationBaseCore(BaseModel):" in rendered_module_code
+    assert "class _JsonSchemaRuntimeValidationBase(_JsonSchemaRuntimeValidationBaseCore):" in rendered_module_code
 
 
 def test_unwrap_type_alias_stops_on_recursive_alias() -> None:

@@ -77,6 +77,9 @@ EXCLUDED_FILES: dict[str, str] = {
     "jsonschema/non_json_object.json": "input is JSON data, not a JSON Schema document",
     "jsonschema/null.json": "intentionally invalid JSON fixture",
     "jsonschema/ref_to_json_list/list.json": "referenced JSON data list, not a schema document",
+    "jsonschema/schema_validators_multiple_aliases_property_count.json": (
+        "opt-in schema-validator e2e fixture; payload validation intentionally uses default generation"
+    ),
     "jsonschema/unknown_format.json": "unknown format fixture intentionally emits a generator warning",
     "openapi/complex_reference.json": "intentionally invalid JSON fixture",
     "openapi/list.json": "input is JSON data, not an OpenAPI document",

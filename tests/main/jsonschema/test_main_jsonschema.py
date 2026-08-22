@@ -76,7 +76,10 @@ from tests.main.conftest import (
     LEGACY_BLACK_SKIP,
     MSGSPEC_LEGACY_BLACK_SKIP,
     TIMESTAMP,
+    _assert_model_json_invalid,
     _generated_model,
+    _generated_package_module,
+    _model_json_validator,
     _uses_external_test_default_formatter,
     assert_generated_model_json_invalid,
     assert_generated_model_json_validation,
@@ -14880,9 +14883,10 @@ def test_field_validators_inline_json(output_file: Path) -> None:
 
 The `--generate-schema-validators` option emits schema-derived model validators
 for object constraints that cannot be represented as type hints alone, including
-patternProperties on composed object models, required-only oneOf/anyOf groups,
-and simple if/then/else required-property conditions. This feature is
-experimental and may change as JSON Schema coverage is expanded.""",
+minProperties/maxProperties on named object models, patternProperties on
+composed object models, required-only oneOf/anyOf groups, and simple
+if/then/else required-property conditions. This feature is experimental and may
+change as JSON Schema coverage is expanded.""",
     input_schema="jsonschema/schema_validators.json",
     cli_args=[
         "--generate-schema-validators",
@@ -14989,6 +14993,378 @@ def test_main_jsonschema_generate_schema_validators(output_file: Path) -> None:
         expected_attribute_path=("note",),
         expected_attribute_value="ok",
     )
+
+
+def test_main_jsonschema_generate_schema_validators_property_count(output_file: Path) -> None:
+    """Validate named object property counts only through the runtime-validator backend."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_validators_property_count.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="schema_validators_property_count.py",
+        extra_args=[
+            "--generate-schema-validators",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+        force_exec_validation=True,
+    )
+    for module_suffix, model_name, valid_json, invalid_json, expected_error_type, attribute_path, attribute_value in (
+        (
+            "minimum",
+            "DirectCount",
+            '{"name":"x","label":"y"}',
+            '{"name":"x"}',
+            "value_error",
+            ("name",),
+            "x",
+        ),
+        (
+            "maximum",
+            "DirectCount",
+            '{"name":"x","label":"y"}',
+            '{"name":"x","label":"y","first":1,"second":2}',
+            "value_error",
+            ("name",),
+            "x",
+        ),
+        (
+            "all_of",
+            "ComposedCount",
+            '{"base":"x","child":"y"}',
+            '{"base":"x"}',
+            "value_error",
+            ("base",),
+            "x",
+        ),
+        (
+            "all_of_count_only",
+            "CountOnlyDerived",
+            '{"base":"x","extra":true}',
+            '{"base":"x"}',
+            "value_error",
+            ("base",),
+            "x",
+        ),
+        (
+            "ref_sibling",
+            "RefSiblingCount",
+            '{"base":"x","child":"y","extra":true}',
+            '{"base":"x","child":"y"}',
+            "value_error",
+            ("base",),
+            "x",
+        ),
+        (
+            "optional_nested",
+            "DirectCount",
+            '{"name":"x","label":"y"}',
+            '{"name":"x","label":"y","child":{}}',
+            "value_error",
+            ("name",),
+            "x",
+        ),
+        (
+            "non_dict",
+            "DirectCount",
+            '{"name":"x","label":"y"}',
+            "[]",
+            "model_type",
+            ("name",),
+            "x",
+        ),
+        (
+            "zero_maximum",
+            "ZeroMaximum",
+            "{}",
+            '{"value":"x"}',
+            "value_error",
+            (),
+            None,
+        ),
+    ):
+        assert_generated_model_json_validation(
+            output_file,
+            module_name=f"output_property_count_{module_suffix}",
+            model_name=model_name,
+            valid_json=valid_json,
+            invalid_json=invalid_json,
+            expected_error_type=expected_error_type,
+            expected_attribute_path=attribute_path,
+            expected_attribute_value=attribute_value,
+        )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output_property_count_keywords",
+        model_name="DirectCount",
+        valid_json='{"name":"x","label":"y"}',
+        invalid_json='{"name":"x"}',
+        expected_error_type="value_error",
+        invalid_keyword_arguments=(
+            ({"name": "x"}, "value_error"),
+            ({"name": "x", "label": "y", "first": 1, "second": 2}, "value_error"),
+        ),
+    )
+
+
+def test_main_jsonschema_property_count_default_generation_is_unchanged(output_file: Path) -> None:
+    """Keep named-object property counts opt-in for schema-runtime validators."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_validators_property_count.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="schema_validators_property_count_default.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output_property_count_default",
+        model_name="DirectCount",
+        valid_json="{}",
+        invalid_json="[]",
+        expected_error_type="model_type",
+    )
+
+
+def test_main_jsonschema_property_count_uses_raw_alias_input_keys(output_file: Path) -> None:
+    """Count duplicate AliasChoices input keys before Pydantic merges them."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_validators_multiple_aliases_property_count.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="schema_validators_multiple_aliases_property_count.py",
+        extra_args=[
+            "--aliases",
+            str(ALIASES_DATA_PATH / "multiple_aliases.json"),
+            "--generate-schema-validators",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output_property_count_aliases",
+        model_name="Root",
+        valid_json='{"my-field":"first","myField":"second"}',
+        invalid_json='{"my-field":"first"}',
+        expected_error_type="value_error",
+        expected_attribute_path=("my_field",),
+        expected_attribute_value="first",
+    )
+
+
+def test_main_jsonschema_property_count_root_model_keeps_field_constraints(output_file: Path) -> None:
+    """Do not add runtime validators to dictionary root models with count bounds."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "object_max_properties_zero.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="object_max_properties_zero.py",
+        extra_args=[
+            "--generate-schema-validators",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output_property_count_root_model",
+        model_name="ObjectMaxPropertiesZero",
+        valid_json="{}",
+        invalid_json='{"key":1}',
+        expected_error_type="too_long",
+    )
+
+
+def test_main_jsonschema_property_count_root_collapse_keeps_helper_imports(output_file: Path) -> None:
+    """Keep property-count helper imports when an earlier runtime RootModel is collapsed."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_validators_property_count_root_collapse.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="schema_validators_property_count_root_collapse.py",
+        extra_args=[
+            "--collapse-root-models",
+            "--generate-schema-validators",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output_property_count_root_collapse",
+        model_name="Survivor",
+        valid_json='{"value":"x"}',
+        invalid_json="{}",
+        expected_error_type="value_error",
+    )
+
+
+def test_main_jsonschema_property_count_with_generic_base_class(output_file: Path) -> None:
+    """Keep runtime helpers executable before the generated generic base class."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_validators_property_count_root_collapse.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="schema_validators_property_count_root_collapse_generic_base.py",
+        extra_args=[
+            "--collapse-root-models",
+            "--extra-fields",
+            "forbid",
+            "--generate-schema-validators",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-generic-base-class",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output_property_count_generic_base",
+        model_name="Survivor",
+        valid_json='{"value":"x"}',
+        invalid_json="{}",
+        expected_error_type="value_error",
+    )
+
+
+def test_main_jsonschema_property_count_cross_module_with_generic_base_class(output_dir: Path) -> None:
+    """Reuse an imported generic base before runtime helpers in split modules."""
+    expected_directory = EXPECTED_JSON_SCHEMA_PATH / "schema_validators_property_count_cross_module_generic_base"
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_validators_property_count_cross_module",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        output_to_expected=(
+            ("required_parent.py", expected_directory / "required_parent.py"),
+            ("property_parent.py", expected_directory / "property_parent.py"),
+        ),
+        extra_args=[
+            "--extra-fields",
+            "forbid",
+            "--generate-schema-validators",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-generic-base-class",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+        force_exec_validation=True,
+        runtime_validation_module="property_parent",
+        runtime_validation_model_name="PropertyParent",
+        runtime_validation_data={"value": "x", "second": "y"},
+    )
+    with _generated_package_module(output_dir, "property_parent") as module:
+        validate_json = _model_json_validator(module.PropertyParent)
+        _assert_model_json_invalid(validate_json, '{"value":"x"}', "value_error")
+        _assert_model_json_invalid(validate_json, '{"value":"x","second":"y","extra":1}', "extra_forbidden")
+
+
+def test_main_jsonschema_property_count_cross_module_capabilities(output_dir: Path) -> None:
+    """Retain property and core validators across module-boundary allOf inheritance."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_validators_property_count_cross_module",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "schema_validators_property_count_cross_module",
+        extra_args=[
+            "--generate-schema-validators",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+        force_exec_validation=True,
+        runtime_validation_module="property_child",
+        runtime_validation_model_name="PropertyChild",
+        runtime_validation_data={"base": "x", "child": "y"},
+    )
+    for module_path, model_name, valid_json, invalid_json, expected_error_type in (
+        (
+            "property_child",
+            "PropertyChild",
+            '{"base":"x","extra_value":1}',
+            '{"base":"x","extra_value":"invalid"}',
+            "int_parsing",
+        ),
+        (
+            "core_child",
+            "CoreChild",
+            '{"value":"x","second":"y","child":"z","extra_value":1}',
+            '{"child":"y"}',
+            "value_error",
+        ),
+        (
+            "property_child_inherited",
+            "PropertyChildInherited",
+            '{"value":"x","second":"y","child":"z"}',
+            '{"child":"y"}',
+            "value_error",
+        ),
+        (
+            "property_child_conditional",
+            "PropertyChildConditional",
+            '{"kind":"metric","metric":"x"}',
+            '{"kind":"metric","note":"x"}',
+            "value_error",
+        ),
+        (
+            "property_child_conditional_intermediate",
+            "PropertyChildConditionalIntermediate",
+            '{"kind":"metric","metric":"x"}',
+            '{"kind":"metric","note":"x"}',
+            "value_error",
+        ),
+        (
+            "property_child_required",
+            "PropertyChildRequired",
+            '{"left":"x","child":"y"}',
+            '{"child":"y"}',
+            "missing",
+        ),
+        (
+            "property_child_intermediate",
+            "PropertyChildIntermediate",
+            '{"child":"y"}',
+            "{}",
+            "value_error",
+        ),
+    ):
+        with _generated_package_module(output_dir, module_path) as module:
+            validate_json = _model_json_validator(getattr(module, model_name))
+            validate_json(valid_json)
+            _assert_model_json_invalid(validate_json, invalid_json, expected_error_type)
 
 
 @pytest.mark.cli_doc(

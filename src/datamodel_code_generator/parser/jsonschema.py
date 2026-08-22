@@ -64,6 +64,7 @@ from datamodel_code_generator.model.enum import (
 from datamodel_code_generator.model.runtime_validation import (
     ConditionalRequiredRule,
     PatternPropertiesRule,
+    PropertyCountRule,
     RequiredGroupsRule,
     SchemaRuntimeValidation,
     _is_internal_schema_runtime_validation,
@@ -1122,6 +1123,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self._rw_model_variant_requirement_cache: dict[tuple[str, str], bool] = {}
         self._rw_model_variant_references: dict[tuple[str, str], Reference] = {}
         self._local_ref_path_cache: dict[Path, Path] = {}
+        if self.generate_schema_validators:
+            self._property_count_rule_cache: dict[int, tuple[JsonSchemaObject, PropertyCountRule | None]] = {}
         self.field_keys: set[str] = {
             *DEFAULT_FIELD_KEYS,
             *self.field_extra_keys,
@@ -1913,6 +1916,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self._inherited_schema_linearization_cache.clear()
         self._inherited_required_cache.clear()
         self._inherited_parent_property_cache.clear()
+        if self.generate_schema_validators:
+            self._property_count_rule_cache.clear()
 
     def _merge_inherited_field_overrides(
         self,
@@ -2534,6 +2539,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             pattern_properties=pattern_properties,
             required_groups=required_groups,
             conditional_required=conditional_required,
+            property_count=source.property_count,
         )
         if target:
             self.extra_template_data[target_path]["schema_runtime_validation"] = target
@@ -6177,7 +6183,60 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             self._has_required_group_validators(obj)
             or self._has_conditional_validator(obj)
             or any(bool(source.patternProperties) for source in self._iter_schema_validation_sources(obj))
+            or self._has_property_count_validator(obj)
         )
+
+    def _has_property_count_validator(self, obj: JsonSchemaObject) -> bool:
+        """Return whether an object or its allOf sources constrain property counts."""
+        return self._get_property_count_rule(obj) is not None
+
+    def _get_property_count_rule(self, obj: JsonSchemaObject) -> PropertyCountRule | None:
+        """Aggregate one immutable count rule and cache it for this parse only."""
+        if not self.generate_schema_validators:
+            return None
+        cache_key = id(obj)
+        if (cached := self._property_count_rule_cache.get(cache_key)) is not None and cached[0] is obj:
+            return cached[1]
+
+        min_properties: int | None = None
+        max_properties: int | None = None
+        for source in self._iter_property_count_validation_sources(obj):
+            match source.minProperties:
+                case int() as source_minimum if source_minimum > 0:
+                    min_properties = source_minimum if min_properties is None else max(min_properties, source_minimum)
+                case _:
+                    pass
+            if (source_maximum := source.maxProperties) is not None:
+                max_properties = source_maximum if max_properties is None else min(max_properties, source_maximum)
+        rule = (
+            PropertyCountRule(min_properties=min_properties, max_properties=max_properties)
+            if min_properties is not None or max_properties is not None
+            else None
+        )
+        self._property_count_rule_cache[cache_key] = obj, rule
+        return rule
+
+    def _iter_property_count_validation_sources(
+        self,
+        obj: JsonSchemaObject,
+        visited_refs: frozenset[str] = frozenset(),
+    ) -> Iterator[JsonSchemaObject]:
+        """Yield count constraints from allOf, preserving JSON Schema $ref siblings."""
+        yield obj
+        for item in obj.allOf:
+            if not isinstance(item, JsonSchemaObject):
+                continue
+            if not item.ref:
+                yield from self._iter_property_count_validation_sources(item, visited_refs)
+                continue
+            yield item
+            resolved_ref = self.model_resolver.resolve_ref(item.ref)
+            if resolved_ref in visited_refs:
+                continue
+            yield from self._iter_property_count_validation_sources(
+                self._load_ref_schema_object(item.ref),
+                visited_refs | {resolved_ref},
+            )
 
     def _should_parse_object_with_schema_validators(self, obj: JsonSchemaObject) -> bool:
         if not self.generate_schema_validators:
@@ -6186,6 +6245,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if has_pattern_properties:
             return True
         if obj.properties and self._has_required_group_validators(obj):
+            return True
+        if obj.properties and self._has_property_count_validator(obj):
             return True
         has_conditional_properties = any(
             branch.properties or branch.patternProperties for branch in self._iter_conditional_branches(obj)
@@ -6387,6 +6448,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             RequiredGroupsRule(keyword=keyword, groups=required_groups)
         )
 
+    def _add_property_count_validator(self, reference_path: str, obj: JsonSchemaObject) -> None:
+        """Add raw-object property-count rules from this schema and its allOf sources."""
+        if (property_count_rule := self._get_property_count_rule(obj)) is None:
+            return
+        self._schema_runtime_validation(reference_path).property_count = property_count_rule
+
     def _get_conditional_predicate(
         self,
         obj: JsonSchemaObject,
@@ -6449,6 +6516,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         path: list[str],
         fields: Sequence[DataModelFieldBase],
         base_classes: Sequence[Reference],
+        *,
+        include_property_count: bool = True,
     ) -> None:
         if not self.generate_schema_validators:
             return
@@ -6462,6 +6531,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             reference_path, "anyOf", self._get_required_groups(obj.anyOf), names_by_property
         )
         self._add_conditional_validator(reference_path, obj, names_by_property)
+        if include_property_count:
+            self._add_property_count_validator(reference_path, obj)
 
     def _parse_object_common_part(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         self,
@@ -7506,7 +7577,15 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self._set_schema_metadata(reference.path, obj)
         self.set_schema_extensions(reference.path, obj)
         if self.generate_schema_validators:
-            self._add_schema_validators(reference.path, class_name, obj, path, fields, [])
+            self._add_schema_validators(
+                reference.path,
+                class_name,
+                obj,
+                path,
+                fields,
+                [],
+                include_property_count=data_model_type_class is self.data_model_type,
+            )
 
         separate_model_fields = self._get_separate_model_fields(fields, None)
         generates_separate = separate_model_fields is not None

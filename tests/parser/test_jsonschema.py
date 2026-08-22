@@ -11,6 +11,7 @@ from collections import Counter
 from copy import deepcopy
 from ipaddress import ip_address
 from pathlib import Path
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union
 
 import pydantic
@@ -233,17 +234,73 @@ def test_schema_validator_helpers_disabled() -> None:
     parser = JsonSchemaParser("", generate_schema_validators=False)
     obj = JsonSchemaObject.model_validate({
         "type": "object",
+        "minProperties": 1,
+        "maxProperties": 2,
         "properties": {"a": {"type": "string"}},
         "oneOf": [{"required": ["a"]}],
     })
     parser.extra_template_data["#/Model"] = {}
 
     assert not parser._should_parse_object_with_schema_validators(obj)
+    assert parser._get_property_count_rule(obj) is None
     assert parser._merge_conditional_properties(obj) is obj
 
     parser._add_schema_validators("#/Model", "Model", obj, ["#"], [], [])
 
     assert parser.extra_template_data["#/Model"] == {}
+
+
+def test_schema_validator_property_count_helper_caches_effective_allof_rule() -> None:
+    """Reuse one immutable property-count rule across validator selection and attachment."""
+    parser = JsonSchemaParser("", generate_schema_validators=True)
+    obj = JsonSchemaObject.model_validate({
+        "type": "object",
+        "allOf": [
+            True,
+            {"minProperties": 2},
+            {"maxProperties": 4},
+        ],
+    })
+    parser.extra_template_data["#/Model"] = {}
+
+    assert parser._has_property_count_validator(obj)
+    rule = parser._get_property_count_rule(obj)
+    assert rule is not None
+    assert (rule.min_properties, rule.max_properties) == (2, 4)
+    parser._add_property_count_validator("#/Model", obj)
+
+    assert parser.extra_template_data["#/Model"]["schema_runtime_validation"].property_count is rule
+
+
+def test_schema_validator_property_count_helper_stops_at_visited_ref() -> None:
+    """Keep $ref sibling counts while avoiding recursive allOf walks."""
+    parser = JsonSchemaParser("", generate_schema_validators=True)
+    parser.raw_obj = {"$defs": {"Loop": {"allOf": [{"$ref": "#/$defs/Loop", "maxProperties": 4}]}}}
+    obj = JsonSchemaObject.model_validate({"allOf": [{"$ref": "#/$defs/Loop", "minProperties": 2}]})
+
+    sources = tuple(parser._iter_property_count_validation_sources(obj))
+
+    assert [source.minProperties for source in sources] == [None, 2, None, None]
+    assert [source.maxProperties for source in sources] == [None, None, None, 4]
+
+
+def test_clear_inherited_field_caches_releases_property_count_rules() -> None:
+    """Release opt-in property-count aggregation cache with parser-owned temporary state."""
+    parser = JsonSchemaParser("", generate_schema_validators=True)
+    parser._get_property_count_rule(JsonSchemaObject.model_validate({"minProperties": 2}))
+
+    assert parser._property_count_rule_cache
+
+    parser._clear_inherited_field_caches()
+
+    assert not parser._property_count_rule_cache
+
+
+def test_schema_runtime_validation_module_preparation_skips_empty_modules() -> None:
+    """Avoid planning work for modules without opt-in runtime metadata."""
+    parser = JsonSchemaParser("", generate_schema_validators=True)
+
+    parser._prepare_schema_runtime_validation_module_code([SimpleNamespace(models=[])])
 
 
 def test_schema_validator_merge_conditional_properties_skips_missing_and_duplicate_properties() -> None:

@@ -1956,6 +1956,19 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         """Render shared code that should be emitted once per generated module."""
         return ""
 
+    @classmethod
+    def get_module_code_insertion_index(cls, models: list[DataModel]) -> int:  # noqa: ARG003
+        """Return the number of models emitted before shared module code."""
+        return 0
+
+    @classmethod
+    def prepare_module_code(cls, models: list[DataModel]) -> None:
+        """Prepare shared module metadata before imports are collected."""
+
+    @classmethod
+    def invalidate_module_code_cache(cls, models: list[DataModel]) -> None:
+        """Discard parser-owned module planning state after a model rename."""
+
     @property
     def custom_template_dir(self) -> Path | None:
         """Return the custom template directory used by this model."""

@@ -8,7 +8,7 @@ from typing import Any, ClassVar
 from pydantic import BaseModel, model_validator
 
 
-class _JsonSchemaRuntimeValidationBase(BaseModel):
+class _JsonSchemaRuntimeValidationBaseCore(BaseModel):
     __json_schema_conditional_required__: ClassVar[tuple[Any, ...]] = ()
 
     @model_validator(mode='before')
@@ -38,6 +38,25 @@ class _JsonSchemaRuntimeValidationBase(BaseModel):
         return data
 
 
+class _JsonSchemaRuntimeValidationBase(_JsonSchemaRuntimeValidationBaseCore):
+    __json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = ()
+
+    @model_validator(mode='before')
+    @classmethod
+    def _validate_json_schema_property_count(cls, data: Any) -> Any:
+        if not (rule := cls.__json_schema_property_count_rule__):
+            return data
+        if not isinstance(data, dict):
+            return data
+        property_count = len(data)
+        min_properties, max_properties = rule
+        if min_properties is not None and property_count < min_properties:
+            raise ValueError(f'Expected at least {min_properties} properties')
+        if max_properties is not None and property_count > max_properties:
+            raise ValueError(f'Expected at most {max_properties} properties')
+        return data
+
+
 class ApiReadOnlyLeafRequestModel(BaseModel):
     pass
 
@@ -47,6 +66,8 @@ class ApiReadOnlyLeafResponseModel(BaseModel):
 
 
 class ApiConditionalEnvelopeRequestModel(_JsonSchemaRuntimeValidationBase):
+    __json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = (2, 2)
+
     __json_schema_conditional_required__: ClassVar[tuple[Any, ...]] = (
         {
             'condition': ((('kind',), ('metric',)),),
@@ -61,6 +82,8 @@ class ApiConditionalEnvelopeRequestModel(_JsonSchemaRuntimeValidationBase):
 
 
 class ApiConditionalEnvelopeResponseModel(_JsonSchemaRuntimeValidationBase):
+    __json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = (2, 2)
+
     __json_schema_conditional_required__: ClassVar[tuple[Any, ...]] = (
         {
             'condition': ((('kind',), ('metric',)),),
