@@ -18,7 +18,9 @@ import json
 import shutil
 import subprocess
 import sys
+from itertools import islice, permutations
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -29,6 +31,10 @@ from datamodel_code_generator.model.msgspec import Struct as MsgspecStruct
 from datamodel_code_generator.model.pydantic_v2.base_model import _construct_parser_simple_field
 from datamodel_code_generator.reference import PydanticFieldNameResolver, Reference
 from datamodel_code_generator.types import DataType
+from tests.main.conftest import _generated_model
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 PERFORMANCE_DATA_PATH: Path = Path(__file__).parent.parent / "data" / "performance"
 EXPECTED_STARTUP_MEASUREMENT_CASES = {
@@ -91,6 +97,147 @@ def false_reference_performance_schema() -> dict[str, YamlValue]:
             "Never": False,
             "Value": {"type": "string"},
         },
+    }
+
+
+@pytest.fixture(scope="module")
+def unique_items_performance_schema() -> dict[str, object]:
+    """Prepare collapsed uniqueItems references outside the measured call."""
+    field_count = 500
+    return {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "UniqueItemsPerformance",
+        "type": "object",
+        "properties": {f"value_{index}": {"$ref": "#/$defs/UniqueValues"} for index in range(field_count)},
+        "$defs": {
+            "UniqueValues": {
+                "type": "array",
+                "uniqueItems": True,
+                "items": {"type": "integer"},
+            }
+        },
+    }
+
+
+@pytest.fixture(scope="module")
+def unique_items_runtime_model(tmp_path_factory: pytest.TempPathFactory) -> Generator[Any, None, None]:
+    """Generate and import one validated RootModel outside the runtime benchmarks."""
+    output_path = tmp_path_factory.mktemp("unique-items-runtime") / "model.py"
+    generate(
+        {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "UniqueItemsRuntime",
+            "type": "array",
+            "uniqueItems": True,
+            "items": {},
+        },
+        input_file_type=InputFileType.JsonSchema,
+        output=output_path,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        disable_timestamp=True,
+        formatters=[],
+        generate_schema_validators=True,
+    )
+    with _generated_model(output_path, "unique_items_runtime", "UniqueItemsRuntime") as model:
+        yield model
+
+
+@pytest.fixture(scope="module")
+def unique_items_nested_model(tmp_path_factory: pytest.TempPathFactory) -> Generator[Any, None, None]:
+    """Generate and import nested models outside the ownership benchmark."""
+    output_path = tmp_path_factory.mktemp("unique-items-nested") / "model.py"
+    generate(
+        {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "Parent",
+            "type": "object",
+            "properties": {
+                "child": {
+                    "type": "object",
+                    "properties": {
+                        "values": {
+                            "type": "array",
+                            "uniqueItems": True,
+                            "items": {"type": "integer"},
+                        }
+                    },
+                    "required": ["values"],
+                }
+            },
+            "required": ["child"],
+        },
+        input_file_type=InputFileType.JsonSchema,
+        output=output_path,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        disable_timestamp=True,
+        formatters=[],
+        generate_schema_validators=True,
+    )
+    with _generated_model(output_path, "unique_items_nested", "Parent") as model:
+        yield model
+
+
+@pytest.fixture(scope="module")
+def pattern_properties_runtime_model(tmp_path_factory: pytest.TempPathFactory) -> Generator[Any, None, None]:
+    """Generate and import pattern/additional dispatch outside the runtime benchmark."""
+    output_path = tmp_path_factory.mktemp("pattern-properties-runtime") / "model.py"
+    generate(
+        {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "PatternPropertiesRuntime",
+            "type": "object",
+            "patternProperties": {"^pattern-": {"type": "integer"}},
+            "additionalProperties": {"type": "string"},
+        },
+        input_file_type=InputFileType.JsonSchema,
+        output=output_path,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        disable_timestamp=True,
+        formatters=[],
+        generate_schema_validators=True,
+    )
+    with _generated_model(output_path, "pattern_properties_runtime", "PatternPropertiesRuntime") as model:
+        yield model
+
+
+@pytest.fixture(scope="module")
+def unique_items_scalar_payload() -> list[int]:
+    """Prepare 10,000 unique primitive values outside the measured runtime call."""
+    return list(range(10_000))
+
+
+@pytest.fixture(scope="module")
+def unique_items_nested_object_payload() -> list[dict[str, object]]:
+    """Prepare 1,000 unique nested objects outside the measured runtime call."""
+    return [
+        {
+            "id": index,
+            "label": f"item-{index}",
+            "metadata": {"rank": index, "values": [index, index + 1]},
+        }
+        for index in range(1_000)
+    ]
+
+
+@pytest.fixture(scope="module")
+def unique_items_nested_model_payload(unique_items_scalar_payload: list[int]) -> dict[str, object]:
+    """Reuse the prepared scalar values in one nested child payload."""
+    return {"child": {"values": unique_items_scalar_payload}}
+
+
+@pytest.fixture(scope="module")
+def unique_items_permuted_object_payload() -> list[dict[str, int]]:
+    """Prepare key-associated permutations that expose weak object fingerprints."""
+    keys = tuple(str(index) for index in range(8))
+    return [dict(zip(keys, values, strict=True)) for values in islice(permutations(range(8)), 10_000)]
+
+
+@pytest.fixture(scope="module")
+def pattern_properties_runtime_payload() -> dict[str, object]:
+    """Prepare many pattern and additional keys outside the measured runtime call."""
+    return {
+        **{f"pattern-{index}": index for index in range(1_000)},
+        **{f"extra-{index}": str(index) for index in range(1_000)},
     }
 
 
@@ -242,6 +389,76 @@ def test_perf_false_reference_validation(
     assert isinstance(result, str)
     assert "class FalseReferencePerformance(BaseModel):" in result
     assert result.endswith("    value_499: Value | None = None")
+
+
+@pytest.mark.perf
+@pytest.mark.benchmark
+def test_perf_unique_items_schema_validators(
+    unique_items_performance_schema: dict[str, object],
+) -> None:
+    """Track collapsed uniqueItems reference generation without formatter work."""
+    result = generate(
+        unique_items_performance_schema,
+        input_file_type=InputFileType.JsonSchema,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        collapse_root_models=True,
+        disable_timestamp=True,
+        formatters=[],
+        generate_schema_validators=True,
+    )
+    assert isinstance(result, str)
+    assert "class UniqueItemsPerformance(_JsonSchemaRuntimeValidationBase):" in result
+    assert "__json_schema_unique_items__" in result
+
+
+@pytest.mark.perf
+@pytest.mark.benchmark
+def test_perf_unique_items_runtime_scalar_validation(
+    unique_items_runtime_model: Any,
+    unique_items_scalar_payload: list[int],
+) -> None:
+    """Benchmark validation of 10,000 unique scalar JSON values only."""
+    unique_items_runtime_model.model_validate(unique_items_scalar_payload)
+
+
+@pytest.mark.perf
+@pytest.mark.benchmark
+def test_perf_unique_items_runtime_nested_object_validation(
+    unique_items_runtime_model: Any,
+    unique_items_nested_object_payload: list[dict[str, object]],
+) -> None:
+    """Benchmark validation of 1,000 unique nested JSON objects only."""
+    unique_items_runtime_model.model_validate(unique_items_nested_object_payload)
+
+
+@pytest.mark.perf
+@pytest.mark.benchmark
+def test_perf_unique_items_nested_model_validation(
+    unique_items_nested_model: Any,
+    unique_items_nested_model_payload: dict[str, object],
+) -> None:
+    """Benchmark one child-owned validation without repeating it on the parent."""
+    unique_items_nested_model.model_validate(unique_items_nested_model_payload)
+
+
+@pytest.mark.perf
+@pytest.mark.benchmark
+def test_perf_unique_items_permuted_object_validation(
+    unique_items_runtime_model: Any,
+    unique_items_permuted_object_payload: list[dict[str, int]],
+) -> None:
+    """Benchmark distinct objects whose key/value associations are permutations."""
+    unique_items_runtime_model.model_validate(unique_items_permuted_object_payload)
+
+
+@pytest.mark.perf
+@pytest.mark.benchmark
+def test_perf_pattern_properties_adapter_reuse(
+    pattern_properties_runtime_model: Any,
+    pattern_properties_runtime_payload: dict[str, object],
+) -> None:
+    """Benchmark reused adapters across many pattern and additional keys."""
+    pattern_properties_runtime_model.model_validate(pattern_properties_runtime_payload)
 
 
 @pytest.mark.perf

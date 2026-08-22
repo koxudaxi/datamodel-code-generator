@@ -15,6 +15,7 @@ from datamodel_code_generator import DataModelType, Formatter
 from datamodel_code_generator.config import JSONSchemaParserConfig
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import _rebuild_model_with_datamodel_namespace, get_data_model_types
+from datamodel_code_generator.model.pydantic_v2 import ConfigDict
 from datamodel_code_generator.model.pydantic_v2._schema_runtime_validation import (
     plan_schema_runtime_validation_bases,
 )
@@ -24,11 +25,13 @@ from datamodel_code_generator.model.pydantic_v2.base_model import (
     DataModelField,
     _construct_parser_simple_field,
 )
+from datamodel_code_generator.model.pydantic_v2.root_model import RootModel
 from datamodel_code_generator.model.runtime_validation import (
     PatternPropertiesRule,
     PropertyCountRule,
     RequiredGroupsRule,
     SchemaRuntimeValidation,
+    UniqueItemsRule,
     _make_internal_schema_runtime_validation,
 )
 from datamodel_code_generator.parser.base import Parser, _get_builtin_pydantic_v2_field_constructor
@@ -75,6 +78,33 @@ def test_base_model_methods_render_once_after_all_fields() -> None:
         f"method count: {rendered.count('def generated_method(')}\n\n{rendered}\n",
         EXPECTED_PYDANTIC_V2_MODEL_PATH / "base_model_methods_once.txt",
     )
+
+
+def test_schema_runtime_validation_unique_items_follows_model_description() -> None:
+    """Render uniqueItems metadata after ordinary class-body template data."""
+    model = BaseModel(
+        fields=[DataModelField(name="values", data_type=DataType(type="str"), required=True)],
+        reference=Reference(name="UniqueItems", path="#/UniqueItems"),
+        description="Unique values.",
+        extra_template_data=defaultdict(
+            dict,
+            {
+                "#/UniqueItems": {
+                    "schema_runtime_validation": _make_internal_schema_runtime_validation(
+                        unique_items=[UniqueItemsRule(path=(("values",),))]
+                    )
+                }
+            },
+        ),
+    )
+
+    expected = EXPECTED_PYDANTIC_V2_MODEL_PATH / "schema_runtime_unique_items_description.txt"
+    assert_output(model.render(), expected)
+
+    model._process_schema_runtime_validation()
+    model.invalidate_render_caches()
+
+    assert_output(model.render(), expected)
 
 
 @pytest.mark.allow_direct_assert
@@ -167,6 +197,7 @@ def test_property_count_class_body_line_is_idempotent() -> None:
             )
         ],
         property_count=PropertyCountRule(min_properties=1),
+        unique_items=[UniqueItemsRule(path=())],
     )
     runtime_model = BaseModel(
         fields=[],
@@ -185,6 +216,46 @@ def test_property_count_class_body_line_is_idempotent() -> None:
 
     assert first == second
     assert runtime_model.render().count("__json_schema_property_count_rule__") == 1
+    assert runtime_model.render().count("__json_schema_unique_items__") == 1
+
+
+@pytest.mark.allow_direct_assert
+def test_runtime_root_model_extra_config_is_idempotent() -> None:
+    """Merge the neutral extra setting into an existing RootModel config once."""
+    plain_runtime_model = RootModel(
+        fields=[DataModelField(name="root", data_type=DataType(type="int"), required=True)],
+        reference=Reference(name="PlainRuntimeRoot", path="#/PlainRuntimeRoot"),
+    )
+    plain_runtime_model._internal_template_data["schema_runtime_validation_use_base"] = True
+    runtime_model = RootModel(
+        fields=[DataModelField(name="root", data_type=DataType(type="str"), required=True)],
+        reference=Reference(name="RuntimeRoot", path="#/RuntimeRoot"),
+        extra_template_data=defaultdict(
+            dict,
+            {"#/RuntimeRoot": {"config": ConfigDict(regex_engine='"python-re"', frozen=True)}},
+        ),
+    )
+    runtime_model._internal_template_data["schema_runtime_validation_use_base"] = True
+
+    BaseModel._neutralize_generic_extra_config_for_runtime_root_models(
+        [plain_runtime_model, runtime_model],
+        uses_generated_generic_base_class=True,
+    )
+    BaseModel._neutralize_generic_extra_config_for_runtime_root_models(
+        [plain_runtime_model, runtime_model],
+        uses_generated_generic_base_class=True,
+    )
+
+    assert plain_runtime_model._additional_imports.count(Import.from_full_path("pydantic.ConfigDict")) == 1
+    plain_rendered = plain_runtime_model.render()
+    assert plain_rendered.count("model_config = ConfigDict(") == 1
+    assert "extra=None," in plain_rendered
+    assert runtime_model._additional_imports.count(Import.from_full_path("pydantic.ConfigDict")) == 1
+    rendered = runtime_model.render()
+    assert rendered.count("model_config = ConfigDict(") == 1
+    assert 'regex_engine="python-re",' in rendered
+    assert "frozen=True," in rendered
+    assert "extra=None," in rendered
 
 
 @pytest.mark.allow_direct_assert

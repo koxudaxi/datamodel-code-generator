@@ -20,13 +20,16 @@ import yaml
 
 import datamodel_code_generator._builtin_formatter as builtin_formatter
 from datamodel_code_generator import (
+    AliasGenerator,
     AllOfMergeMode,
     DataModelType,
     Error,
     Formatter,
+    InputFileType,
     PythonVersion,
     ReadOnlyWriteOnlyModelType,
     YamlValue,
+    generate,
 )
 from datamodel_code_generator._python_type_annotation import PythonTypeRuntimeSymbol
 from datamodel_code_generator.config import JSONSchemaParserConfig
@@ -37,8 +40,12 @@ from datamodel_code_generator.model.dataclass import DataClass
 from datamodel_code_generator.model.pydantic_v2.base_model import BaseModel
 from datamodel_code_generator.model.pydantic_v2.root_model import RootModel
 from datamodel_code_generator.model.runtime_validation import (
+    UNIQUE_ITEMS_ARRAY_TAIL_PATH_STEP,
+    UNIQUE_ITEMS_MAPPING_ADDITIONAL_VALUES_PATH_STEP,
+    UNIQUE_ITEMS_MAPPING_VALUES_PATH_STEP,
     ConditionalRequiredRule,
     PatternPropertiesRule,
+    UniqueItemsRule,
     _make_internal_schema_runtime_validation,
 )
 from datamodel_code_generator.model.type_alias import TypeAlias
@@ -61,6 +68,9 @@ from datamodel_code_generator.parser.jsonschema import (
     _get_json_value_type,
     _get_union_variant_name,
     _get_unique_rw_model_variant_source_path,
+    _json_literal_may_accept_container,
+    _json_literal_values_equal,
+    _json_schema_type_may_accept_container,
     _validate_schema_python_import_path,
     get_model_by_path,
     split_json_pointer,
@@ -68,6 +78,7 @@ from datamodel_code_generator.parser.jsonschema import (
 from datamodel_code_generator.reference import SPECIAL_PATH_MARKER, Reference
 from datamodel_code_generator.types import ANY, DataType
 from tests.conftest import assert_output
+from tests.main.conftest import assert_generated_model_json_validation
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -79,6 +90,44 @@ DATA_PATH: Path = Path(__file__).parents[1] / "data" / "jsonschema"
 
 def _json_schema_object(data: dict[str, Any]) -> JsonSchemaObject:
     return JsonSchemaObject.model_validate(data)
+
+
+def test_schema_validator_retains_unique_items_for_collapsed_referenced_root_model(output_file: Path) -> None:
+    """Keep uniqueItems validation when a referenced array root model is collapsed."""
+    generate(
+        {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "Payload",
+            "type": "object",
+            "properties": {"unique-values": {"$ref": "#/$defs/UniqueValues"}},
+            "required": ["unique-values"],
+            "$defs": {
+                "UniqueValues": {
+                    "type": "array",
+                    "uniqueItems": True,
+                    "items": {"type": "integer"},
+                }
+            },
+        },
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        collapse_root_models=True,
+        disable_timestamp=True,
+        formatters=[],
+        generate_schema_validators=True,
+    )
+
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="collapsed_unique_items",
+        model_name="Payload",
+        valid_json='{"unique-values":[1,2]}',
+        invalid_json='{"unique-values":[1,1]}',
+        expected_error_type="value_error",
+        expected_attribute_path=("unique_values",),
+        expected_attribute_value=[1, 2],
+    )
 
 
 def test_generated_formatter_mode_only_enabled_for_builtin() -> None:
@@ -339,11 +388,11 @@ def test_schema_validator_input_names_include_validation_aliases_and_schema_base
         }
     }
 
-    assert parser._field_input_names(field) == ("field", "fieldAlias", "field_name", "field-alt")
+    assert parser._field_input_names(field) == ("fieldAlias", "field-alt")
     assert parser._get_input_names_by_property(
         [empty_field, nameless_field],
         [Reference(path="#/$defs/Empty", name="Empty"), Reference(path="#/$defs/Base", name="Base")],
-    ) == {"": ("", "field_"), "base": ("base",)}
+    ) == {"": ("",), "base": ("base",)}
 
 
 def test_schema_validator_input_names_include_empty_datamodel_base_fields() -> None:
@@ -358,13 +407,68 @@ def test_schema_validator_input_names_include_empty_datamodel_base_fields() -> N
     )
     empty_field = DataModelFieldBase(name="field_", original_name="", alias="", data_type=DataType(type="str"))
     nameless_field = DataModelFieldBase(data_type=DataType(type="str"))
+    typed_extra_field = DataModelFieldBase(
+        name=BaseModel.TYPED_EXTRA_FIELD_NAME,
+        original_name=BaseModel.TYPED_EXTRA_FIELD_NAME,
+        data_type=DataType(type="str"),
+    )
     base_ref = Reference(path="#/$defs/Base", name="Base")
-    BaseModel(reference=base_ref, fields=[base_field, empty_field, nameless_field])
+    BaseModel(reference=base_ref, fields=[base_field, empty_field, nameless_field, typed_extra_field])
 
     assert parser._get_input_names_by_property([], [base_ref]) == {
-        "": ("", "field_"),
-        "base": ("base", "baseAlias", "base_field", "base-alt"),
+        "": ("",),
+        "base": ("baseAlias", "base-alt"),
     }
+    assert parser._field_input_names(base_field) == ("baseAlias", "base-alt")
+    assert JsonSchemaParser("", allow_population_by_field_name=True)._field_input_names(base_field) == (
+        "baseAlias",
+        "base-alt",
+        "base_field",
+    )
+    assert parser._get_input_names_by_property([], [base_ref]) == {
+        "": ("",),
+        "base": ("baseAlias", "base-alt"),
+    }
+    assert parser._required_group_input_names((("base",),), {"base": ("baseAlias",)}) == ((("baseAlias",),),)
+
+
+def test_schema_validator_input_names_match_pydantic_validation_priority() -> None:
+    """Use Pydantic's validation-alias priority for raw schema paths."""
+    serialization_field = DataModelFieldBase(
+        name="known_value",
+        original_name="known-value",
+        alias="known-value",
+        use_serialization_alias=True,
+        data_type=DataType(type="str"),
+    )
+    validation_field = DataModelFieldBase(
+        name="input_value",
+        original_name="input-value",
+        alias="output-value",
+        validation_aliases=["input-value", "inputValue"],
+        use_serialization_alias=True,
+        data_type=DataType(type="str"),
+    )
+    nameless_field = DataModelFieldBase(data_type=DataType(type="str"))
+
+    assert JsonSchemaParser("")._field_input_names(serialization_field) == ("known_value",)
+    assert JsonSchemaParser("", alias_generator=AliasGenerator.ToCamel)._field_input_names(serialization_field) == (
+        "knownValue",
+        "known_value",
+    )
+    assert JsonSchemaParser("", alias_generator=AliasGenerator.ToPascal)._field_input_names(serialization_field) == (
+        "KnownValue",
+        "known_value",
+    )
+    assert JsonSchemaParser("", alias_generator=AliasGenerator.ToSnake)._field_input_names(serialization_field) == (
+        "known_value",
+    )
+    assert JsonSchemaParser("", allow_population_by_field_name=True)._field_input_names(validation_field) == (
+        "input-value",
+        "inputValue",
+        "input_value",
+    )
+    assert JsonSchemaParser("")._field_input_names(nameless_field) == ()
 
 
 def test_build_missing_required_field_uses_shared_alias_policy() -> None:
@@ -512,6 +616,547 @@ def test_schema_runtime_validation_reuses_existing_instance() -> None:
     runtime_validation = parser._schema_runtime_validation("#/Model")
 
     assert parser._schema_runtime_validation("#/Model") is runtime_validation
+
+
+def test_schema_runtime_validation_copy_replans_unique_items_paths() -> None:
+    """Replan uniqueItems rules from the variant schema and visible fields."""
+    parser = JsonSchemaParser("")
+    source_path = "#/UniqueItemsSource"
+    target_path = "#/UniqueItemsTarget"
+    parser.extra_template_data[source_path]["schema_runtime_validation"] = _make_internal_schema_runtime_validation(
+        unique_items=[UniqueItemsRule(path=())]
+    )
+
+    parser._copy_schema_runtime_validation_for_variant(
+        source_path,
+        target_path,
+        [DataModelFieldBase(name="kept", original_name="kept", data_type=DataType(is_list=True))],
+        "Request",
+        obj=_json_schema_object({
+            "type": "object",
+            "properties": {
+                "kept": {"type": "array", "uniqueItems": True},
+                "removed": {"type": "array", "uniqueItems": True},
+            },
+        }),
+    )
+
+    runtime_validation = parser.extra_template_data[target_path]["schema_runtime_validation"]
+    assert_output(
+        "\n".join(repr(rule.path) for rule in runtime_validation.unique_items) + "\n",
+        DATA_PATH / "schema_runtime_unique_items_variant.snapshot",
+    )
+
+
+def test_schema_validator_unique_items_paths_cover_composed_input_shapes() -> None:
+    """Collect uniqueItems paths for every inline JSON Schema container shape."""
+    parser = JsonSchemaParser("", collapse_root_models=True, generate_schema_validators=True)
+    root_schema = _json_schema_object({
+        "allOf": [{"type": "array", "uniqueItems": True}],
+        "items": [False, {"type": "array", "uniqueItems": True}],
+        "prefixItems": [False, {"type": "array", "uniqueItems": True}],
+        "properties": {
+            "ignored": False,
+            "child": {"type": "array", "uniqueItems": True},
+        },
+    })
+    mapping_schema = _json_schema_object({
+        "additionalProperties": {"type": "array", "uniqueItems": True},
+    })
+    prefix_items_tail_schema = _json_schema_object({
+        "items": {"type": "array", "uniqueItems": True},
+        "prefixItems": [{"type": "array"}, {"type": "string"}],
+    })
+    direct_schema = _json_schema_object({"type": "array", "uniqueItems": True})
+    property_schema = _json_schema_object({
+        "allOf": [{"type": "object"}],
+        "properties": {
+            "unmapped": {"type": "array", "uniqueItems": True},
+            "kept": {"type": "array", "uniqueItems": True},
+            "ignored": True,
+        },
+    })
+    visited_reference = _json_schema_object({"$ref": "#/$defs/UniqueValues", "uniqueItems": True})
+    visited_reference_paths = list(
+        parser._iter_unique_items_paths(
+            visited_reference,
+            (),
+            frozenset({parser.model_resolver.resolve_ref(visited_reference.ref)}),
+        )
+    )
+    parser.raw_obj = {
+        "$defs": {
+            "Loop": {"$ref": "#/$defs/Loop"},
+            "UniqueMapping": {
+                "additionalProperties": {"type": "array", "uniqueItems": True},
+            },
+        },
+    }
+    loop_ref = parser.model_resolver.resolve_ref("#/$defs/Loop")
+    visited_all_of_paths = list(
+        parser._iter_unique_items_paths(
+            _json_schema_object({"allOf": [{"$ref": "#/$defs/Loop"}]}),
+            (),
+            frozenset({loop_ref}),
+        )
+    )
+    union_paths = tuple(
+        (
+            reference_path,
+            list(parser._iter_unique_items_paths(schema, ())),
+        )
+        for reference_path, schema in (
+            (
+                "#/NullableAnyOf",
+                _json_schema_object({"anyOf": [{"type": "array", "uniqueItems": True}, {"type": "null"}]}),
+            ),
+            (
+                "#/NullableOneOf",
+                _json_schema_object({"oneOf": [{"type": "array", "uniqueItems": True}, {"type": "null"}]}),
+            ),
+            (
+                "#/UnconstrainedArrayAnyOf",
+                _json_schema_object({
+                    "anyOf": [
+                        {"type": "array", "uniqueItems": True},
+                        {"type": "array"},
+                    ],
+                }),
+            ),
+            (
+                "#/UnknownArrayAnyOf",
+                _json_schema_object({"anyOf": [{"type": "array", "uniqueItems": True}, {}]}),
+            ),
+            (
+                "#/TrueArrayAnyOf",
+                _json_schema_object({"anyOf": [{"type": "array", "uniqueItems": True}, True]}),
+            ),
+            (
+                "#/FalseArrayAnyOf",
+                _json_schema_object({"anyOf": [{"type": "array", "uniqueItems": True}, False]}),
+            ),
+            (
+                "#/StringArrayAnyOf",
+                _json_schema_object({"anyOf": [{"type": "array", "uniqueItems": True}, {"type": "string"}]}),
+            ),
+            (
+                "#/RecursiveArrayAnyOf",
+                _json_schema_object({
+                    "anyOf": [
+                        {"type": "array", "uniqueItems": True},
+                        {"$ref": "#/$defs/Loop"},
+                    ],
+                }),
+            ),
+            (
+                "#/RefMappingAnyOf",
+                _json_schema_object({
+                    "anyOf": [
+                        {"$ref": "#/$defs/UniqueMapping"},
+                        {"additionalProperties": {"type": "array", "uniqueItems": True}},
+                    ],
+                }),
+            ),
+            (
+                "#/RefMappingOneOf",
+                _json_schema_object({
+                    "oneOf": [
+                        {"$ref": "#/$defs/UniqueMapping"},
+                        {"additionalProperties": {"type": "array", "uniqueItems": True}},
+                    ],
+                }),
+            ),
+            (
+                "#/MappingFallbackAnyOf",
+                _json_schema_object({
+                    "anyOf": [
+                        {"additionalProperties": {"type": "array", "uniqueItems": True}},
+                        {"type": "object"},
+                    ],
+                }),
+            ),
+            (
+                "#/MappingFallbackOneOf",
+                _json_schema_object({
+                    "oneOf": [
+                        {"additionalProperties": {"type": "array", "uniqueItems": True}},
+                        {"type": "object"},
+                    ],
+                }),
+            ),
+            (
+                "#/ImpossibleArrayAnyOf",
+                _json_schema_object({
+                    "anyOf": [
+                        {"type": "array", "anyOf": [{"type": "object"}]},
+                        {"type": "array", "uniqueItems": True},
+                    ],
+                }),
+            ),
+            (
+                "#/ImpossibleMappingAnyOf",
+                _json_schema_object({
+                    "anyOf": [
+                        {"type": "object", "anyOf": [{"type": "array"}]},
+                        {"additionalProperties": {"type": "array", "uniqueItems": True}},
+                    ],
+                }),
+            ),
+            (
+                "#/ConstScalarArrayAnyOf",
+                _json_schema_object({
+                    "anyOf": [
+                        {"type": "array", "uniqueItems": True},
+                        {"const": "scalar"},
+                    ],
+                }),
+            ),
+            (
+                "#/EnumScalarMappingOneOf",
+                _json_schema_object({
+                    "oneOf": [
+                        {"additionalProperties": {"type": "array", "uniqueItems": True}},
+                        {"enum": ["scalar", 0]},
+                    ],
+                }),
+            ),
+            (
+                "#/ConstArrayLiteralAnyOf",
+                _json_schema_object({
+                    "anyOf": [
+                        {"type": "array", "uniqueItems": True},
+                        {"const": [1, 1]},
+                    ],
+                }),
+            ),
+            (
+                "#/EnumObjectLiteralOneOf",
+                _json_schema_object({
+                    "oneOf": [
+                        {"additionalProperties": {"type": "array", "uniqueItems": True}},
+                        {"enum": [{"x": [1, 1]}]},
+                    ],
+                }),
+            ),
+        )
+    )
+    literal_values = parser._schema_literal_values(
+        _json_schema_object({"const": [{"nested": [True]}], "enum": [[{"nested": [1]}]]})
+    )
+    skipped_rule_paths = list(
+        parser._iter_unique_items_rules(
+            _json_schema_object({
+                "allOf": [True],
+                "properties": {
+                    "ignored": False,
+                    "kept": {"type": "array", "uniqueItems": True},
+                },
+            }),
+            (),
+            include_properties=True,
+        )
+    )
+
+    parser._add_unique_items_validator("#/Root", root_schema, [], [], is_root_model=True)
+    parser._add_unique_items_validator("#/Mapping", mapping_schema, [], [], is_root_model=True)
+    parser._add_unique_items_validator("#/Tail", prefix_items_tail_schema, [], [], is_root_model=True)
+    parser._add_unique_items_validator("#/Direct", direct_schema, [], [], is_root_model=False)
+    parser._add_unique_items_validator(
+        "#/Properties",
+        property_schema,
+        [DataModelFieldBase(name="kept", original_name="kept", data_type=DataType(type="str"))],
+        [],
+        is_root_model=False,
+    )
+
+    assert_output(
+        "\n".join(
+            f"{reference_path}: {runtime_validation.unique_items!r}"
+            for reference_path in ("#/Root", "#/Mapping", "#/Tail", "#/Direct", "#/Properties")
+            if (runtime_validation := parser.extra_template_data[reference_path]["schema_runtime_validation"])
+        )
+        + f"\n#/VisitedReference: {visited_reference_paths!r}"
+        + f"\n#/VisitedAllOfReference: {visited_all_of_paths!r}"
+        + f"\n#/LiteralIntersection: {literal_values!r}"
+        + f"\n#/LiteralFallback: {_json_literal_values_equal(object(), object())}"
+        + "\n#/LiteralEqualities: "
+        + repr((
+            _json_literal_values_equal(None, None),
+            _json_literal_values_equal(1, 1.0),
+            _json_literal_values_equal("value", "value"),
+        ))
+        + f"\n#/SkippedRules: {skipped_rule_paths!r}"
+        + "".join(f"\n{reference_path}: {paths!r}" for reference_path, paths in union_paths)
+        + "\n",
+        DATA_PATH / "schema_runtime_unique_items_paths.snapshot",
+    )
+
+
+def test_schema_validator_unique_items_array_capability_branches() -> None:
+    """Conservatively classify union branches that can receive array input."""
+    parser = JsonSchemaParser("", collapse_root_models=True, generate_schema_validators=True)
+    parser.raw_obj = {"$defs": {"String": {"type": "string"}}}
+    visited_refs = frozenset[str]()
+    cases: tuple[tuple[str, JsonSchemaObject | bool], ...] = (
+        ("false", False),
+        ("true", True),
+        ("array", _json_schema_object({"type": "array"})),
+        ("array-type-list", _json_schema_object({"type": ["array", "null"]})),
+        ("string-type-list", _json_schema_object({"type": ["string", "null"]})),
+        ("items", _json_schema_object({"items": {}})),
+        ("prefix-items", _json_schema_object({"prefixItems": []})),
+        ("false-object", JsonSchemaObject(is_boolean_schema_false=True)),
+        ("string-ref", _json_schema_object({"$ref": "#/$defs/String"})),
+        ("false-all-of", _json_schema_object({"allOf": [False]})),
+        ("true-all-of", _json_schema_object({"allOf": [True]})),
+        ("array-any-of", _json_schema_object({"anyOf": [{"type": "string"}, {"type": "array"}]})),
+        ("string-one-of", _json_schema_object({"oneOf": [{"type": "string"}]})),
+    )
+    capability_lines = [
+        f"{name}={parser._schema_item_may_accept_container(item, 'array', visited_refs)}" for name, item in cases
+    ]
+    unique_array = _json_schema_object({"type": "array", "uniqueItems": True})
+    identical_union_paths = list(parser._iter_union_unique_items_paths((unique_array, unique_array), (), visited_refs))
+    unknown_path_union_paths = list(
+        parser._iter_union_unique_items_paths((unique_array, unique_array), ("unknown",), visited_refs)
+    )
+    non_array_union_paths = list(
+        parser._iter_union_unique_items_paths((False, _json_schema_object({"type": "string"})), (), visited_refs)
+    )
+    path_container_type_lines = [
+        f"{path!r}={parser._unique_items_path_container_type(path)!r}"
+        for path in (
+            (),
+            (None,),
+            (1,),
+            ((UNIQUE_ITEMS_ARRAY_TAIL_PATH_STEP, 1),),
+            (UNIQUE_ITEMS_MAPPING_VALUES_PATH_STEP,),
+            (("__json_schema_mapping_pattern_values__", "^x", None),),
+            ((UNIQUE_ITEMS_MAPPING_ADDITIONAL_VALUES_PATH_STEP, ((),), ()),),
+            (("field",),),
+            ("unknown",),
+        )
+    ]
+
+    assert_output(
+        "\n".join((
+            *capability_lines,
+            *path_container_type_lines,
+            f"identical-union={identical_union_paths!r}",
+            f"unknown-path-union={unknown_path_union_paths!r}",
+            f"non-array-union={non_array_union_paths!r}",
+        ))
+        + "\n",
+        DATA_PATH / "schema_runtime_unique_items_array_capability.snapshot",
+    )
+
+
+def test_schema_validator_unique_items_branch_coverage() -> None:
+    """Exercise deduplication and loop fallthroughs in the uniqueItems planner."""
+    parser = JsonSchemaParser("", collapse_root_models=False, generate_schema_validators=True)
+    parser.raw_obj = {"$defs": {"Array": {"type": "array"}}}
+    visited_refs = frozenset({parser.model_resolver.resolve_ref("#/$defs/Array")})
+    reference = _json_schema_object({"$ref": "#/$defs/Array"})
+    branch_rules, candidates = parser._get_union_unique_items_branch_rules((True, reference), (), visited_refs, None)
+    owner = RootModel(
+        reference=Reference(path="#/$defs/Owner", name="Owner"),
+        fields=[DataModelFieldBase(name="root", data_type=DataType(is_list=True))],
+    )
+    owner._set_internal_template_data(
+        "schema_runtime_validation",
+        _make_internal_schema_runtime_validation(unique_items=[UniqueItemsRule(path=())]),
+    )
+    owner_types = tuple(DataType(reference=owner.reference) for _ in range(3))
+    common_paths = parser._get_common_executable_unique_items_paths(owner_types, (), set())
+    pattern_rules = tuple(
+        parser._iter_unique_items_rules(
+            _json_schema_object({
+                "patternProperties": {
+                    "^ignored": False,
+                    "^value": {"type": "array", "uniqueItems": True},
+                }
+            }),
+            (),
+        )
+    )
+
+    parser._add_required_groups_validator("#/Model", "anyOf", (("value",),), {})
+    parser._add_required_groups_validator("#/Model", "anyOf", (("value",),), {})
+    conditional = _json_schema_object({
+        "if": {"required": ["kind"], "properties": {"kind": {"const": "metric"}}},
+        "then": {"required": ["value"]},
+    })
+    parser._add_conditional_validator("#/Model", conditional, {})
+    parser._add_conditional_validator("#/Model", conditional, {})
+    runtime_validation = parser.extra_template_data["#/Model"]["schema_runtime_validation"]
+
+    assert_output(
+        "\n".join((
+            f"literal-object={_json_literal_may_accept_container({}, 'object')}",
+            f"type-list={_json_schema_type_may_accept_container(['array', 'null'], 'array')}",
+            f"schema-object={parser._schema_item_may_accept_container(reference, 'array', visited_refs)}",
+            f"branch-rule-counts={tuple(len(rules) for _, rules in branch_rules)!r}",
+            f"candidate-paths={tuple(rule.path for rule in candidates)!r}",
+            f"common-paths={tuple(sorted(common_paths, key=repr))!r}",
+            f"pattern-paths={tuple(rule.path for rule in pattern_rules)!r}",
+            f"required-group-count={len(runtime_validation.required_groups)}",
+            f"conditional-required-count={len(runtime_validation.conditional_required)}",
+        ))
+        + "\n",
+        DATA_PATH / "schema_runtime_unique_items_branch_coverage.snapshot",
+    )
+
+
+def test_schema_validator_unique_items_executable_paths_cover_all_data_type_branches() -> None:
+    """Collect executable child paths without recursing through data-type cycles."""
+    parser = JsonSchemaParser("", generate_schema_validators=True)
+    owner_reference = Reference(path="#/$defs/Owner", name="Owner")
+    owner = RootModel(
+        reference=owner_reference,
+        fields=[DataModelFieldBase(name="root", data_type=DataType(is_list=True))],
+    )
+    owner._set_internal_template_data(
+        "schema_runtime_validation",
+        _make_internal_schema_runtime_validation(unique_items=[UniqueItemsRule(path=())]),
+    )
+    owner_type = DataType(reference=owner_reference)
+    fallback_reference = Reference(path="#/$defs/Fallback", name="Fallback")
+    BaseModel(reference=fallback_reference, fields=[])
+    parser.extra_template_data[fallback_reference.path]["schema_runtime_validation"] = (
+        _make_internal_schema_runtime_validation(unique_items=[UniqueItemsRule(path=())])
+    )
+    cyclic_type = DataType()
+    outer_root_type = DataType(is_list=True, data_types=[owner_type])
+    parser._add_unique_items_validator(
+        "#/Outer",
+        _json_schema_object({"items": {"type": "array", "uniqueItems": True}}),
+        [DataModelFieldBase(name="root", data_type=outer_root_type)],
+        [],
+        is_root_model=True,
+    )
+    child_reference = Reference(path="#/$defs/Child", name="Child")
+    child = BaseModel(
+        reference=child_reference,
+        fields=[DataModelFieldBase(name="my_field", original_name="my_field", data_type=DataType(type="str"))],
+    )
+    child._set_internal_template_data(
+        "schema_runtime_validation",
+        _make_internal_schema_runtime_validation(
+            unique_items=[
+                UniqueItemsRule(
+                    path=(
+                        (
+                            UNIQUE_ITEMS_MAPPING_ADDITIONAL_VALUES_PATH_STEP,
+                            (("my_field", "my-field", "myField"),),
+                            (),
+                        ),
+                    )
+                )
+            ]
+        ),
+    )
+    parser._add_unique_items_validator(
+        "#/Parent",
+        _json_schema_object({
+            "type": "object",
+            "properties": {
+                "child": {
+                    "type": "object",
+                    "properties": {"my-field": {"type": "array"}},
+                    "additionalProperties": {"type": "array", "uniqueItems": True},
+                }
+            },
+        }),
+        [DataModelFieldBase(name="child", original_name="child", data_type=DataType(reference=child_reference))],
+        [],
+        is_root_model=False,
+    )
+    unowned_reference = Reference(path="#/$defs/Unowned", name="Unowned")
+    unowned = BaseModel(
+        reference=unowned_reference,
+        fields=[DataModelFieldBase(name="my_field", original_name="my_field", data_type=DataType(type="str"))],
+    )
+    unowned._set_internal_template_data(
+        "schema_runtime_validation",
+        _make_internal_schema_runtime_validation(
+            unique_items=[
+                UniqueItemsRule(path=(("other",),)),
+                UniqueItemsRule(path=(("long",), ("tail",))),
+            ]
+        ),
+    )
+    parser._add_unique_items_validator(
+        "#/UnownedParent",
+        _json_schema_object({
+            "type": "object",
+            "properties": {
+                "child": {
+                    "type": "object",
+                    "properties": {"my-field": {"type": "array"}},
+                    "additionalProperties": {"type": "array", "uniqueItems": True},
+                }
+            },
+        }),
+        [DataModelFieldBase(name="child", original_name="child", data_type=DataType(reference=unowned_reference))],
+        [],
+        is_root_model=False,
+    )
+    fixed_paths = parser._get_executable_unique_items_paths(
+        DataType(is_tuple=True, tuple_item_count=2, data_types=[owner_type, owner_type]),
+        (),
+    )
+    variable_paths = parser._get_executable_unique_items_paths(
+        DataType(is_tuple=True, data_types=[owner_type]),
+        (),
+    )
+    mapping_paths = parser._get_executable_unique_items_paths(
+        DataType(is_mapping=True, data_types=[owner_type]),
+        (),
+    )
+    list_child_paths = parser._get_executable_unique_items_paths(
+        DataType(is_list=True, data_types=[DataType(reference=child_reference)]),
+        (),
+    )
+    parser.collapse_root_models = True
+
+    assert_output(
+        "\n".join((
+            f"visited-array={parser._data_type_may_accept_array(cyclic_type, frozenset({id(cyclic_type)}))}",
+            f"unknown-array={parser._data_type_may_accept_array(DataType())}",
+            f"visited-paths={parser._get_executable_unique_items_paths(cyclic_type, (), {id(cyclic_type)})!r}",
+            f"fallback={parser._get_executable_unique_items_paths(DataType(reference=fallback_reference), ())!r}",
+            f"fixed={fixed_paths!r}",
+            f"variable={variable_paths!r}",
+            f"mapping={mapping_paths!r}",
+            f"list-child={sorted(list_child_paths, key=repr)!r}",
+            f"collapsed-root={parser._get_executable_unique_items_paths(DataType(reference=owner_reference), ())!r}",
+            f"root-owned={parser.extra_template_data['#/Outer'].get('schema_runtime_validation')!r}",
+            f"selector-owned={parser.extra_template_data['#/Parent'].get('schema_runtime_validation')!r}",
+            f"selector-unowned={bool(parser.extra_template_data['#/UnownedParent']['schema_runtime_validation'].unique_items)}",
+        ))
+        + "\n",
+        DATA_PATH / "schema_runtime_unique_items_executable_paths.snapshot",
+    )
+
+
+def test_schema_validator_adds_all_of_missing_required_field() -> None:
+    """Materialize a required field supplied only by an allOf branch."""
+    parser = JsonSchemaParser(
+        json.dumps({
+            "title": "MissingRequired",
+            "type": "object",
+            "properties": {"known": {"type": "string"}},
+            "allOf": [{"required": ["missing"]}],
+        })
+    )
+
+    parser.parse(format_=False)
+
+    model = next(result for result in parser.results if result.class_name == "MissingRequired")
+    assert_output(
+        "\n".join(f"{field.original_name}={field.required}" for field in model.fields) + "\n",
+        DATA_PATH / "schema_runtime_missing_required.snapshot",
+    )
 
 
 def test_schema_validator_pattern_property_helpers_collect_inherited_sources() -> None:
@@ -4600,6 +5245,7 @@ def test_request_response_runtime_validation_copy_handles_empty_optional_parts()
         pattern_target_path,
         [field],
         "Request",
+        obj=_json_schema_object({"type": "object"}),
     )
 
     pattern_target = parser.extra_template_data[pattern_target_path]["schema_runtime_validation"]
@@ -4625,6 +5271,7 @@ def test_request_response_runtime_validation_copy_handles_empty_optional_parts()
         conditional_target_path,
         [field],
         "Response",
+        obj=_json_schema_object({"type": "object"}),
     )
 
     assert "schema_runtime_validation" not in parser.extra_template_data[conditional_target_path]

@@ -3234,13 +3234,31 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     root_type_model = reference.source
                     root_type_field = root_type_model.fields[0]
 
-                    if (
-                        self.field_constraints
-                        and isinstance(root_type_field.constraints, ConstraintsBase)
-                        and root_type_field.constraints.has_constraints
-                        and any(d for d in model_field.data_type.all_data_types if d.is_dict or d.is_union or d.is_list)
+                    # These runtime rules are owned by the referenced root model;
+                    # replacing it with the raw type would discard its validator.
+                    runtime_validation = (
+                        root_type_model._internal_template_data.get("schema_runtime_validation")  # noqa: SLF001
+                        or root_type_model.extra_template_data.get("schema_runtime_validation")
+                    )
+                    if runtime_validation and any(
+                        getattr(runtime_validation, rule_name, None)
+                        for rule_name in (
+                            "pattern_properties",
+                            "required_groups",
+                            "conditional_required",
+                        )
                     ):
-                        continue  # pragma: no cover
+                        continue
+
+                    root_constraints = root_type_field.constraints
+                    if isinstance(root_constraints, ConstraintsBase) and root_constraints.has_constraints:
+                        if root_type_field.data_type.is_dict or root_type_field.data_type.is_mapping:
+                            continue
+                        if self.field_constraints and any(
+                            data_type.is_dict or data_type.is_union or data_type.is_list
+                            for data_type in model_field.data_type.all_data_types
+                        ):
+                            continue
 
                     if root_type_field.data_type.reference:
                         if self.collapse_root_models_name_strategy is None:
