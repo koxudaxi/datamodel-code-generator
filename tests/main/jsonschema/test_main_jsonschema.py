@@ -6852,6 +6852,32 @@ def test_main_jsonschema_additional_properties_value_constraints_schema_validato
     )
 
 
+def test_main_jsonschema_schema_validators_pattern_properties_own_typed_extras(output_file: Path) -> None:
+    """Let the runtime pattern dispatcher, not Pydantic typed extras, own extra values."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_validators_pattern_additional_properties.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="schema_validators_pattern_additional_properties.py",
+        extra_args=[
+            "--generate-schema-validators",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="schema_validators_pattern_additional_properties",
+        model_name="PatternAdditionalProperties",
+        valid_json='{"known":"value","pattern-number":1,"extra":"value","__pydantic_extra__":1}',
+        invalid_json='{"known":"value","pattern-number":1,"__pydantic_extra__":"invalid"}',
+        expected_error_type="int_parsing",
+    )
+
+
 def test_main_jsonschema_empty_anyof_uses_any(output_file: Path) -> None:
     """Test empty anyOf remains an unconstrained root type."""
     expected = (
@@ -15714,6 +15740,14 @@ def test_main_jsonschema_property_count_root_collapse_keeps_helper_imports(outpu
         invalid_json="{}",
         expected_error_type="value_error",
     )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output_property_count_root_collapse_pattern",
+        model_name="DisposableBag",
+        valid_json='{"item_one":1,"other":2}',
+        invalid_json='{"item_one":"bad"}',
+        expected_error_type="int_parsing",
+    )
 
 
 def test_main_jsonschema_property_count_with_generic_base_class(output_file: Path) -> None:
@@ -15745,6 +15779,14 @@ def test_main_jsonschema_property_count_with_generic_base_class(output_file: Pat
         valid_json='{"value":"x"}',
         invalid_json="{}",
         expected_error_type="value_error",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output_property_count_generic_base_pattern",
+        model_name="DisposableBag",
+        valid_json='{"item_one":1,"other":2}',
+        invalid_json='{"item_one":"bad"}',
+        expected_error_type="int_parsing",
     )
 
 

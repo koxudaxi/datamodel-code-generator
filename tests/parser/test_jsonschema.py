@@ -68,7 +68,9 @@ from datamodel_code_generator.parser.jsonschema import (
     _get_json_value_type,
     _get_union_variant_name,
     _get_unique_rw_model_variant_source_path,
+    _json_literal_may_accept_container,
     _json_literal_values_equal,
+    _json_schema_type_may_accept_container,
     _validate_schema_python_import_path,
     get_model_by_path,
     split_json_pointer,
@@ -405,8 +407,13 @@ def test_schema_validator_input_names_include_empty_datamodel_base_fields() -> N
     )
     empty_field = DataModelFieldBase(name="field_", original_name="", alias="", data_type=DataType(type="str"))
     nameless_field = DataModelFieldBase(data_type=DataType(type="str"))
+    typed_extra_field = DataModelFieldBase(
+        name=BaseModel.TYPED_EXTRA_FIELD_NAME,
+        original_name=BaseModel.TYPED_EXTRA_FIELD_NAME,
+        data_type=DataType(type="str"),
+    )
     base_ref = Reference(path="#/$defs/Base", name="Base")
-    BaseModel(reference=base_ref, fields=[base_field, empty_field, nameless_field])
+    BaseModel(reference=base_ref, fields=[base_field, empty_field, nameless_field, typed_extra_field])
 
     assert parser._get_input_names_by_property([], [base_ref]) == {
         "": ("",),
@@ -941,6 +948,62 @@ def test_schema_validator_unique_items_array_capability_branches() -> None:
         ))
         + "\n",
         DATA_PATH / "schema_runtime_unique_items_array_capability.snapshot",
+    )
+
+
+def test_schema_validator_unique_items_branch_coverage() -> None:
+    """Exercise deduplication and loop fallthroughs in the uniqueItems planner."""
+    parser = JsonSchemaParser("", collapse_root_models=False, generate_schema_validators=True)
+    parser.raw_obj = {"$defs": {"Array": {"type": "array"}}}
+    visited_refs = frozenset({parser.model_resolver.resolve_ref("#/$defs/Array")})
+    reference = _json_schema_object({"$ref": "#/$defs/Array"})
+    branch_rules, candidates = parser._get_union_unique_items_branch_rules((True, reference), (), visited_refs, None)
+    owner = RootModel(
+        reference=Reference(path="#/$defs/Owner", name="Owner"),
+        fields=[DataModelFieldBase(name="root", data_type=DataType(is_list=True))],
+    )
+    owner._set_internal_template_data(
+        "schema_runtime_validation",
+        _make_internal_schema_runtime_validation(unique_items=[UniqueItemsRule(path=())]),
+    )
+    owner_types = tuple(DataType(reference=owner.reference) for _ in range(3))
+    common_paths = parser._get_common_executable_unique_items_paths(owner_types, (), set())
+    pattern_rules = tuple(
+        parser._iter_unique_items_rules(
+            _json_schema_object({
+                "patternProperties": {
+                    "^ignored": False,
+                    "^value": {"type": "array", "uniqueItems": True},
+                }
+            }),
+            (),
+        )
+    )
+
+    parser._add_required_groups_validator("#/Model", "anyOf", (("value",),), {})
+    parser._add_required_groups_validator("#/Model", "anyOf", (("value",),), {})
+    conditional = _json_schema_object({
+        "if": {"required": ["kind"], "properties": {"kind": {"const": "metric"}}},
+        "then": {"required": ["value"]},
+    })
+    parser._add_conditional_validator("#/Model", conditional, {})
+    parser._add_conditional_validator("#/Model", conditional, {})
+    runtime_validation = parser.extra_template_data["#/Model"]["schema_runtime_validation"]
+
+    assert_output(
+        "\n".join((
+            f"literal-object={_json_literal_may_accept_container({}, 'object')}",
+            f"type-list={_json_schema_type_may_accept_container(['array', 'null'], 'array')}",
+            f"schema-object={parser._schema_item_may_accept_container(reference, 'array', visited_refs)}",
+            f"branch-rule-counts={tuple(len(rules) for _, rules in branch_rules)!r}",
+            f"candidate-paths={tuple(rule.path for rule in candidates)!r}",
+            f"common-paths={tuple(sorted(common_paths, key=repr))!r}",
+            f"pattern-paths={tuple(rule.path for rule in pattern_rules)!r}",
+            f"required-group-count={len(runtime_validation.required_groups)}",
+            f"conditional-required-count={len(runtime_validation.conditional_required)}",
+        ))
+        + "\n",
+        DATA_PATH / "schema_runtime_unique_items_branch_coverage.snapshot",
     )
 
 

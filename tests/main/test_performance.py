@@ -178,6 +178,29 @@ def unique_items_nested_model(tmp_path_factory: pytest.TempPathFactory) -> Gener
 
 
 @pytest.fixture(scope="module")
+def pattern_properties_runtime_model(tmp_path_factory: pytest.TempPathFactory) -> Generator[Any, None, None]:
+    """Generate and import pattern/additional dispatch outside the runtime benchmark."""
+    output_path = tmp_path_factory.mktemp("pattern-properties-runtime") / "model.py"
+    generate(
+        {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "PatternPropertiesRuntime",
+            "type": "object",
+            "patternProperties": {"^pattern-": {"type": "integer"}},
+            "additionalProperties": {"type": "string"},
+        },
+        input_file_type=InputFileType.JsonSchema,
+        output=output_path,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        disable_timestamp=True,
+        formatters=[],
+        generate_schema_validators=True,
+    )
+    with _generated_model(output_path, "pattern_properties_runtime", "PatternPropertiesRuntime") as model:
+        yield model
+
+
+@pytest.fixture(scope="module")
 def unique_items_scalar_payload() -> list[int]:
     """Prepare 10,000 unique primitive values outside the measured runtime call."""
     return list(range(10_000))
@@ -207,6 +230,15 @@ def unique_items_permuted_object_payload() -> list[dict[str, int]]:
     """Prepare key-associated permutations that expose weak object fingerprints."""
     keys = tuple(str(index) for index in range(8))
     return [dict(zip(keys, values, strict=True)) for values in islice(permutations(range(8)), 10_000)]
+
+
+@pytest.fixture(scope="module")
+def pattern_properties_runtime_payload() -> dict[str, object]:
+    """Prepare many pattern and additional keys outside the measured runtime call."""
+    return {
+        **{f"pattern-{index}": index for index in range(1_000)},
+        **{f"extra-{index}": str(index) for index in range(1_000)},
+    }
 
 
 def _build_inherited_required_performance_schema(
@@ -417,6 +449,16 @@ def test_perf_unique_items_permuted_object_validation(
 ) -> None:
     """Benchmark distinct objects whose key/value associations are permutations."""
     unique_items_runtime_model.model_validate(unique_items_permuted_object_payload)
+
+
+@pytest.mark.perf
+@pytest.mark.benchmark
+def test_perf_pattern_properties_adapter_reuse(
+    pattern_properties_runtime_model: Any,
+    pattern_properties_runtime_payload: dict[str, object],
+) -> None:
+    """Benchmark reused adapters across many pattern and additional keys."""
+    pattern_properties_runtime_model.model_validate(pattern_properties_runtime_payload)
 
 
 @pytest.mark.perf

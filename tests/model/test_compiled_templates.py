@@ -1448,6 +1448,28 @@ def test_module_property_count_runtime_validation_helper_uses_custom_jinja_rende
 
 def test_module_unique_items_runtime_validation_requires_supported_custom_helper(tmp_path: Path) -> None:
     """Fail clearly instead of emitting a custom helper that silently skips uniqueItems."""
+    no_override_reference = _reference("NoOverrideUniqueItemsRuntimeModel")
+    no_override_model = BaseModel(
+        fields=[],
+        reference=no_override_reference,
+        custom_template_dir=tmp_path,
+        extra_template_data=defaultdict(
+            dict,
+            {
+                no_override_reference.path: {
+                    "schema_runtime_validation": _make_internal_schema_runtime_validation(
+                        unique_items=[UniqueItemsRule(path=())]
+                    ),
+                    "schema_runtime_validation_enabled": True,
+                }
+            },
+        ),
+    )
+    assert_output(
+        f"{BaseModel.SCHEMA_RUNTIME_VALIDATION_BASE_CLASS_NAME in BaseModel.render_module_code([no_override_model])}\n",
+        EXPECTED_PATH / "module_helper_unique_items_no_custom_override.txt",
+    )
+
     custom_dir = tmp_path / "pydantic_v2"
     custom_dir.mkdir()
     custom_dir.joinpath("schema_runtime_validation_helpers.jinja2").write_text(

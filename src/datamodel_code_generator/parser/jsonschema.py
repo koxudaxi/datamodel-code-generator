@@ -247,6 +247,11 @@ _RW_MODEL_VARIANT_SPECIAL_MARKERS = frozenset({
     SPECIAL_PATH_FORMAT.format("read-write-request"),
     SPECIAL_PATH_FORMAT.format("read-write-response"),
 })
+_REF_SIBLING_KEYWORDS_DISABLED_VERSIONS = frozenset({
+    JsonSchemaVersion.Draft4,
+    JsonSchemaVersion.Draft6,
+    JsonSchemaVersion.Draft7,
+})
 
 
 def _field_source_name(field: DataModelFieldBase) -> str | None:
@@ -258,11 +263,7 @@ def _json_literal_may_accept_container(
     container_type: Literal["array", "object"],
 ) -> bool:
     """Return whether a JSON literal has the requested raw container shape."""
-    match container_type:
-        case "array":
-            return isinstance(value, list)
-        case "object":
-            return isinstance(value, dict)
+    return isinstance(value, list if container_type == "array" else dict)
 
 
 def _json_schema_type_may_accept_container(
@@ -270,11 +271,7 @@ def _json_schema_type_may_accept_container(
     container_type: Literal["array", "object"],
 ) -> bool:
     """Return whether a JSON Schema type keyword permits the raw container shape."""
-    match schema_type:
-        case str():
-            return schema_type == container_type
-        case list():
-            return container_type in schema_type
+    return schema_type == container_type if isinstance(schema_type, str) else container_type in schema_type
 
 
 def _json_literal_values_equal(left: object, right: object) -> bool:  # noqa: PLR0911
@@ -1325,11 +1322,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if self.raw_obj
             else JsonSchemaVersion.Auto
         )
-        match version:
-            case JsonSchemaVersion.Draft4 | JsonSchemaVersion.Draft6 | JsonSchemaVersion.Draft7:
-                return False
-            case _:
-                return True
+        return version not in _REF_SIBLING_KEYWORDS_DISABLED_VERSIONS
 
     @property
     def root_id(self) -> str | None:
@@ -6267,8 +6260,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         return bool(
             self._has_required_group_validators(obj)
             or self._has_conditional_validator(obj)
-            or any(bool(source.patternProperties) for source in self._iter_schema_validation_sources(obj))
+            or self._has_pattern_properties_validator(obj)
             or self._has_property_count_validator(obj)
+        )
+
+    def _has_pattern_properties_validator(self, obj: JsonSchemaObject) -> bool:
+        """Return whether schema runtime validation owns patternProperties dispatch."""
+        return self.generate_schema_validators and any(
+            source.patternProperties for source in self._iter_schema_validation_sources(obj)
         )
 
     def _has_core_schema_runtime_rules(  # noqa: PLR6301
@@ -6422,6 +6421,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     ) -> dict[str, tuple[str, ...]]:
         names_by_property: dict[str, tuple[str, ...]] = {}
         for field in fields:
+            if field.name == self.data_model_type.TYPED_EXTRA_FIELD_NAME:
+                continue
             property_name = _field_source_name(field)
             if property_name is not None:
                 names_by_property[property_name] = self._field_input_names(field)
@@ -6430,6 +6431,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             data_model = base_class.source if isinstance(base_class.source, DataModel) else None
             if data_model is not None:
                 for field in data_model.iter_all_fields():
+                    if field.name == self.data_model_type.TYPED_EXTRA_FIELD_NAME:
+                        continue
                     property_name = _field_source_name(field)
                     if property_name is not None:
                         names_by_property.setdefault(property_name, self._field_input_names(field))
@@ -6486,13 +6489,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         visited_refs: frozenset[str],
     ) -> bool:
         """Return whether a schema item can accept one raw JSON container shape."""
-        match item:
-            case False:
-                return False
-            case True:
-                return True
-            case JsonSchemaObject() as schema:
-                return self._schema_may_accept_container(schema, container_type, visited_refs)
+        if isinstance(item, JsonSchemaObject):
+            return self._schema_may_accept_container(item, container_type, visited_refs)
+        return item
 
     def _schema_literal_values(self, obj: JsonSchemaObject) -> tuple[object, ...] | None:
         """Return direct const/enum values after their JSON Schema intersection."""
@@ -6574,38 +6573,36 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         branch_rules: list[tuple[JsonSchemaObject | bool, tuple[UniqueItemsRule, ...]]] = []
         candidates: list[UniqueItemsRule] = []
         for item in items:
-            match item:
-                case False:
-                    continue
-                case True:
-                    branch_rules.append((item, ()))
-                case JsonSchemaObject() as branch:
-                    rules = tuple(
-                        self._iter_unique_items_rules(
-                            branch,
+            if item is False:
+                continue
+            if item is True:
+                branch_rules.append((item, ()))
+                continue
+            branch = item
+            rules = tuple(
+                self._iter_unique_items_rules(
+                    branch,
+                    path,
+                    visited_refs,
+                    property_input_names,
+                    include_properties=True,
+                )
+            )
+            if branch.ref and not self.collapse_root_models:
+                resolved_ref = self.model_resolver.resolve_ref(branch.ref)
+                if resolved_ref not in visited_refs:
+                    rules = (
+                        *rules,
+                        *self._iter_unique_items_rules(
+                            self._load_ref_schema_object(branch.ref),
                             path,
-                            visited_refs,
+                            visited_refs | {resolved_ref},
                             property_input_names,
                             include_properties=True,
-                        )
+                        ),
                     )
-                    if branch.ref and not self.collapse_root_models:
-                        resolved_ref = self.model_resolver.resolve_ref(branch.ref)
-                        if resolved_ref not in visited_refs:
-                            rules = (
-                                *rules,
-                                *self._iter_unique_items_rules(
-                                    self._load_ref_schema_object(branch.ref),
-                                    path,
-                                    visited_refs | {resolved_ref},
-                                    property_input_names,
-                                    include_properties=True,
-                                ),
-                            )
-                    branch_rules.append((branch, rules))
-                    candidates.extend(
-                        rule for rule in rules if all(rule.path != candidate.path for candidate in candidates)
-                    )
+            branch_rules.append((branch, rules))
+            candidates.extend(rule for rule in rules if all(rule.path != candidate.path for candidate in candidates))
         return branch_rules, candidates
 
     def _iter_union_unique_items_rules(
@@ -6689,7 +6686,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             case DataType(type="None" | "str" | "int" | "float" | "bool" | "bytes"):
                 return False
             case _:
-                return True
+                pass
+        return True
 
     def _get_executable_unique_items_paths(  # noqa: PLR0911, PLR0912
         self,
@@ -6750,7 +6748,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                         filter_array_branches=False,
                     )
                 case _:
-                    return self._get_common_executable_unique_items_paths(data_type.data_types, path, visited)
+                    pass
+            return self._get_common_executable_unique_items_paths(data_type.data_types, path, visited)
         finally:
             visited.remove(data_type_id)
 
@@ -7993,16 +7992,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if additional_props.allOf and self._contains_false_schema(additional_props.allOf):
             return None
         additional_props = self._add_nullable_combined_schema_branches(additional_props)
-        if (
-            self.generate_schema_validators
-            and any(source.patternProperties for source in self._iter_schema_validation_sources(obj))
-            and (
-                constrained_schema := self._merge_additional_properties_all_of(additional_props)
-                if additional_props.allOf
-                else additional_props
-            )
-            and self._has_effective_constraints(constrained_schema)
-        ):
+        if self._has_pattern_properties_validator(obj):
             return None
         additional_property_name = f"{class_name}AdditionalProperty"
         extra_value_type = self._parse_additional_properties_value(
@@ -8201,16 +8191,16 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         path: list[str],
     ) -> DataModelFieldBase:
         """Build a dict root field without leaking value constraints onto the container."""
-        match obj.additionalProperties:
-            case JsonSchemaObject() as additional_properties:
-                additional_props_type = self._parse_additional_properties_value(
-                    name,
-                    [*path, "additionalProperties"],
-                    obj,
-                    additional_properties=additional_properties,
-                )
-            case _:
-                additional_props_type = None
+        additional_props_type = None
+        if not self._has_pattern_properties_validator(obj):
+            match obj.additionalProperties:
+                case JsonSchemaObject() as additional_properties:
+                    additional_props_type = self._parse_additional_properties_value(
+                        name,
+                        [*path, "additionalProperties"],
+                        obj,
+                        additional_properties=additional_properties,
+                    )
 
         additional_props_field = self.SCHEMA_OBJECT_TYPE.model_validate({
             "minProperties": obj.minProperties,

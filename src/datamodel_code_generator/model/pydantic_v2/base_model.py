@@ -855,6 +855,7 @@ class BaseModel(BaseModelBase):
             id(model): runtime_validations[index] for index, model in enumerate(runtime_models)
         }
         has_property_count = any(runtime_validation.property_count for runtime_validation in runtime_validations)
+        uses_generated_generic_base_class = cls._has_generated_generic_base_class(models)
         if not has_property_count:
             local_model_ids = {id(model) for model in models}
             for model in runtime_models:
@@ -870,11 +871,15 @@ class BaseModel(BaseModelBase):
                         local_model_ids=local_model_ids,
                     ),
                 )
+            cls._neutralize_generic_extra_config_for_runtime_root_models(
+                runtime_models,
+                uses_generated_generic_base_class=uses_generated_generic_base_class,
+            )
             cls._add_schema_runtime_validation_helper_imports(
                 runtime_models[0],
                 runtime_validations,
                 has_local_core_helper=True,
-                uses_generated_generic_base_class=cls._has_generated_generic_base_class(models),
+                uses_generated_generic_base_class=uses_generated_generic_base_class,
             )
             module_plan = SchemaRuntimeValidationModulePlan(
                 base_class_name,
@@ -913,11 +918,15 @@ class BaseModel(BaseModelBase):
                 helper_base_class_names.get(missing_capabilities),
                 missing_capabilities,
             )
+        cls._neutralize_generic_extra_config_for_runtime_root_models(
+            runtime_models,
+            uses_generated_generic_base_class=uses_generated_generic_base_class,
+        )
         cls._add_schema_runtime_validation_helper_imports(
             runtime_models[0],
             runtime_validations,
             has_local_core_helper=any(capabilities[0] for capabilities in helper_base_class_names),
-            uses_generated_generic_base_class=cls._has_generated_generic_base_class(models),
+            uses_generated_generic_base_class=uses_generated_generic_base_class,
         )
         module_plan = SchemaRuntimeValidationModulePlan(
             base_class_name,
@@ -1016,6 +1025,29 @@ class BaseModel(BaseModelBase):
                 if import_ not in additional_imports:
                     additional_imports.append(import_)
         model.clear_imports_cache()
+
+    @classmethod
+    def _neutralize_generic_extra_config_for_runtime_root_models(
+        cls,
+        runtime_models: list[DataModel],
+        *,
+        uses_generated_generic_base_class: bool,
+    ) -> None:
+        """Keep a runtime helper's generic ``extra`` config off RootModel subclasses."""
+        if not uses_generated_generic_base_class:
+            return
+        config_line = "model_config = ConfigDict(extra=None)"
+        for model in runtime_models:
+            if not model.IS_ROOT_MODEL or not model._internal_template_data.get(  # noqa: SLF001
+                "schema_runtime_validation_use_base"
+            ):
+                continue
+            class_body_lines = model._internal_template_data.get("class_body_lines", ())  # noqa: SLF001
+            if config_line not in class_body_lines:
+                model._append_internal_template_data("class_body_lines", config_line)  # noqa: SLF001
+            if IMPORT_CONFIG_DICT not in model._additional_imports:  # noqa: SLF001
+                model._additional_imports.append(IMPORT_CONFIG_DICT)  # noqa: SLF001
+                model.clear_imports_cache()
 
     @staticmethod
     def _has_core_schema_runtime_validation(runtime_validation: SchemaRuntimeValidation) -> bool:

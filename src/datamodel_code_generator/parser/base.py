@@ -3234,6 +3234,18 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     root_type_model = reference.source
                     root_type_field = root_type_model.fields[0]
 
+                    # These runtime rules are owned by the referenced root model;
+                    # replacing it with the raw type would discard its validator.
+                    runtime_validation = (
+                        root_type_model._internal_template_data.get("schema_runtime_validation")  # noqa: SLF001
+                        or root_type_model.extra_template_data.get("schema_runtime_validation")
+                    )
+                    if runtime_validation and any(
+                        getattr(runtime_validation, rule_name, None)
+                        for rule_name in ("pattern_properties", "required_groups", "conditional_required")
+                    ):
+                        continue
+
                     if (
                         self.field_constraints
                         and isinstance(root_type_field.constraints, ConstraintsBase)

@@ -96,10 +96,13 @@ def test_schema_runtime_validation_unique_items_follows_model_description() -> N
         ),
     )
 
-    assert_output(
-        model.render(),
-        EXPECTED_PYDANTIC_V2_MODEL_PATH / "schema_runtime_unique_items_description.txt",
-    )
+    expected = EXPECTED_PYDANTIC_V2_MODEL_PATH / "schema_runtime_unique_items_description.txt"
+    assert_output(model.render(), expected)
+
+    model._process_schema_runtime_validation()
+    model.invalidate_render_caches()
+
+    assert_output(model.render(), expected)
 
 
 @pytest.mark.allow_direct_assert
@@ -192,6 +195,7 @@ def test_property_count_class_body_line_is_idempotent() -> None:
             )
         ],
         property_count=PropertyCountRule(min_properties=1),
+        unique_items=[UniqueItemsRule(path=())],
     )
     runtime_model = BaseModel(
         fields=[],
@@ -210,6 +214,7 @@ def test_property_count_class_body_line_is_idempotent() -> None:
 
     assert first == second
     assert runtime_model.render().count("__json_schema_property_count_rule__") == 1
+    assert runtime_model.render().count("__json_schema_unique_items__") == 1
 
 
 @pytest.mark.allow_direct_assert

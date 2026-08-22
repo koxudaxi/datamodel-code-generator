@@ -2671,7 +2671,7 @@ Generate experimental Pydantic v2 model validators for JSON Schema runtime rules
 The `--generate-schema-validators` option emits schema-derived model validators
 for object constraints that cannot be represented as type hints alone, including
 minProperties/maxProperties on named object models, patternProperties on
-composed object models, required-only oneOf/anyOf groups, and simple
+composed object models, required-only oneOf/anyOf groups, simple
 if/then/else required-property conditions, and uniqueItems array validation.
 This feature is experimental and may change as JSON Schema coverage is expanded.
 
