@@ -14,6 +14,7 @@ from collections import defaultdict
 from collections.abc import Callable as ABCCallable
 from collections.abc import Sequence
 from dataclasses import Field as DataclassField
+from decimal import Decimal
 from pathlib import Path, PurePath
 from typing import TYPE_CHECKING, get_args, get_type_hints
 
@@ -96,6 +97,35 @@ if TYPE_CHECKING:
     from datamodel_code_generator.parser.base import Result
 
 FixtureRequest = pytest.FixtureRequest
+
+
+class _ArrayLikeEquality:
+    __hash__ = None
+
+    def __eq__(self, other: object) -> list[bool]:
+        return [isinstance(other, _ArrayLikeEquality)]
+
+
+class _RaisingEquality:
+    __hash__ = None
+
+    def __eq__(self, other: object) -> bool:
+        raise ValueError
+
+
+class _EqualOne:
+    __hash__ = None
+
+    def __eq__(self, other: object) -> bool:
+        return other == 1
+
+
+class _HashableEqualOne:
+    def __hash__(self) -> int:
+        return hash(1)
+
+    def __eq__(self, other: object) -> bool:
+        return other == 1
 
 
 class _FallbackMsgspecDataModelField(MsgspecDataModelField):
@@ -6819,6 +6849,32 @@ def test_main_jsonschema_additional_properties_value_constraints_schema_validato
         expected_error_type="greater_than_equal",
         expected_attribute_path=("nestedMap", "ok"),
         expected_attribute_value=1,
+    )
+
+
+def test_main_jsonschema_schema_validators_pattern_properties_own_typed_extras(output_file: Path) -> None:
+    """Let the runtime pattern dispatcher, not Pydantic typed extras, own extra values."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_validators_pattern_additional_properties.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="schema_validators_pattern_additional_properties.py",
+        extra_args=[
+            "--generate-schema-validators",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="schema_validators_pattern_additional_properties",
+        model_name="PatternAdditionalProperties",
+        valid_json='{"known":"value","pattern-number":1,"extra":"value","__pydantic_extra__":1}',
+        invalid_json='{"known":"value","pattern-number":1,"__pydantic_extra__":"invalid"}',
+        expected_error_type="int_parsing",
     )
 
 
@@ -14884,9 +14940,13 @@ def test_field_validators_inline_json(output_file: Path) -> None:
 The `--generate-schema-validators` option emits schema-derived model validators
 for object constraints that cannot be represented as type hints alone, including
 minProperties/maxProperties on named object models, patternProperties on
-composed object models, required-only oneOf/anyOf groups, and simple
-if/then/else required-property conditions. This feature is experimental and may
-change as JSON Schema coverage is expanded.""",
+composed object models, required-only oneOf/anyOf groups, simple
+if/then/else required-property conditions, and uniqueItems array validation.
+This feature is experimental and may change as JSON Schema coverage is expanded.
+
+When generating uniqueItems validation, do not override
+`pydantic_v2/schema_runtime_validation_helpers.jinja2`; custom helper overrides
+are unsupported and generation fails fast.""",
     input_schema="jsonschema/schema_validators.json",
     cli_args=[
         "--generate-schema-validators",
@@ -14993,6 +15053,464 @@ def test_main_jsonschema_generate_schema_validators(output_file: Path) -> None:
         expected_attribute_path=("note",),
         expected_attribute_value="ok",
     )
+
+
+def test_main_jsonschema_unique_items_schema_validators(output_file: Path) -> None:
+    """Validate uniqueItems arrays without coercing their list values to sets."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "unique_items_schema_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="unique_items_schema_validators.py",
+        extra_args=[
+            "--generate-schema-validators",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-annotated",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="unique_items_strings",
+        model_name="UniqueItemsPayload",
+        valid_json=(
+            '{"strings":["first","second"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first","second"]]}'
+        ),
+        invalid_json=(
+            '{"strings":["first","first"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first","second"]]}'
+        ),
+        expected_error_type="value_error",
+        expected_attribute_path=("strings",),
+        expected_attribute_value=["first", "second"],
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="unique_items_objects",
+        model_name="UniqueItemsPayload",
+        valid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"},{"id":2,"name":"second"}],'
+            '"jsonValues":[true,1],"nested":[["first"]]}'
+        ),
+        invalid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"},{"name":"first","id":1}],'
+            '"jsonValues":[true,1],"nested":[["first"]]}'
+        ),
+        expected_error_type="value_error",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="unique_items_json_equality",
+        model_name="UniqueItemsPayload",
+        valid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"}],"jsonValues":[true,1],"nested":[["first"]]}'
+        ),
+        invalid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"}],"jsonValues":[1,1.0],"nested":[["first"]]}'
+        ),
+        expected_error_type="value_error",
+        expected_attribute_path=("jsonValues",),
+        expected_attribute_value=[True, 1],
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="unique_items_nested",
+        model_name="UniqueItemsPayload",
+        valid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first","second"]]}'
+        ),
+        invalid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first","first"]]}'
+        ),
+        expected_error_type="value_error",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="unique_items_root",
+        model_name="RootUniqueItems",
+        valid_json='[true,1,{"first":[1,2]}]',
+        invalid_json="[1,1.0]",
+        expected_error_type="value_error",
+        expected_attribute_path=("root",),
+        expected_attribute_value=[True, 1, {"first": [1, 2]}],
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="unique_items_tuple",
+        model_name="UniqueItemsPayload",
+        valid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first"]],"tupleItems":[["first","second"],"tail"]}'
+        ),
+        invalid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first"]],"tupleItems":[["first","first"],"tail"]}'
+        ),
+        expected_error_type="value_error",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="unique_items_tuple_tail",
+        model_name="UniqueItemsPayload",
+        valid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first"]],'
+            '"tupleItemsTail":[[1,1],"prefix",["first","second"]]}'
+        ),
+        invalid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first"]],'
+            '"tupleItemsTail":[[1,1],"prefix",["first","first"]]}'
+        ),
+        expected_error_type="value_error",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="unique_items_mapping",
+        model_name="UniqueItemsPayload",
+        valid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first"]],"mapping":{"values":["first","second"]}}'
+        ),
+        invalid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first"]],"mapping":{"values":["first","first"]}}'
+        ),
+        expected_error_type="value_error",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="unique_items_nullable_any_of",
+        model_name="UniqueItemsPayload",
+        valid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first"]],"nullableAnyOf":[1,2]}'
+        ),
+        invalid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first"]],"nullableAnyOf":[1,1]}'
+        ),
+        expected_error_type="value_error",
+        expected_attribute_path=("nullableAnyOf", "root"),
+        expected_attribute_value=[1, 2],
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="unique_items_nullable_any_of_null",
+        model_name="UniqueItemsPayload",
+        valid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first"]],"nullableAnyOf":null}'
+        ),
+        invalid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first"]],"nullableAnyOf":[1,1]}'
+        ),
+        expected_error_type="value_error",
+        expected_attribute_path=("nullableAnyOf",),
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="unique_items_unconstrained_array_any_of",
+        model_name="UniqueItemsPayload",
+        valid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first"]],"unconstrainedArrayAnyOf":[1,1]}'
+        ),
+        invalid_json=(
+            '{"strings":["first","first"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first"]],"unconstrainedArrayAnyOf":[1,1]}'
+        ),
+        expected_error_type="value_error",
+        expected_attribute_path=("unconstrainedArrayAnyOf",),
+        expected_attribute_value=[1, 1],
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="unique_items_nullable_one_of",
+        model_name="UniqueItemsPayload",
+        valid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first"]],"nullableOneOf":[1,2]}'
+        ),
+        invalid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first"]],"nullableOneOf":[1,1]}'
+        ),
+        expected_error_type="value_error",
+        expected_attribute_path=("nullableOneOf", "root"),
+        expected_attribute_value=[1, 2],
+    )
+    base_data = {
+        "strings": ["first"],
+        "objects": [{"id": 1, "name": "first"}],
+        "nested": [["first"]],
+    }
+    with _generated_model(output_file, "unique_items_python_values", "UniqueItemsPayload") as model:
+        permuted_object_values = [
+            dict(zip(("one", "two", "three", "four", "five", "six"), values, strict=True))
+            for values in itertools.permutations(range(6))
+        ]
+        permuted_object_fingerprint_count = len({
+            model._json_schema_unique_items_fingerprint(value) for value in permuted_object_values
+        })
+        validated_python_values = (
+            model.model_validate({**base_data, "jsonValues": [Decimal(1), Decimal(2)]}).jsonValues,
+            model.model_validate({**base_data, "jsonValues": [[Decimal(1)], [Decimal(2)]]}).jsonValues,
+            model.model_validate({**base_data, "jsonValues": [True, Decimal(1)]}).jsonValues,
+            model.model_validate({**base_data, "jsonValues": permuted_object_values}).jsonValues,
+            model.model_validate({
+                **base_data,
+                "jsonValues": [_ArrayLikeEquality(), _ArrayLikeEquality()],
+            }).jsonValues,
+            model.model_validate({
+                **base_data,
+                "jsonValues": [_RaisingEquality(), _RaisingEquality()],
+            }).jsonValues,
+        )
+        assert_output(
+            "\n".join((
+                f"decimals={validated_python_values[0]!r}",
+                f"nested_decimals={validated_python_values[1]!r}",
+                f"bool_decimal={validated_python_values[2]!r}",
+                f"permuted_objects={len(validated_python_values[3])}",
+                f"permuted_object_fingerprints={permuted_object_fingerprint_count}",
+                f"array_like={[type(item).__name__ for item in validated_python_values[4]]!r}",
+                f"raising={[type(item).__name__ for item in validated_python_values[5]]!r}",
+            ))
+            + "\n",
+            JSON_SCHEMA_DATA_PATH / "unique_items_python_values.snapshot",
+        )
+        for values in (
+            [Decimal(1), Decimal(1)],
+            [Decimal(1), 1],
+            [1, Decimal(1)],
+            [_EqualOne(), 1],
+            [1, _EqualOne()],
+            [_HashableEqualOne(), 1],
+            [1, _HashableEqualOne()],
+            [[_EqualOne()], [1]],
+            [[1], [_EqualOne()]],
+            [{"value": _EqualOne()}, {"value": 1}],
+            [{"value": 1}, {"value": _EqualOne()}],
+            [[Decimal(1)], [Decimal(1)]],
+            [[Decimal(1)], [1]],
+            [[1], [Decimal(1)]],
+            [{"first"}, {"first"}],
+        ):
+            with pytest.raises(ValidationError, match="Array items must be unique"):
+                model.model_validate({**base_data, "jsonValues": values})
+
+
+def test_main_jsonschema_unique_items_schema_validators_collapsed_root_models(output_file: Path) -> None:
+    """Keep consumer-side uniqueItems checks when collapsed schemas remove an array wrapper."""
+    generate(
+        input_=JSON_SCHEMA_DATA_PATH / "unique_items_schema_validators.json",
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        collapse_root_models=True,
+        generate_schema_validators=True,
+        use_annotated=True,
+        field_constraints=True,
+        disable_timestamp=True,
+        formatters=[Formatter.BUILTIN],
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="unique_items_collapsed_nullable_any_of",
+        model_name="UniqueItemsPayload",
+        valid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first"]],"nullableAnyOf":[1,2]}'
+        ),
+        invalid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first"]],"nullableAnyOf":[1,1]}'
+        ),
+        expected_error_type="value_error",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="unique_items_collapsed_nullable_any_of_null",
+        model_name="UniqueItemsPayload",
+        valid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first"]],"nullableAnyOf":null}'
+        ),
+        invalid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first"]],"nullableAnyOf":[1,1]}'
+        ),
+        expected_error_type="value_error",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="unique_items_collapsed_unconstrained_array_any_of",
+        model_name="UniqueItemsPayload",
+        valid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first"]],"unconstrainedArrayAnyOf":[1,1]}'
+        ),
+        invalid_json=(
+            '{"strings":["first","first"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first"]],"unconstrainedArrayAnyOf":[1,1]}'
+        ),
+        expected_error_type="value_error",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="unique_items_collapsed_nullable_one_of",
+        model_name="UniqueItemsPayload",
+        valid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first"]],"nullableOneOf":[1,2]}'
+        ),
+        invalid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first"]],"nullableOneOf":[1,1]}'
+        ),
+        expected_error_type="value_error",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="unique_items_collapsed_nested",
+        model_name="UniqueItemsPayload",
+        valid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first","second"]]}'
+        ),
+        invalid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first","first"]]}'
+        ),
+        expected_error_type="value_error",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="unique_items_collapsed_tuple_tail",
+        model_name="UniqueItemsPayload",
+        valid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first"]],'
+            '"tupleItemsTail":[[1,1],"prefix",["first","second"]]}'
+        ),
+        invalid_json=(
+            '{"strings":["first"],"objects":[{"id":1,"name":"first"}],'
+            '"jsonValues":[true,1],"nested":[["first"]],'
+            '"tupleItemsTail":[[1,1],"prefix",["first","first"]]}'
+        ),
+        expected_error_type="value_error",
+    )
+
+
+@pytest.mark.parametrize("root_model_alias_option", ["--use-type-alias", "--use-root-model-type-alias"])
+def test_main_jsonschema_unique_items_root_alias_preserves_validation(
+    output_file: Path,
+    root_model_alias_option: str,
+) -> None:
+    """Use an executable RootModel when an alias cannot run uniqueItems validation."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "unique_items_schema_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--generate-schema-validators",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-annotated",
+            root_model_alias_option,
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name=f"unique_items_root_alias_{root_model_alias_option.removeprefix('--').replace('-', '_')}",
+        model_name="RootUniqueItems",
+        valid_json="[1,2]",
+        invalid_json="[1,1]",
+        expected_error_type="value_error",
+        expected_attribute_path=("root",),
+        expected_attribute_value=[1, 2],
+    )
+
+
+def test_main_jsonschema_unique_items_inline_paths_default_options(output_file: Path) -> None:
+    """Validate inline array, union, and mapping paths without RootModel wrappers."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "unique_items_inline_paths.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="unique_items_inline_paths.py",
+        extra_args=[
+            "--generate-schema-validators",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+        force_exec_validation=True,
+    )
+    valid_json = (
+        '{"nestedArray":[["first","second"]],"nullableAnyOf":[1,2],'
+        '"typedMapping":{"known":[1,1],"patternValues":[1,1],"extra":[1,2]},'
+        '"patternMapping":{"plainOnly":[1,1],"plainList":["1",1]}}'
+    )
+    for module_name, invalid_json in (
+        (
+            "unique_items_inline_array",
+            (
+                '{"nestedArray":[["first","first"]],"nullableAnyOf":[1,2],'
+                '"typedMapping":{"known":[1,1],"patternValues":[1,1],"extra":[1,2]},'
+                '"patternMapping":{"plainOnly":[1,1],"plainList":["1",1]}}'
+            ),
+        ),
+        (
+            "unique_items_inline_nullable_union",
+            (
+                '{"nestedArray":[["first","second"]],"nullableAnyOf":[1,1],'
+                '"typedMapping":{"known":[1,1],"patternValues":[1,1],"extra":[1,2]},'
+                '"patternMapping":{"plainOnly":[1,1],"plainList":["1",1]}}'
+            ),
+        ),
+        (
+            "unique_items_typed_additional_values",
+            (
+                '{"nestedArray":[["first","second"]],"nullableAnyOf":[1,2],'
+                '"typedMapping":{"known":[1,1],"patternValues":[1,1],"extra":[1,1]},'
+                '"patternMapping":{"plainOnly":[1,1],"plainList":["1",1]}}'
+            ),
+        ),
+        (
+            "unique_items_pattern_values",
+            (
+                '{"nestedArray":[["first","second"]],"nullableAnyOf":[1,2],'
+                '"typedMapping":{"known":[1,1],"patternValues":[1,1],"extra":[1,2]},'
+                '"patternMapping":{"plainOnly":[1,1],"plainList":[1,1]}}'
+            ),
+        ),
+    ):
+        assert_generated_model_json_validation(
+            output_file,
+            module_name=module_name,
+            model_name="UniqueItemsInlinePaths",
+            valid_json=valid_json,
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+        )
 
 
 def test_main_jsonschema_generate_schema_validators_property_count(output_file: Path) -> None:
@@ -15222,6 +15740,43 @@ def test_main_jsonschema_property_count_root_collapse_keeps_helper_imports(outpu
         invalid_json="{}",
         expected_error_type="value_error",
     )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output_property_count_root_collapse_pattern",
+        model_name="DisposableBag",
+        valid_json='{"item_one":1,"other":2}',
+        invalid_json='{"item_one":"bad"}',
+        expected_error_type="int_parsing",
+    )
+
+
+def test_main_jsonschema_property_count_ref_survives_root_collapse(output_file: Path) -> None:
+    """Keep map property-count constraints when collapsing a referenced RootModel."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_validators_property_count_ref_collapse.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="schema_validators_property_count_ref_collapse.py",
+        extra_args=[
+            "--collapse-root-models",
+            "--generate-schema-validators",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output_property_count_ref_collapse",
+        model_name="Payload",
+        valid_json='{"values":{"first":1,"second":2}}',
+        invalid_json='{"values":{"only":1}}',
+        expected_error_type="too_short",
+    )
 
 
 def test_main_jsonschema_property_count_with_generic_base_class(output_file: Path) -> None:
@@ -15236,6 +15791,7 @@ def test_main_jsonschema_property_count_with_generic_base_class(output_file: Pat
             "--collapse-root-models",
             "--extra-fields",
             "forbid",
+            "--enable-faux-immutability",
             "--generate-schema-validators",
             "--output-model-type",
             "pydantic_v2.BaseModel",
@@ -15254,6 +15810,52 @@ def test_main_jsonschema_property_count_with_generic_base_class(output_file: Pat
         invalid_json="{}",
         expected_error_type="value_error",
     )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="output_property_count_generic_base_pattern",
+        model_name="DisposableBag",
+        valid_json='{"item_one":1,"other":2}',
+        invalid_json='{"item_one":"bad"}',
+        expected_error_type="int_parsing",
+    )
+
+
+def test_main_jsonschema_runtime_root_merges_generic_base_config(output_dir: Path) -> None:
+    """Retain and import RootModel config when the generic base is external."""
+    expected_directory = EXPECTED_JSON_SCHEMA_PATH / "schema_validators_runtime_root_cross_module"
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_validators_runtime_root_cross_module",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        output_to_expected=(
+            ("a.py", expected_directory / "a.py"),
+            ("z.py", expected_directory / "z.py"),
+        ),
+        extra_args=[
+            "--enable-faux-immutability",
+            "--extra-fields",
+            "forbid",
+            "--generate-schema-validators",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-generic-base-class",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+        force_exec_validation=True,
+        runtime_validation_module="a",
+        runtime_validation_model_name="AModel",
+        runtime_validation_data={"mixed": "alpha"},
+    )
+    with _generated_package_module(output_dir, "a") as module:
+        validate_json = _model_json_validator(module.AModel)
+        parsed = validate_json('{"mixed":"alpha"}')
+        _assert_model_json_invalid(validate_json, '{"mixed":"beta"}', "string_pattern_mismatch")
+        _assert_model_json_invalid(validate_json, '{"mixed":[1,1]}', "value_error")
+        with pytest.raises(ValidationError, match="Instance is frozen"):
+            parsed.mixed.root = [1, 2]
 
 
 def test_main_jsonschema_property_count_cross_module_with_generic_base_class(output_dir: Path) -> None:
@@ -15356,8 +15958,57 @@ def test_main_jsonschema_property_count_cross_module_capabilities(output_dir: Pa
         (
             "property_child_intermediate",
             "PropertyChildIntermediate",
-            '{"child":"y"}',
+            '{"left":"x","child":"y"}',
             "{}",
+            "value_error",
+        ),
+        (
+            "external_core_pattern_child",
+            "ExternalCorePatternChild",
+            '{"values":[1,2]}',
+            '{"values":[1,1]}',
+            "value_error",
+        ),
+        (
+            "external_core_unique_child",
+            "ExternalCoreUniqueChild",
+            '{"baseValues":[1,2],"x-values":[3,4]}',
+            '{"x-values":[1,1]}',
+            "value_error",
+        ),
+        (
+            "external_core_unique_child",
+            "ExternalCoreUniqueChild",
+            '{"baseValues":[1,2],"x-values":[3,4]}',
+            '{"baseValues":[1,1]}',
+            "value_error",
+        ),
+        (
+            "external_core_conditional_child",
+            "ExternalCoreConditionalChild",
+            '{"kind":"metric","metric":"x","values":[1,2]}',
+            '{"kind":"metric","values":[1,2]}',
+            "value_error",
+        ),
+        (
+            "external_core_conditional_child",
+            "ExternalCoreConditionalChild",
+            '{"kind":"metric","metric":"x","values":[1,2]}',
+            '{"kind":"metric","metric":"x","values":[1,1]}',
+            "value_error",
+        ),
+        (
+            "external_core_required_child",
+            "ExternalCoreRequiredChild",
+            '{"left":"x","values":[1,2]}',
+            '{"values":[1,2]}',
+            "value_error",
+        ),
+        (
+            "external_core_required_child",
+            "ExternalCoreRequiredChild",
+            '{"left":"x","values":[1,2]}',
+            '{"left":"x","values":[1,1]}',
             "value_error",
         ),
     ):

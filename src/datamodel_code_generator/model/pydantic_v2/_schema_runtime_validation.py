@@ -8,7 +8,11 @@ from typing import TYPE_CHECKING, TypeAlias, TypeVar
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
 
-    from datamodel_code_generator.model.runtime_validation import PropertyCountRule, SchemaRuntimeValidation
+    from datamodel_code_generator.model.runtime_validation import (
+        PropertyCountRule,
+        SchemaRuntimeValidation,
+        UniqueItemsRule,
+    )
 
 _Model = TypeVar("_Model")
 SchemaRuntimeValidationCapabilities: TypeAlias = tuple[bool, bool]
@@ -92,6 +96,15 @@ def render_property_count_rule(rule: PropertyCountRule) -> str:
     return (
         "__json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = "
         f"({rule.min_properties!r}, {rule.max_properties!r})"
+    )
+
+
+def render_unique_items_rules(rules: Iterable[UniqueItemsRule]) -> tuple[str, ...]:
+    """Render raw uniqueItems paths through existing ``class_body_lines``."""
+    return (
+        "__json_schema_unique_items__: ClassVar[tuple[tuple[object, ...], ...]] = (",
+        *(f"    {rule.path!r}," for rule in rules),
+        ")\n",
     )
 
 
