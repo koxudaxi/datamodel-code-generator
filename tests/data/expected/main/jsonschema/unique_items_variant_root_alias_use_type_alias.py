@@ -11,7 +11,7 @@ from typing_extensions import TypeAliasType
 
 
 class _JsonSchemaRuntimeValidationBase(BaseModel):
-    __json_schema_unique_items__: ClassVar[tuple[Any, ...]] = ()
+    __json_schema_unique_items__: ClassVar[tuple[tuple[object, ...], ...]] = ()
 
     @model_validator(mode='before')
     @classmethod
@@ -31,7 +31,7 @@ class _JsonSchemaRuntimeValidationBase(BaseModel):
     def _validate_json_schema_unique_items_path(
         cls,
         value: Any,
-        path: tuple[Any, ...],
+        path: tuple[object, ...],
         position: int,
     ) -> None:
         if position == len(path):
@@ -254,7 +254,7 @@ class VariantRootItemRequest(_JsonSchemaRuntimeValidationBase):
     __annotations__ = {
         '__pydantic_extra__': Dict[str, list[int]],
     }
-    __json_schema_unique_items__: ClassVar[tuple[Any, ...]] = (
+    __json_schema_unique_items__: ClassVar[tuple[tuple[object, ...], ...]] = (
         (('__json_schema_mapping_additional_values__', (('requestValues',), ('responseValues',)), ()),),
     )
 
@@ -268,7 +268,7 @@ class VariantRootItemResponse(_JsonSchemaRuntimeValidationBase):
     __annotations__ = {
         '__pydantic_extra__': Dict[str, list[int]],
     }
-    __json_schema_unique_items__: ClassVar[tuple[Any, ...]] = (
+    __json_schema_unique_items__: ClassVar[tuple[tuple[object, ...], ...]] = (
         (('__json_schema_mapping_additional_values__', (('requestValues',), ('responseValues',)), ()),),
     )
 

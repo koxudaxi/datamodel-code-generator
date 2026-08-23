@@ -10,7 +10,7 @@ class {{ schema_runtime_validation_base_class_name }}(BaseModel):
     __json_schema_conditional_required__: ClassVar[tuple[Any, ...]] = ()
 {%- endif %}
 {%- if has_unique_items %}
-    __json_schema_unique_items__: ClassVar[tuple[Any, ...]] = ()
+    __json_schema_unique_items__: ClassVar[tuple[tuple[object, ...], ...]] = ()
 {%- endif %}
 
     @model_validator(mode='before')
@@ -152,7 +152,7 @@ class {{ schema_runtime_validation_base_class_name }}(BaseModel):
     def _validate_json_schema_unique_items_path(
         cls,
         value: Any,
-        path: tuple[Any, ...],
+        path: tuple[object, ...],
         position: int,
     ) -> None:
         if position == len(path):

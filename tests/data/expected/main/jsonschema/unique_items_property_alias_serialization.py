@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class _JsonSchemaRuntimeValidationBase(BaseModel):
-    __json_schema_unique_items__: ClassVar[tuple[Any, ...]] = ()
+    __json_schema_unique_items__: ClassVar[tuple[tuple[object, ...], ...]] = ()
 
     @model_validator(mode='before')
     @classmethod
@@ -29,7 +29,7 @@ class _JsonSchemaRuntimeValidationBase(BaseModel):
     def _validate_json_schema_unique_items_path(
         cls,
         value: Any,
-        path: tuple[Any, ...],
+        path: tuple[object, ...],
         position: int,
     ) -> None:
         if position == len(path):
@@ -227,7 +227,7 @@ class UniqueItemsPropertyAlias(_JsonSchemaRuntimeValidationBase):
     model_config = ConfigDict(
         extra='allow',
     )
-    __json_schema_unique_items__: ClassVar[tuple[Any, ...]] = (
+    __json_schema_unique_items__: ClassVar[tuple[tuple[object, ...], ...]] = (
         (('my_list',),),
     )
 

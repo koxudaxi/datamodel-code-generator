@@ -9,7 +9,7 @@ from pydantic import BaseModel, RootModel, model_validator
 
 
 class _JsonSchemaRuntimeValidationBaseCore(BaseModel):
-    __json_schema_unique_items__: ClassVar[tuple[Any, ...]] = ()
+    __json_schema_unique_items__: ClassVar[tuple[tuple[object, ...], ...]] = ()
 
     @model_validator(mode='before')
     @classmethod
@@ -29,7 +29,7 @@ class _JsonSchemaRuntimeValidationBaseCore(BaseModel):
     def _validate_json_schema_unique_items_path(
         cls,
         value: Any,
-        path: tuple[Any, ...],
+        path: tuple[object, ...],
         position: int,
     ) -> None:
         if position == len(path):
@@ -250,7 +250,7 @@ class UniqueObject(BaseModel):
 
 
 class RootUniqueItems(_JsonSchemaRuntimeValidationBaseCore, RootModel[list[Any]]):
-    __json_schema_unique_items__: ClassVar[tuple[Any, ...]] = (
+    __json_schema_unique_items__: ClassVar[tuple[tuple[object, ...], ...]] = (
         (),
     )
 
@@ -258,7 +258,7 @@ class RootUniqueItems(_JsonSchemaRuntimeValidationBaseCore, RootModel[list[Any]]
 
 
 class NestedItem(_JsonSchemaRuntimeValidationBaseCore, RootModel[list[Any]]):
-    __json_schema_unique_items__: ClassVar[tuple[Any, ...]] = (
+    __json_schema_unique_items__: ClassVar[tuple[tuple[object, ...], ...]] = (
         (),
     )
 
@@ -266,7 +266,7 @@ class NestedItem(_JsonSchemaRuntimeValidationBaseCore, RootModel[list[Any]]):
 
 
 class TupleItemsTailItem(_JsonSchemaRuntimeValidationBaseCore, RootModel[list[Any]]):
-    __json_schema_unique_items__: ClassVar[tuple[Any, ...]] = (
+    __json_schema_unique_items__: ClassVar[tuple[tuple[object, ...], ...]] = (
         (),
     )
 
@@ -274,7 +274,7 @@ class TupleItemsTailItem(_JsonSchemaRuntimeValidationBaseCore, RootModel[list[An
 
 
 class NullableAnyOf(_JsonSchemaRuntimeValidationBaseCore, RootModel[list[int]]):
-    __json_schema_unique_items__: ClassVar[tuple[Any, ...]] = (
+    __json_schema_unique_items__: ClassVar[tuple[tuple[object, ...], ...]] = (
         (),
     )
 
@@ -285,7 +285,7 @@ class UnconstrainedArrayAnyOf(
     _JsonSchemaRuntimeValidationBaseCore,
     RootModel[list[int]],
 ):
-    __json_schema_unique_items__: ClassVar[tuple[Any, ...]] = (
+    __json_schema_unique_items__: ClassVar[tuple[tuple[object, ...], ...]] = (
         (),
     )
 
@@ -293,7 +293,7 @@ class UnconstrainedArrayAnyOf(
 
 
 class NullableOneOf(_JsonSchemaRuntimeValidationBaseCore, RootModel[list[int]]):
-    __json_schema_unique_items__: ClassVar[tuple[Any, ...]] = (
+    __json_schema_unique_items__: ClassVar[tuple[tuple[object, ...], ...]] = (
         (),
     )
 
@@ -302,7 +302,7 @@ class NullableOneOf(_JsonSchemaRuntimeValidationBaseCore, RootModel[list[int]]):
 
 class UniqueItemsPayload(_JsonSchemaRuntimeValidationBase):
     __json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = (4, None)
-    __json_schema_unique_items__: ClassVar[tuple[Any, ...]] = (
+    __json_schema_unique_items__: ClassVar[tuple[tuple[object, ...], ...]] = (
         (('strings',),),
         (('objects',),),
         (('jsonValues',),),

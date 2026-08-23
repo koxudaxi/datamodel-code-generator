@@ -13,7 +13,7 @@ from .external_core_pattern_parent import ExternalCorePatternParent
 
 class _JsonSchemaRuntimeValidationBaseCore(BaseModel):
     __json_schema_pattern_properties__: ClassVar[tuple[Any, ...]] = ()
-    __json_schema_unique_items__: ClassVar[tuple[Any, ...]] = ()
+    __json_schema_unique_items__: ClassVar[tuple[tuple[object, ...], ...]] = ()
 
     @model_validator(mode='before')
     @classmethod
@@ -82,7 +82,7 @@ class _JsonSchemaRuntimeValidationBaseCore(BaseModel):
     def _validate_json_schema_unique_items_path(
         cls,
         value: Any,
-        path: tuple[Any, ...],
+        path: tuple[object, ...],
         position: int,
     ) -> None:
         if position == len(path):
@@ -305,7 +305,7 @@ class ExternalCorePatternChild(
         extra='allow',
     )
     __json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = (1, None)
-    __json_schema_unique_items__: ClassVar[tuple[Any, ...]] = (
+    __json_schema_unique_items__: ClassVar[tuple[tuple[object, ...], ...]] = (
         (('values',),),
     )
 

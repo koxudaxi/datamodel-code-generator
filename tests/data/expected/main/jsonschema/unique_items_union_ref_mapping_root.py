@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field, RootModel, model_validator
 
 
 class _JsonSchemaRuntimeValidationBase(BaseModel):
-    __json_schema_unique_items__: ClassVar[tuple[Any, ...]] = ()
+    __json_schema_unique_items__: ClassVar[tuple[tuple[object, ...], ...]] = ()
 
     @model_validator(mode='before')
     @classmethod
@@ -29,7 +29,7 @@ class _JsonSchemaRuntimeValidationBase(BaseModel):
     def _validate_json_schema_unique_items_path(
         cls,
         value: Any,
-        path: tuple[Any, ...],
+        path: tuple[object, ...],
         position: int,
     ) -> None:
         if position == len(path):
@@ -224,7 +224,7 @@ class _JsonSchemaRuntimeValidationBase(BaseModel):
 
 
 class UniqueMapping(_JsonSchemaRuntimeValidationBase, RootModel[dict[str, list[int]]]):
-    __json_schema_unique_items__: ClassVar[tuple[Any, ...]] = (
+    __json_schema_unique_items__: ClassVar[tuple[tuple[object, ...], ...]] = (
         ('__json_schema_mapping_values__',),
     )
 
@@ -232,7 +232,7 @@ class UniqueMapping(_JsonSchemaRuntimeValidationBase, RootModel[dict[str, list[i
 
 
 class UniqueItemsUnionRefMappingRoot(_JsonSchemaRuntimeValidationBase, RootModel[UniqueMapping | dict[str, list[int]]]):
-    __json_schema_unique_items__: ClassVar[tuple[Any, ...]] = (
+    __json_schema_unique_items__: ClassVar[tuple[tuple[object, ...], ...]] = (
         ('__json_schema_mapping_values__',),
     )
 

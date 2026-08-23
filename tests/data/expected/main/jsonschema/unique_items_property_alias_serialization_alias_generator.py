@@ -10,7 +10,7 @@ from pydantic.alias_generators import to_camel
 
 
 class _JsonSchemaRuntimeValidationBase(BaseModel):
-    __json_schema_unique_items__: ClassVar[tuple[Any, ...]] = ()
+    __json_schema_unique_items__: ClassVar[tuple[tuple[object, ...], ...]] = ()
 
     @model_validator(mode='before')
     @classmethod
@@ -30,7 +30,7 @@ class _JsonSchemaRuntimeValidationBase(BaseModel):
     def _validate_json_schema_unique_items_path(
         cls,
         value: Any,
-        path: tuple[Any, ...],
+        path: tuple[object, ...],
         position: int,
     ) -> None:
         if position == len(path):
@@ -230,7 +230,7 @@ class UniqueItemsPropertyAlias(_JsonSchemaRuntimeValidationBase):
         populate_by_name=True,
         alias_generator=to_camel,
     )
-    __json_schema_unique_items__: ClassVar[tuple[Any, ...]] = (
+    __json_schema_unique_items__: ClassVar[tuple[tuple[object, ...], ...]] = (
         (('myList', 'my_list'),),
     )
 

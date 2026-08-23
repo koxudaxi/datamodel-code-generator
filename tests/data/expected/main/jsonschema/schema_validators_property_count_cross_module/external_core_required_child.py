@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field, RootModel, model_validator
 class _JsonSchemaRuntimeValidationBase(BaseModel):
     __json_schema_one_of_required_groups__: ClassVar[tuple[Any, ...]] = ()
     __json_schema_any_of_required_groups__: ClassVar[tuple[Any, ...]] = ()
-    __json_schema_unique_items__: ClassVar[tuple[Any, ...]] = ()
+    __json_schema_unique_items__: ClassVar[tuple[tuple[object, ...], ...]] = ()
 
     @model_validator(mode='before')
     @classmethod
@@ -67,7 +67,7 @@ class _JsonSchemaRuntimeValidationBase(BaseModel):
     def _validate_json_schema_unique_items_path(
         cls,
         value: Any,
-        path: tuple[Any, ...],
+        path: tuple[object, ...],
         position: int,
     ) -> None:
         if position == len(path):
@@ -274,7 +274,7 @@ class ExternalCoreRequiredChild2(BaseModel):
 
 
 class ExternalCoreRequiredChild3(_JsonSchemaRuntimeValidationBase):
-    __json_schema_unique_items__: ClassVar[tuple[Any, ...]] = (
+    __json_schema_unique_items__: ClassVar[tuple[tuple[object, ...], ...]] = (
         (('values',),),
     )
 
@@ -289,7 +289,7 @@ class ExternalCoreRequiredChild4(
     ExternalCoreRequiredChild1,
     ExternalCoreRequiredChild3,
 ):
-    __json_schema_unique_items__: ClassVar[tuple[Any, ...]] = (
+    __json_schema_unique_items__: ClassVar[tuple[tuple[object, ...], ...]] = (
         (('values',),),
     )
 
@@ -302,7 +302,7 @@ class ExternalCoreRequiredChild5(
     ExternalCoreRequiredChild2,
     ExternalCoreRequiredChild3,
 ):
-    __json_schema_unique_items__: ClassVar[tuple[Any, ...]] = (
+    __json_schema_unique_items__: ClassVar[tuple[tuple[object, ...], ...]] = (
         (('values',),),
     )
 

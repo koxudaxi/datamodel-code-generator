@@ -102,7 +102,7 @@ def render_property_count_rule(rule: PropertyCountRule) -> str:
 def render_unique_items_rules(rules: Iterable[UniqueItemsRule]) -> tuple[str, ...]:
     """Render raw uniqueItems paths through existing ``class_body_lines``."""
     return (
-        "__json_schema_unique_items__: ClassVar[tuple[Any, ...]] = (",
+        "__json_schema_unique_items__: ClassVar[tuple[tuple[object, ...], ...]] = (",
         *(f"    {rule.path!r}," for rule in rules),
         ")\n",
     )

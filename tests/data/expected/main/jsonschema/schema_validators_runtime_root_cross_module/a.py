@@ -11,7 +11,7 @@ from .z import BaseModel
 
 
 class _JsonSchemaRuntimeValidationBase(BaseModel):
-    __json_schema_unique_items__: ClassVar[tuple[Any, ...]] = ()
+    __json_schema_unique_items__: ClassVar[tuple[tuple[object, ...], ...]] = ()
 
     @model_validator(mode='before')
     @classmethod
@@ -31,7 +31,7 @@ class _JsonSchemaRuntimeValidationBase(BaseModel):
     def _validate_json_schema_unique_items_path(
         cls,
         value: Any,
-        path: tuple[Any, ...],
+        path: tuple[object, ...],
         position: int,
     ) -> None:
         if position == len(path):
@@ -232,7 +232,7 @@ class RootMixed(_JsonSchemaRuntimeValidationBase, RootModel[str | list[int]]):
         regex_engine="python-re",
         extra=None,
     )
-    __json_schema_unique_items__: ClassVar[tuple[Any, ...]] = (
+    __json_schema_unique_items__: ClassVar[tuple[tuple[object, ...], ...]] = (
         (),
     )
 
