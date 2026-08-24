@@ -5,16 +5,16 @@ info:
 paths: {}
 components:
   schemas:
-    JsonValue:
+    Value:
       nullable: true
       anyOf:
         - type: string
         - type: array
           items:
-            $ref: '#/components/schemas/JsonValue'
+            $ref: '#/components/schemas/Value'
         - type: object
           additionalProperties:
-            $ref: '#/components/schemas/JsonValue'
+            $ref: '#/components/schemas/Value'
     SaveTrifectaV2.1:
       type: object
     SaveRequest:
@@ -23,4 +23,4 @@ components:
         trifecta:
           $ref: '#/components/schemas/SaveTrifectaV2.1'
         value:
-          $ref: '#/components/schemas/JsonValue'
+          $ref: '#/components/schemas/Value'

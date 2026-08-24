@@ -8,10 +8,8 @@ from typing import Optional, Union
 from pydantic import BaseModel, RootModel
 
 
-class JsonValue(
-    RootModel[Optional[Union[str, list["JsonValue"], dict[str, "JsonValue"]]]]
-):
-    root: Optional[Union[str, list["JsonValue"], dict[str, "JsonValue"]]] = None
+class Value(RootModel[Optional[Union[str, list["Value"], dict[str, "Value"]]]]):
+    root: Optional[Union[str, list["Value"], dict[str, "Value"]]] = None
 
 
 class Field1(BaseModel):
@@ -20,7 +18,7 @@ class Field1(BaseModel):
 
 class SaveRequest(BaseModel):
     trifecta: Field1 | None = None
-    value: JsonValue | None = None
+    value: Value | None = None
 
 
-JsonValue.model_rebuild()
+Value.model_rebuild()
