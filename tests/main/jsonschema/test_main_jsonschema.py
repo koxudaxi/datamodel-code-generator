@@ -25,6 +25,7 @@ from pydantic import ValidationError
 
 from datamodel_code_generator import (
     MIN_VERSION,
+    DanglingRefWarning,
     DataModelType,
     Error,
     InputFileType,
@@ -12508,6 +12509,103 @@ def test_main_jsonschema_collapse_root_models_nested_reference(output_file: Path
     """Ensure nested references inside root models still get imported when collapsing."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_nested_reference.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=["--collapse-root-models"],
+    )
+
+
+def test_main_jsonschema_collapse_root_models_self_reference(output_file: Path) -> None:
+    """Keep self-referential root models named instead of collapsing them infinitely."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_self_reference.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=["--collapse-root-models", "--formatters", "builtin"],
+        force_exec_validation=True,
+    )
+
+
+def test_main_jsonschema_collapse_root_models_dict_key_self_reference_retries_once(output_file: Path) -> None:
+    """Keep fallback-only circular root models named, including property-name references."""
+    with warnings.catch_warnings(record=True) as warning_records:
+        warnings.simplefilter("always", DanglingRefWarning)
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_dict_key_self_reference.json",
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file="collapse_root_models_dict_key_self_reference.py",
+            extra_args=["--collapse-root-models", "--disable-timestamp", "--formatters", "builtin"],
+            force_exec_validation=True,
+        )
+
+    dangling_warnings = [warning for warning in warning_records if warning.category is DanglingRefWarning]
+    assert_warnings_contain(dangling_warnings, "#/$defs/Missing")
+    if len(dangling_warnings) != 1:  # pragma: no cover
+        pytest.fail(f"Expected one deduplicated dangling-ref warning, got {len(dangling_warnings)}")
+
+
+def test_main_jsonschema_collapse_root_models_parse_warning_emitted_once(output_file: Path) -> None:
+    """Do not repeat raw-parse warnings when circular root collapsing retries."""
+    warning_message = "Boolean schemas are not supported in Draft 4"
+    with warnings.catch_warnings(record=True) as warning_records:
+        warnings.simplefilter("always", UserWarning)
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_parse_warning.json",
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file="collapse_root_models_parse_warning.py",
+            extra_args=[
+                "--collapse-root-models",
+                "--schema-version-mode",
+                "strict",
+                "--disable-timestamp",
+                "--formatters",
+                "builtin",
+            ],
+            force_exec_validation=True,
+        )
+
+    parse_warnings = [warning for warning in warning_records if warning_message in str(warning.message)]
+    assert_warnings_contain(parse_warnings, warning_message)
+    if len(parse_warnings) != 1:  # pragma: no cover
+        pytest.fail(f"Expected one deduplicated parse warning, got {len(parse_warnings)}")
+
+
+def test_main_jsonschema_collapse_root_models_dict_key_self_reference_preserves_legacy_output(
+    output_file: Path,
+) -> None:
+    """Leave dict-key-only root references collapsed when the recursion retry is not needed."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_dict_key_self_reference_legacy.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="collapse_root_models_dict_key_self_reference_legacy.py",
+        extra_args=["--collapse-root-models", "--disable-timestamp", "--formatters", "builtin"],
+        skip_code_validation=True,
+    )
+
+
+def test_main_jsonschema_collapse_root_models_transitive_reference_cycle(output_file: Path) -> None:
+    """Preserve legacy collapsed output for a root cycle that already terminated."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_transitive_reference_cycle.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=["--collapse-root-models"],
+    )
+
+
+def test_main_jsonschema_collapse_root_models_shared_reference(output_file: Path) -> None:
+    """Collapse acyclic root models that share referenced root models."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_shared_reference.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
