@@ -1522,6 +1522,31 @@ def _is_any_variant(data_type: DataType) -> bool:
     )
 
 
+def _reaches_root_model_cycle(
+    model: DataModel,
+    root_model_type: type[DataModel],
+    ancestors: frozenset[str] = frozenset(),
+) -> bool:
+    """Return True if expanding ``model`` can reach a cycle of root-model references.
+
+    Collapsing such a model would inline its body, which re-introduces references
+    to root models whose bodies are inlined in turn, growing the tree without
+    bound. These models must stay named.
+    """
+    if model.path in ancestors:
+        return True
+    child_ancestors = ancestors | {model.path}
+    for field in model.fields:
+        for data_type in field.data_type.all_data_types:
+            reference = data_type.reference
+            source = reference.source if reference else None
+            if isinstance(source, root_model_type) and _reaches_root_model_cycle(
+                source, root_model_type, child_ancestors
+            ):
+                return True
+    return False
+
+
 _DedupItem = TypeVar("_DedupItem")
 
 
@@ -3233,6 +3258,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     # Use root-type as model_field type
                     root_type_model = reference.source
                     root_type_field = root_type_model.fields[0]
+
+                    if _reaches_root_model_cycle(root_type_model, self.data_model_root_type):
+                        # A self- or transitively-referential root model cannot be
+                        # fully inlined; keep it as a named model.
+                        continue
 
                     # These runtime rules are owned by the referenced root model;
                     # replacing it with the raw type would discard its validator.

@@ -12515,6 +12515,39 @@ def test_main_jsonschema_collapse_root_models_nested_reference(output_file: Path
     )
 
 
+def test_main_jsonschema_collapse_root_models_self_reference(output_file: Path) -> None:
+    """Keep self-referential root models named instead of collapsing them infinitely."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_self_reference.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=["--collapse-root-models"],
+    )
+
+
+def test_main_jsonschema_collapse_root_models_transitive_reference_cycle(output_file: Path) -> None:
+    """Keep root models involved in a transitive reference cycle named when collapsing."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_transitive_reference_cycle.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=["--collapse-root-models"],
+    )
+
+
+def test_main_jsonschema_collapse_root_models_shared_reference(output_file: Path) -> None:
+    """Collapse acyclic root models that share referenced root models."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_shared_reference.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=["--collapse-root-models"],
+    )
+
+
 @pytest.mark.cli_doc(
     options=["--collapse-root-models-name-strategy"],
     option_description="""Select which name to keep when collapsing root models with object references.
