@@ -5,6 +5,51 @@ This changelog is automatically generated from GitHub Releases.
 
 ---
 
+## [0.75.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.75.0) - 2026-08-24
+
+## Breaking Changes
+
+
+* minProperties/maxProperties now generate runtime validators - When using the experimental `--generate-schema-validators` option, `minProperties`/`maxProperties` constraints on named object models are now emitted as Pydantic v2 model validators. Previously these constraints were ignored. Data that omits or exceeds the allowed property count will now be rejected at validation time, and generated models gain a new `__json_schema_property_count_rule__` class variable (#3780)
+* Runtime-validation helper base class renamed in mixed modules - When a module contains both core validators (patternProperties / required groups / conditional required) and the new property-count validators, the shared helper base class previously named `_JsonSchemaRuntimeValidationBase` is now split: the core helper is renamed to `_JsonSchemaRuntimeValidationBaseCore` and a new `_JsonSchemaRuntimeValidationBase` subclass is inserted. Code that references the generated helper class name by hand will need to be updated (#3780)
+
+```python
+# Before (--generate-schema-validators)
+class _JsonSchemaRuntimeValidationBase(BaseModel):
+    __json_schema_conditional_required__: ClassVar[tuple[Any, ...]] = ()
+    ...
+
+class ApiConditionalEnvelopeRequestModel(_JsonSchemaRuntimeValidationBase):
+    __json_schema_conditional_required__: ClassVar[tuple[Any, ...]] = (...)
+
+# After
+class _JsonSchemaRuntimeValidationBaseCore(BaseModel):
+    __json_schema_conditional_required__: ClassVar[tuple[Any, ...]] = ()
+    ...
+
+class _JsonSchemaRuntimeValidationBase(_JsonSchemaRuntimeValidationBaseCore):
+    __json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = ()
+    ...
+
+class ApiConditionalEnvelopeRequestModel(_JsonSchemaRuntimeValidationBase):
+    __json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = (2, 2)
+    __json_schema_conditional_required__: ClassVar[tuple[Any, ...]] = (...)
+```
+
+## What's Changed
+* Update CHANGELOG for 0.74.0 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3773
+* Update release benchmark data by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3774
+* Bump the github-actions group with 6 updates by @dependabot[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3778
+* Bump python from 3.14.6-slim-bookworm to 3.14.7-slim-bookworm by @dependabot[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3779
+* fix(jsonschema): generate property count validators by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3780
+* fix(jsonschema): generate uniqueItems validators by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3781
+* Fix payload runtime validation exclusions by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3784
+
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.74.0...0.75.0
+
+---
+
 ## [0.74.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.74.0) - 2026-08-17
 
 ## Breaking Changes
