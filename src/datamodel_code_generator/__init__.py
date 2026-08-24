@@ -2283,9 +2283,10 @@ def _parse_collapse_root_models_retry(  # noqa: PLR0913
     except _CollapseRootModelsRecursionError as retry_exc:
         match retry_exc.__cause__:
             case RecursionError() as retry_cause:
-                raise retry_cause from None
+                public_error = retry_cause
             case _:
-                raise RecursionError(str(retry_exc)) from None
+                public_error = RecursionError(str(retry_exc))
+        raise public_error from None
     finally:
         parser.__dict__.pop("parse_raw", None)
         parser.__dict__.pop("_report_parse_diagnostics", None)
