@@ -185,6 +185,9 @@ ROUND_TRIP_EXCLUDED_CASES: dict[str, str] = {
     "jsonschema/strict_types_matrix.json": (
         "pydantic serializes Decimal JSON values as strings while the source schema requires number"
     ),
+    "jsonschema/unique_items_schema_validators.json": (
+        "pydantic drops extra nested object properties while dumping, which can collapse distinct uniqueItems values"
+    ),
     "openapi/allof_array_ref_override.yaml::components.schemas.DataType": (
         "schema requires a property absent from properties, so the generated model has no field to dump"
     ),
@@ -212,6 +215,9 @@ PYDANTIC_V2_LEGACY_LOOKAROUND_EXCLUDED_CASES: dict[str, str] = {
     "jsonschema/nested_lookaround_array.json": (
         "Pydantic before 2.5.0 cannot apply regex_engine='python-re' to nested lookaround pattern validators"
     ),
+    "jsonschema/schema_validators_runtime_root_cross_module/a.json": (
+        "Pydantic before 2.5.0 cannot apply regex_engine='python-re' to lookaround pattern validators"
+    ),
     "openapi/pattern_lookaround.yaml::components.schemas.info": (
         "Pydantic before 2.5.0 cannot apply regex_engine='python-re' to OpenAPI lookaround pattern validators"
     ),
@@ -221,6 +227,7 @@ PYDANTIC_V2_DATACLASS_LEGACY_LOOKAROUND_CASE_IDS = (
     "jsonschema/lookaround_dict.json",
     "jsonschema/lookaround_union_types.json",
     "jsonschema/nested_lookaround_array.json",
+    "jsonschema/schema_validators_runtime_root_cross_module/a.json",
 )
 
 

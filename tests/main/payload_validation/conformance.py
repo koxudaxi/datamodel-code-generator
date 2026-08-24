@@ -5,10 +5,15 @@ from __future__ import annotations
 from fractions import Fraction
 from typing import TYPE_CHECKING, Final
 
+from datamodel_code_generator.format import PythonVersion
+
+from .constants import PAYLOAD_TARGET_PYTHON_VERSION
 from .models import PayloadBackend, SchemaCase
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
+
+_PAYLOAD_TARGET_PYTHON_VERSION = PythonVersion(PAYLOAD_TARGET_PYTHON_VERSION)
 
 PYDANTIC_V2_REJECTED_MUTATION_CONSTRAINTS: Final[dict[str, str]] = {
     "additionalProperties": "generated pydantic v2 models forbid extra object properties for closed schemas",
@@ -207,6 +212,16 @@ MSGSPEC_VALIDATION_EXCLUDED_CASES: Final[dict[str, str]] = {
     "jsonschema/default_factory_nested_model_with_dict.json": (
         "msgspec conversion rejects unions containing multiple dict-like runtime types"
     ),
+    **dict.fromkeys(
+        (
+            "jsonschema/unique_items_union_ref_sibling_2020.json",
+            "jsonschema/unique_items_union_ref_sibling_draft7.json",
+        ),
+        "msgspec conversion rejects unions containing multiple array-like runtime types",
+    ),
+    "jsonschema/unique_items_union_enum_root.json": (
+        "msgspec conversion only supports Enum classes with homogeneous str or int values"
+    ),
     "jsonschema/enum_complex_values_literal.json": (
         "msgspec conversion only supports Enum classes with homogeneous str or int values"
     ),
@@ -342,6 +357,14 @@ MSGSPEC_VALIDATION_EXCLUDED_CASES: Final[dict[str, str]] = {
     ),
     "openapi/pattern_lookaround.yaml::components.schemas.info": (
         "msgspec conversion rejects generated lookaround regex metadata in non-string containers"
+    ),
+}
+MSGSPEC_TYPE_STATEMENT_VALIDATION_EXCLUDED_CASES: Final[dict[str, str]] = {
+    "jsonschema/unique_items_schema_validators.json": (
+        "msgspec conversion rejects unions containing multiple array-like runtime types"
+    ),
+    "jsonschema/unique_items_union_ref_mapping_root.json": (
+        "msgspec conversion rejects unions containing multiple dict-like runtime types"
     ),
 }
 BACKEND_FULL_MATRIX_EXCLUDED_CASES: Final[dict[PayloadBackend, dict[str, str]]] = {
@@ -538,10 +561,22 @@ def _msgspec_schema_exclusion_reason(case: SchemaCase) -> str | None:
     return None
 
 
+def _msgspec_type_statement_exclusion_reason(
+    case: SchemaCase,
+    target_python_version: PythonVersion = _PAYLOAD_TARGET_PYTHON_VERSION,
+) -> str | None:
+    """Return msgspec exclusions caused by generated PEP 695 aliases."""
+    if not target_python_version.has_type_statement:
+        return None
+    return MSGSPEC_TYPE_STATEMENT_VALIDATION_EXCLUDED_CASES.get(case.id)
+
+
 def _backend_schema_exclusion_reason(case: SchemaCase, backend: PayloadBackend) -> str | None:
     """Return dynamic full-matrix exclusions derived from schema/runtime semantics."""
     match backend:
         case PayloadBackend.MSGSPEC:
+            if reason := _msgspec_type_statement_exclusion_reason(case):
+                return reason
             return _msgspec_schema_exclusion_reason(case)
         case _:
             return None
