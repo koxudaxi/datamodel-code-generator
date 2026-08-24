@@ -4,37 +4,19 @@
 
 from __future__ import annotations
 
-from typing import Optional, Union
+from typing import Union
 
 from pydantic import BaseModel, RootModel
 
 
 class JsonValue(
-    RootModel[
-        Optional[
-            Union[
-                str,
-                float,
-                bool,
-                list[Optional["JsonValue"]],
-                dict[str, Optional["JsonValue"]],
-            ]
-        ]
-    ]
+    RootModel[Union[str, float, bool, list["JsonValue"], dict[str, "JsonValue"]]]
 ):
-    root: Optional[
-        Union[
-            str,
-            float,
-            bool,
-            list[Optional["JsonValue"]],
-            dict[str, Optional["JsonValue"]],
-        ]
-    ]
+    root: Union[str, float, bool, list["JsonValue"], dict[str, "JsonValue"]]
 
 
 class Model(BaseModel):
-    data: JsonValue | None
+    data: JsonValue
 
 
 JsonValue.model_rebuild()
