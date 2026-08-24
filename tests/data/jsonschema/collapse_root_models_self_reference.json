@@ -4,6 +4,9 @@
   "properties": {
     "data": {
       "$ref": "#/$defs/JsonValue"
+    },
+    "wrapped": {
+      "$ref": "#/$defs/Wrapper"
     }
   },
   "required": ["data"],
@@ -21,6 +24,12 @@
           "type": "object",
           "additionalProperties": { "$ref": "#/$defs/JsonValue" }
         }
+      ]
+    },
+    "Wrapper": {
+      "anyOf": [
+        { "type": "integer" },
+        { "$ref": "#/$defs/JsonValue" }
       ]
     }
   }

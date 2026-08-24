@@ -17,6 +17,7 @@ class JsonValue(
 
 class Model(BaseModel):
     data: JsonValue
+    wrapped: int | JsonValue | None = None
 
 
 JsonValue.model_rebuild()

@@ -4,9 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Union
-
-from pydantic import BaseModel, RootModel
+from pydantic import BaseModel
 
 
 class Plain(BaseModel):
@@ -14,17 +12,5 @@ class Plain(BaseModel):
 
 
 class Model(BaseModel):
-    a: ModelA | None = None
-    b: ModelB | None = None
-
-
-class ModelA(RootModel[Union[str, Plain, "ModelB"]]):
-    root: Union[str, Plain, "ModelB"]
-
-
-class ModelB(RootModel[float | ModelA]):
-    root: float | ModelA
-
-
-Model.model_rebuild()
-ModelA.model_rebuild()
+    a: str | Plain | None = None
+    b: float | None = None

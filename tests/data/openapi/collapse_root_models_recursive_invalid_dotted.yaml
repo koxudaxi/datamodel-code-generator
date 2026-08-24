@@ -1,0 +1,26 @@
+openapi: 3.0.0
+info:
+  title: Combined retry
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    JsonValue:
+      nullable: true
+      anyOf:
+        - type: string
+        - type: array
+          items:
+            $ref: '#/components/schemas/JsonValue'
+        - type: object
+          additionalProperties:
+            $ref: '#/components/schemas/JsonValue'
+    SaveTrifectaV2.1:
+      type: object
+    SaveRequest:
+      type: object
+      properties:
+        trifecta:
+          $ref: '#/components/schemas/SaveTrifectaV2.1'
+        value:
+          $ref: '#/components/schemas/JsonValue'

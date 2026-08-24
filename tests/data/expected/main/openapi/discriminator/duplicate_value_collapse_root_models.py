@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Literal, Union
+from typing import Literal
 
 from pydantic import BaseModel, Field, RootModel
 
@@ -44,10 +44,6 @@ class MissingTypeWrapper(RootModel[MissingType]):
     root: MissingType
 
 
-class RecursiveItem(RootModel[Union["RecursiveItem", ItemReference]]):
-    root: Union["RecursiveItem", ItemReference]
-
-
 class UniqueA(BaseModel):
     type: Literal['a']
 
@@ -67,9 +63,6 @@ class Envelope(BaseModel):
     wrapped: MessageWrapper | UserMessage | ItemReference
     nested_missing: MissingTypeWrapper | ItemReference
     container: list[UniqueA | UniqueB] | ItemReference
-    recursive: RecursiveItem
+    recursive: ItemReference
     unique: UniqueC | UniqueA | UniqueB = Field(..., discriminator='type')
     nullable_unique: UniqueA | UniqueB | None = Field(..., discriminator='type')
-
-
-RecursiveItem.model_rebuild()

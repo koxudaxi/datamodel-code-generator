@@ -12522,12 +12522,13 @@ def test_main_jsonschema_collapse_root_models_self_reference(output_file: Path) 
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
-        extra_args=["--collapse-root-models"],
+        extra_args=["--collapse-root-models", "--formatters", "builtin"],
+        force_exec_validation=True,
     )
 
 
 def test_main_jsonschema_collapse_root_models_transitive_reference_cycle(output_file: Path) -> None:
-    """Keep root models involved in a transitive reference cycle named when collapsing."""
+    """Preserve legacy collapsed output for a root cycle that already terminated."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_transitive_reference_cycle.json",
         output_path=output_file,

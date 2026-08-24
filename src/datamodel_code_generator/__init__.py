@@ -623,6 +623,10 @@ class Error(Exception):
         return self.message
 
 
+class _CollapseRootModelsRecursionError(RecursionError):
+    """Signal that collapsing root models needs its circular-reference fallback."""
+
+
 def _normalized_absolute_path(path: Path, *, resolve_aliases: bool = False) -> Path:
     """Return a normalized absolute path, resolving aliases only when needed."""
     expanded_path = path.expanduser()
@@ -2009,6 +2013,55 @@ def _build_generation_parser(  # noqa: PLR0913, PLR0917
     return parser
 
 
+def _build_generation_retry_parser(  # noqa: PLR0913, PLR0917
+    input_: _GenerationInput,
+    input_text: str | None,
+    input_file_type: InputFileType,
+    source_override: Mapping[str, Any] | None,
+    config: GenerateConfig,
+    extra_template_data: defaultdict[str, dict[str, Any]] | None,
+    dataclass_arguments: DataclassArguments,
+    schema_versions: _SchemaVersions,
+    diagnostic_source_path: Path | None,
+    remote_text_cache: DefaultPutDict[str, str],
+    reference_cache: Any | None,
+    base_path: Path,
+    *,
+    skip_root_model: bool,
+    preserve_circular_root_models: bool = False,
+) -> tuple[Any, DataModelSet, bool]:
+    """Build one fresh parser for an internal compatibility retry."""
+    data_model_types, parser_source, defer_formatting, parser_options, python_type_expressions = (
+        _prepare_parser_common_options(
+            input_,
+            input_text,
+            input_file_type,
+            source_override,
+            config,
+            extra_template_data,
+            dataclass_arguments,
+            skip_root_model=skip_root_model,
+            remote_text_cache=remote_text_cache,
+        )
+    )
+    parser_options["base_path"] = base_path
+    parser = _build_generation_parser(
+        input_,
+        input_file_type,
+        parser_source,
+        config,
+        parser_options,
+        data_model_types,
+        schema_versions,
+        diagnostic_source_path,
+        reference_cache=reference_cache,
+        python_type_expressions=python_type_expressions,
+    )
+    if preserve_circular_root_models:
+        parser._preserve_circular_root_models = True  # noqa: SLF001
+    return parser, data_model_types, defer_formatting
+
+
 def _prepare_generation_input(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     input_: _GenerationInput,
     config: GenerateConfig,
@@ -2182,9 +2235,13 @@ def _parse_with_disposal(  # noqa: PLR0913
                 module_split_mode=config.module_split_mode,
                 collect_model_metadata=config.emit_model_metadata is not None,
             )
-    except BaseException:
-        with contextlib.suppress(BaseException):
-            parser._dispose()  # noqa: SLF001
+    except BaseException as exc:
+        match exc:
+            case _CollapseRootModelsRecursionError():
+                parser._dispose()  # noqa: SLF001
+            case _:
+                with contextlib.suppress(BaseException):
+                    parser._dispose()  # noqa: SLF001
         raise
     finally:
         if not use_output_cwd:
@@ -2213,7 +2270,7 @@ def _parse_generation(  # noqa: PLR0913, PLR0914, PLR0917
     use_output_cwd: bool,
     output_context_path: Path,
 ) -> _ParsedGeneration:
-    """Parse, dispose, and optionally retry invalid dotted stdout inside the output cwd."""
+    """Parse, dispose, and retry narrow compatibility failures inside the output cwd."""
     # Phase 3: build before chdir so initial reference resolution keeps the caller's cwd.
     parser = _build_generation_parser(
         input_,
@@ -2228,14 +2285,47 @@ def _parse_generation(  # noqa: PLR0913, PLR0914, PLR0917
     )
     # Phase 4: initial parse, disposal, and the complete retry flow share the output cwd.
     with chdir(output_context_path if use_output_cwd else None):
-        results = _parse_with_disposal(
-            input_,
-            parser,
-            config,
-            parser_settings_path=parser_settings_path,
-            use_output_cwd=use_output_cwd,
-            output_context_path=output_context_path,
-        )
+        try:
+            results = _parse_with_disposal(
+                input_,
+                parser,
+                config,
+                parser_settings_path=parser_settings_path,
+                use_output_cwd=use_output_cwd,
+                output_context_path=output_context_path,
+            )
+        except _CollapseRootModelsRecursionError:
+            retry_remote_text_cache = parser.remote_text_cache
+            retry_reference_cache = getattr(parser, "remote_object_cache", None)
+            retry_base_path = parser.base_path
+            del parser
+
+            retry_extra_template_data = _copy_generation_extra_template_data(config)
+            parser, data_model_types, defer_formatting = _build_generation_retry_parser(
+                input_,
+                input_text,
+                input_file_type,
+                source_override,
+                config,
+                retry_extra_template_data,
+                dataclass_arguments,
+                schema_versions,
+                diagnostic_source_path,
+                retry_remote_text_cache,
+                retry_reference_cache,
+                retry_base_path,
+                skip_root_model=skip_root_model,
+                preserve_circular_root_models=True,
+            )
+            extra_template_data = retry_extra_template_data
+            results = _parse_with_disposal(
+                input_,
+                parser,
+                config,
+                parser_settings_path=parser_settings_path,
+                use_output_cwd=use_output_cwd,
+                output_context_path=output_context_path,
+            )
         model_metadata = parser.model_metadata
         if repair_modules := parser.invalid_dotted_stdout_repair_modules:
             legacy_inventory = parser.generated_model_inventory
@@ -2243,6 +2333,7 @@ def _parse_generation(  # noqa: PLR0913, PLR0914, PLR0917
             retry_remote_text_cache = parser.remote_text_cache
             retry_reference_cache = getattr(parser, "remote_object_cache", None)
             retry_base_path = parser.base_path
+            preserve_circular_root_models = getattr(parser, "_preserve_circular_root_models", False)
         parser._dispose()  # noqa: SLF001
         del parser
 
@@ -2253,17 +2344,10 @@ def _parse_generation(  # noqa: PLR0913, PLR0914, PLR0917
                     "forced_invalid_dotted_stdout_repair_modules": repair_modules,
                 }
             )
-            retry_options: ParserConfigDict | None = None
             retry_completed = False
             with contextlib.suppress(Exception), warnings.catch_warnings():
                 warnings.simplefilter("ignore", DanglingRefWarning)
-                (
-                    retry_data_model_types,
-                    retry_source,
-                    retry_defer_formatting,
-                    retry_options,
-                    retry_python_type_expressions,
-                ) = _prepare_parser_common_options(
+                retry_parser, retry_data_model_types, retry_defer_formatting = _build_generation_retry_parser(
                     input_,
                     input_text,
                     input_file_type,
@@ -2271,21 +2355,13 @@ def _parse_generation(  # noqa: PLR0913, PLR0914, PLR0917
                     retry_config,
                     extra_template_data,
                     dataclass_arguments,
-                    skip_root_model=skip_root_model,
-                    remote_text_cache=retry_remote_text_cache,
-                )
-                retry_options["base_path"] = retry_base_path
-                retry_parser = _build_generation_parser(
-                    input_,
-                    input_file_type,
-                    retry_source,
-                    retry_config,
-                    retry_options,
-                    retry_data_model_types,
                     schema_versions,
                     diagnostic_source_path,
-                    reference_cache=retry_reference_cache,
-                    python_type_expressions=retry_python_type_expressions,
+                    retry_remote_text_cache,
+                    retry_reference_cache,
+                    retry_base_path,
+                    skip_root_model=skip_root_model,
+                    preserve_circular_root_models=preserve_circular_root_models,
                 )
                 retry_results = _parse_with_disposal(
                     input_,
@@ -2316,7 +2392,6 @@ def _parse_generation(  # noqa: PLR0913, PLR0914, PLR0917
                 del retry_parser
 
             del retry_reference_cache, retry_remote_text_cache
-            del retry_options
     return results, model_metadata, data_model_types, defer_formatting
 
 

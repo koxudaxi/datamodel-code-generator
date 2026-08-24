@@ -104,6 +104,20 @@ def set_model_base_classes(
         generation_store.set_base_classes(model, base_classes)
 
 
+def _detach_data_type_tree(root: DataType) -> None:
+    """Sever one data-type tree iteratively so cleanup cannot hit recursion limits."""
+    stack = [root]
+    while stack:
+        data_type = stack.pop()
+        stack.extend(data_type.data_types)
+        data_type.data_types.clear()
+        if dict_key := data_type.dict_key:
+            stack.append(dict_key)
+            data_type.dict_key = None
+        data_type.parent = None
+        data_type.reference = None
+
+
 @dataclass(frozen=True, slots=True)
 class ModelFact:
     """A parsed model and the stable facts derived from its reference."""
@@ -587,14 +601,10 @@ class GenerationStore:  # noqa: PLR0904
         """
         for model in self.models:
             for model_field in model.fields:
-                for data_type in list(model_field.data_type.all_data_types):
-                    data_type.parent = None
-                    data_type.reference = None
+                _detach_data_type_tree(model_field.data_type)
                 model_field.parent = None
             for base_class in model.base_classes:
-                for data_type in list(base_class.all_data_types):
-                    data_type.parent = None
-                    data_type.reference = None
+                _detach_data_type_tree(base_class)
         for reference in references:
             reference.children.clear()
             reference.source = None

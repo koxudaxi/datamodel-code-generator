@@ -51,6 +51,7 @@ from datamodel_code_generator import (
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
     YamlValue,
+    _CollapseRootModelsRecursionError,
     _internal_utils,
     _is_parsed_source_cache_enabled,
     _read_parser_source_data_from_path,
@@ -1520,38 +1521,6 @@ def _is_any_variant(data_type: DataType) -> bool:
     return data_type.type == ANY or (
         not data_type.reference and not data_type.data_types and not data_type.literals and not data_type.type
     )
-
-
-def _reaches_root_model_cycle(
-    model: DataModel,
-    root_model_type: type[DataModel],
-    ancestors: frozenset[str],
-    cache: dict[str, bool],
-) -> bool:
-    """Return True if expanding ``model`` can reach a cycle of root-model references.
-
-    Collapsing such a model would inline its body, which re-introduces references
-    to root models whose bodies are inlined in turn, growing the tree without
-    bound. These models must stay named.
-
-    ``ancestors`` tracks the current reference chain for cycle detection and
-    ``cache`` memoizes completed results across calls; reference edges are only
-    removed while collapsing, so cached results stay conservative.
-    """
-    if model.path in ancestors:
-        return True
-    if model.path in cache:
-        return cache[model.path]
-    child_ancestors = ancestors | {model.path}
-    result = any(
-        isinstance(source, root_model_type)
-        and _reaches_root_model_cycle(source, root_model_type, child_ancestors, cache)
-        for field in model.fields
-        for data_type in field.data_type.all_data_types
-        for source in [data_type.reference.source if data_type.reference else None]
-    )
-    cache[model.path] = result
-    return result
 
 
 _DedupItem = TypeVar("_DedupItem")
@@ -3252,7 +3221,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
         generation_store = self.generation_store
         generation_index = generation_store.index
-        root_cycle_cache: dict[str, bool] = {}
+        circular_root_model_paths = getattr(self, "_circular_root_model_paths", ())
 
         for model in models:  # noqa: PLR1702
             for model_field in model.fields:
@@ -3267,11 +3236,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     root_type_model = reference.source
                     root_type_field = root_type_model.fields[0]
 
-                    if _reaches_root_model_cycle(
-                        root_type_model, self.data_model_root_type, frozenset(), root_cycle_cache
-                    ):
-                        # A self- or transitively-referential root model cannot be
-                        # fully inlined; keep it as a named model.
+                    if root_type_model.path in circular_root_model_paths:
+                        # A circular root model cannot be fully inlined; keep it named.
                         continue
 
                     # These runtime rules are owned by the referenced root model;
@@ -3428,6 +3394,26 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     imports.remove_referenced_imports(root_type_model.path)
                     if not generation_index.has_data_type_references(root_type_model.reference):
                         unused_models.append(root_type_model)
+
+    def __set_circular_root_model_paths(self, module_models: ModuleModels) -> None:
+        """Cache live root-model paths in a circular component for the retry path."""
+        root_models = {
+            model.path: model
+            for _, models in module_models
+            for model in models
+            if isinstance(model, self.data_model_root_type)
+        }
+        graph = {
+            (path,): {
+                (reference_path,)
+                for reference_path in self.generation_store.index.reference_classes_for_model(model)
+                if reference_path in root_models
+            }
+            for path, model in root_models.items()
+        }
+        self._circular_root_model_paths = frozenset(
+            path for component in find_circular_sccs(graph) for (path,) in component
+        )
 
     def __set_default_enum_member(
         self,
@@ -5198,7 +5184,16 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         """Apply defaults and model transforms before final type adjustments."""
         self.__set_reference_default_value_to_field(models, can_retain_cache=can_retain_cache)
         self.__reuse_model(models, require_update_action_models)
-        self.__collapse_root_models(models, unused_models, imports, scoped_model_resolver, model_path_to_module_name)
+        try:
+            self.__collapse_root_models(
+                models,
+                unused_models,
+                imports,
+                scoped_model_resolver,
+                model_path_to_module_name,
+            )
+        except RecursionError as exc:
+            raise _CollapseRootModelsRecursionError from exc
         self.__set_default_enum_member(models, can_retain_cache=can_retain_cache)
         self.__sort_models(models, imports, use_deferred_annotations=use_deferred_annotations)
         self.__change_field_name(models, can_retain_cache=can_retain_cache)
@@ -5714,6 +5709,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         unused_models: list[DataModel] = []
         module_to_import: dict[ModulePath, Imports] = {}
         contexts: list[ModuleContext] = []
+
+        if self.collapse_root_models and getattr(self, "_preserve_circular_root_models", False):
+            self.__set_circular_root_model_paths(module_models)
 
         for module_, models in module_models:
             ctx = self._process_single_module(

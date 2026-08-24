@@ -894,6 +894,22 @@ def test_main_invalid_dotted_schema_name_stdout(capsys: pytest.CaptureFixture[st
 
 
 @pytest.mark.isolate_builtin_formatter_config
+def test_main_collapse_root_models_recursive_invalid_dotted_stdout(capsys: pytest.CaptureFixture[str]) -> None:
+    """Carry the circular-root fallback into the invalid-dotted stdout repair."""
+    expected_path = EXPECTED_OPENAPI_PATH / "collapse_root_models_recursive_invalid_dotted_stdout.py"
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "collapse_root_models_recursive_invalid_dotted.yaml",
+        output_path=None,
+        input_file_type="openapi",
+        extra_args=["--collapse-root-models", "--disable-timestamp", "--formatters", "builtin"],
+        expected_stdout_path=expected_path,
+        capsys=capsys,
+        assert_no_stderr=True,
+    )
+    validate_generated_code(expected_path.read_text(), str(expected_path), do_exec=True)
+
+
+@pytest.mark.isolate_builtin_formatter_config
 def test_main_invalid_dotted_mixed_keys_stdout(capsys: pytest.CaptureFixture[str]) -> None:
     """Fingerprint parsed YAML with heterogeneous mapping keys before a safe retry."""
     expected_path = EXPECTED_OPENAPI_PATH / "invalid_dotted_mixed_keys_stdout.py"
