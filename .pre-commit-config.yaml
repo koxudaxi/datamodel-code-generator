@@ -9,17 +9,17 @@ repos:
     - id: check-github-workflows
       args: [ "--verbose" ]
 - repo: https://github.com/tox-dev/tox-ini-fmt
-  rev: "1.8.1"
+  rev: "1.9.0"
   hooks:
     - id: tox-ini-fmt
       args: ["-p", "fix"]
 - repo: https://github.com/tox-dev/pyproject-fmt
-  rev: v2.27.0
+  rev: v2.28.1
   hooks:
     - id: pyproject-fmt
       args: ["--max-supported-python=3.14"]
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: 'v0.16.2'
+  rev: 'v0.16.4'
   hooks:
   - id: ruff-format
     exclude: "^tests/data|^src/datamodel_code_generator/_types/|^src/datamodel_code_generator/model/_compiled_templates/"
