@@ -104,6 +104,20 @@ def set_model_base_classes(
         generation_store.set_base_classes(model, base_classes)
 
 
+def _detach_data_type_tree(root: DataType) -> None:
+    """Sever one data-type tree iteratively so cleanup cannot hit recursion limits."""
+    stack = [root]
+    while stack:
+        data_type = stack.pop()
+        stack.extend(data_type.data_types)
+        data_type.data_types.clear()
+        if dict_key := data_type.dict_key:
+            stack.append(dict_key)
+            data_type.dict_key = None
+        data_type.parent = None
+        data_type.reference = None
+
+
 @dataclass(frozen=True, slots=True)
 class ModelFact:
     """A parsed model and the stable facts derived from its reference."""
@@ -475,6 +489,27 @@ class GenerationIndex:
         self._reference_classes_cache[model_id] = reference_classes
         return reference_classes
 
+    def reference_classes_for_model_including_dict_keys(self, model: DataModel) -> frozenset[str]:
+        """Return every referenced path for fallback-only dependency analysis."""
+        facts = self._facts()
+        model_id = self._store.model_id(model)
+        if model_id is None:
+            reference_classes = frozenset(model.reference_classes).union(
+                data_type.reference.path
+                for field in model.fields
+                for data_type in field.data_type.all_data_types
+                if data_type.reference is not None
+            )
+        else:
+            reference_classes = frozenset(
+                reference.path
+                for data_type_id in facts.data_types_by_model.get(model_id, ())
+                if (reference := facts.data_type_facts[data_type_id].reference) is not None
+            )
+        if len(additional_properties_references := model._additional_properties_reference_classes):  # noqa: SLF001
+            return reference_classes.union(additional_properties_references)
+        return reference_classes
+
     def owner_model_for_data_type(self, data_type: DataType) -> DataModel | None:
         """Return the tracked model that owns ``data_type`` if known."""
         facts = self._facts()
@@ -587,14 +622,10 @@ class GenerationStore:  # noqa: PLR0904
         """
         for model in self.models:
             for model_field in model.fields:
-                for data_type in list(model_field.data_type.all_data_types):
-                    data_type.parent = None
-                    data_type.reference = None
+                _detach_data_type_tree(model_field.data_type)
                 model_field.parent = None
             for base_class in model.base_classes:
-                for data_type in list(base_class.all_data_types):
-                    data_type.parent = None
-                    data_type.reference = None
+                _detach_data_type_tree(base_class)
         for reference in references:
             reference.children.clear()
             reference.source = None

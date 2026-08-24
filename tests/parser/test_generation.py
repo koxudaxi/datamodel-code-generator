@@ -106,7 +106,7 @@ def _base_model(name: str = "Model", fields: list[DataModelField] | None = None)
     return BaseModel(fields=fields or [], reference=Reference(path=name, original_name=name, name=name))
 
 
-def _dict_key_reference_classes(model_type: type[DataModel]) -> frozenset[str]:
+def _dict_key_reference_classes(model_type: type[DataModel], *, include_dict_keys: bool = False) -> frozenset[str]:
     reference_model = Reference(path="Model", original_name="Model", name="Model")
     reference_value = Reference(path="Value", original_name="Value", name="Value")
     reference_key = Reference(path="Key", original_name="Key", name="Key")
@@ -117,6 +117,8 @@ def _dict_key_reference_classes(model_type: type[DataModel]) -> frozenset[str]:
     model = model_type(fields=[DataModelFieldBase(data_type=data_type)], reference=reference_model)
     store = GenerationStore()
     store.register_model(model)
+    if include_dict_keys:
+        return store.index.reference_classes_for_model_including_dict_keys(model)
     return store.index.reference_classes_for_model(model)
 
 
@@ -169,10 +171,30 @@ def test_generation_index_does_not_use_metadata_collection_truthiness() -> None:
 
     assert {
         "reference_classes": store.index.reference_classes_for_model(model),
+        "fallback_reference_classes": store.index.reference_classes_for_model_including_dict_keys(model),
         "typed_dict_kwargs": model._internal_template_data["typed_dict_kwargs"],
     } == snapshot({
         "reference_classes": frozenset({"Metadata"}),
+        "fallback_reference_classes": frozenset({"Metadata"}),
         "typed_dict_kwargs": {"extra_items": "'Metadata'"},
+    })
+
+
+def test_generation_index_including_dict_keys_falls_back_for_untracked_model() -> None:
+    """Keep direct-model fallback behavior when no store facts are available."""
+    target = Reference(path="Target", original_name="Target", name="Target")
+    key = Reference(path="Key", original_name="Key", name="Key")
+    model = _base_model(
+        fields=[
+            DataModelField(
+                data_type=DataType(data_types=[DataType(reference=target)], dict_key=DataType(reference=key))
+            )
+        ]
+    )
+
+    assert GenerationStore().index.reference_classes_for_model_including_dict_keys(model) == frozenset({
+        "Key",
+        "Target",
     })
 
 
@@ -553,6 +575,7 @@ def test_generation_index_dict_key_reference_policy_matrix(
     expected = frozenset({"Key", "Value"} if include_dict_key_reference else {"Value"})
 
     assert _dict_key_reference_classes(model_type) == expected
+    assert _dict_key_reference_classes(model_type, include_dict_keys=True) == frozenset({"Key", "Value"})
 
 
 def test_generation_index_external_pydantic_subclasses_do_not_inherit_dict_key_reference_policy() -> None:

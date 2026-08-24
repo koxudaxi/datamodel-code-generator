@@ -103,6 +103,56 @@ class _GenerateParseAbort(BaseException):
     """Test-only parse abort that is not an Exception subclass."""
 
 
+@pytest.mark.allow_direct_assert
+def test_collapse_root_models_retry_reraises_second_recursion_error(mocker: MockerFixture) -> None:
+    """Retry root-model collapsing exactly once and expose the second recursion error."""
+    retry_error = RecursionError("retry parse recursion")
+
+    def raise_collapse_recursion(*_: Any, **__: Any) -> None:
+        try:
+            raise retry_error
+        except RecursionError as exc:
+            raise datamodel_code_generator._CollapseRootModelsRecursionError from exc
+
+    parse_with_disposal = mocker.patch.object(
+        datamodel_code_generator,
+        "_parse_with_disposal",
+        side_effect=raise_collapse_recursion,
+    )
+
+    with pytest.raises(RecursionError, match="retry parse recursion") as exc_info:
+        generate(
+            {"type": "object"},
+            input_file_type=InputFileType.JsonSchema,
+            collapse_root_models=True,
+        )
+
+    assert exc_info.value is retry_error
+    assert parse_with_disposal.call_count == 2
+
+
+@pytest.mark.allow_direct_assert
+def test_collapse_root_models_retry_normalizes_sentinel_without_cause(mocker: MockerFixture) -> None:
+    """Never expose the private retry sentinel when an abnormal retry loses its cause."""
+    initial_error = datamodel_code_generator._CollapseRootModelsRecursionError()
+    initial_error.__cause__ = RecursionError("initial parse recursion")
+    parse_with_disposal = mocker.patch.object(
+        datamodel_code_generator,
+        "_parse_with_disposal",
+        side_effect=[initial_error, datamodel_code_generator._CollapseRootModelsRecursionError("retry recursion")],
+    )
+
+    with pytest.raises(RecursionError, match="retry recursion") as exc_info:
+        generate(
+            {"type": "object"},
+            input_file_type=InputFileType.JsonSchema,
+            collapse_root_models=True,
+        )
+
+    assert type(exc_info.value) is RecursionError
+    assert parse_with_disposal.call_count == 2
+
+
 def test_parser_collects_empty_model_metadata() -> None:
     """Collect an empty metadata payload when parsing emits no models."""
     from datamodel_code_generator.model_metadata import dump_model_metadata
