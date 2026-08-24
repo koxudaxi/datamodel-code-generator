@@ -1525,26 +1525,33 @@ def _is_any_variant(data_type: DataType) -> bool:
 def _reaches_root_model_cycle(
     model: DataModel,
     root_model_type: type[DataModel],
-    ancestors: frozenset[str] = frozenset(),
+    ancestors: frozenset[str],
+    cache: dict[str, bool],
 ) -> bool:
     """Return True if expanding ``model`` can reach a cycle of root-model references.
 
     Collapsing such a model would inline its body, which re-introduces references
     to root models whose bodies are inlined in turn, growing the tree without
     bound. These models must stay named.
+
+    ``ancestors`` tracks the current reference chain for cycle detection and
+    ``cache`` memoizes completed results across calls; reference edges are only
+    removed while collapsing, so cached results stay conservative.
     """
     if model.path in ancestors:
         return True
+    if model.path in cache:
+        return cache[model.path]
     child_ancestors = ancestors | {model.path}
-    for field in model.fields:
-        for data_type in field.data_type.all_data_types:
-            reference = data_type.reference
-            source = reference.source if reference else None
-            if isinstance(source, root_model_type) and _reaches_root_model_cycle(
-                source, root_model_type, child_ancestors
-            ):
-                return True
-    return False
+    result = any(
+        isinstance(source, root_model_type)
+        and _reaches_root_model_cycle(source, root_model_type, child_ancestors, cache)
+        for field in model.fields
+        for data_type in field.data_type.all_data_types
+        for source in [data_type.reference.source if data_type.reference else None]
+    )
+    cache[model.path] = result
+    return result
 
 
 _DedupItem = TypeVar("_DedupItem")
@@ -3245,6 +3252,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
         generation_store = self.generation_store
         generation_index = generation_store.index
+        root_cycle_cache: dict[str, bool] = {}
 
         for model in models:  # noqa: PLR1702
             for model_field in model.fields:
@@ -3259,7 +3267,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     root_type_model = reference.source
                     root_type_field = root_type_model.fields[0]
 
-                    if _reaches_root_model_cycle(root_type_model, self.data_model_root_type):
+                    if _reaches_root_model_cycle(
+                        root_type_model, self.data_model_root_type, frozenset(), root_cycle_cache
+                    ):
                         # A self- or transitively-referential root model cannot be
                         # fully inlined; keep it as a named model.
                         continue
