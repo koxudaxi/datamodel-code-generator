@@ -14,6 +14,8 @@ from packaging.version import Version
 from pydantic import VERSION as PYDANTIC_VERSION
 from pydantic import ValidationError
 
+from datamodel_code_generator.format import PythonVersion
+
 from .payload_validation import (
     BACKEND_ACCEPTANCE_EXCLUDED_CASES,
     BACKEND_REJECTED_MUTATION_CONSTRAINTS,
@@ -48,6 +50,8 @@ from .payload_validation import (
     validate_with_source_schema,
 )
 from .payload_validation import codegen as payload_codegen
+from .payload_validation.conformance import _msgspec_type_statement_exclusion_reason
+from .payload_validation.constants import PAYLOAD_TARGET_PYTHON_VERSION
 
 
 def _max_examples_from_env(raw_examples: str | None = None) -> int:
@@ -412,6 +416,57 @@ def test_msgspec_schema_runtime_exclusions_cover_known_semantic_gaps(case_id: st
     assert backend_rejection_exclusion_reason(case, PayloadBackend.MSGSPEC)
 
 
+@pytest.mark.parametrize(
+    ("case_id", "expected_reason"),
+    [
+        (
+            "jsonschema/unique_items_union_enum_root.json",
+            "msgspec conversion only supports Enum classes with homogeneous str or int values",
+        ),
+        (
+            "jsonschema/unique_items_union_ref_sibling_2020.json",
+            "msgspec conversion rejects unions containing multiple array-like runtime types",
+        ),
+        (
+            "jsonschema/unique_items_union_ref_sibling_draft7.json",
+            "msgspec conversion rejects unions containing multiple array-like runtime types",
+        ),
+    ],
+)
+@pytest.mark.allow_direct_assert
+def test_msgspec_unique_items_runtime_exclusions_match_type_limits(case_id: str, expected_reason: str) -> None:
+    """UniqueItems fixtures preserve msgspec's array, mapping, and Enum union limits."""
+    case = SCHEMA_CASE_BY_ID[case_id]
+    assert backend_acceptance_exclusion_reason(case, PayloadBackend.MSGSPEC) == expected_reason
+    assert backend_rejection_exclusion_reason(case, PayloadBackend.MSGSPEC) == expected_reason
+
+
+@pytest.mark.parametrize(
+    ("case_id", "expected_reason"),
+    [
+        (
+            "jsonschema/unique_items_schema_validators.json",
+            "msgspec conversion rejects unions containing multiple array-like runtime types",
+        ),
+        (
+            "jsonschema/unique_items_union_ref_mapping_root.json",
+            "msgspec conversion rejects unions containing multiple dict-like runtime types",
+        ),
+    ],
+)
+@pytest.mark.allow_direct_assert
+def test_msgspec_pep_695_unique_items_runtime_exclusions_match_target(case_id: str, expected_reason: str) -> None:
+    """PEP 695 aliases make these msgspec unions unsupported only for Python 3.12+ targets."""
+    case = SCHEMA_CASE_BY_ID[case_id]
+    current_target = PythonVersion(PAYLOAD_TARGET_PYTHON_VERSION)
+    current_reason = expected_reason if current_target.has_type_statement else None
+
+    assert backend_acceptance_exclusion_reason(case, PayloadBackend.MSGSPEC) == current_reason
+    assert backend_rejection_exclusion_reason(case, PayloadBackend.MSGSPEC) == current_reason
+    assert _msgspec_type_statement_exclusion_reason(case, PythonVersion.PY_311) is None
+    assert _msgspec_type_statement_exclusion_reason(case, PythonVersion.PY_312) == expected_reason
+
+
 @pytest.mark.allow_direct_assert
 def test_msgspec_schema_runtime_exclusions_ignore_literal_payloads() -> None:
     """Literal payload values must not be traversed as nested JSON Schemas."""
@@ -470,10 +525,16 @@ def test_payload_round_trip_exclusions_are_classified() -> None:
         pytest.fail("Payload round-trip exclusions reference unknown cases:\n" + "\n".join(unknown_cases))
 
 
+@pytest.mark.parametrize(
+    "case_id",
+    [
+        "jsonschema/one_of_with_sub_schema_array_item.json",
+        "jsonschema/unique_items_schema_validators.json",
+    ],
+)
 @pytest.mark.allow_direct_assert
-def test_pydantic_round_trip_exclusions_cover_uri_unique_items_normalization() -> None:
-    """URI normalization can collapse distinct JSON Schema uniqueItems values."""
-    case_id = "jsonschema/one_of_with_sub_schema_array_item.json"
+def test_pydantic_round_trip_exclusions_cover_unique_items_normalization(case_id: str) -> None:
+    """Pydantic normalization can collapse distinct JSON Schema uniqueItems values."""
     assert ROUND_TRIP_EXCLUDED_CASES[case_id]
     assert case_id not in {case.id for case in ROUND_TRIP_CASES}
 
@@ -555,6 +616,17 @@ def test_pydantic_v2_legacy_runtime_exclusions_are_version_gated() -> None:
             )
             is None
         )
+
+
+@pytest.mark.parametrize("backend", [PayloadBackend.PYDANTIC_V2, PayloadBackend.PYDANTIC_V2_DATACLASS])
+@pytest.mark.allow_direct_assert
+def test_pydantic_v2_legacy_runtime_cross_module_lookaround_exclusions_are_version_gated(
+    backend: PayloadBackend,
+) -> None:
+    """Cross-module RootModel lookaround validators need Pydantic 2.5+ for both Pydantic backends."""
+    case = SCHEMA_CASE_BY_ID["jsonschema/schema_validators_runtime_root_cross_module/a.json"]
+    assert _pydantic_v2_legacy_runtime_exclusion_reason(case, backend, Version("2.0.3"))
+    assert _pydantic_v2_legacy_runtime_exclusion_reason(case, backend, PYDANTIC_V2_FULL_PAYLOAD_RUNTIME_MIN) is None
 
 
 @pytest.mark.parametrize(
