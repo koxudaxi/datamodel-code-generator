@@ -14,6 +14,7 @@ from collections import OrderedDict, defaultdict
 from collections.abc import Callable, Iterator, Mapping
 from datetime import datetime, timezone
 from functools import lru_cache as _lru_cache
+from functools import partial as _partial
 from hashlib import sha256
 from pathlib import Path
 from threading import RLock
@@ -2249,6 +2250,47 @@ def _parse_with_disposal(  # noqa: PLR0913
     return results
 
 
+def _parse_collapse_root_models_retry(  # noqa: PLR0913
+    input_: _GenerationInput,
+    parser: Any,
+    config: GenerateConfig,
+    *,
+    parser_settings_path: Path | None,
+    use_output_cwd: bool,
+    output_context_path: Path,
+) -> _ParserResults:
+    """Parse the compatibility retry without repeating user-visible warnings."""
+
+    def suppress_warnings(callback: Callable[[], None]) -> None:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            callback()
+
+    parser.parse_raw = _partial(suppress_warnings, parser.parse_raw)
+    parser._report_parse_diagnostics = _partial(  # noqa: SLF001
+        suppress_warnings,
+        parser._report_parse_diagnostics,  # noqa: SLF001
+    )
+    try:
+        return _parse_with_disposal(
+            input_,
+            parser,
+            config,
+            parser_settings_path=parser_settings_path,
+            use_output_cwd=use_output_cwd,
+            output_context_path=output_context_path,
+        )
+    except _CollapseRootModelsRecursionError as retry_exc:
+        match retry_exc.__cause__:
+            case RecursionError() as retry_cause:
+                raise retry_cause from None
+            case _:
+                raise RecursionError(str(retry_exc)) from None
+    finally:
+        parser.__dict__.pop("parse_raw", None)
+        parser.__dict__.pop("_report_parse_diagnostics", None)
+
+
 def _parse_generation(  # noqa: PLR0913, PLR0914, PLR0917
     input_: _GenerationInput,
     input_text: str | None,
@@ -2318,7 +2360,7 @@ def _parse_generation(  # noqa: PLR0913, PLR0914, PLR0917
                 preserve_circular_root_models=True,
             )
             extra_template_data = retry_extra_template_data
-            results = _parse_with_disposal(
+            results = _parse_collapse_root_models_retry(
                 input_,
                 parser,
                 config,

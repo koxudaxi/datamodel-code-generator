@@ -489,6 +489,27 @@ class GenerationIndex:
         self._reference_classes_cache[model_id] = reference_classes
         return reference_classes
 
+    def reference_classes_for_model_including_dict_keys(self, model: DataModel) -> frozenset[str]:
+        """Return every referenced path for fallback-only dependency analysis."""
+        facts = self._facts()
+        model_id = self._store.model_id(model)
+        if model_id is None:
+            reference_classes = frozenset(model.reference_classes).union(
+                data_type.reference.path
+                for field in model.fields
+                for data_type in field.data_type.all_data_types
+                if data_type.reference is not None
+            )
+        else:
+            reference_classes = frozenset(
+                reference.path
+                for data_type_id in facts.data_types_by_model.get(model_id, ())
+                if (reference := facts.data_type_facts[data_type_id].reference) is not None
+            )
+        if len(additional_properties_references := model._additional_properties_reference_classes):  # noqa: SLF001
+            return reference_classes.union(additional_properties_references)
+        return reference_classes
+
     def owner_model_for_data_type(self, data_type: DataType) -> DataModel | None:
         """Return the tracked model that owns ``data_type`` if known."""
         facts = self._facts()

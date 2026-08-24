@@ -3406,7 +3406,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         graph = {
             (path,): {
                 (reference_path,)
-                for reference_path in self.generation_store.index.reference_classes_for_model(model)
+                for reference_path in self.generation_store.index.reference_classes_for_model_including_dict_keys(model)
                 if reference_path in root_models
             }
             for path, model in root_models.items()
