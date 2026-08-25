@@ -5,6 +5,21 @@ This changelog is automatically generated from GitHub Releases.
 
 ---
 
+## [0.75.1](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.75.1) - 2026-08-24
+
+## What's Changed
+* Update CHANGELOG for 0.75.0 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3787
+* Update release benchmark data by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3788
+* fix(parser): preserve recursive root models by @gtxy27 in https://github.com/koxudaxi/datamodel-code-generator/pull/3786
+* [pre-commit.ci] pre-commit autoupdate by @pre-commit-ci[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3775
+
+## New Contributors
+* @gtxy27 made their first contribution in https://github.com/koxudaxi/datamodel-code-generator/pull/3786
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.75.0...0.75.1
+
+---
+
 ## [0.75.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.75.0) - 2026-08-24
 
 ## Breaking Changes
