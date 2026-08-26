@@ -44,6 +44,7 @@ from datamodel_code_generator.parser._xmlschema_literals import (
 )
 from datamodel_code_generator.parser.base import Source, title_to_class_name
 from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+from datamodel_code_generator.python_literal import runtime_expression_imports
 from datamodel_code_generator.util import record_watch_dependency
 
 if TYPE_CHECKING:
@@ -65,7 +66,7 @@ XML_DATE_PATTERN = _xmlschema_literals.XML_DATE_PATTERN
 XSD_WHITESPACE_CHARS = _xmlschema_literals.XSD_WHITESPACE_CHARS
 _datetime_expression = _xmlschema_literals._datetime_expression  # noqa: SLF001
 _normalize_timezone = _xmlschema_literals._normalize_timezone  # noqa: SLF001
-_collect_python_expression_imports = _xmlschema_literals._collect_python_expression_imports  # noqa: SLF001
+_collect_python_expression_imports = runtime_expression_imports
 
 _XMLSCHEMA_LITERAL_REEXPORTS: tuple[tuple[str, object], ...] = (
     ("DAY_TIME_DURATION_PATTERN", DAY_TIME_DURATION_PATTERN),

@@ -186,15 +186,13 @@ def _rewrite_runtime_mapping(
 
 def _rebuild_runtime_container(value: object, items: tuple[object, ...]) -> object:
     """Create the exact built-in container type after a nested expression changed."""
-    match value:
-        case list() if type(value) is list:
-            return list(items)
-        case tuple() if type(value) is tuple:
-            return items
-        case set() if type(value) is set:
-            return set(items)
-        case _:
-            return frozenset(items)
+    if type(value) is list:
+        return list(items)
+    if type(value) is tuple:
+        return items
+    if type(value) is set:
+        return set(items)
+    return frozenset(items)
 
 
 class _NonFiniteFloat(float):

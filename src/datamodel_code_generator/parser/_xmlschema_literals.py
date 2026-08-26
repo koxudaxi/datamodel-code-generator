@@ -12,7 +12,6 @@ from datamodel_code_generator.imports import Import
 from datamodel_code_generator.python_literal import (
     PythonRuntimeExpression,
     _safe_non_finite_float,
-    runtime_expression_imports,
 )
 
 XML_DATE_PATTERN = re.compile(r"^(?P<date>-?\d{4,}-\d{2}-\d{2})(?:Z|[+-]\d{2}:\d{2})?$")
@@ -27,7 +26,6 @@ IMPORT_DATETIME_MODULE = Import(import_="datetime", alias="datetime_module")
 # Compatibility aliases for existing parser integrations. New runtime expressions
 # retain their import identity in the shared source-literal representation.
 _PythonExpression = PythonRuntimeExpression
-_collect_python_expression_imports = runtime_expression_imports
 
 
 def _safe_float(value: str, *, source_safe_non_finite: bool = False) -> float | None:
