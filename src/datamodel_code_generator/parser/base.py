@@ -3621,8 +3621,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 continue
             data_type.kwargs = kwargs
             runtime_imports = data_type.runtime_expression_imports
-            if IMPORT_DECIMAL not in runtime_imports:
-                data_type._set_runtime_expression_imports((*runtime_imports, IMPORT_DECIMAL))  # noqa: SLF001
+            data_type._set_runtime_expression_imports((*runtime_imports, IMPORT_DECIMAL))  # noqa: SLF001
             self._register_runtime_expression()
 
     def __deserialize_decimal_default(
