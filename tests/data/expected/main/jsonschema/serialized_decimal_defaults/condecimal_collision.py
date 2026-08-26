@@ -3,17 +3,17 @@
 
 from __future__ import annotations
 
-from decimal import Decimal as Decimal_default_
+from decimal import Decimal as Decimal_aliased
 
 from pydantic import BaseModel, StrictStr, condecimal
 
 
 class CondecimalCollision(BaseModel):
     amount: (
-        condecimal(ge=Decimal_default_('0'), le=Decimal_default_('100')) | None
-    ) = Decimal_default_('12.34')
+        condecimal(ge=Decimal_aliased('0'), le=Decimal_aliased('100')) | None
+    ) = Decimal_aliased('12.34')
     tax: (
-        condecimal(ge=Decimal_default_('0'), le=Decimal_default_('1')) | None
-    ) = Decimal_default_('0.2')
+        condecimal(ge=Decimal_aliased('0'), le=Decimal_aliased('1')) | None
+    ) = Decimal_aliased('0.2')
     Decimal: StrictStr | None = 'shadow'
     Decimal_default: StrictStr | None = 'shadow-default'

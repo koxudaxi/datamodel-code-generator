@@ -1511,6 +1511,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     REQUIRES_TAGGED_UNION_DISCRIMINATOR: ClassVar[bool] = False
     REQUIRES_ADDITIONAL_PROPERTIES_REFERENCE_CLASSES: ClassVar[bool] = False
     SUPPORTS_TYPED_DICT_TOTAL_FALSE: ClassVar[bool] = False
+    SUPPORTS_DESERIALIZED_DEFAULT_VALUES: ClassVar[bool] = True
     SUPPORTS_ANNOTATED_CONSTRAINTS: ClassVar[bool] = False
     ANNOTATED_CONSTRAINTS_CONTEXT: ClassVar[object | None] = None
     TYPED_EXTRA_FIELD_NAME: ClassVar[str | None] = None

@@ -4,16 +4,21 @@ from __future__ import annotations
 
 import ast
 import inspect
+from decimal import Decimal
 from typing import TYPE_CHECKING, ClassVar, cast
 
 import pytest
 
 from datamodel_code_generator import DataModelType, PythonVersion
+from datamodel_code_generator.imports import IMPORT_DECIMAL
 from datamodel_code_generator.model import base as model_base_module
 from datamodel_code_generator.model import get_data_model_types
 from datamodel_code_generator.model.base import DataModel
+from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_CONDECIMAL
 from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+from datamodel_code_generator.python_literal import PythonRuntimeExpression
 from datamodel_code_generator.reference import ModelType, Reference
+from datamodel_code_generator.types import DataType
 
 if TYPE_CHECKING:
     from datamodel_code_generator.model import DataModelSet
@@ -31,6 +36,12 @@ class _CustomDataModel(DataModel):
     """Custom model without an output-specific construction contract."""
 
     TEMPLATE_FILE_PATH: ClassVar[str] = "TypedDict.jinja2"
+
+
+class _NoDeserializedDefaultsDataModel(_CustomDataModel):
+    """Custom renderer that deliberately keeps schema defaults serialized."""
+
+    SUPPORTS_DESERIALIZED_DEFAULT_VALUES: ClassVar[bool] = False
 
 
 def _parser(model_types: DataModelSet, *, data_model_type: type[DataModel] | None = None) -> JsonSchemaParser:
@@ -133,3 +144,76 @@ def test_custom_model_construction_capabilities_fail_closed() -> None:
     assert _CustomDataModel.FIELD_NAME_MODEL_TYPE is None
     assert parser.field_name_model_type is ModelType.CLASS
     assert result.dataclass_arguments == {}
+
+
+@pytest.mark.allow_direct_assert
+def test_custom_renderer_can_disable_deserialized_defaults() -> None:
+    """Honor a custom output model's default-expression capability without backend checks."""
+    model_types = get_data_model_types(DataModelType.PydanticV2BaseModel, target_python_version=PythonVersion.PY_311)
+    parser = _parser(model_types, data_model_type=_NoDeserializedDefaultsDataModel)
+    parser.deserialize_decimal_default_values = True
+    field = model_types.field_model(
+        name="amount",
+        data_type=DataType(type="Decimal", import_=IMPORT_DECIMAL),
+        default="1.23",
+        required=False,
+    )
+    model = _NoDeserializedDefaultsDataModel(
+        reference=Reference(path="CustomModel", name="CustomModel"),
+        fields=[field],
+    )
+
+    parser._Parser__deserialize_decimal_default(model, field, can_retain_cache=False)
+
+    assert DataModel.SUPPORTS_DESERIALIZED_DEFAULT_VALUES
+    assert not model.SUPPORTS_DESERIALIZED_DEFAULT_VALUES
+    assert field.default == "1.23"
+    assert not field.runtime_expression_imports
+
+
+@pytest.mark.allow_direct_assert
+def test_decimal_constraint_imports_stay_unmodified_without_a_deserialized_default() -> None:
+    """Do not opt into runtime expressions for condecimal constraints alone."""
+    model_types = get_data_model_types(DataModelType.PydanticV2BaseModel, target_python_version=PythonVersion.PY_311)
+    parser = _parser(model_types)
+    parser.deserialize_decimal_default_values = True
+    data_type = DataType(type="condecimal", import_=IMPORT_CONDECIMAL, kwargs={"ge": Decimal(0)})
+    field = model_types.field_model(name="amount", data_type=data_type, default=None, required=False)
+    model = model_types.data_model(
+        reference=Reference(path="DecimalConstraint", name="DecimalConstraint"),
+        fields=[field],
+    )
+
+    parser._Parser__set_validate_default_on_fields([model], can_retain_cache=False)
+
+    assert data_type.kwargs == {"ge": Decimal(0)}
+    assert not data_type.runtime_expression_imports
+    assert not parser._has_runtime_expressions
+
+
+@pytest.mark.allow_direct_assert
+def test_decimal_constraint_non_runtime_values_stay_unmodified_after_deserialization() -> None:
+    """Only native Decimal kwargs become runtime expressions after a successful conversion."""
+    model_types = get_data_model_types(DataModelType.PydanticV2BaseModel, target_python_version=PythonVersion.PY_311)
+    parser = _parser(model_types)
+    parser.deserialize_decimal_default_values = True
+    decimal_field = model_types.field_model(
+        name="amount",
+        data_type=DataType(type="Decimal", import_=IMPORT_DECIMAL),
+        default="1.23",
+        required=False,
+    )
+    constraint_type = DataType(type="condecimal", import_=IMPORT_CONDECIMAL, kwargs={"strict": True})
+    constraint_field = model_types.field_model(
+        name="strict_amount", data_type=constraint_type, default=None, required=False
+    )
+    model = model_types.data_model(
+        reference=Reference(path="DecimalConstraint", name="DecimalConstraint"),
+        fields=[decimal_field, constraint_field],
+    )
+
+    parser._Parser__set_validate_default_on_fields([model], can_retain_cache=False)
+
+    assert isinstance(decimal_field.default, PythonRuntimeExpression)
+    assert constraint_type.kwargs == {"strict": True}
+    assert not constraint_type.runtime_expression_imports

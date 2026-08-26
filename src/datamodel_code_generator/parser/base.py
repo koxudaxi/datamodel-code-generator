@@ -61,6 +61,7 @@ from datamodel_code_generator._format_types import Formatter, PythonVersion
 from datamodel_code_generator.enums import DefaultValueType, StrictTypes
 from datamodel_code_generator.imports import (
     IMPORT_ANNOTATIONS,
+    IMPORT_DECIMAL,
     IMPORT_LITERAL,
     IMPORT_OPTIONAL,
     IMPORT_UNION,
@@ -97,7 +98,6 @@ from datamodel_code_generator.python_literal import (
     _semantic_value_text,
     rewrite_runtime_expressions,
     rewrite_runtime_imports,
-    runtime_expression_imports,
 )
 from datamodel_code_generator.reference import ModelResolver, ModelType, Reference, split_module_name
 from datamodel_code_generator.types import ANY, NONE, DataType, DataTypeManager
@@ -144,8 +144,6 @@ _RAW_SCHEMA_DEFAULT_UNDEFINED: Final = object()
 _SOURCE_REFERENCE_PATH_KEY: Final = "_source_reference_path"
 _DECIMAL_DEFAULT_WARNING_RECORDED_KEY: Final = "_decimal_default_warning_recorded"
 _DECIMAL_WARNING_EXAMPLE_LIMIT: Final = 5
-_DECIMAL_DEFAULT_IMPORT_KEY: Final = "_decimal_default_import"
-_CONDECIMAL_CONSTRAINT_DEFAULTS_REWRITTEN_KEY: Final = "_condecimal_constraint_defaults_rewritten"
 
 
 @dataclass(frozen=True, slots=True)
@@ -858,106 +856,19 @@ def _unwrap_default_scalar_data_type(data_type: DataType) -> DataType:
     return data_type
 
 
-def _decimal_annotation_imports(import_: Import | None) -> tuple[Import, Import] | None:
-    """Return the annotation and constructor imports for a known Decimal runtime type."""
-    if import_ is None:
-        return None
-    match import_.from_, import_.import_:
-        case "decimal", "Decimal":
-            return import_, import_
-        case "pydantic", "condecimal":
-            return import_, Import.from_full_path("decimal.Decimal")
-    return None
-
-
-def _decimal_default_imports(data_type: DataType) -> tuple[Import, Import] | None:
-    """Return the final Decimal annotation and constructor imports, if known."""
+def _decimal_default_annotation_import(data_type: DataType) -> Import | None:
+    """Return the emitted annotation import when one scalar default is a Decimal."""
     if not data_type.data_types and data_type.reference is None:
-        return _decimal_annotation_imports(data_type.import_)
-
-    data_type = _unwrap_default_scalar_data_type(data_type)
-    if data_type.data_types or _is_default_value_container(data_type):
-        return None
-    return _decimal_annotation_imports(data_type.import_)
-
-
-def _resolve_decimal_default_import(
-    annotation_import: Import,
-    decimal_import: Import,
-    models: list[DataModel],
-) -> Import:
-    """Reuse a module Decimal alias, or create one that cannot shadow a field."""
-    if decimal_import.alias is not None or (annotation_import.from_, annotation_import.import_) == (
-        "decimal",
-        "Decimal",
-    ):
-        return decimal_import
-    cache_owner = models[0]
-    if (cached_import := cache_owner.__dict__.get(_DECIMAL_DEFAULT_IMPORT_KEY)) is not None:
-        return cached_import
-    for model in models:
-        for import_ in model._additional_imports:  # noqa: SLF001
-            if import_.from_ == "decimal" and import_.import_ == "Decimal" and import_.alias is not None:
-                cache_owner.__dict__[_DECIMAL_DEFAULT_IMPORT_KEY] = import_
-                return import_
-        for field in model.fields:
-            for data_type in field.data_type.all_data_types:
-                if (
-                    (import_ := data_type.import_) is not None
-                    and import_.from_ == "decimal"
-                    and import_.import_ == "Decimal"
-                    and import_.alias is not None
-                ):
-                    cache_owner.__dict__[_DECIMAL_DEFAULT_IMPORT_KEY] = import_
-                    return import_
-    if not any(field.name == decimal_import.import_ for model in models for field in model.fields):
-        cache_owner.__dict__[_DECIMAL_DEFAULT_IMPORT_KEY] = decimal_import
-        return decimal_import
-    alias = f"{decimal_import.import_}_default"
-    while any(field.name == alias for model in models for field in model.fields):
-        alias = f"{alias}_"
-    decimal_import = Import(
-        import_=decimal_import.import_,
-        from_=decimal_import.from_,
-        alias=alias,
-        reference_path=decimal_import.reference_path,
-    )
-    cache_owner.__dict__[_DECIMAL_DEFAULT_IMPORT_KEY] = decimal_import
-    return decimal_import
-
-
-def _rewrite_condecimal_constraint_defaults(
-    models: list[DataModel],
-    decimal_import: Import,
-    decimal_type: type[object],
-    *,
-    can_retain_cache: bool,
-) -> None:
-    """Keep condecimal constraint expressions aligned with a generated Decimal alias."""
-    cache_owner = models[0]
-    if cache_owner.__dict__.get(_CONDECIMAL_CONSTRAINT_DEFAULTS_REWRITTEN_KEY) == decimal_import:
-        return
-    cache_owner.__dict__[_CONDECIMAL_CONSTRAINT_DEFAULTS_REWRITTEN_KEY] = decimal_import
-    constructor = decimal_import.alias or decimal_import.import_
-    for model in models:
-        changed = False
-        for field in model.fields:
-            for data_type in field.data_type.all_data_types:
-                import_ = data_type.import_
-                if (
-                    import_ is None
-                    or import_.from_ != "pydantic"
-                    or import_.import_ != "condecimal"
-                    or not data_type.kwargs
-                ):
-                    continue
-                for key, value in data_type.kwargs.items():
-                    # Current condecimal managers normalize every supported constraint to Decimal.
-                    if isinstance(value, decimal_type):  # pragma: no branch
-                        data_type.kwargs[key] = PythonCode(f"{constructor}({str(value)!r})")
-                        changed = True
-        if changed:
-            _clear_model_imports_cache_if_retained(model, can_retain_cache=can_retain_cache)
+        candidate = data_type.import_
+    else:
+        data_type = _unwrap_default_scalar_data_type(data_type)
+        if data_type.data_types or _is_default_value_container(data_type):
+            return None
+        candidate = data_type.import_
+    match candidate:
+        case Import(from_="decimal", import_="Decimal") | Import(from_="pydantic", import_="condecimal"):
+            return candidate
+    return None
 
 
 def _alias_base_class_imports(
@@ -3655,6 +3566,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         can_retain_cache: bool,
     ) -> None:
         """Set validate_default=True on fields with structured defaults needing validation."""
+        deserialized_decimal_default = False
         for model in models:
             if isinstance(model, Enum):
                 continue
@@ -3665,45 +3577,79 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     continue
                 if isinstance(model_field.default, Member):
                     continue
-                self.__deserialize_decimal_default(
-                    model,
-                    model_field,
-                    models=models,
-                    can_retain_cache=can_retain_cache,
+                deserialized_decimal_default = (
+                    self.__deserialize_decimal_default(
+                        model,
+                        model_field,
+                        can_retain_cache=can_retain_cache,
+                    )
+                    or deserialized_decimal_default
                 )
                 if (
                     _needs_validate_default(model_field.data_type)
                     and model_field.enable_structured_default_validation()
                 ):
                     _clear_model_imports_cache_if_retained(model, can_retain_cache=can_retain_cache)
+        if deserialized_decimal_default:
+            self.__normalize_decimal_constraint_defaults(models)
+
+    def __normalize_decimal_constraint_defaults(self, models: list[DataModel]) -> None:
+        """Keep opt-in condecimal kwargs structured until module alias resolution."""
+        from decimal import Decimal  # noqa: PLC0415
+
+        for model, _, data_type in iter_models_field_data_types(models):
+            import_ = data_type.import_
+            if (
+                not model.SUPPORTS_DESERIALIZED_DEFAULT_VALUES
+                or not data_type.kwargs
+                or import_ is None
+                or (import_.from_, import_.import_) != ("pydantic", "condecimal")
+                or self.__has_import_override(import_, IMPORT_DECIMAL)
+            ):
+                continue
+            kwargs = data_type.kwargs
+            for key, value in kwargs.items():
+                if not isinstance(value, Decimal):
+                    continue
+                if kwargs is data_type.kwargs:
+                    kwargs = kwargs.copy()
+                kwargs[key] = PythonRuntimeExpression.from_import_call(
+                    IMPORT_DECIMAL,
+                    repr(str(value)),
+                    value=str(value),
+                )
+            if kwargs is data_type.kwargs:
+                continue
+            data_type.kwargs = kwargs
+            runtime_imports = data_type.runtime_expression_imports
+            if IMPORT_DECIMAL not in runtime_imports:
+                data_type._set_runtime_expression_imports((*runtime_imports, IMPORT_DECIMAL))  # noqa: SLF001
+            self._register_runtime_expression()
 
     def __deserialize_decimal_default(
         self,
         model: DataModel,
         field: DataModelFieldBase,
         *,
-        models: list[DataModel],
         can_retain_cache: bool,
-    ) -> None:
+    ) -> bool:
         """Deserialize one emitted Decimal default or record its compatibility warning."""
-        if model.BASE_CLASS == "typing.TypedDict" or field.has_default_factory or isinstance(field.default, PythonCode):
-            return
-        default_type = type(field.default)
-        if default_type.__module__ == "decimal" and default_type.__name__ == "Decimal":
-            return
-        if (decimal_imports := _decimal_default_imports(field.data_type)) is None:
-            return
-        annotation_import, decimal_import = decimal_imports
-        if self._import_overrides and (
-            self._import_overrides.get(annotation_import.import_, annotation_import.from_) != annotation_import.from_
-            or self._import_overrides.get(decimal_import.import_, decimal_import.from_) != decimal_import.from_
+        if (
+            not model.SUPPORTS_DESERIALIZED_DEFAULT_VALUES
+            or field.has_default_factory
+            or isinstance(field.default, (PythonCode, PythonRuntimeExpression))
         ):
-            return
+            return False
+        default_type = type(field.default)
+        if (default_type.__module__ == "decimal" and default_type.__name__ == "Decimal") or (
+            annotation_import := _decimal_default_annotation_import(field.data_type)
+        ) is None:
+            return False
+        if self.__has_import_override(annotation_import, IMPORT_DECIMAL):
+            return False
         if not self.deserialize_decimal_default_values:
             self.__record_decimal_default_warning(model, field)
-            return
-
-        decimal_import = _resolve_decimal_default_import(annotation_import, decimal_import, models)
+            return False
 
         from decimal import Decimal, InvalidOperation  # noqa: PLC0415
 
@@ -3711,19 +3657,20 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             decimal_default = Decimal(str(field.default))
         except (InvalidOperation, TypeError, ValueError):
             self.__record_decimal_default_warning(model, field)
-            return
+            return False
 
-        field.default = PythonCode(f"{decimal_import.alias or decimal_import.import_}({str(decimal_default)!r})")
-        if decimal_import not in model._additional_imports:  # noqa: SLF001
-            model._additional_imports.append(decimal_import)  # noqa: SLF001
-        if decimal_import.alias is not None:
-            _rewrite_condecimal_constraint_defaults(
-                models,
-                decimal_import,
-                Decimal,
-                can_retain_cache=can_retain_cache,
-            )
+        value = str(decimal_default)
+        field.default = PythonRuntimeExpression.from_import_call(IMPORT_DECIMAL, repr(value), value=value)
+        field._set_runtime_expression_imports((IMPORT_DECIMAL,))  # noqa: SLF001
+        self._register_runtime_expression()
         _clear_model_imports_cache_if_retained(model, can_retain_cache=can_retain_cache)
+        return True
+
+    def __has_import_override(self, *imports: Import) -> bool:
+        """Avoid changing generated defaults when an import policy redirects their bindings."""
+        if not self._import_overrides:
+            return False
+        return any(self._import_overrides.get(import_.import_, import_.from_) != import_.from_ for import_ in imports)
 
     def __record_decimal_default_warning(self, model: DataModel, field: DataModelFieldBase) -> None:
         """Record a bounded example set without retaining every affected field."""
