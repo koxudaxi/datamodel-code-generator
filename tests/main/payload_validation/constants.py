@@ -74,6 +74,7 @@ SERIALIZED_DECIMAL_DEFAULT_PAYLOAD_EXCLUSION_REASON = (
 )
 EXCLUDED_FILES: dict[str, str] = {
     "jsonschema/allof_class_hierarchy.json": "intentionally invalid JSON fixture",
+    "jsonschema/collapse_root_models_decimal_defaults.json": SERIALIZED_DECIMAL_DEFAULT_PAYLOAD_EXCLUSION_REASON,
     "jsonschema/non_dict_files/list_only.json": "input is JSON data, not a JSON Schema document",
     "jsonschema/non_dict_files/list_only.yaml": "input is YAML data, not a JSON Schema document",
     "jsonschema/non_dict_files/whitespace_only.yaml": "empty YAML fixture",

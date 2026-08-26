@@ -213,6 +213,48 @@ def test_deserialize_decimal_defaults_scalar_scope(output_file: Path) -> None:
     )
 
 
+@pytest.mark.parametrize(
+    "deserialize_args",
+    [
+        pytest.param(["--deserialize-default-values", "decimal"], id="opt-in"),
+        pytest.param([], id="default"),
+    ],
+)
+def test_deserialize_decimal_defaults_ignores_collapsed_root_models(
+    deserialize_args: list[str],
+    output_file: Path,
+) -> None:
+    """Process only live models after collapsing a Decimal root wrapper."""
+    with warnings.catch_warnings(record=True) as recorded_warnings:
+        warnings.simplefilter("always", UserWarning)
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_decimal_defaults.json",
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file="serialized_decimal_defaults/collapse_root_models.py",
+            extra_args=[
+                *BACKEND_GOLDEN_TARGET_ARGS,
+                "--disable-timestamp",
+                "--formatters",
+                "builtin",
+                "--strict-types",
+                "int",
+                "float",
+                "str",
+                "--collapse-root-models",
+                *deserialize_args,
+            ],
+            force_exec_validation=True,
+        )
+
+    assert_warnings_do_not_contain(
+        recorded_warnings,
+        "emitted as serialized data instead of Decimal",
+        "could not be deserialized",
+    )
+
+
 def test_deserialize_decimal_defaults_type_alias(output_file: Path) -> None:
     """Resolve direct and single-wrapper scalar aliases before converting their defaults."""
     with warnings.catch_warnings(record=True) as recorded_warnings:

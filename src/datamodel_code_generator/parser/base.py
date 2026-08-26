@@ -142,7 +142,6 @@ _DEFERRED_INHERITED_TYPE_KEY: Final = "_deferred_inherited_type"
 _RAW_SCHEMA_DEFAULT_KEY: Final = "_raw_schema_default"
 _RAW_SCHEMA_DEFAULT_UNDEFINED: Final = object()
 _SOURCE_REFERENCE_PATH_KEY: Final = "_source_reference_path"
-_DECIMAL_DEFAULT_WARNING_RECORDED_KEY: Final = "_decimal_default_warning_recorded"
 _DECIMAL_WARNING_EXAMPLE_LIMIT: Final = 5
 
 
@@ -3674,9 +3673,6 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
     def __record_decimal_default_warning(self, model: DataModel, field: DataModelFieldBase) -> None:
         """Record a bounded example set without retaining every affected field."""
-        if field.__dict__.get(_DECIMAL_DEFAULT_WARNING_RECORDED_KEY):
-            return
-        field.__dict__[_DECIMAL_DEFAULT_WARNING_RECORDED_KEY] = True
         self._decimal_default_warning_count += 1
         examples = self._decimal_default_warning_examples
         if examples is None:
@@ -5375,6 +5371,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             model_path_to_module_name=model_path_to_module_name,
             can_retain_cache=can_retain_cache,
         )
+        unused_models_start = len(unused_models)
         models = self.__process_module_models(
             models,
             unused_models=unused_models,
@@ -5385,8 +5382,12 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             use_deferred_annotations=config.use_deferred_annotations,
             can_retain_cache=can_retain_cache,
         )
+        current_unused_models: Sequence[DataModel] = ()
+        if unused_models_start != len(unused_models):
+            current_unused_models = unused_models[unused_models_start:]
         self.__finalize_module_models(
             models,
+            unused_models=current_unused_models,
             use_deferred_annotations=config.use_deferred_annotations,
             can_retain_cache=can_retain_cache,
         )
@@ -5461,6 +5462,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self,
         models: list[DataModel],
         *,
+        unused_models: Sequence[DataModel],
         use_deferred_annotations: bool,
         can_retain_cache: bool,
     ) -> None:
@@ -5472,7 +5474,12 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             use_deferred_annotations=use_deferred_annotations,
             can_retain_cache=can_retain_cache,
         )
-        self.__set_validate_default_on_fields(models, can_retain_cache=can_retain_cache)
+        if not unused_models:
+            live_models = models
+        else:
+            unused_model_ids = {id(model) for model in unused_models}
+            live_models = [model for model in models if id(model) not in unused_model_ids]
+        self.__set_validate_default_on_fields(live_models, can_retain_cache=can_retain_cache)
         if not can_retain_cache:
             _clear_model_imports_cache(models)
 
@@ -5591,15 +5598,6 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             # Renaming only changes synthetic helper names; capabilities and their
             # import set stay invariant. Keep snapshots synchronized defensively.
             self._sync_schema_runtime_validation_module_imports(contexts, model_imports)
-
-        for ctx in contexts:
-            self.__set_validate_default_on_fields(
-                ctx.models,
-                can_retain_cache=_can_retain_model_imports_cache(
-                    ctx.models,
-                    configured_types_are_builtin=self._configured_generation_types_are_builtin,
-                ),
-            )
 
         match self._import_overrides:
             case None:
