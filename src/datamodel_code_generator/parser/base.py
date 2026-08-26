@@ -952,7 +952,8 @@ def _rewrite_condecimal_constraint_defaults(
                 ):
                     continue
                 for key, value in data_type.kwargs.items():
-                    if isinstance(value, decimal_type):
+                    # Current condecimal managers normalize every supported constraint to Decimal.
+                    if isinstance(value, decimal_type):  # pragma: no branch
                         data_type.kwargs[key] = PythonCode(f"{constructor}({str(value)!r})")
                         changed = True
         if changed:
