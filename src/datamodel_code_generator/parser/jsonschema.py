@@ -8475,8 +8475,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     property_names,
                     get_special_path("propertyNames/key", path),
                 )
-            case _:
-                return self._parse_property_name_key_schema(property_names)
+        return self._parse_property_name_key_schema(property_names)
 
     def _parse_typed_extra_property_names_key_type(
         self,
@@ -8496,8 +8495,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 )
             ):
                 return self._parse_property_name_key_schema(property_names)
-            case _:
-                return None
+        return None
 
     def parse_property_names(
         self,
