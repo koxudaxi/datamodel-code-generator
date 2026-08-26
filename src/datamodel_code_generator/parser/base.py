@@ -867,8 +867,7 @@ def _decimal_annotation_imports(import_: Import | None) -> tuple[Import, Import]
             return import_, import_
         case "pydantic", "condecimal":
             return import_, Import.from_full_path("decimal.Decimal")
-        case _:
-            return None
+    return None
 
 
 def _decimal_default_imports(data_type: DataType) -> tuple[Import, Import] | None:
