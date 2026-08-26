@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "KnownAndImpossibleNamedExtra",
+  "title": "KnownAndUnionNamedExtra",
   "type": "object",
   "properties": {
     "name": {
@@ -11,8 +11,14 @@
     "name"
   ],
   "propertyNames": {
-    "type": "integer",
-    "pattern": "^[a-z_]+$"
+    "anyOf": [
+      {
+        "type": "string"
+      },
+      {
+        "type": "integer"
+      }
+    ]
   },
   "additionalProperties": {
     "type": "integer"

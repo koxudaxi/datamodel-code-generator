@@ -7556,7 +7556,7 @@ def test_main_jsonschema_property_names_ref_additional_properties_schema_with_pr
 def test_main_jsonschema_property_names_type_non_string_additional_properties_schema_with_properties(
     output_file: Path,
 ) -> None:
-    """Test non-string propertyNames does not constrain Pydantic typed-extra keys."""
+    """Test propertyNames with a non-string branch keeps typed-extra keys as strings."""
     run_main_and_assert(
         input_path=(
             JSON_SCHEMA_DATA_PATH / "property_names_type_non_string_additional_properties_schema_with_properties.json"

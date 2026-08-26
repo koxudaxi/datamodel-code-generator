@@ -9,7 +9,7 @@ from typing import Dict
 from pydantic import BaseModel, ConfigDict
 
 
-class KnownAndImpossibleNamedExtra(BaseModel):
+class KnownAndUnionNamedExtra(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
