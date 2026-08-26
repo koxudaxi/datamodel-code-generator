@@ -71,6 +71,7 @@ What other options should I use?
 - `--aliases`: Apply custom field and class name aliases via inline JSON or a JSON file path.
 - `--capitalize-enum-members`: Capitalize enum member names to UPPER_CASE format.
 - `--default-values`: Override field default values via inline JSON or a JSON file path.
+- `--deserialize-default-values`: Deserialize selected direct scalar field defaults into their generated Python ...
 - `--empty-enum-field-name`: Name for empty string enum field values.
 - `--extra-fields`: Configure how generated models handle extra fields not defined in schema.
 - `--field-constraints`: Generate Field() with validation constraints from schema.
@@ -80,6 +81,7 @@ What other options should I use?
 - `--field-type-collision-strategy`: Rename type class instead of field when names collide (Pydantic v2 only).
 - `--infer-union-variant-names`: Infer names for inline oneOf/anyOf object variants from literal fields.
 - `--no-alias`: Disable Field alias generation for non-Python-safe property names.
+- `--no-deserialize-default-values`: Keep serialized schema defaults instead of deserializing selected types.
 - `--no-snake-case-field`
 - `--original-field-name-delimiter`: Specify delimiter for original field names when using snake-case conversion.
 - `--remove-special-field-name-prefix`: Remove the special prefix from field names.
@@ -327,7 +329,7 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --output OUTPUT       Output file (default: stdout)
   --output-model-type {pydantic_v2.BaseModel,pydantic_v2.dataclass,dataclasses.dataclass,typing.TypedDict,msgspec.Struct}
                         Output model type (default: pydantic_v2.BaseModel)
-  --preset {standard-py310-20260619,standard-py311-20260619,standard-py312-20260619,standard-py313-20260619,standard-py314-20260619,practical-py310-20260619,practical-py311-20260619,practical-py312-20260619,practical-py313-20260619,practical-py314-20260619}
+  --preset {standard-py310-20260619,standard-py311-20260619,standard-py312-20260619,standard-py313-20260619,standard-py314-20260619,practical-py310-20260619,practical-py311-20260619,practical-py312-20260619,practical-py313-20260619,practical-py314-20260619,standard-py310-20260826,standard-py311-20260826,standard-py312-20260826,standard-py313-20260826,standard-py314-20260826,practical-py310-20260826,practical-py311-20260826,practical-py312-20260826,practical-py313-20260826,practical-py314-20260826}
                         Apply an immutable built-in option preset. Preset
                         names include the target Python version so generated
                         syntax is pinned.
@@ -771,6 +773,9 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         fields remain required unless --use-default is also
                         specified. Example: {'User.status': 'active', 'page':
                         1, 'limit': 10}
+  --deserialize-default-values {decimal} [{decimal} ...]
+                        Deserialize serialized schema defaults for selected
+                        generated types. Supported values: decimal.
   --encoding ENCODING   The encoding of input and output (default: utf-8)
   --extra-template-data EXTRA_TEMPLATE_DATA
                         Extra template data for output models as inline JSON
@@ -785,6 +790,8 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         Generate Pydantic v2 model validators for JSON Schema
                         rules that cannot be represented as type hints
                         (experimental).
+  --no-deserialize-default-values
+                        Disable schema default value deserialization.
   --schema-validator-base-class-name SCHEMA_VALIDATOR_BASE_CLASS_NAME
                         Set the generated shared Pydantic v2 schema runtime
                         validator base class name.

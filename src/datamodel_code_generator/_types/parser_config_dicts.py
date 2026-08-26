@@ -20,6 +20,7 @@ if TYPE_CHECKING:
         ClassNameAffixScope,
         CollapseRootModelsNameStrategy,
         DataclassArguments,
+        DefaultValueType,
         FieldTypeCollisionStrategy,
         HTTPBackend,
         JsonSchemaVersion,
@@ -92,6 +93,7 @@ class ParserConfigDict(TypedDict):
     use_inline_field_description: NotRequired[bool]
     use_single_line_docstring: NotRequired[bool]
     use_default_kwarg: NotRequired[bool]
+    deserialize_default_values: NotRequired[Sequence[DefaultValueType]]
     use_missing_sentinel: NotRequired[bool]
     reuse_model: NotRequired[bool]
     reuse_scope: NotRequired[ReuseScope | None]

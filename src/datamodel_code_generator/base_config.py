@@ -33,6 +33,7 @@ from datamodel_code_generator.enums import (
     CustomFileHeaderMode,
     DataclassArguments,
     DataModelType,
+    DefaultValueType,
     FieldTypeCollisionStrategy,
     HTTPBackend,
     InputFileType,
@@ -126,6 +127,7 @@ class BaseGenerateConfig(BaseModel):
     use_inline_field_description: bool = False
     use_single_line_docstring: bool = False
     use_default_kwarg: bool = False
+    deserialize_default_values: Sequence[DefaultValueType] = ()
     use_missing_sentinel: bool = False
     reuse_model: bool = False
     reuse_scope: ReuseScope = ReuseScope.Module

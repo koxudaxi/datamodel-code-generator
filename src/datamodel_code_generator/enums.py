@@ -297,6 +297,12 @@ class StrictTypes(Enum):
     bool = "bool"
 
 
+class DefaultValueType(Enum):
+    """Schema default value types that can be deserialized in generated code."""
+
+    Decimal = "decimal"
+
+
 class JsonSchemaVersion(Enum):
     """JSON Schema draft versions.
 
@@ -383,6 +389,7 @@ __all__ = [
     "CustomFileHeaderMode",
     "DataModelType",
     "DataclassArguments",
+    "DefaultValueType",
     "FieldTypeCollisionStrategy",
     "GraphQLScope",
     "HTTPBackend",

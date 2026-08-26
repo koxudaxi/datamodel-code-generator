@@ -30,6 +30,7 @@ from datamodel_code_generator.enums import (
     ClassNameAffixScope,
     CollapseRootModelsNameStrategy,
     DataclassArguments,
+    DefaultValueType,
     FieldTypeCollisionStrategy,
     GraphQLScope,
     HTTPBackend,
@@ -112,7 +113,10 @@ def _rebuild_config_model(model_type: type[BaseModel], types_namespace: dict[str
 
 
 def _rebuild_generate_config() -> None:
-    _rebuild_config_model(GenerateConfig, {"StrictTypes": StrictTypes, "UnionMode": UnionMode})
+    _rebuild_config_model(
+        GenerateConfig,
+        {"DefaultValueType": DefaultValueType, "StrictTypes": StrictTypes, "UnionMode": UnionMode},
+    )
 
 
 class ParserConfig(BaseModel):
@@ -168,6 +172,7 @@ class ParserConfig(BaseModel):
     use_inline_field_description: bool = False
     use_single_line_docstring: bool = False
     use_default_kwarg: bool = False
+    deserialize_default_values: Sequence[DefaultValueType] = ()
     use_missing_sentinel: bool = False
     reuse_model: bool = False
     reuse_scope: ReuseScope | None = None

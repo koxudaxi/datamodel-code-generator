@@ -65,6 +65,7 @@
 - `--aliases`: Apply custom field and class name aliases via inline JSON or a JSON file path.
 - `--capitalize-enum-members`: Capitalize enum member names to UPPER_CASE format.
 - `--default-values`: Override field default values via inline JSON or a JSON file path.
+- `--deserialize-default-values`: Deserialize selected direct scalar field defaults into their generated Python ...
 - `--empty-enum-field-name`: Name for empty string enum field values.
 - `--extra-fields`: Configure how generated models handle extra fields not defined in schema.
 - `--field-constraints`: Generate Field() with validation constraints from schema.
@@ -74,6 +75,7 @@
 - `--field-type-collision-strategy`: Rename type class instead of field when names collide (Pydantic v2 only).
 - `--infer-union-variant-names`: Infer names for inline oneOf/anyOf object variants from literal fields.
 - `--no-alias`: Disable Field alias generation for non-Python-safe property names.
+- `--no-deserialize-default-values`: Keep serialized schema defaults instead of deserializing selected types.
 - `--no-snake-case-field`
 - `--original-field-name-delimiter`: Specify delimiter for original field names when using snake-case conversion.
 - `--remove-special-field-name-prefix`: Remove the special prefix from field names.

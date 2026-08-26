@@ -27,6 +27,7 @@ from datamodel_code_generator.enums import (
     CustomFileHeaderMode,
     DataclassArguments,
     DataModelType,
+    DefaultValueType,
     FieldTypeCollisionStrategy,
     HTTPBackend,
     InputFileType,
@@ -1119,6 +1120,21 @@ template_options.add_argument(
     "Required fields remain required unless --use-default is also specified. "
     "Example: {'User.status': 'active', 'page': 1, 'limit': 10}",
     type=str,
+)
+template_options.add_argument(
+    "--deserialize-default-values",
+    help="Deserialize serialized schema defaults for selected generated types. Supported values: decimal.",
+    choices=[default_value_type.value for default_value_type in DefaultValueType],
+    nargs="+",
+    default=None,
+)
+template_options.add_argument(
+    "--no-deserialize-default-values",
+    dest="deserialize_default_values",
+    help="Disable schema default value deserialization.",
+    action="store_const",
+    const=(),
+    default=None,
 )
 template_options.add_argument(
     "--custom-file-header",
