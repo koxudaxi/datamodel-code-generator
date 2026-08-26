@@ -293,6 +293,25 @@ def test_main_xmlschema_temporal_defaults(output_file: Path) -> None:
     )
 
 
+def test_main_xmlschema_temporal_default_import_alias(output_file: Path) -> None:
+    """Keep temporal default expressions bound when a generated field reserves the import alias."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "temporal_default_import_alias.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_file_content,
+        expected_file="temporal_default_import_alias.py",
+        extra_args=[
+            "--generate-schema-validators",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+        importable_module_name="generated_xml_temporal_default_import_alias",
+        importable_module_attribute="Root",
+    )
+
+
 def test_main_xmlschema_single_root_same_name(output_file: Path) -> None:
     """Inline a single root type when no other definition references it."""
     run_main_and_assert(

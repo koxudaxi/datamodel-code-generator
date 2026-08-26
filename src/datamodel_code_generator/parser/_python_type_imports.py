@@ -1,4 +1,4 @@
-"""Resolve module-wide import collisions for structured Python types."""
+"""Resolve module-wide import collisions for structured Python consumers."""
 
 from __future__ import annotations
 
@@ -22,12 +22,12 @@ _ImportsByName = dict[str, dict[_ImportKey, Import]]
 
 
 @dataclass(slots=True)
-class _PythonTypeImportAliasState:
-    """Parser-level identities needed to alias structured imports."""
+class _StructuredImportAliasState:
+    """Parser-level identities needed to alias type and runtime expression imports."""
 
     ordinary_imports_by_name: _ImportsByName
     ordinary_imports_by_key: dict[_ImportKey, Import]
-    bound_imports_by_name: _ImportsByName
+    structured_imports_by_name: _ImportsByName
     ordinary_field_alias_candidates: dict[_ImportKey, Import]
     reserved_names: set[str]
     used_names: set[str]
@@ -77,7 +77,7 @@ class _PythonTypeImportAliasState:
 
 
 def _collect_data_type_imports(
-    state: _PythonTypeImportAliasState,
+    state: _StructuredImportAliasState,
     data_types: Iterable[DataType],
     all_model_field_names: set[str],
 ) -> None:
@@ -94,41 +94,54 @@ def _collect_data_type_imports(
             state.used_names.add(name.partition(".")[0])
         if data_type.python_type:
             for import_ in data_type.python_type.imports:
-                state.collect_import(state.bound_imports_by_name, import_)
+                state.collect_import(state.structured_imports_by_name, import_)
             rewrite_python_type_expr(data_type.python_type.expression, state.reserve_unbound_name)
+        for import_ in data_type.runtime_expression_imports:
+            state.collect_import(state.structured_imports_by_name, import_)
 
 
-def _bound_import_keys(state: _PythonTypeImportAliasState) -> set[_ImportKey]:
+def _structured_import_keys(state: _StructuredImportAliasState) -> set[_ImportKey]:
     return {
         python_type_import_key(import_)
-        for imports_by_key in state.bound_imports_by_name.values()
+        for imports_by_key in state.structured_imports_by_name.values()
         for import_ in imports_by_key.values()
     }
 
 
+def _collect_field_runtime_imports(state: _StructuredImportAliasState, models: Iterable[DataModel]) -> None:
+    """Collect runtime expressions stored in defaults outside DataType kwargs."""
+    for model in models:
+        for field in model.fields:
+            imports = field.runtime_expression_imports
+            for import_ in imports:
+                state.collect_import(state.structured_imports_by_name, import_)
+
+
 def _collect_model_context_imports(
-    state: _PythonTypeImportAliasState,
+    state: _StructuredImportAliasState,
     models: Iterable[DataModel],
     import_aggregates: Iterable[Imports],
 ) -> None:
     """Collect parser/model bindings without reaching into model internals."""
-    bound_import_keys = _bound_import_keys(state)
+    structured_import_keys = _structured_import_keys(state)
     for model in models:
         for base_class in model.base_classes:
             if not base_class.import_ and (base_name := base_class.type_hint):
                 state.reserved_names.add(base_name.partition(".")[0])
                 state.used_names.add(base_name.partition(".")[0])
         # This public aggregate contains field, base, default, backend, and
-        # additional imports. Bound identities are already classified above.
+        # additional imports. Unaliased structured identities are classified
+        # above; an established alias remains the canonical module binding.
         for import_ in model.imports:
-            if python_type_import_key(import_) not in bound_import_keys:
-                state.collect_ordinary_import(import_)
+            if python_type_import_key(import_) in structured_import_keys and not import_.alias:
+                continue
+            state.collect_ordinary_import(import_)
     for import_aggregate in import_aggregates:
         for from_, imported_names in import_aggregate.items():
             for import_name in imported_names:
                 key = (from_, import_name)
                 alias = import_aggregate.alias.get(from_, {}).get(import_name)
-                if key in bound_import_keys and not alias:
+                if key in structured_import_keys and not alias:
                     continue
                 state.collect_ordinary_import(
                     Import(
@@ -139,7 +152,7 @@ def _collect_model_context_imports(
                 )
 
 
-def resolve_python_type_import_aliases(
+def resolve_structured_import_aliases(
     data_types: Iterable[DataType],
     models: list[DataModel],
     all_model_field_names: set[str],
@@ -148,22 +161,29 @@ def resolve_python_type_import_aliases(
     """Prefer established module bindings and alias structured imports around them."""
     reserved_names = set(all_model_field_names)
     reserved_names.update(model.class_name for model in models)
-    state = _PythonTypeImportAliasState({}, {}, {}, {}, reserved_names, set(reserved_names), {})
+    state = _StructuredImportAliasState({}, {}, {}, {}, reserved_names, set(reserved_names), {})
     _collect_data_type_imports(state, data_types, all_model_field_names)
+    _collect_field_runtime_imports(state, models)
     _collect_model_context_imports(state, models, import_aggregates)
 
     # An existing alias is the canonical binding for its exact import identity.
     # Propagate it to every structured consumer before allocating new aliases;
     # otherwise the import statement and the annotation can name different objects.
-    for key in _bound_import_keys(state) & state.ordinary_imports_by_key.keys():
-        if (ordinary_import := state.ordinary_imports_by_key[key]).alias:
-            if ordinary_import.alias in state.reserved_names:
+    for key in _structured_import_keys(state) & state.ordinary_imports_by_key.keys():
+        ordinary_import = state.ordinary_imports_by_key[key]
+        if ordinary_import.alias:
+            if ordinary_import.binding_name in state.reserved_names:
                 state.alias_import(
                     ordinary_import,
-                    state.unique_alias(ordinary_import.alias, field_collision=True),
+                    state.unique_alias(ordinary_import.binding_name, field_collision=True),
                 )
             else:
                 state.aliased_imports[key] = ordinary_import
+        elif ordinary_import.binding_name in state.reserved_names:
+            state.alias_import(
+                ordinary_import,
+                state.unique_alias(ordinary_import.binding_name, field_collision=True),
+            )
 
     for import_ in state.ordinary_field_alias_candidates.values():
         if python_type_import_key(import_) in state.aliased_imports:
@@ -173,7 +193,7 @@ def resolve_python_type_import_aliases(
             state.unique_alias(python_type_import_name(import_), field_collision=True),
         )
 
-    for name, imports_by_key in state.bound_imports_by_name.items():
+    for name, imports_by_key in state.structured_imports_by_name.items():
         ordinary_keys = state.ordinary_imports_by_name.get(name, {})
         kept_unaliased = False
         for key, import_ in imports_by_key.items():
@@ -195,4 +215,7 @@ def resolve_python_type_import_aliases(
     return state.aliased_imports
 
 
-__all__ = ["resolve_python_type_import_aliases"]
+resolve_python_type_import_aliases = resolve_structured_import_aliases
+
+
+__all__ = ["resolve_python_type_import_aliases", "resolve_structured_import_aliases"]

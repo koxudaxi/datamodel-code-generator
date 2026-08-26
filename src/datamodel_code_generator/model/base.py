@@ -62,6 +62,7 @@ _MAX_MISSING_CUSTOM_TEMPLATE_SUBDIRS = 128
 _NESTED_MODEL_DEFAULT_FACTORY_ORDER_KEY = "_nested_model_default_factory_order"
 _NESTED_MODEL_DEFAULT_FACTORY_RECURSIVE_PATHS_KEY = "_nested_model_default_factory_recursive_paths"
 _REQUIRED_INHERITED_DEFAULT_FACTORY_KEY = "_required_inherited_default_factory"
+_RUNTIME_EXPRESSION_IMPORTS_FIELD_KEY = "_runtime_expression_imports"
 _EXTRA_TEMPLATE_DATA_MAPPING_ERROR = "extra template data must be a dictionary"
 _EXTRA_TEMPLATE_DATA_KEY_ERROR = "extra template data keys must be strings"
 _DATACLASS_ARGUMENTS_MAPPING_ERROR = "dataclass_arguments must be a dictionary"
@@ -632,6 +633,18 @@ class DataModelFieldBase(_BaseModel):  # noqa: PLR0904
     def imports(self) -> tuple[Import, ...]:
         """Get all imports required for this field's type hint."""
         return self._collect_field_imports(needs_annotated=self.use_annotated and self.needs_annotated_import)
+
+    @property
+    def runtime_expression_imports(self) -> tuple[Import, ...]:
+        """Return parser-registered nested runtime expression imports without scanning defaults."""
+        return self.__dict__.get(_RUNTIME_EXPRESSION_IMPORTS_FIELD_KEY, ())
+
+    def _set_runtime_expression_imports(self, imports: tuple[Import, ...]) -> None:
+        """Register parser-owned nested default imports once at their producer boundary."""
+        if imports:
+            self.__dict__[_RUNTIME_EXPRESSION_IMPORTS_FIELD_KEY] = imports
+            return
+        self.__dict__.pop(_RUNTIME_EXPRESSION_IMPORTS_FIELD_KEY, None)
 
     def _collect_field_imports(
         self,

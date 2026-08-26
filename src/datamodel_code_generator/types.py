@@ -74,6 +74,8 @@ SourceT = TypeVar("SourceT")
 OPTIONAL = "Optional"
 OPTIONAL_PREFIX = f"{OPTIONAL}["
 
+_RUNTIME_EXPRESSION_IMPORTS_DATA_TYPE_KEY = "_runtime_expression_imports"
+
 UNION = "Union"
 UNION_PREFIX = f"{UNION}["
 UNION_DELIMITER = ", "
@@ -529,6 +531,7 @@ class DataType(_BaseModel):
                 value = getattr(self, field_name)
                 copied_value = deepcopy(value, memo)
                 object.__setattr__(new_obj, field_name, copied_value)
+        new_obj._set_runtime_expression_imports(self.runtime_expression_imports)
 
         return new_obj
 
@@ -697,6 +700,18 @@ class DataType(_BaseModel):
             yield (self.is_set, IMPORT_SET)
             yield (self.is_dict, IMPORT_DICT)
             yield (self.is_tuple, IMPORT_TUPLE)
+
+    @property
+    def runtime_expression_imports(self) -> tuple[Import, ...]:
+        """Return producer-registered runtime imports without walking ``kwargs``."""
+        return self.__dict__.get(_RUNTIME_EXPRESSION_IMPORTS_DATA_TYPE_KEY, ())
+
+    def _set_runtime_expression_imports(self, imports: tuple[Import, ...]) -> None:
+        """Register parser-owned kwargs expressions once at their producer boundary."""
+        if imports:
+            self.__dict__[_RUNTIME_EXPRESSION_IMPORTS_DATA_TYPE_KEY] = imports
+            return
+        self.__dict__.pop(_RUNTIME_EXPRESSION_IMPORTS_DATA_TYPE_KEY, None)
 
     @property
     def imports(self) -> Iterator[Import]:

@@ -64,6 +64,7 @@ def test_xmlschema_literal_reexport_contract_is_explicit() -> None:
         "XSD_WHITESPACE_CHARS": XSD_WHITESPACE_CHARS,
         "_datetime_expression": _datetime_expression,
         "_normalize_timezone": _normalize_timezone,
+        "_collect_python_expression_imports": _collect_python_expression_imports,
     }
 
 
