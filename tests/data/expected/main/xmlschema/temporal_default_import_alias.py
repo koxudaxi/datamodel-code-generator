@@ -17,3 +17,7 @@ class Root(BaseModel):
         datetime_module_aliased.date.fromisoformat('2026-06-05'),
         datetime_module_aliased.date.fromisoformat('2026-06-06'),
     ]
+
+
+class Plain(BaseModel):
+    value: str

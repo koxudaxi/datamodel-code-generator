@@ -732,10 +732,8 @@ def _alias_field_runtime_expressions(
     imports = field.runtime_expression_imports
     if not imports or (rewritten_imports := rewrite_runtime_imports(imports, aliased_imports)) is imports:
         return False
-    rewritten_default = rewrite_runtime_expressions(field.default, aliased_imports)
+    field.default = rewrite_runtime_expressions(field.default, aliased_imports)
     field._set_runtime_expression_imports(rewritten_imports)  # noqa: SLF001
-    if rewritten_default is not field.default:
-        field.default = rewritten_default
     return True
 
 
@@ -765,9 +763,7 @@ def _alias_data_type_structured_imports(
         return changed
     if (rewritten_imports := rewrite_runtime_imports(imports, aliased_imports)) is imports:
         return changed
-    if (kwargs := rewrite_runtime_expressions(data_type.kwargs, aliased_imports)) is not data_type.kwargs:
-        data_type.kwargs = cast("dict[str, Any]", kwargs)
-        changed = True
+    data_type.kwargs = cast("dict[str, Any]", rewrite_runtime_expressions(data_type.kwargs, aliased_imports))
     data_type._set_runtime_expression_imports(rewritten_imports)  # noqa: SLF001
     return True
 
