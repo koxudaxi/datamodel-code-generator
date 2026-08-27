@@ -28,6 +28,8 @@ from datamodel_code_generator import DataModelType, Formatter, InputFileType, Mo
 from datamodel_code_generator.model.msgspec import DataModelField as MsgspecDataModelField
 from datamodel_code_generator.model.msgspec import DataTypeManager as MsgspecDataTypeManager
 from datamodel_code_generator.model.msgspec import Struct as MsgspecStruct
+from datamodel_code_generator.model.pydantic_v2.base_model import BaseModel as PydanticV2BaseModel
+from datamodel_code_generator.model.pydantic_v2.base_model import DataModelField as PydanticV2DataModelField
 from datamodel_code_generator.model.pydantic_v2.base_model import _construct_parser_simple_field
 from datamodel_code_generator.reference import PydanticFieldNameResolver, Reference
 from datamodel_code_generator.types import DataType
@@ -53,6 +55,20 @@ EXPECTED_STARTUP_MEASUREMENT_CASES = {
 def simple_pydantic_v2_data_types() -> list[DataType]:
     """Prepare normalized types outside the field-construction benchmark."""
     return [DataType(type="str") for _ in range(5000)]
+
+
+@pytest.fixture(scope="module")
+def plain_pydantic_v2_fields(simple_pydantic_v2_data_types: list[DataType]) -> list[PydanticV2DataModelField]:
+    """Prepare parser-style plain Pydantic v2 fields outside render-plan timing."""
+    fields = [
+        _construct_parser_simple_field(name=f"field_{index}", data_type=data_type, required=True)
+        for index, data_type in enumerate(simple_pydantic_v2_data_types)
+    ]
+    PydanticV2BaseModel(
+        reference=Reference(path="PydanticFieldRenderPlanPerformance", name="PydanticFieldRenderPlanPerformance"),
+        fields=fields,
+    )
+    return fields
 
 
 @pytest.fixture(scope="module")
@@ -562,6 +578,16 @@ def test_perf_simple_pydantic_v2_field_construction(simple_pydantic_v2_data_type
     ]
     assert len(fields) == len(simple_pydantic_v2_data_types)
     assert fields[-1].name == "field_4999"
+
+
+@pytest.mark.perf
+@pytest.mark.benchmark
+def test_perf_empty_pydantic_v2_field_render_plans(plain_pydantic_v2_fields: list[PydanticV2DataModelField]) -> None:
+    """Benchmark shared empty Field() plans for parser-created Pydantic v2 fields."""
+    rendered_fields = [str(field) for field in plain_pydantic_v2_fields]
+
+    assert len(rendered_fields) == len(plain_pydantic_v2_fields)
+    assert not rendered_fields[-1]
 
 
 @pytest.mark.perf

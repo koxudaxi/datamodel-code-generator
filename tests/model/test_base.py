@@ -69,6 +69,9 @@ from datamodel_code_generator.model.pydantic_base import DataModelField as Pydan
 from datamodel_code_generator.model.pydantic_v2 import BaseModel
 from datamodel_code_generator.model.pydantic_v2 import DataModelField as PydanticV2DataModelField
 from datamodel_code_generator.model.pydantic_v2.base_model import (
+    Constraints as PydanticV2Constraints,
+)
+from datamodel_code_generator.model.pydantic_v2.base_model import (
     _safe_config_dict_items,
     _strip_legacy_pydantic_extra_post_class_assignment,
 )
@@ -1384,6 +1387,87 @@ def test_pydantic_v2_field_render_plan_preserves_explicit_null_default() -> None
     assert str(field) == "Field(None)"
     assert field.field == "Field(default=None)"
     assert field.annotated == "Annotated[None, Field(None)]"
+
+
+def test_pydantic_v2_empty_field_render_plan_is_shared_for_builtin_fields() -> None:
+    """Built-in fields without Field() syntax share one immutable empty plan."""
+    first = PydanticV2DataModelField(name="first", data_type=DataType(type="str"), required=True)
+    second = PydanticV2DataModelField(name="second", data_type=DataType(type="int"), required=True)
+    BaseModel(
+        fields=[first, second],
+        reference=Reference(path="Model", name="Model"),
+    )
+
+    first_plan = first._get_field_render_plan()
+
+    assert first_plan is second._get_field_render_plan()
+    assert not first_plan.rendered
+    assert first_plan.assignment is None
+    assert first_plan.arguments == ()
+    assert first_plan.default_factory is None
+    assert first.imports == ()
+
+
+def test_pydantic_v2_empty_field_render_plan_falls_back_for_extensions_and_field_syntax() -> None:
+    """Custom templates, subclasses, and Field() features retain the conventional plan."""
+    plain = PydanticV2DataModelField(name="plain", data_type=DataType(type="str"), required=True)
+    BaseModel(fields=[plain], reference=Reference(path="Plain", name="Plain"))
+    shared_plan = plain._get_field_render_plan()
+
+    hook_calls = 0
+
+    class CustomField(PydanticV2DataModelField):
+        def _get_field_render_plan(self) -> Any:
+            nonlocal hook_calls
+            hook_calls += 1
+            return super()._get_field_render_plan()
+
+    custom_field = CustomField(name="custom", data_type=DataType(type="str"), required=True)
+    custom_template_field = PydanticV2DataModelField(
+        name="custom_template",
+        data_type=DataType(type="str"),
+        required=True,
+    )
+    constrained_field = PydanticV2DataModelField(
+        name="constrained",
+        data_type=DataType(type="str"),
+        required=False,
+        constraints=PydanticV2Constraints(minLength=1),
+    )
+    alias_field = PydanticV2DataModelField(
+        name="alias",
+        data_type=DataType(type="str"),
+        required=False,
+        alias="alias-value",
+    )
+    for field, model in (
+        (
+            custom_field,
+            BaseModel(fields=[custom_field], reference=Reference(path="Custom", name="Custom")),
+        ),
+        (
+            custom_template_field,
+            BaseModel(
+                fields=[custom_template_field],
+                reference=Reference(path="CustomTemplate", name="CustomTemplate"),
+                custom_template_dir=Path(__file__).parents[1] / "data" / "templates_extensions",
+            ),
+        ),
+        (
+            constrained_field,
+            BaseModel(fields=[constrained_field], reference=Reference(path="Constrained", name="Constrained")),
+        ),
+        (
+            alias_field,
+            BaseModel(fields=[alias_field], reference=Reference(path="Alias", name="Alias")),
+        ),
+    ):
+        assert field.parent is model
+        assert field._get_field_render_plan() is not shared_plan
+
+    assert hook_calls == 1
+    assert str(constrained_field) == "Field(None, min_length=1)"
+    assert str(alias_field) == "Field(None, alias='alias-value')"
 
 
 def test_pydantic_field_render_plan_preserves_required_nullable_marker() -> None:

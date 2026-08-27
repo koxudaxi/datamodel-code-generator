@@ -116,6 +116,12 @@ class DataModelField(DataModelFieldBase):
 
     def _has_field_statement(self) -> bool:
         """Return whether rendering this field will require a Field() call."""
+        if not self._may_have_field_statement():
+            return False
+        return bool(self._get_field_render_plan().rendered)
+
+    def _may_have_field_statement(self) -> bool:
+        """Return whether field metadata may require a Field() call."""
         if self.is_class_var:
             return False
         has_field_metadata = (
@@ -134,9 +140,7 @@ class DataModelField(DataModelFieldBase):
             and not self.required
             and (self.default is None or self.default is UNDEFINED)
         )
-        if not has_field_metadata and not needs_required_nullable_field and not needs_optional_nested_factory:
-            return False
-        return bool(self._get_field_render_plan().rendered)
+        return bool(has_field_metadata or needs_required_nullable_field or needs_optional_nested_factory)
 
     def _has_numeric_data_type(self, type_name: str, strict_import_part: str) -> bool:
         """Return whether any field data type is the given builtin or strict numeric type."""
