@@ -239,6 +239,28 @@ Parsers do not hard-code Pydantic, dataclass, TypedDict, or msgspec classes. `ge
 The same parser output can therefore render into different Python model styles while sharing the same reference and
 module-generation pipeline.
 
+## Layer Dependency Rules
+
+The pipeline is also a dependency boundary. Configuration and entry points select behavior, parsers normalize source
+formats, and output models own rendering-framework behavior. Keep these rules when adding features or optimizing hot
+paths:
+
+- Parser modules may depend on neutral `DataModel`, `DataModelFieldBase`, and declared capability hooks. They must not
+  import or identify concrete Pydantic, dataclass, TypedDict, or msgspec output implementations.
+- Output-specific constructor, forward-reference, runtime-validation, import-conflict, and rendering behavior belongs
+  to the output model that implements it. The parser calls the neutral capability without switching on backend names.
+- Reusable graph, detection, enum, and cache helpers belong in neutral package modules. Code outside `parser/` must not
+  import private `parser._*` helpers.
+- Input-model conversion reads output-family compatibility from the output selection registry. It must not maintain a
+  second `DataModelType`-to-backend mapping.
+- Configuration must not acquire new parser or concrete output-backend dependencies. Historical concrete defaults are
+  narrowly allowlisted until they can be migrated without changing the public `ParserConfig` surface.
+
+Run `python scripts/check_architecture_boundaries.py` to validate these rules. The checker parses imports and semantic
+backend inspection with the Python AST, including lazy and dynamic imports. Its legacy allowlist is keyed by file,
+enclosing symbol, rule, and target; extra occurrences fail, and removed dependencies make stale entries fail so the
+exception cannot silently become permanent. The same check runs in pre-commit and pytest with actionable diagnostics.
+
 ## Rendering And Formatting
 
 Every `DataModel` renders through a Jinja2 template. Built-in templates live in
