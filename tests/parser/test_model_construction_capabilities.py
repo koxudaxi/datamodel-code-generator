@@ -270,3 +270,32 @@ def test_decimal_constraint_non_runtime_values_stay_unmodified_after_deserializa
     assert isinstance(decimal_field.default, PythonRuntimeExpression)
     assert constraint_type.kwargs == {"strict": True}
     assert not constraint_type.runtime_expression_imports
+
+
+@pytest.mark.allow_direct_assert
+def test_decimal_constraint_import_override_stays_unmodified_after_deserialization() -> None:
+    """Skip condecimal normalization when its emitted import is overridden."""
+    model_types = get_data_model_types(DataModelType.PydanticV2BaseModel, target_python_version=PythonVersion.PY_311)
+    parser = _parser(model_types)
+    parser.deserialize_default_value_types = frozenset({DefaultValueType.Decimal})
+    parser._import_overrides = {"condecimal": "custom.module"}
+    constraint_type = DataType(type="condecimal", import_=IMPORT_CONDECIMAL, kwargs={"ge": Decimal(0)})
+    constraint_field = model_types.field_model(
+        name="bounded_amount", data_type=constraint_type, default=None, required=False
+    )
+    decimal_field = model_types.field_model(
+        name="amount",
+        data_type=DataType(type="Decimal", import_=IMPORT_DECIMAL),
+        default="1.23",
+        required=False,
+    )
+    model = model_types.data_model(
+        reference=Reference(path="DecimalConstraint", name="DecimalConstraint"),
+        fields=[constraint_field, decimal_field],
+    )
+
+    parser._Parser__set_validate_default_on_fields([model], can_retain_cache=False)
+
+    assert isinstance(decimal_field.default, PythonRuntimeExpression)
+    assert constraint_type.kwargs == {"ge": Decimal(0)}
+    assert not constraint_type.runtime_expression_imports
