@@ -8,13 +8,16 @@
 | [`--debug`](#debug) | Show debug messages during code generation |
 | [`--generate-prompt`](#generate-prompt) | Generate a prompt for consulting LLMs about CLI options |
 | [`--help`](#help) | Show help message and exit |
+| [`--install-skill`](#install-skill) | Install the bundled Agent Skill (experimental) |
 | [`--job`](#job) | Run a named generation job from pyproject.toml (experimental) |
 | [`--list-deprecations`](#list-deprecations) | List registered deprecations and scheduled breaking changes |
 | [`--list-experimental`](#list-experimental) | List registered experimental features |
 | [`--no-color`](#no-color) | Disable colorized output |
 | [`--output-format`](#output-format) | Choose the command output format |
 | [`--output-format-json-schema`](#output-format-json-schema) | Output JSON Schema for structured command output or JSON configuration |
+| [`--overwrite-skill`](#overwrite-skill) | Replace an existing Agent Skill installation |
 | [`--profile`](#profile) | Use a named profile from pyproject.toml |
+| [`--skill-scope`](#skill-scope) | Choose an Agent Skill installation scope |
 | [`--version`](#version) | Show program version and exit |
 
 ---
@@ -185,6 +188,33 @@ Displays all available command-line options with their descriptions and default 
       --input INPUT         Input file path (default: stdin)
       ...
     ```
+
+---
+
+## `--install-skill` {#install-skill}
+
+Install the bundled experimental `datamodel-code-generator` Agent Skill for Codex or Claude Code, then exit.
+
+The default `project` scope installs the skill in the current project's
+`.agents/skills/` directory for Codex or `.claude/skills/` directory for Claude
+Code. Use `--skill-scope user` to install the same skill below your home
+directory instead.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --install-skill codex # (1)!
+    datamodel-codegen --install-skill claude-code --skill-scope user # (2)!
+    datamodel-codegen --install-skill codex --overwrite-skill # (3)!
+    ```
+
+    1. :material-arrow-left: Install for Codex in `.agents/skills/` for the current project
+    2. :material-arrow-left: Install for Claude Code in `~/.claude/skills/`
+    3. :material-arrow-left: Replace an existing regular skill directory
+
+For safety, an existing skill directory is left untouched unless
+`--overwrite-skill` is supplied. Symlinks and non-directory targets are never
+replaced.
 
 ---
 
@@ -423,6 +453,18 @@ Currently supported schema targets:
 
 ---
 
+## `--overwrite-skill` {#overwrite-skill}
+
+Replace an existing regular Agent Skill directory when installing with
+`--install-skill`.
+
+Without this option, an existing skill is preserved and the command exits with
+an error. Symlinks and non-directory targets are never overwritten.
+
+    datamodel-codegen --install-skill codex --overwrite-skill
+
+---
+
 ## `--profile` {#profile}
 
 Use a named profile from pyproject.toml configuration.
@@ -466,6 +508,20 @@ file. Each profile can override the default settings with its own set of options
     # Use the dataclass profile
     datamodel-codegen --input schema.json --profile dataclass
     ```
+
+---
+
+## `--skill-scope` {#skill-scope}
+
+Choose whether `--install-skill` installs the bundled Agent Skill for the
+current project or for the current user. The default is `project`.
+
+`project` uses `.agents/skills/` for Codex and `.claude/skills/` for Claude
+Code below the current working directory. `user` uses the matching directory
+below your home directory.
+
+    datamodel-codegen --install-skill codex --skill-scope project
+    datamodel-codegen --install-skill claude-code --skill-scope user
 
 ---
 

@@ -2,7 +2,9 @@
 
 This repository includes an experimental Agent Skill for skills-compatible coding agents. The skill teaches an agent to run `datamodel-codegen` when a user asks for Python models from OpenAPI, AsyncAPI, JSON Schema, GraphQL, JSON/YAML/CSV sample data, MCP tool schemas, Protocol Buffers, XML Schema, Apache Avro, or existing Python model objects.
 
-The skill is a directory, not a package-manager install. The required entrypoint is `SKILL.md`, and supporting files live under `references/`.
+The skill is a directory with a `SKILL.md` entrypoint and supporting files under
+`references/`. It is bundled with the CLI and can be installed without checking
+out this repository.
 
 Treat this skill as experimental. The workflow, trigger wording, and client-specific install guidance can change as Codex, Claude Code, and other skills-compatible agents evolve.
 
@@ -29,15 +31,13 @@ Claude Code project skills load from `.claude/skills/` in the starting directory
 For a project skill, run:
 
 ```bash
-mkdir -p .claude/skills
-cp -R skills/datamodel-code-generator .claude/skills/datamodel-code-generator
+datamodel-codegen --install-skill claude-code
 ```
 
 For a personal skill, run:
 
 ```bash
-mkdir -p ~/.claude/skills
-cp -R skills/datamodel-code-generator ~/.claude/skills/datamodel-code-generator
+datamodel-codegen --install-skill claude-code --skill-scope user
 ```
 
 Claude Code can invoke a skill directly with `/datamodel-code-generator`, or load it automatically when the description matches the task. Existing top-level skill directories are watched for changes. If the top-level skills directory did not exist when the session started, restart Claude Code.
@@ -49,18 +49,20 @@ Codex reads project skills from `.agents/skills` in the current directory, paren
 For a project skill, run:
 
 ```bash
-mkdir -p .agents/skills
-cp -R skills/datamodel-code-generator .agents/skills/datamodel-code-generator
+datamodel-codegen --install-skill codex
 ```
 
 For a personal skill, run:
 
 ```bash
-mkdir -p ~/.agents/skills
-cp -R skills/datamodel-code-generator ~/.agents/skills/datamodel-code-generator
+datamodel-codegen --install-skill codex --skill-scope user
 ```
 
 Codex can invoke skills explicitly through `/skills` or `$` mention, or load them automatically when the description matches the task.
+
+The installer preserves an existing skill directory by default. Use
+`--overwrite-skill` only when you want to replace it; symlinks and
+non-directory targets are never overwritten.
 
 ## Other agents
 

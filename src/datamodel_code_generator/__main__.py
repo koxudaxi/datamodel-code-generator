@@ -55,6 +55,12 @@ match schema_output_name:
         sys.stdout.write(f"{structured_output_json_schema()}\n")
         sys.exit(0)
 
+# Fast path for Agent Skill installation (avoid importing generation dependencies)
+if any(arg == "--install-skill" or arg.startswith("--install-skill=") for arg in sys.argv[1:]):  # pragma: no cover
+    from datamodel_code_generator._agent_skill_cli import run_agent_skill_installer
+
+    sys.exit(run_agent_skill_installer(sys.argv[1:]))
+
 # Fast path for prompt helper outputs
 if any(
     arg.startswith(("--generate-prompt", "--output-format-json-schema=")) or arg == "--output-format-json-schema"
@@ -183,6 +189,9 @@ EXCLUDED_CONFIG_OPTIONS: frozenset[str] = frozenset({
     "generate_cli_command",
     "generate_prompt",
     "ignore_pyproject",
+    "install_skill",
+    "skill_scope",
+    "overwrite_skill",
     "profile",
     "job",
     "all_jobs",
@@ -2677,6 +2686,20 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
         args = sys.argv[1:]
 
     arg_parser.parse_args(args, namespace=namespace)
+
+    if (agent := namespace.install_skill) is not None:
+        from datamodel_code_generator._agent_skill_cli import install_agent_skill_command  # noqa: PLC0415
+
+        return Exit(
+            install_agent_skill_command(
+                agent,
+                namespace.skill_scope or "project",
+                overwrite=namespace.overwrite_skill,
+            )
+        )
+    if namespace.skill_scope is not None or namespace.overwrite_skill:
+        print("Error: --skill-scope and --overwrite-skill require --install-skill", file=sys.stderr)  # noqa: T201
+        return Exit.ERROR
 
     if namespace.version:
         from datamodel_code_generator import get_version  # noqa: PLC0415

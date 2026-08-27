@@ -367,6 +367,9 @@ MANUAL_OPTION_DESCRIPTIONS = {
     "--output-format-json-schema": "Output JSON Schema for structured command output or JSON configuration",
     "--no-color": "Disable colorized output",
     "--generate-prompt": "Generate a prompt for consulting LLMs about CLI options",
+    "--install-skill": "Install the bundled Agent Skill (experimental)",
+    "--skill-scope": "Choose an Agent Skill installation scope",
+    "--overwrite-skill": "Replace an existing Agent Skill installation",
     "--list-deprecations": "List registered deprecations and scheduled breaking changes",
     "--list-experimental": "List registered experimental features",
 }

@@ -356,19 +356,18 @@ This repository includes an experimental Agent Skill that teaches compatible cod
 
 See [Coding Agent Skill](docs/coding-agent-skill.md) for detailed guidance and troubleshooting.
 
-Install the directory for your agent:
+Install the bundled skill directly from the CLI:
 
 ```bash
 # Codex, project-local
-mkdir -p .agents/skills
-cp -R skills/datamodel-code-generator .agents/skills/datamodel-code-generator
+datamodel-codegen --install-skill codex
 
 # Claude Code, project-local
-mkdir -p .claude/skills
-cp -R skills/datamodel-code-generator .claude/skills/datamodel-code-generator
+datamodel-codegen --install-skill claude-code
 ```
 
-For a personal install, copy the same directory to `$HOME/.agents/skills/datamodel-code-generator/` for Codex or `~/.claude/skills/datamodel-code-generator/` for Claude Code.
+For a personal install, add `--skill-scope user`. Existing skills are preserved
+unless you explicitly add `--overwrite-skill`.
 
 Check your agent's current documentation for exact search paths.
 

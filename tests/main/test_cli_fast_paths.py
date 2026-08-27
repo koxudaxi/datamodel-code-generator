@@ -203,6 +203,57 @@ def _run_generate_prompt_invalid_option_fast_path() -> dict[str, Any]:
     )
 
 
+def _run_agent_skill_install_fast_path() -> dict[str, Any]:
+    return _run_probe(
+        textwrap.dedent(
+            """
+            import contextlib
+            import io
+            import json
+            import os
+            import runpy
+            import sys
+            import tempfile
+            from pathlib import Path
+
+            previous_cwd = Path.cwd()
+            with tempfile.TemporaryDirectory() as directory:
+                root = Path(directory).resolve()
+                os.chdir(root)
+                os.environ["HOME"] = str(root / "home")
+                os.environ["USERPROFILE"] = str(root / "home")
+                sys.argv = ["datamodel-codegen", "--install-skill", "codex"]
+                stdout = io.StringIO()
+                stderr = io.StringIO()
+                with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                    try:
+                        runpy.run_module("datamodel_code_generator.__main__", run_name="__main__", alter_sys=True)
+                    except SystemExit as exc:
+                        code = exc.code
+                    else:
+                        code = None
+                target = root / ".agents" / "skills" / "datamodel-code-generator"
+                result = {
+                    "code": code,
+                    "files": sorted(path.relative_to(target).as_posix() for path in target.rglob("*")),
+                    "imported_config": "datamodel_code_generator.config" in sys.modules,
+                    "imported_format": "datamodel_code_generator.format" in sys.modules,
+                    "imported_model": "datamodel_code_generator.model" in sys.modules,
+                    "imported_pydantic": "pydantic" in sys.modules,
+                    "imported_reference": "datamodel_code_generator.reference" in sys.modules,
+                    "imported_types": "datamodel_code_generator.types" in sys.modules,
+                    "imported_validators": "datamodel_code_generator.validators" in sys.modules,
+                    "stderr": stderr.getvalue(),
+                    "stdout": stdout.getvalue().replace(str(target), "<target>"),
+                }
+                os.chdir(previous_cwd)
+
+            print(json.dumps(result, indent=2, sort_keys=True))
+            """
+        )
+    )
+
+
 def _run_argument_parser_json_option_parse() -> dict[str, Any]:
     return _run_probe(
         textwrap.dedent(
@@ -756,6 +807,16 @@ def test_version_fast_path_uses_embedded_version(version_option: str) -> None:
     assert_output(
         f"{json.dumps(output, indent=2, sort_keys=True)}\n",
         ROOT / "tests/data/expected/main/cli_fast_paths/version_fast_path.txt",
+    )
+
+
+def test_agent_skill_fast_path_skips_generation_imports() -> None:
+    """Agent Skill installation copies the bundle without loading generation dependencies."""
+    result = _run_agent_skill_install_fast_path()
+
+    assert_output(
+        f"{json.dumps(result, indent=2, sort_keys=True)}\n",
+        ROOT / "tests/data/expected/main/cli_fast_paths/agent_skill_install.txt",
     )
 
 

@@ -49,6 +49,8 @@ def test_experimental_table_output_includes_registered_features() -> None:
     assert "[tool.datamodel-codegen.jobs], --job, --all-jobs" in output
     assert "behavior.remote-reference-lock" in output
     assert "datamodel-codegen.lock, --lockfile, --update-lock, and --locked" in output
+    assert "cli-option.install-skill" in output
+    assert "--install-skill, --skill-scope, and --overwrite-skill" in output
     assert "input-format.avro" in output
     assert "--input-file-type xmlschema" in output
     assert "Notes:" in output
@@ -77,6 +79,7 @@ def test_experimental_markdown_output_includes_details() -> None:
     assert "input-format.protobuf" in output
     assert "input-format.xmlschema" in output
     assert "cli-option.generate-schema-validators" in output
+    assert "cli-option.install-skill" in output
     assert "cli-option.use-missing-sentinel" in output
     assert "formatter.builtin" in output
     assert "behavior.remote-reference-lock" in output
@@ -127,6 +130,15 @@ def test_release_note_output_includes_remote_reference_lock_feature() -> None:
     assert "## Experimental Features" in output
     assert "datamodel-codegen.lock, --lockfile, --update-lock, and --locked" in output
     assert "lock document schema and request-identity compatibility may evolve" in output
+
+
+def test_release_note_output_includes_agent_skill_installation() -> None:
+    """Release-note snippets identify the experimental Agent Skill installer."""
+    output = render_release_note_experimental_features("0.76.0")
+
+    assert "## Experimental Features" in output
+    assert "--install-skill, --skill-scope, and --overwrite-skill" in output
+    assert "supported clients, scopes, and installed skill contents may change" in output
 
 
 def test_experimental_markdown_includes_tracking_issue(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -1451,6 +1451,32 @@ general_options.add_argument(
     help="Ignore pyproject.toml configuration",
 )
 general_options.add_argument(
+    "--install-skill",
+    choices=["codex", "claude-code"],
+    default=None,
+    metavar="{codex,claude-code}",
+    help=(
+        "Install the bundled datamodel-code-generator Agent Skill and exit (experimental). "
+        "Use --skill-scope to select a project or personal installation."
+    ),
+)
+general_options.add_argument(
+    "--skill-scope",
+    choices=["project", "user"],
+    default=None,
+    metavar="{project,user}",
+    help=(
+        "Installation scope for --install-skill (default: project). "
+        "Project installs use .agents/skills or .claude/skills; user installs use the matching home directory."
+    ),
+)
+general_options.add_argument(
+    "--overwrite-skill",
+    action="store_true",
+    default=False,
+    help="Replace an existing regular skill directory when used with --install-skill.",
+)
+general_options.add_argument(
     "--profile",
     help="Use a named profile from pyproject.toml [tool.datamodel-codegen.profiles.<name>]",
     default=None,
