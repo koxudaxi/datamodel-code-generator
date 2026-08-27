@@ -256,6 +256,7 @@ def test_install_skill_preserves_recovery_copy_when_rollback_fails(
             recovery_directory.name,
             "<recovery>",
         )
+        .replace("\\", "/")
     )
     assert_output(f"{error}\n", EXPECTED / "rollback_failure.txt")
     assert_exact_directory_content(

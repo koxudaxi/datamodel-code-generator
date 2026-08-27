@@ -216,6 +216,7 @@ def _run_agent_skill_install_fast_path() -> dict[str, Any]:
             import tempfile
             from pathlib import Path
 
+            previous_cwd = Path.cwd()
             with tempfile.TemporaryDirectory() as directory:
                 root = Path(directory).resolve()
                 os.chdir(root)
@@ -245,6 +246,7 @@ def _run_agent_skill_install_fast_path() -> dict[str, Any]:
                     "stderr": stderr.getvalue(),
                     "stdout": stdout.getvalue().replace(str(target), "<target>"),
                 }
+                os.chdir(previous_cwd)
 
             print(json.dumps(result, indent=2, sort_keys=True))
             """
