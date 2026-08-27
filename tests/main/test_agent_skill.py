@@ -165,7 +165,10 @@ def test_install_skill_never_replaces_a_symlink(
     if not broken:
         link_source.mkdir()
         (link_source / "SKILL.md").write_text("external skill\n", encoding="utf-8")
-    target.symlink_to(link_source, target_is_directory=True)
+    try:
+        target.symlink_to(link_source, target_is_directory=True)
+    except (NotImplementedError, OSError):  # pragma: no cover - platform capability
+        pytest.skip("this platform cannot create directory symlinks")
 
     with chdir(tmp_path):
         run_main_with_args(["--install-skill", "codex", "--overwrite-skill"], expected_exit=Exit.ERROR)
