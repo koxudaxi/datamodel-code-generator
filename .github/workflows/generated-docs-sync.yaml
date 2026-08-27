@@ -14,6 +14,7 @@ on:
       - 'tests/data/jsonschema/tutorial_pet.json'
       - 'tests/test_main_kr.py'
       - 'scripts/build_cli_docs.py'
+      - 'scripts/build_datamodel_codegen_skill_docs.py'
       - 'scripts/build_prompt_data.py'
       - 'scripts/build_preset_docs.py'
       - 'scripts/build_schema_docs.py'
@@ -31,6 +32,7 @@ on:
       - 'tox.ini'
       - '.github/workflows/generated-docs-sync.yaml'
       - 'docs/**/*.md'
+      - 'skills/datamodel-code-generator/**'
       - 'CHANGELOG.md'
       - 'README.md'
       - 'zensical.toml'
@@ -80,6 +82,7 @@ jobs:
             docs/architecture.md
             docs/performance-benchmarks.md
             docs/cli-reference/
+            skills/datamodel-code-generator/references/cli-options.md
             docs/llms.txt
             docs/llms-full.txt
             docs/supported-data-types.md

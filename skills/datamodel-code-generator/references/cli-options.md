@@ -242,6 +242,9 @@ General utility, HTTP, checking, and project integration options.
 - `--generate-cli-command`: Generate CLI command from pyproject.toml configuration and exit
 - `--generate-prompt`: Generate a prompt for consulting LLMs about CLI options. Optionally provide your question as an argument. Pipe to CLI tools (e.g., `| claude -p`, `| codex exec`) or copy to clipboard (e.g., `| pbcopy`, `| xclip`) for web LLM chats.
 - `--ignore-pyproject`: Ignore pyproject.toml configuration
+- `--install-skill`: Install the bundled datamodel-code-generator Agent Skill and exit. Use --skill-scope to select a project or personal installation. Choices: `codex`, `claude-code`.
+- `--skill-scope`: Installation scope for --install-skill (default: project). Project installs use .agents/skills or .claude/skills; user installs use the matching home directory. Choices: `project`, `user`.
+- `--overwrite-skill`: Replace an existing regular skill directory when used with --install-skill.
 - `--profile`: Use a named profile from pyproject.toml [tool.datamodel-codegen.profiles.<name>]
 - `--job`: Run a named job from pyproject.toml [tool.datamodel-codegen.jobs.<name>] (experimental). Can be repeated.
 - `--all-jobs`: Run every named job from pyproject.toml in declaration order (experimental).

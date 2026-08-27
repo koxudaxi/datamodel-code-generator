@@ -875,6 +875,10 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         Generate pyproject.toml configuration from the
                         provided CLI arguments and exit
   --ignore-pyproject    Ignore pyproject.toml configuration
+  --install-skill {codex,claude-code}
+                        Install the bundled datamodel-code-generator Agent
+                        Skill and exit. Use --skill-scope to select a project
+                        or personal installation.
   --job NAME            Run a named job from pyproject.toml [tool.datamodel-
                         codegen.jobs.<name>] (experimental). Can be repeated.
   --list-deprecations [{table,json,markdown}]
@@ -890,8 +894,15 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --output-format-json-schema {config,generate-prompt,generation,model-metadata,structured-output}
                         Output JSON Schema for the selected JSON output or
                         JSON configuration format and exit.
+  --overwrite-skill     Replace an existing regular skill directory when used
+                        with --install-skill.
   --profile PROFILE     Use a named profile from pyproject.toml
                         [tool.datamodel-codegen.profiles.<name>]
+  --skill-scope {project,user}
+                        Installation scope for --install-skill (default:
+                        project). Project installs use .agents/skills or
+                        .claude/skills; user installs use the matching home
+                        directory.
   --version             show version
   --watch               Watch input file(s) for changes and regenerate output
                         automatically

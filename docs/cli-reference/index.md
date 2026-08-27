@@ -16,7 +16,7 @@ This documentation is auto-generated from test cases.
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 8 | OpenAPI-specific features |
 | 📋 [GraphQL-only Options](graphql-only-options.md) | 1 |  |
 | ⚙️ [General Options](general-options.md) | 24 | Utilities and meta options |
-| 📝 [Utility Options](utility-options.md) | 12 | Help, version, debug options |
+| 📝 [Utility Options](utility-options.md) | 15 | Help, version, debug options |
 
 ## 🎯 Focused Topics
 
@@ -177,6 +177,7 @@ These links are generated from CLI option metadata and summarize options that im
 - [`--input-file-type`](base-options.md#input-file-type)
 - [`--input-model`](base-options.md#input-model)
 - [`--input-model-ref-strategy`](base-options.md#input-model-ref-strategy)
+- [`--install-skill`](utility-options.md#install-skill)
 
 ### J {#j}
 
@@ -225,6 +226,7 @@ These links are generated from CLI option metadata and summarize options that im
 - [`--output-format`](utility-options.md#output-format)
 - [`--output-format-json-schema`](utility-options.md#output-format-json-schema)
 - [`--output-model-type`](model-customization.md#output-model-type)
+- [`--overwrite-skill`](utility-options.md#overwrite-skill)
 
 ### P {#p}
 
@@ -248,6 +250,7 @@ These links are generated from CLI option metadata and summarize options that im
 - [`--serialization-aliases`](field-customization.md#serialization-aliases)
 - [`--set-default-enum-member`](field-customization.md#set-default-enum-member)
 - [`--shared-module-name`](general-options.md#shared-module-name)
+- [`--skill-scope`](utility-options.md#skill-scope)
 - [`--skip-root-model`](model-customization.md#skip-root-model)
 - [`--snake-case-field`](field-customization.md#snake-case-field)
 - [`--special-field-name-prefix`](field-customization.md#special-field-name-prefix)

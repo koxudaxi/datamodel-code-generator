@@ -150,6 +150,9 @@ MANUAL_DOCS: frozenset[str] = frozenset({
     "--output-format-json-schema",
     "--no-color",
     "--generate-prompt",
+    "--install-skill",
+    "--skill-scope",
+    "--overwrite-skill",
     "--list-deprecations",
     "--list-experimental",
 })
