@@ -8,6 +8,7 @@ schema field names to valid Python identifiers.
 from __future__ import annotations
 
 import re
+import stat
 from collections import defaultdict
 from contextlib import contextmanager
 from enum import Enum, auto
@@ -583,6 +584,18 @@ def get_relative_path(base_path: PurePath, target_path: PurePath) -> PurePath:
     return Path(*[".." for _ in range(parent_count)], *children)
 
 
+def _contains_symlink(path: Path) -> bool:
+    """Return whether resolving ``path`` can traverse an existing symlink."""
+    while path != path.parent:
+        try:
+            if stat.S_ISLNK(path.lstat().st_mode):
+                return True
+        except OSError:
+            return True
+        path = path.parent
+    return False
+
+
 class ModelResolver:  # noqa: PLR0904
     """Manages model references, class names, and field name resolution.
 
@@ -595,6 +608,7 @@ class ModelResolver:  # noqa: PLR0904
         "model": "Model",
         "enum": "Enum",
     }
+    _MAX_RESOLVED_LOCAL_FILE_PARTS: ClassVar[int] = 256
 
     def __init__(  # noqa: PLR0913, PLR0917
         self,
@@ -664,6 +678,7 @@ class ModelResolver:  # noqa: PLR0904
         self.class_name_generator = custom_class_name_generator or self.default_class_name_generator
         self._base_path: Path = base_path or Path.cwd()
         self._current_base_path: Path | None = self._base_path
+        self._resolved_local_file_parts: dict[tuple[Path, str], str] = {}
         self.remove_suffix_number: bool = remove_suffix_number
 
         # Handle naming strategy with backward compatibility for parent_scoped_naming
@@ -910,15 +925,28 @@ class ModelResolver:  # noqa: PLR0904
     def resolve_ref(self, path: Sequence[str] | str) -> str:  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
         """Resolve a reference path to its canonical form."""
         joined_path = path if isinstance(path, str) else self.join_path(tuple(path))
-        if joined_path == "#":
+        if not joined_path or joined_path == "#":
             return f"{'/'.join(self.current_root)}#"
         if path_absolute_ref := self._resolve_path_absolute_local_ref(joined_path):
             joined_path = path_absolute_ref
-        if self.current_base_path and not self.base_url and joined_path[0] != "#" and not is_url(joined_path):
+        if (
+            (current_base_path := self.current_base_path)
+            and not self.base_url
+            and joined_path[0] != "#"
+            and not is_url(joined_path)
+        ):
             # resolve local file path
             file_path, fragment = joined_path.split("#", 1) if "#" in joined_path else (joined_path, "")
-            resolved_file_path = Path(self.current_base_path, file_path).resolve()
-            joined_path = get_relative_path(self._base_path, resolved_file_path).as_posix()
+            cache_key = current_base_path, file_path
+            if (resolved_file_part := self._resolved_local_file_parts.get(cache_key)) is None:
+                local_file_path = Path(current_base_path, file_path)
+                resolved_file_path = local_file_path.resolve()
+                resolved_file_part = get_relative_path(self._base_path, resolved_file_path).as_posix()
+                if len(self._resolved_local_file_parts) < self._MAX_RESOLVED_LOCAL_FILE_PARTS and not _contains_symlink(
+                    local_file_path
+                ):
+                    self._resolved_local_file_parts[cache_key] = resolved_file_part
+            joined_path = resolved_file_part
             if fragment:
                 joined_path += f"#{fragment}"
         if ID_PATTERN.match(joined_path) and SPECIAL_PATH_MARKER not in joined_path:
