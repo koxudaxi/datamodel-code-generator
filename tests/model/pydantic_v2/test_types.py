@@ -4,12 +4,16 @@ from __future__ import annotations
 
 import pytest
 
-from datamodel_code_generator.imports import IMPORT_ANNOTATED, IMPORT_UNION
+from datamodel_code_generator.imports import IMPORT_ANNOTATED, IMPORT_DECIMAL, IMPORT_UNION, Import
 from datamodel_code_generator.model.pydantic_v2 import BaseModel, DataModelField
-from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_SERIALIZE_AS_ANY
+from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_CONDECIMAL, IMPORT_SERIALIZE_AS_ANY
 from datamodel_code_generator.model.pydantic_v2.types import DataTypeManager, PydanticV2DataType
 from datamodel_code_generator.reference import Reference
-from datamodel_code_generator.types import DataType
+from datamodel_code_generator.types import (
+    CONSTRAINED_DECIMAL_DEFAULT_VALUE_DESCRIPTOR,
+    DECIMAL_DEFAULT_VALUE_DESCRIPTOR,
+    DataType,
+)
 
 
 class TypeHintErrorDataType(PydanticV2DataType):
@@ -133,3 +137,24 @@ def test_transform_kwargs_iterates_filter_when_kwargs_are_larger() -> None:
         },
         ("minimum", "maximum", "multipleOf"),
     ) == {"ge": 1, "le": 9, "multiple_of": 2}
+
+
+@pytest.mark.allow_direct_assert
+def test_pydantic_v2_data_type_manager_declares_decimal_value_semantics() -> None:
+    """Keep final Decimal and condecimal semantics in the Pydantic backend."""
+    data_type_manager = DataTypeManager()
+
+    assert (
+        data_type_manager.get_default_value_descriptor(DataType(import_=IMPORT_DECIMAL))
+        is DECIMAL_DEFAULT_VALUE_DESCRIPTOR
+    )
+    assert (
+        data_type_manager.get_default_value_descriptor(DataType(import_=IMPORT_CONDECIMAL))
+        is CONSTRAINED_DECIMAL_DEFAULT_VALUE_DESCRIPTOR
+    )
+    assert (
+        data_type_manager.get_default_value_descriptor(
+            DataType(import_=Import(import_="condecimal", from_="pydantic", alias="DecimalType"))
+        )
+        is CONSTRAINED_DECIMAL_DEFAULT_VALUE_DESCRIPTOR
+    )

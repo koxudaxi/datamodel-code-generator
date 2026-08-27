@@ -5,16 +5,19 @@ from __future__ import annotations
 import ast
 import inspect
 from decimal import Decimal
+from types import MappingProxyType
 from typing import TYPE_CHECKING, ClassVar, cast
 
 import pytest
 
-from datamodel_code_generator import DataModelType, PythonVersion
+from datamodel_code_generator import DataModelType, DefaultValueType, PythonVersion
 from datamodel_code_generator.imports import IMPORT_DECIMAL
 from datamodel_code_generator.model import base as model_base_module
 from datamodel_code_generator.model import get_data_model_types
 from datamodel_code_generator.model.base import DataModel
 from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_CONDECIMAL
+from datamodel_code_generator.model.types import DataTypeManager as _CommonDataTypeManager
+from datamodel_code_generator.parser.base import _resolve_default_scalar_data_type
 from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
 from datamodel_code_generator.python_literal import PythonRuntimeExpression
 from datamodel_code_generator.reference import ModelType, Reference
@@ -44,14 +47,25 @@ class _NoDeserializedDefaultsDataModel(_CustomDataModel):
     SUPPORTS_DESERIALIZED_DEFAULT_VALUES: ClassVar[bool] = False
 
 
-def _parser(model_types: DataModelSet, *, data_model_type: type[DataModel] | None = None) -> JsonSchemaParser:
+class _UnmarkedDefaultValueDataTypeManager(_CommonDataTypeManager):
+    """Custom output manager that deliberately does not expose runtime value semantics."""
+
+    DEFAULT_VALUE_DESCRIPTORS = MappingProxyType({})
+
+
+def _parser(
+    model_types: DataModelSet,
+    *,
+    data_model_type: type[DataModel] | None = None,
+    data_type_manager_type: type[_CommonDataTypeManager] | None = None,
+) -> JsonSchemaParser:
     """Create a parser configured with the supplied output model set."""
     return JsonSchemaParser(
         "",
         data_model_type=data_model_type or model_types.data_model,
         data_model_root_type=model_types.root_model,
         data_model_field_type=model_types.field_model,
-        data_type_manager_type=model_types.data_type_manager,
+        data_type_manager_type=data_type_manager_type or model_types.data_type_manager,
     )
 
 
@@ -151,7 +165,7 @@ def test_custom_renderer_can_disable_deserialized_defaults() -> None:
     """Honor a custom output model's default-expression capability without backend checks."""
     model_types = get_data_model_types(DataModelType.PydanticV2BaseModel, target_python_version=PythonVersion.PY_311)
     parser = _parser(model_types, data_model_type=_NoDeserializedDefaultsDataModel)
-    parser.deserialize_decimal_default_values = True
+    parser.deserialize_default_value_types = frozenset({DefaultValueType.Decimal})
     field = model_types.field_model(
         name="amount",
         data_type=DataType(type="Decimal", import_=IMPORT_DECIMAL),
@@ -163,7 +177,7 @@ def test_custom_renderer_can_disable_deserialized_defaults() -> None:
         fields=[field],
     )
 
-    parser._Parser__deserialize_decimal_default(model, field, can_retain_cache=False)
+    parser._Parser__deserialize_default_value(model, field, can_retain_cache=False)
 
     assert DataModel.SUPPORTS_DESERIALIZED_DEFAULT_VALUES
     assert not model.SUPPORTS_DESERIALIZED_DEFAULT_VALUES
@@ -172,11 +186,50 @@ def test_custom_renderer_can_disable_deserialized_defaults() -> None:
 
 
 @pytest.mark.allow_direct_assert
+def test_custom_data_type_manager_fails_closed_without_value_semantics() -> None:
+    """Require a custom backend to opt into generated runtime default expressions."""
+    model_types = get_data_model_types(DataModelType.PydanticV2BaseModel, target_python_version=PythonVersion.PY_311)
+    parser = _parser(
+        model_types,
+        data_model_type=_CustomDataModel,
+        data_type_manager_type=_UnmarkedDefaultValueDataTypeManager,
+    )
+    parser.deserialize_default_value_types = frozenset({DefaultValueType.Decimal})
+    field = model_types.field_model(
+        name="amount",
+        data_type=DataType(type="Decimal", import_=IMPORT_DECIMAL),
+        default="1.23",
+        required=False,
+    )
+    model = _CustomDataModel(
+        reference=Reference(path="CustomModel", name="CustomModel"),
+        fields=[field],
+    )
+
+    assert not parser._Parser__deserialize_default_value(model, field, can_retain_cache=False)
+    assert field.default == "1.23"
+    assert not field.runtime_expression_imports
+
+
+@pytest.mark.allow_direct_assert
+def test_default_value_scalar_resolver_rejects_containers_and_unions() -> None:
+    """Only a direct scalar leaf can ask a backend for default-value semantics."""
+    scalar = DataType(type="Decimal", import_=IMPORT_DECIMAL)
+
+    assert _resolve_default_scalar_data_type(scalar) is scalar
+    assert _resolve_default_scalar_data_type(DataType(import_=IMPORT_DECIMAL, is_list=True)) is None
+    assert (
+        _resolve_default_scalar_data_type(DataType(data_types=[DataType(import_=IMPORT_DECIMAL), DataType(type="str")]))
+        is None
+    )
+
+
+@pytest.mark.allow_direct_assert
 def test_decimal_constraint_imports_stay_unmodified_without_a_deserialized_default() -> None:
     """Do not opt into runtime expressions for condecimal constraints alone."""
     model_types = get_data_model_types(DataModelType.PydanticV2BaseModel, target_python_version=PythonVersion.PY_311)
     parser = _parser(model_types)
-    parser.deserialize_decimal_default_values = True
+    parser.deserialize_default_value_types = frozenset({DefaultValueType.Decimal})
     data_type = DataType(type="condecimal", import_=IMPORT_CONDECIMAL, kwargs={"ge": Decimal(0)})
     field = model_types.field_model(name="amount", data_type=data_type, default=None, required=False)
     model = model_types.data_model(
@@ -196,7 +249,7 @@ def test_decimal_constraint_non_runtime_values_stay_unmodified_after_deserializa
     """Only native Decimal kwargs become runtime expressions after a successful conversion."""
     model_types = get_data_model_types(DataModelType.PydanticV2BaseModel, target_python_version=PythonVersion.PY_311)
     parser = _parser(model_types)
-    parser.deserialize_decimal_default_values = True
+    parser.deserialize_default_value_types = frozenset({DefaultValueType.Decimal})
     decimal_field = model_types.field_model(
         name="amount",
         data_type=DataType(type="Decimal", import_=IMPORT_DECIMAL),

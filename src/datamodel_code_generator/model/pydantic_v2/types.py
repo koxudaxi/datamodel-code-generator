@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import ast
 from decimal import Decimal
+from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from datamodel_code_generator._format_types import DateClassType, DatetimeClassType, PythonVersion, PythonVersionMin
@@ -70,6 +71,8 @@ from datamodel_code_generator.model.pydantic_v2.imports import (
 )
 from datamodel_code_generator.python_literal import PythonCode
 from datamodel_code_generator.types import (
+    CONSTRAINED_DECIMAL_DEFAULT_VALUE_DESCRIPTOR,
+    DECIMAL_DEFAULT_VALUE_DESCRIPTOR,
     DataType,
     StrictTypes,
     Types,
@@ -214,6 +217,10 @@ class _PydanticDataTypeManager(_DataTypeManagerBase):
         "NonNegativeFloat": ("minimum",),
         "NonPositiveFloat": ("maximum",),
     }
+    DEFAULT_VALUE_DESCRIPTORS = MappingProxyType({
+        (IMPORT_DECIMAL.from_, IMPORT_DECIMAL.import_): DECIMAL_DEFAULT_VALUE_DESCRIPTOR,
+        (IMPORT_CONDECIMAL.from_, IMPORT_CONDECIMAL.import_): CONSTRAINED_DECIMAL_DEFAULT_VALUE_DESCRIPTOR,
+    })
 
     def __init__(  # noqa: PLR0913, PLR0917
         self,

@@ -181,6 +181,40 @@ def test_deserialize_decimal_defaults_respects_type_mapping(output_file: Path) -
     )
 
 
+def test_deserialize_decimal_defaults_respects_type_override(output_file: Path) -> None:
+    """Classify the final overridden scalar type instead of its original schema format."""
+    with warnings.catch_warnings(record=True) as recorded_warnings:
+        warnings.simplefilter("always", UserWarning)
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "serialized_decimal_defaults.json",
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file="serialized_decimal_defaults/type_override.py",
+            extra_args=[
+                *BACKEND_GOLDEN_TARGET_ARGS,
+                "--disable-timestamp",
+                "--formatters",
+                "builtin",
+                "--deserialize-default-values",
+                "decimal",
+                "--type-overrides",
+                (
+                    '{"Invoice.amount": "builtins.str", '
+                    '"Invoice.invalid_amount": "builtins.str", '
+                    '"Invoice.nullable_amount": "builtins.str"}'
+                ),
+            ],
+            force_exec_validation=True,
+        )
+
+    assert_warnings_do_not_contain(
+        recorded_warnings,
+        "emitted as serialized data instead of Decimal",
+        "could not be deserialized",
+    )
+
+
 def test_deserialize_decimal_defaults_scalar_scope(output_file: Path) -> None:
     """Convert constrained scalar defaults without traversing unions or containers."""
     with warnings.catch_warnings(record=True) as recorded_warnings:
@@ -303,6 +337,35 @@ def test_deserialize_decimal_defaults_condecimal_collision(output_file: Path) ->
                 "int",
                 "float",
                 "str",
+                "--deserialize-default-values",
+                "decimal",
+            ],
+            force_exec_validation=True,
+        )
+
+    assert_warnings_do_not_contain(
+        recorded_warnings,
+        "emitted as serialized data instead of Decimal",
+        "could not be deserialized",
+    )
+
+
+def test_deserialize_decimal_defaults_with_decimal_multiple_of(output_file: Path) -> None:
+    """Use the Pydantic condecimal descriptor created for number multipleOf constraints."""
+    with warnings.catch_warnings(record=True) as recorded_warnings:
+        warnings.simplefilter("always", UserWarning)
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "serialized_decimal_default_multiple_of.json",
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file="serialized_decimal_defaults/multiple_of.py",
+            extra_args=[
+                *BACKEND_GOLDEN_TARGET_ARGS,
+                "--disable-timestamp",
+                "--formatters",
+                "builtin",
+                "--use-decimal-for-multiple-of",
                 "--deserialize-default-values",
                 "decimal",
             ],
