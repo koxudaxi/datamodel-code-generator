@@ -13,6 +13,7 @@ from typing_extensions import TypedDict
 
 from datamodel_code_generator._format_types import DateClassType, DatetimeClassType, PythonVersion
 from datamodel_code_generator._registry_render import _render_registry_json
+from datamodel_code_generator._shared_types import LiteralType
 from datamodel_code_generator.base_config import BaseGenerateConfig
 from datamodel_code_generator.cli_options import CLI_OPTION_META
 from datamodel_code_generator.enums import (
@@ -31,7 +32,6 @@ from datamodel_code_generator.enums import (
     UnionMode,
     VersionMode,
 )
-from datamodel_code_generator.parser import LiteralType
 
 if TYPE_CHECKING:
     from typing_extensions import Unpack

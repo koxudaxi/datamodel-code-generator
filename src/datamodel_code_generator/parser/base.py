@@ -58,6 +58,8 @@ from datamodel_code_generator import (
     _read_parser_source_data_from_path,
 )
 from datamodel_code_generator._format_types import Formatter, PythonVersion
+from datamodel_code_generator._graph import stable_toposort
+from datamodel_code_generator._shared_types import DefaultPutDict, LiteralType
 from datamodel_code_generator.enums import DefaultValueType, StrictTypes
 from datamodel_code_generator.imports import (
     IMPORT_ANNOTATIONS,
@@ -86,8 +88,6 @@ from datamodel_code_generator.model.enum import Enum, Member, get_raw_enum_membe
 from datamodel_code_generator.model.enum import escape_characters as _enum_escape_characters
 from datamodel_code_generator.model.imports import IMPORT_TYPED_DICT, IMPORT_TYPED_DICT_BACKPORT
 from datamodel_code_generator.model.type_alias import TypeAliasBase, TypeStatement
-from datamodel_code_generator.parser import DefaultPutDict, LiteralType
-from datamodel_code_generator.parser._graph import stable_toposort
 from datamodel_code_generator.parser._scc import find_circular_sccs, strongly_connected_components
 from datamodel_code_generator.parser.generation import GenerationIndex, GenerationStore, set_model_base_classes
 from datamodel_code_generator.parser.schema_version import SchemaFeaturesT

@@ -22,9 +22,9 @@ import pydantic
 from pydantic import BaseModel
 
 from datamodel_code_generator import Error, generate, is_asyncapi, is_openapi
+from datamodel_code_generator._graph import stable_toposort
 from datamodel_code_generator.config import GenerateConfig, _rebuild_generate_config
 from datamodel_code_generator.enums import DataModelType, InputFileType
-from datamodel_code_generator.parser._graph import stable_toposort
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence

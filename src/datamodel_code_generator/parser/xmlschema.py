@@ -23,16 +23,11 @@ from typing_extensions import Unpack
 
 from datamodel_code_generator import Error, YamlValue
 from datamodel_code_generator._format_types import DatetimeClassType
+from datamodel_code_generator._xmlschema_detection import XML_SCHEMA_NAMESPACE, XML_SCHEMA_TAG
+from datamodel_code_generator._xmlschema_detection import is_xml_schema_text as _is_xml_schema_text
 from datamodel_code_generator.enums import VersionMode, XMLSchemaVersion
 from datamodel_code_generator.parser import _xmlschema_literals
 from datamodel_code_generator.parser._convert_common import _copy_schema, _namespace_name, _unique_name
-from datamodel_code_generator.parser._xmlschema_detection import (
-    XML_SCHEMA_NAMESPACE,
-    XML_SCHEMA_TAG,
-)
-from datamodel_code_generator.parser._xmlschema_detection import (
-    is_xml_schema_text as _is_xml_schema_text,
-)
 from datamodel_code_generator.parser._xmlschema_literals import (
     _PythonExpression,
     _safe_bool,

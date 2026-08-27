@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 from datamodel_code_generator._format_types import DateClassType, DatetimeClassType, Formatter, PythonVersion
+from datamodel_code_generator._shared_types import LiteralType
 from datamodel_code_generator.deprecations import deprecation_message
 from datamodel_code_generator.enums import (
     DEFAULT_SHARED_MODULE_NAME,
@@ -43,7 +44,6 @@ from datamodel_code_generator.enums import (
     UnionMode,
     VersionMode,
 )
-from datamodel_code_generator.parser import LiteralType
 from datamodel_code_generator.preset_names import PRESET_NAMES
 
 if TYPE_CHECKING:

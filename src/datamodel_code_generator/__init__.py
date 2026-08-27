@@ -30,6 +30,7 @@ from typing import (
 from urllib.parse import ParseResult
 
 from datamodel_code_generator._process_state import PROCESS_STATE_LOCK
+from datamodel_code_generator._shared_types import DefaultPutDict, LiteralType
 from datamodel_code_generator.enums import (
     DEFAULT_SHARED_MODULE_NAME,
     MAX_VERSION,
@@ -65,7 +66,6 @@ from datamodel_code_generator.enums import (
     XMLSchemaVersion,
     _is_pydantic_version_at_least,
 )
-from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 
 # Pydantic 2.5 cannot build schemas from stdlib TypeAliasType on Python 3.12.
 if sys.version_info >= (3, 14):
@@ -2568,7 +2568,7 @@ def infer_input_type(text: str) -> InputFileType:  # noqa: PLR0911, PLR0912
     from datamodel_code_generator.util import get_yaml_parse_errors  # noqa: PLC0415
 
     if _is_xml_text(text):
-        from datamodel_code_generator.parser._xmlschema_detection import is_xml_schema_text  # noqa: PLC0415
+        from datamodel_code_generator._xmlschema_detection import is_xml_schema_text  # noqa: PLC0415
 
         if is_xml_schema_text(text):
             return InputFileType.XMLSchema
@@ -2585,7 +2585,7 @@ def infer_input_type(text: str) -> InputFileType:  # noqa: PLR0911, PLR0912
             return InputFileType.AsyncAPI
         if is_openapi(data):
             return InputFileType.OpenAPI
-        from datamodel_code_generator.parser._avro_detection import is_avro_schema_data  # noqa: PLC0415
+        from datamodel_code_generator._avro_detection import is_avro_schema_data  # noqa: PLC0415
 
         if is_avro_schema_data(data):
             return InputFileType.Avro
@@ -2595,14 +2595,14 @@ def infer_input_type(text: str) -> InputFileType:  # noqa: PLR0911, PLR0912
     if _is_protobuf_text(text):
         return InputFileType.Protobuf
     if isinstance(data, list):
-        from datamodel_code_generator.parser._avro_detection import is_avro_schema_data  # noqa: PLC0415
+        from datamodel_code_generator._avro_detection import is_avro_schema_data  # noqa: PLC0415
 
         if is_avro_schema_data(data):
             return InputFileType.Avro
     if isinstance(data, str):
         if _looks_like_csv_text(text):
             return InputFileType.CSV
-        from datamodel_code_generator.parser._avro_detection import is_avro_schema_data  # noqa: PLC0415
+        from datamodel_code_generator._avro_detection import is_avro_schema_data  # noqa: PLC0415
 
         if is_avro_schema_data(data):
             return InputFileType.Avro

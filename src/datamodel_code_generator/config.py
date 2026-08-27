@@ -18,6 +18,7 @@ from datamodel_code_generator._format_types import (
     PythonVersion,
     PythonVersionMin,
 )
+from datamodel_code_generator._shared_types import DefaultPutDict, LiteralType
 from datamodel_code_generator.base_config import BaseGenerateConfig, _validate_additional_import_paths
 from datamodel_code_generator.enums import (
     DEFAULT_SHARED_MODULE_NAME,
@@ -54,7 +55,6 @@ from datamodel_code_generator.model.base import (  # noqa: TC001 - used by Pydan
 )
 from datamodel_code_generator.model.scalar import DataTypeScalar
 from datamodel_code_generator.model.union import DataTypeUnion
-from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.types import DataTypeManager, StrictTypes
 from datamodel_code_generator.validators import ModelValidators  # noqa: TC001 - used by Pydantic at runtime
 
