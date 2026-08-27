@@ -8003,7 +8003,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             constrained_name=additional_property_name,
         )
         dict_key = (
-            self._parse_typed_extra_property_names_key_type(property_names)
+            self._parse_simple_property_name_key_type(property_names)
             if (property_names := obj.propertyNames) is not None
             else None
         )
@@ -8477,17 +8477,20 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 )
         return self._parse_property_name_key_schema(property_names)
 
-    def _parse_typed_extra_property_names_key_type(
+    def _parse_simple_property_name_key_type(
         self,
-        property_names: JsonSchemaObject | bool,  # noqa: FBT001
+        property_names: JsonSchemaObject | bool | None,  # noqa: FBT001
     ) -> DataType | None:
-        """Build a Pydantic typed-extra key type when it preserves JSON string keys."""
+        """Parse a direct propertyNames schema without resolving references or combinators."""
         match property_names:
             case JsonSchemaObject(ref=None, anyOf=[], oneOf=[], allOf=[]) as property_names if (
-                self._get_x_python_type(property_names) is None
-                and not type(self)._property_names_forbids_all_keys(property_names)  # noqa: SLF001
+                not type(self)._property_names_forbids_all_keys(property_names)  # noqa: SLF001
                 and (
-                    property_names.pattern is not None
+                    (
+                        isinstance(x_python_type := property_names.extras.get("x-python-type"), str)
+                        and bool(x_python_type)
+                    )
+                    or property_names.pattern is not None
                     or property_names.minLength is not None
                     or property_names.maxLength is not None
                     or any(isinstance(value, str) for value in property_names.enum)

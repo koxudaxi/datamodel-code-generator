@@ -7573,6 +7573,26 @@ def test_main_jsonschema_property_names_type_non_string_additional_properties_sc
     )
 
 
+def test_main_jsonschema_property_names_forbidden_additional_properties_schema_with_properties(
+    output_file: Path,
+) -> None:
+    """Test an impossible direct propertyNames schema does not constrain typed extra keys."""
+    run_main_and_assert(
+        input_path=(
+            JSON_SCHEMA_DATA_PATH / "property_names_forbidden_additional_properties_schema_with_properties.json"
+        ),
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="property_names_forbidden_additional_properties_schema_with_properties.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+
+
 @pytest.mark.parametrize(
     ("input_name", "expected_file", "disable_future_imports", "old_style_template"),
     [
