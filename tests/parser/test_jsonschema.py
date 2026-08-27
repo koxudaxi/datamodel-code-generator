@@ -1619,6 +1619,38 @@ def test_local_ref_false_schema_fast_path_matches_validation_path() -> None:
     assert outputs[0] == outputs[1]
 
 
+def test_array_items_constraints_fast_path_falls_back_for_subclasses() -> None:
+    """Keep parser and schema subclasses on the conventional constraint path."""
+
+    class ConstraintParser(JsonSchemaParser):
+        @classmethod
+        def _get_array_max_items_constraints(cls, _obj: JsonSchemaObject) -> list[int]:
+            return [2]
+
+    class ConstraintSchema(JsonSchemaObject):
+        def model_post_init(self, _context: Any, /) -> None:
+            self.items = False
+
+    assert ConstraintParser._get_array_items_constraints(JsonSchemaObject.model_validate({})) == {"maxItems": 2}
+    assert JsonSchemaParser._get_array_items_constraints(ConstraintSchema.model_validate({})) == {"maxItems": 0}
+
+
+def test_array_items_constraints_fast_path_matches_conventional_large_schema() -> None:
+    """Keep large-schema output byte-identical to the conventional path."""
+
+    class ConventionalArrayConstraintParser(JsonSchemaParser):
+        pass
+
+    source = (DATA_PATH.parent / "performance" / "large_models.json").read_text()
+    outputs: list[str] = []
+    for parser_type in (ConventionalArrayConstraintParser, JsonSchemaParser):
+        parser = parser_type(source)
+        parser.parse(format_=False)
+        outputs.append(dump_templates(list(parser.results)))
+
+    assert outputs[0] == outputs[1]
+
+
 def test_resolve_local_ref_path_caches_safe_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Avoid resolving the same local ref path repeatedly after it has passed safety checks."""
     parser = JsonSchemaParser(tmp_path / "schema.json")

@@ -147,6 +147,18 @@ def local_reference_file_cache_performance_input(tmp_path_factory: pytest.TempPa
 
 
 @pytest.fixture(scope="module")
+def ordinary_array_constraint_performance_schema() -> dict[str, object]:
+    """Prepare ordinary arrays without derived item constraints outside CodSpeed's measured call."""
+    field_count = 4000
+    return {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "OrdinaryArrayConstraintPerformance",
+        "type": "object",
+        "properties": {f"value_{index}": {"type": "array"} for index in range(field_count)},
+    }
+
+
+@pytest.fixture(scope="module")
 def unique_items_performance_schema() -> dict[str, object]:
     """Prepare collapsed uniqueItems references outside the measured call."""
     field_count = 500
@@ -451,6 +463,25 @@ def test_perf_local_reference_file_resolution(local_reference_file_cache_perform
     assert isinstance(result, str)
     assert "class LocalReferenceFileCachePerformance(BaseModel):" in result
     assert result.endswith("    value_499: First")
+
+
+@pytest.mark.perf
+@pytest.mark.benchmark
+def test_perf_ordinary_array_constraint_generation(
+    ordinary_array_constraint_performance_schema: dict[str, object],
+) -> None:
+    """Track ordinary arrays that do not need derived item constraints."""
+    result = generate(
+        ordinary_array_constraint_performance_schema,
+        input_file_type=InputFileType.JsonSchema,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        formatters=[],
+        disable_timestamp=True,
+    )
+
+    assert isinstance(result, str)
+    assert "class OrdinaryArrayConstraintPerformance(BaseModel):" in result
+    assert result.endswith("    value_3999: list[Any] | None = None")
 
 
 @pytest.mark.perf

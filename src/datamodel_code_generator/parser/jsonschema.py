@@ -144,6 +144,7 @@ JsonSchemaConstraintKey = Literal[
 JsonSchemaConstraintValue = int | float | str | bool
 JsonSchemaDataTypeKwargValue = JsonSchemaConstraintValue
 TaggedUnionValue = Union[int, str]  # noqa: UP007
+_ARRAY_ITEMS_CONSTRAINT_FIELDS = frozenset({"items", "additionalItems", "prefixItems", "unevaluatedItems"})
 
 
 def _update_false_schema_refs(
@@ -1738,6 +1739,18 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     @classmethod
     def _get_array_items_constraints(cls, obj: JsonSchemaObject) -> dict[str, int]:
         """Return array length constraints derived from boolean items."""
+        # Only these fields can add derived array-length constraints: items,
+        # additionalItems, prefixItems, unevaluatedItems, and contains-related
+        # extras. Keep explicit null or empty fields on the conventional path,
+        # where subclasses can retain their existing semantics.
+        if (
+            cls is JsonSchemaParser
+            and type(obj) is JsonSchemaObject
+            and not obj.extras
+            and obj.model_fields_set.isdisjoint(_ARRAY_ITEMS_CONSTRAINT_FIELDS)
+        ):
+            return {}
+
         min_items: list[int] = []
         max_items = cls._get_array_max_items_constraints(obj)
         if cls._contains_matches_every_item(obj):
