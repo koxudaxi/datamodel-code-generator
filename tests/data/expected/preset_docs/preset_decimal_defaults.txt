@@ -1,4 +1,5 @@
-standard-py310-20260619: []
-standard-py310-20260826: ['decimal']
-practical-py310-20260826: ['decimal']
-standard-py310-20260826 explicit: []
+standard-py310-20260619: [], legacy=True
+standard-py310-20260826: ['decimal', 'enum'], legacy=False
+practical-py310-20260826: ['decimal', 'enum'], legacy=False
+standard-py310-20260826 explicit: [], legacy=False
+practical-py310-20260826 explicit: [], legacy=False

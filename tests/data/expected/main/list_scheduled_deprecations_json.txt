@@ -72,6 +72,18 @@
     "warning_since": "8.0.0"
   },
   {
+    "id": "cli.set-default-enum-member",
+    "kind": "cli-option",
+    "message": "--set-default-enum-member is deprecated. Use --deserialize-default-values enum instead.",
+    "note": null,
+    "removal_version": null,
+    "replacement": "--deserialize-default-values enum",
+    "status": "scheduled",
+    "target": "--set-default-enum-member",
+    "warning_category": "DeprecationWarning",
+    "warning_since": "0.76.0"
+  },
+  {
     "id": "cli.validation",
     "kind": "cli-option",
     "message": "The `--validation` option is deprecated and will be removed in a future release. Use --field-constraints instead.",

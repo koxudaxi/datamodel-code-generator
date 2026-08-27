@@ -80,7 +80,7 @@
 - `--original-field-name-delimiter`: Specify delimiter for original field names when using snake-case conversion.
 - `--remove-special-field-name-prefix`: Remove the special prefix from field names.
 - `--serialization-aliases`: Apply custom Pydantic v2 serialization aliases via inline JSON or a JSON file path.
-- `--set-default-enum-member`: Set the first enum member as the default value for enum fields.
+- `--set-default-enum-member`: Use the legacy flag for deserializing enum defaults.
 - `--snake-case-field`: Convert field names to snake_case format.
 - `--special-field-name-prefix`: Prefix to add to special field names (like reserved keywords).
 - `--use-attribute-docstrings`: Generate field descriptions as attribute docstrings instead of Field descriptions.

@@ -301,6 +301,7 @@ class DefaultValueType(Enum):
     """Schema default value types that can be deserialized in generated code."""
 
     Decimal = "decimal"
+    Enum = "enum"
 
 
 class JsonSchemaVersion(Enum):

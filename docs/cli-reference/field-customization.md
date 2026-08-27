@@ -21,7 +21,7 @@
 | [`--original-field-name-delimiter`](#original-field-name-delimiter) | Specify delimiter for original field names when using snake-... |
 | [`--remove-special-field-name-prefix`](#remove-special-field-name-prefix) | Remove the special prefix from field names. |
 | [`--serialization-aliases`](#serialization-aliases) | Apply custom Pydantic v2 serialization aliases via inline JS... |
-| [`--set-default-enum-member`](#set-default-enum-member) | Set the first enum member as the default value for enum fiel... |
+| [`--set-default-enum-member`](#set-default-enum-member) | Use the legacy flag for deserializing enum defaults. |
 | [`--snake-case-field`](#snake-case-field) | Convert field names to snake_case format. |
 | [`--special-field-name-prefix`](#special-field-name-prefix) | Prefix to add to special field names (like reserved keywords... |
 | [`--use-attribute-docstrings`](#use-attribute-docstrings) | Generate field descriptions as attribute docstrings instead ... |
@@ -581,10 +581,10 @@ Supports scoped format (ClassName.field) for hierarchical overrides.
 
 Deserialize selected direct scalar field defaults into their generated Python types.
 
-The `--deserialize-default-values` option accepts an explicit list of final generated scalar types. For example,
-`--deserialize-default-values decimal` emits a direct Decimal field's valid string default as a `Decimal` value.
-Container, union, and nested defaults keep their existing handling. Defaults that cannot be deserialized remain
-serialized so the generated module stays importable.
+The `--deserialize-default-values` option accepts an explicit list of generated value types. For example,
+`--deserialize-default-values decimal` emits a direct Decimal field's valid string default as a `Decimal` value,
+while `--deserialize-default-values enum` emits matching scalar and list defaults as enum members. Defaults that
+cannot be deserialized remain serialized so the generated module stays importable.
 
 !!! tip "Usage"
 
@@ -2626,9 +2626,11 @@ or validation aliases while using separate output-only names for serialization.
 
 ## `--set-default-enum-member` {#set-default-enum-member}
 
-Set the first enum member as the default value for enum fields.
+Use the legacy flag for deserializing enum defaults.
 
-The `--set-default-enum-member` flag configures the code generation behavior.
+The `--set-default-enum-member` flag is deprecated. Use `--deserialize-default-values enum` instead.
+
+**Deprecated:** --set-default-enum-member is deprecated. Use --deserialize-default-values enum instead.
 
 !!! tip "Usage"
 

@@ -80,7 +80,7 @@
 - `--original-field-name-delimiter`: Specify delimiter for original field names when using snake-case conversion.
 - `--remove-special-field-name-prefix`: Remove the special prefix from field names.
 - `--serialization-aliases`: Apply custom Pydantic v2 serialization aliases via inline JSON or a JSON file path.
-- `--set-default-enum-member`: Set the first enum member as the default value for enum fields.
+- `--set-default-enum-member`: Use the legacy flag for deserializing enum defaults.
 - `--snake-case-field`: Convert field names to snake_case format.
 - `--special-field-name-prefix`: Prefix to add to special field names (like reserved keywords).
 - `--use-attribute-docstrings`: Generate field descriptions as attribute docstrings instead of Field descriptions.
@@ -398,7 +398,8 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         Example: '{"TypedDict": "my_project.typing_compat",
                         "NotRequired": "my_project.typing_compat"}'.
   --set-default-enum-member
-                        Set enum members as default values for enum field
+                        Deprecated: --set-default-enum-member is deprecated.
+                        Use --deserialize-default-values enum instead.
   --strict-types {str,bytes,int,float,bool} [{str,bytes,int,float,bool} ...]
                         Use strict types
   --type-mappings TYPE_MAPPINGS [TYPE_MAPPINGS ...]
@@ -767,9 +768,9 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         fields remain required unless --use-default is also
                         specified. Example: {'User.status': 'active', 'page':
                         1, 'limit': 10}
-  --deserialize-default-values {decimal} [{decimal} ...]
+  --deserialize-default-values {decimal,enum} [{decimal,enum} ...]
                         Deserialize serialized schema defaults for selected
-                        generated types. Supported values: decimal.
+                        generated types. Supported values: decimal, enum.
   --encoding ENCODING   The encoding of input and output (default: utf-8)
   --extra-template-data EXTRA_TEMPLATE_DATA
                         Extra template data for output models as inline JSON

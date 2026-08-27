@@ -11,6 +11,7 @@ This page lists deprecations and scheduled breaking changes.
 | `behavior.remote-ref-default` | active | behavior | `Remote $ref fetching without --allow-remote-refs` | 0.56.0 | TBD | Pass --allow-remote-refs for trusted remote schemas, or --no-allow-remote-refs to block HTTP(S) $ref fetching. |
 | `cli.allow-extra-fields` | active | cli-option | `--allow-extra-fields` | 0.31.0 | TBD | --extra-fields=allow |
 | `cli.parent-scoped-naming` | active | cli-option | `--parent-scoped-naming` | 0.48.0 | TBD | --naming-strategy parent-prefixed |
+| `cli.set-default-enum-member` | scheduled | cli-option | `--set-default-enum-member` | 0.76.0 | TBD | --deserialize-default-values enum |
 | `cli.validation` | active | cli-option | `--validation` | 0.24.0 | TBD | --field-constraints |
 | `config.json-config-strict-validation` | active | config | `JSON configuration values accepted by legacy validation` | 0.64.2 | TBD | Update the JSON configuration to match --output-format-json-schema config. |
 | `config.yaml-non-lowercase-bool` | active | config | `YAML bool values True, False, TRUE, FALSE` | 0.48.0 | TBD | Use lowercase true or false. |
@@ -83,6 +84,18 @@ The replacement supports allow, forbid, and ignore modes.
 - **Replacement:** --naming-strategy parent-prefixed
 
 --parent-scoped-naming is deprecated. Use --naming-strategy parent-prefixed instead.
+
+### `cli.set-default-enum-member`
+
+- **Status:** scheduled
+- **Kind:** cli-option
+- **Target:** `--set-default-enum-member`
+- **Since:** 0.76.0
+- **Planned removal:** TBD
+- **Warning category:** `DeprecationWarning`
+- **Replacement:** --deserialize-default-values enum
+
+--set-default-enum-member is deprecated. Use --deserialize-default-values enum instead.
 
 ### `cli.validation`
 

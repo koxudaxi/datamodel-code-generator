@@ -79,10 +79,10 @@ def test_serialized_decimal_defaults_warn_without_changing_output(output_file: P
     options=["--deserialize-default-values"],
     option_description="""Deserialize selected direct scalar field defaults into their generated Python types.
 
-The `--deserialize-default-values` option accepts an explicit list of final generated scalar types. For example,
-`--deserialize-default-values decimal` emits a direct Decimal field's valid string default as a `Decimal` value.
-Container, union, and nested defaults keep their existing handling. Defaults that cannot be deserialized remain
-serialized so the generated module stays importable.""",
+The `--deserialize-default-values` option accepts an explicit list of generated value types. For example,
+`--deserialize-default-values decimal` emits a direct Decimal field's valid string default as a `Decimal` value,
+while `--deserialize-default-values enum` emits matching scalar and list defaults as enum members. Defaults that
+cannot be deserialized remain serialized so the generated module stays importable.""",
     input_schema="jsonschema/serialized_decimal_defaults.json",
     cli_args=["--deserialize-default-values", "decimal", "--target-python-version", "3.10"],
     model_outputs={
