@@ -50,6 +50,7 @@ from datamodel_code_generator.enums import InputModelRefStrategy, _get_output_mo
 
 if TYPE_CHECKING:
     from datamodel_code_generator import DataModelType, InputFileType
+    from datamodel_code_generator.enums import _OutputModelFamily
 
 
 class Error(Exception):
@@ -662,7 +663,7 @@ def _get_type_family(tp: type) -> str:  # noqa: PLR0911
     return _TYPE_FAMILY_OTHER  # pragma: no cover
 
 
-def _should_reuse_type(source_family: str, output_family: str) -> bool:
+def _should_reuse_type(source_family: str, output_family: _OutputModelFamily) -> bool:
     """Determine if a source type can be reused without conversion."""
     if source_family == _TYPE_FAMILY_ENUM:
         return True
@@ -672,7 +673,7 @@ def _should_reuse_type(source_family: str, output_family: str) -> bool:
 def _filter_defs_by_strategy(
     schema: dict[str, Any],
     nested_models: dict[str, type],
-    output_family: str | None,
+    output_family: _OutputModelFamily | None,
     strategy: InputModelRefStrategy,
 ) -> dict[str, Any]:
     """Filter $defs based on ref strategy, marking reused types with x-python-import."""
@@ -870,7 +871,7 @@ def _load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
 ) -> dict[str, object]:
     from datamodel_code_generator import InputFileType  # noqa: PLC0415
 
-    output_family: str | None = None
+    output_family: _OutputModelFamily | None = None
     if ref_strategy is InputModelRefStrategy.ReuseForeign:
         output_family = _get_output_model_family(output_model_type)
 
@@ -976,7 +977,7 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0915
     input_model: str,
     input_file_type: InputFileType,
     ref_strategy: InputModelRefStrategy | None,
-    output_family: str | None,
+    output_family: _OutputModelFamily | None,
     expression_collector: PythonTypeExpressionCollector | None = None,
 ) -> dict[str, object]:
     """Load schema from a Python import path.
