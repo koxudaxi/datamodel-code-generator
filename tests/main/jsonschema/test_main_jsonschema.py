@@ -1479,6 +1479,70 @@ def test_main_jsonschema_anchor_ref(output_file: Path) -> None:
     )
 
 
+@pytest.mark.parametrize(
+    ("input_name", "expected_file", "extra_args"),
+    [
+        pytest.param(
+            "simple_string.json",
+            "simple_string.py",
+            ["--formatters", "builtin", "--disable-timestamp"],
+            id="primitive-leaf",
+        ),
+        pytest.param(
+            "schema_validators.json",
+            "schema_validators.py",
+            [
+                "--generate-schema-validators",
+                "--output-model-type",
+                "pydantic_v2.BaseModel",
+                "--use-annotated",
+                "--disable-timestamp",
+            ],
+            id="children-conditional-reference",
+        ),
+        pytest.param(
+            "anchor_ref.json",
+            "anchor_ref.py",
+            ["--disable-timestamp"],
+            id="anchor-reference",
+        ),
+        pytest.param(
+            "dynamic_ref.json",
+            "dynamic_ref_pydantic_v2.py",
+            ["--output-model-type", "pydantic_v2.BaseModel"],
+            id="children-dynamic-anchor",
+        ),
+    ],
+)
+def test_main_jsonschema_leaf_schema_traversal_cli(
+    output_file: Path,
+    input_name: str,
+    expected_file: str,
+    extra_args: list[str],
+) -> None:
+    """Keep CLI output byte-identical for leaf and nested traversal schemas."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / input_name,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=extra_args,
+    )
+
+
+def test_generate_jsonschema_leaf_schema_traversal_dynamic_reference(output_file: Path) -> None:
+    """Keep the public generate API aligned for dynamic child references."""
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "dynamic_ref.json",
+        output_path=output_file,
+        input_file_type=InputFileType.JsonSchema,
+        assert_func=assert_file_content,
+        expected_file="dynamic_ref_pydantic_v2.py",
+        output_model_type=DataModelType.PydanticV2BaseModel,
+    )
+
+
 def test_main_jsonschema_missing_anchor_reports_error(capsys: pytest.CaptureFixture[str], output_file: Path) -> None:
     """Test missing $id anchor produces a clear error instead of KeyError trace."""
     run_main_and_assert(

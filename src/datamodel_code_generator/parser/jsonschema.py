@@ -379,6 +379,23 @@ _NUMBER_CONSTRAINT_TYPES = frozenset({
     Types.decimal,
 })
 
+# Keep this in sync with _traverse_schema_objects(). Only schemas that did not
+# explicitly receive one of these fields can skip the child traversal below.
+_SCHEMA_OBJECT_CHILD_FIELDS = frozenset({
+    "items",
+    "prefixItems",
+    "additionalProperties",
+    "unevaluatedProperties",
+    "unevaluatedItems",
+    "patternProperties",
+    "propertyNames",
+    "anyOf",
+    "allOf",
+    "oneOf",
+    "properties",
+})
+_CONDITIONAL_SCHEMA_KEYWORDS = frozenset({"if", "then", "else"})
+
 
 def _get_data_type_constraint_kwargs(
     obj: JsonSchemaObject,
@@ -9743,6 +9760,13 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     ) -> None:
         """Traverse schema objects recursively and apply callback."""
         callback(obj, path)
+        if (
+            type(self) is JsonSchemaParser
+            and type(obj) is JsonSchemaObject
+            and obj.model_fields_set.isdisjoint(_SCHEMA_OBJECT_CHILD_FIELDS)
+            and (not self.generate_schema_validators or obj.extras.keys().isdisjoint(_CONDITIONAL_SCHEMA_KEYWORDS))
+        ):
+            return
         match obj.items:
             case JsonSchemaObject() as item:
                 self._traverse_schema_objects(item, [*path, "items"], callback, include_one_of=include_one_of)
