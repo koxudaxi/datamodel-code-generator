@@ -101,6 +101,36 @@ def false_reference_performance_schema() -> dict[str, YamlValue]:
 
 
 @pytest.fixture(scope="module")
+def local_reference_file_cache_performance_input(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """Prepare repeated local file fragments outside CodSpeed's measured call."""
+    schema_directory = tmp_path_factory.mktemp("local-reference-file-cache")
+    (schema_directory / "shared.json").write_text(
+        json.dumps({
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "$defs": {
+                "First": {"type": "object", "properties": {"name": {"type": "string"}}},
+                "Second": {"type": "object", "properties": {"count": {"type": "integer"}}},
+            },
+        }),
+        encoding="utf-8",
+    )
+    (schema_directory / "root.json").write_text(
+        json.dumps({
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "LocalReferenceFileCachePerformance",
+            "type": "object",
+            "properties": {
+                f"value_{index}": {"$ref": f"shared.json#/$defs/{'First' if index % 2 else 'Second'}"}
+                for index in range(500)
+            },
+            "required": [f"value_{index}" for index in range(500)],
+        }),
+        encoding="utf-8",
+    )
+    return schema_directory / "root.json"
+
+
+@pytest.fixture(scope="module")
 def unique_items_performance_schema() -> dict[str, object]:
     """Prepare collapsed uniqueItems references outside the measured call."""
     field_count = 500
@@ -389,6 +419,22 @@ def test_perf_false_reference_validation(
     assert isinstance(result, str)
     assert "class FalseReferencePerformance(BaseModel):" in result
     assert result.endswith("    value_499: Value | None = None")
+
+
+@pytest.mark.perf
+@pytest.mark.benchmark
+def test_perf_local_reference_file_resolution(local_reference_file_cache_performance_input: Path) -> None:
+    """Track repeated local file fragment resolution without formatter work."""
+    result = generate(
+        local_reference_file_cache_performance_input,
+        input_file_type=InputFileType.JsonSchema,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        formatters=[],
+        disable_timestamp=True,
+    )
+    assert isinstance(result, str)
+    assert "class LocalReferenceFileCachePerformance(BaseModel):" in result
+    assert result.endswith("    value_499: First")
 
 
 @pytest.mark.perf

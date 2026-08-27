@@ -2004,6 +2004,16 @@ def test_main_external_files_in_directory(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_local_reference_file_cache(output_file: Path) -> None:
+    """Generate local references with shared file parts, fragments, and recursive nested schemas."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "local_reference_file_cache" / "root.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+    )
+
+
 def test_main_nested_directory(output_dir: Path) -> None:
     """Test nested directory structure generation."""
     run_main_and_assert(
