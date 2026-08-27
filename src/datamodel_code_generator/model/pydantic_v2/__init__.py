@@ -12,6 +12,7 @@ from pydantic import BaseModel as _BaseModel
 from pydantic import ConfigDict as _PydanticConfigDict
 
 from datamodel_code_generator.enums import UnionMode
+from datamodel_code_generator.model.base import declare_resolve_reference_action_capabilities
 
 from .base_model import BaseModel, DataModelField
 from .root_model import RootModel
@@ -25,6 +26,13 @@ if TYPE_CHECKING:
 def dump_resolve_reference_action(class_names: Iterable[str]) -> str:
     """Generate model_rebuild() calls for Pydantic v2 models."""
     return "\n".join(f"{class_name}.model_rebuild()" for class_name in class_names)
+
+
+declare_resolve_reference_action_capabilities(
+    dump_resolve_reference_action,
+    filter_forward_references=True,
+    generated_formatter_safe=True,
+)
 
 
 class ConfigDict(_BaseModel):

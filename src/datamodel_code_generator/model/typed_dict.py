@@ -29,10 +29,10 @@ from datamodel_code_generator.types import NOT_REQUIRED_PREFIX, READ_ONLY_PREFIX
 
 if TYPE_CHECKING:
     from collections import defaultdict
-    from collections.abc import Iterable, Iterator
+    from collections.abc import Iterable, Iterator, Mapping
     from pathlib import Path
 
-    from datamodel_code_generator.imports import Import
+    from datamodel_code_generator.imports import Import, Imports
     from datamodel_code_generator.reference import Reference
 
 
@@ -66,6 +66,23 @@ class TypedDict(DataModel):
     REQUIRES_ADDITIONAL_PROPERTIES_REFERENCE_CLASSES: ClassVar[bool] = True
     SUPPORTS_TYPED_DICT_TOTAL_FALSE: ClassVar[bool] = True
     SUPPORTS_DESERIALIZED_DEFAULT_VALUES: ClassVar[bool] = False
+
+    @classmethod
+    def resolve_module_import_conflicts(
+        cls,
+        models: Iterable[DataModel],
+        model_imports: Mapping[DataModel, tuple[Import, ...]],
+        imports: Imports,
+    ) -> None:
+        """Prefer one TypedDict source when a module mixes target-version requirements."""
+        if not any(IMPORT_TYPED_DICT_BACKPORT in model_imports[model] for model in models):
+            return
+        if IMPORT_TYPED_DICT_BACKPORT.import_ not in imports.get(
+            IMPORT_TYPED_DICT_BACKPORT.from_, set()
+        ) or IMPORT_TYPED_DICT.import_ not in imports.get(IMPORT_TYPED_DICT.from_, set()):
+            return
+        while imports.counter.get((IMPORT_TYPED_DICT.from_, IMPORT_TYPED_DICT.import_), 0) > 0:
+            imports.remove(IMPORT_TYPED_DICT)
 
     def __init__(  # noqa: PLR0913
         self,
