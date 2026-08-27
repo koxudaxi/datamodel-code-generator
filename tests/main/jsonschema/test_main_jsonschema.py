@@ -6189,6 +6189,19 @@ def test_main_jsonschema_items_boolean(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_array_constraint_fast_path(output_file: Path) -> None:
+    """Keep array length constraints identical when the fast path is unavailable."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "array_constraint_fast_path.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="array_constraint_fast_path.py",
+        extra_args=["--disable-timestamp", "--formatters", "builtin", "--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+
+
 def test_main_jsonschema_array_in_additional_properites(output_file: Path) -> None:
     """Test array in additional properties."""
     run_main_and_assert(
