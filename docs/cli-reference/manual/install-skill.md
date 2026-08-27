@@ -1,6 +1,6 @@
 ## `--install-skill` {#install-skill}
 
-Install the bundled `datamodel-code-generator` Agent Skill for Codex or Claude Code, then exit.
+Install the bundled experimental `datamodel-code-generator` Agent Skill for Codex or Claude Code, then exit.
 
 The default `project` scope installs the skill in the current project's
 `.agents/skills/` directory for Codex or `.claude/skills/` directory for Claude

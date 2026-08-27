@@ -37620,7 +37620,7 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/utility-opti
 | [`--debug`](#debug) | Show debug messages during code generation |
 | [`--generate-prompt`](#generate-prompt) | Generate a prompt for consulting LLMs about CLI options |
 | [`--help`](#help) | Show help message and exit |
-| [`--install-skill`](#install-skill) | Install the bundled Agent Skill |
+| [`--install-skill`](#install-skill) | Install the bundled Agent Skill (experimental) |
 | [`--job`](#job) | Run a named generation job from pyproject.toml (experimental) |
 | [`--list-deprecations`](#list-deprecations) | List registered deprecations and scheduled breaking changes |
 | [`--list-experimental`](#list-experimental) | List registered experimental features |
@@ -37805,7 +37805,7 @@ Displays all available command-line options with their descriptions and default 
 
 ## `--install-skill` {#install-skill}
 
-Install the bundled `datamodel-code-generator` Agent Skill for Codex or Claude Code, then exit.
+Install the bundled experimental `datamodel-code-generator` Agent Skill for Codex or Claude Code, then exit.
 
 The default `project` scope installs the skill in the current project's
 `.agents/skills/` directory for Codex or `.claude/skills/` directory for Claude
@@ -38673,7 +38673,7 @@ datamodel-codegen [OPTIONS]
 | [`--debug`](utility-options.md#debug) | Show debug messages during code generation |
 | [`--generate-prompt`](utility-options.md#generate-prompt) | Generate a prompt for consulting LLMs about CLI options |
 | [`--help`](utility-options.md#help) | Show help message and exit |
-| [`--install-skill`](utility-options.md#install-skill) | Install the bundled Agent Skill |
+| [`--install-skill`](utility-options.md#install-skill) | Install the bundled Agent Skill (experimental) |
 | [`--job`](utility-options.md#job) | Run a named generation job from pyproject.toml (experimental) |
 | [`--list-deprecations`](utility-options.md#list-deprecations) | List registered deprecations and scheduled breaking changes |
 | [`--list-experimental`](utility-options.md#list-experimental) | List registered experimental features |
@@ -38773,7 +38773,7 @@ All options sorted alphabetically:
 - [`--input-file-type`](base-options.md#input-file-type) - Specify the input file type for code generation.
 - [`--input-model`](base-options.md#input-model) - Import a Python type or dict schema from a module or Python ...
 - [`--input-model-ref-strategy`](base-options.md#input-model-ref-strategy) - Strategy for referenced types when using --input-model.
-- [`--install-skill`](utility-options.md#install-skill) - Install the bundled Agent Skill
+- [`--install-skill`](utility-options.md#install-skill) - Install the bundled Agent Skill (experimental)
 - [`--job`](utility-options.md#job) - Run a named generation job from pyproject.toml (experimental)
 - [`--keep-model-order`](model-customization.md#keep-model-order) - Keep generated model order deterministic while respecting de...
 - [`--keyword-only`](model-customization.md#keyword-only) - Generate dataclasses with keyword-only fields (Python 3.10+)...
@@ -39551,6 +39551,7 @@ This page lists features that are available but still experimental.
 | `behavior.batch-generation-jobs` | behavior | `[tool.datamodel-codegen.jobs], --job, --all-jobs` | 0.72.3 | - |
 | `behavior.remote-reference-lock` | behavior | `datamodel-codegen.lock, --lockfile, --update-lock, and --locked` | 0.72.3 | - |
 | `cli-option.generate-schema-validators` | cli-option | `--generate-schema-validators` | 0.66.1 | - |
+| `cli-option.install-skill` | cli-option | `--install-skill, --skill-scope, and --overwrite-skill` | 0.76.0 | - |
 | `cli-option.schema-validator-type` | cli-option | `--schema-validator-type` | 0.66.1 | - |
 | `cli-option.use-missing-sentinel` | cli-option | `--use-missing-sentinel` | 0.66.1 | - |
 | `cli-option.use-type-alias` | cli-option | `--use-type-alias` | 0.36.0 | - |
@@ -39594,6 +39595,16 @@ The lock stores opaque SHA-256 request-identity digests and SHA-256 body digests
 Schema-derived runtime validators are experimental and may change as JSON Schema coverage is expanded.
 
 The option currently targets Pydantic v2 BaseModel output and covers selected object-level rules such as patternProperties, required-only oneOf/anyOf groups, and simple if/then/else required-property conditions.
+
+### `cli-option.install-skill`
+
+- **Kind:** cli-option
+- **Target:** `--install-skill, --skill-scope, and --overwrite-skill`
+- **Since:** 0.76.0
+
+Bundled Agent Skill installation is experimental; supported clients, scopes, and installed skill contents may change.
+
+Use --install-skill with codex or claude-code. --skill-scope selects a project or user installation, and --overwrite-skill safely replaces an existing regular skill directory.
 
 ### `cli-option.schema-validator-type`
 

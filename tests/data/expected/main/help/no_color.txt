@@ -662,8 +662,8 @@ General options:
   --ignore-pyproject    Ignore pyproject.toml configuration
   --install-skill {codex,claude-code}
                         Install the bundled datamodel-code-generator Agent
-                        Skill and exit. Use --skill-scope to select a project
-                        or personal installation.
+                        Skill and exit (experimental). Use --skill-scope to
+                        select a project or personal installation.
   --job NAME            Run a named job from pyproject.toml [tool.datamodel-
                         codegen.jobs.<name>] (experimental). Can be repeated.
   --list-deprecations [{table,json,markdown}]

@@ -9,6 +9,7 @@ This page lists features that are available but still experimental.
 | `behavior.batch-generation-jobs` | behavior | `[tool.datamodel-codegen.jobs], --job, --all-jobs` | 0.72.3 | - |
 | `behavior.remote-reference-lock` | behavior | `datamodel-codegen.lock, --lockfile, --update-lock, and --locked` | 0.72.3 | - |
 | `cli-option.generate-schema-validators` | cli-option | `--generate-schema-validators` | 0.66.1 | - |
+| `cli-option.install-skill` | cli-option | `--install-skill, --skill-scope, and --overwrite-skill` | 0.76.0 | - |
 | `cli-option.schema-validator-type` | cli-option | `--schema-validator-type` | 0.66.1 | - |
 | `cli-option.use-missing-sentinel` | cli-option | `--use-missing-sentinel` | 0.66.1 | - |
 | `cli-option.use-type-alias` | cli-option | `--use-type-alias` | 0.36.0 | - |
@@ -52,6 +53,16 @@ The lock stores opaque SHA-256 request-identity digests and SHA-256 body digests
 Schema-derived runtime validators are experimental and may change as JSON Schema coverage is expanded.
 
 The option currently targets Pydantic v2 BaseModel output and covers selected object-level rules such as patternProperties, required-only oneOf/anyOf groups, and simple if/then/else required-property conditions.
+
+### `cli-option.install-skill`
+
+- **Kind:** cli-option
+- **Target:** `--install-skill, --skill-scope, and --overwrite-skill`
+- **Since:** 0.76.0
+
+Bundled Agent Skill installation is experimental; supported clients, scopes, and installed skill contents may change.
+
+Use --install-skill with codex or claude-code. --skill-scope selects a project or user installation, and --overwrite-skill safely replaces an existing regular skill directory.
 
 ### `cli-option.schema-validator-type`
 

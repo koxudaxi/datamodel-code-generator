@@ -1456,7 +1456,7 @@ general_options.add_argument(
     default=None,
     metavar="{codex,claude-code}",
     help=(
-        "Install the bundled datamodel-code-generator Agent Skill and exit. "
+        "Install the bundled datamodel-code-generator Agent Skill and exit (experimental). "
         "Use --skill-scope to select a project or personal installation."
     ),
 )

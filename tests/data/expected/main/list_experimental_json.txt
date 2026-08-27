@@ -27,6 +27,15 @@
     "tracking_issue": null
   },
   {
+    "id": "cli-option.install-skill",
+    "kind": "cli-option",
+    "message": "Bundled Agent Skill installation is experimental; supported clients, scopes, and installed skill contents may change.",
+    "note": "Use --install-skill with codex or claude-code. --skill-scope selects a project or user installation, and --overwrite-skill safely replaces an existing regular skill directory.",
+    "since_version": "0.76.0",
+    "target": "--install-skill, --skill-scope, and --overwrite-skill",
+    "tracking_issue": null
+  },
+  {
     "id": "cli-option.schema-validator-type",
     "kind": "cli-option",
     "message": "Schema-derived runtime validator backend selection is experimental and may change as validation backends are added.",

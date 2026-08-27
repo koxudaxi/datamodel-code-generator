@@ -8,7 +8,7 @@
 | [`--debug`](#debug) | Show debug messages during code generation |
 | [`--generate-prompt`](#generate-prompt) | Generate a prompt for consulting LLMs about CLI options |
 | [`--help`](#help) | Show help message and exit |
-| [`--install-skill`](#install-skill) | Install the bundled Agent Skill |
+| [`--install-skill`](#install-skill) | Install the bundled Agent Skill (experimental) |
 | [`--job`](#job) | Run a named generation job from pyproject.toml (experimental) |
 | [`--list-deprecations`](#list-deprecations) | List registered deprecations and scheduled breaking changes |
 | [`--list-experimental`](#list-experimental) | List registered experimental features |
@@ -193,7 +193,7 @@ Displays all available command-line options with their descriptions and default 
 
 ## `--install-skill` {#install-skill}
 
-Install the bundled `datamodel-code-generator` Agent Skill for Codex or Claude Code, then exit.
+Install the bundled experimental `datamodel-code-generator` Agent Skill for Codex or Claude Code, then exit.
 
 The default `project` scope installs the skill in the current project's
 `.agents/skills/` directory for Codex or `.claude/skills/` directory for Claude

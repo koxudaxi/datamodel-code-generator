@@ -14,6 +14,7 @@ ExperimentalFeatureId = Literal[
     "behavior.batch-generation-jobs",
     "behavior.remote-reference-lock",
     "cli-option.generate-schema-validators",
+    "cli-option.install-skill",
     "cli-option.schema-validator-type",
     "cli-option.use-missing-sentinel",
     "cli-option.use-type-alias",
@@ -98,6 +99,20 @@ EXPERIMENTAL_FEATURES: dict[ExperimentalFeatureId, ExperimentalFeature] = {
         note=(
             "The option currently targets Pydantic v2 BaseModel output and covers selected object-level rules such as "
             "patternProperties, required-only oneOf/anyOf groups, and simple if/then/else required-property conditions."
+        ),
+    ),
+    "cli-option.install-skill": ExperimentalFeature(
+        id="cli-option.install-skill",
+        kind="cli-option",
+        target="--install-skill, --skill-scope, and --overwrite-skill",
+        message=(
+            "Bundled Agent Skill installation is experimental; supported clients, scopes, and installed skill "
+            "contents may change."
+        ),
+        since_version="0.76.0",
+        note=(
+            "Use --install-skill with codex or claude-code. --skill-scope selects a project or user installation, "
+            "and --overwrite-skill safely replaces an existing regular skill directory."
         ),
     ),
     "cli-option.schema-validator-type": ExperimentalFeature(
