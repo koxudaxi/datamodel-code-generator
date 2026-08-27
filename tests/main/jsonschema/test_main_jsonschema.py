@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, get_args, get_type_hints
 import black
 import pytest
 from packaging import version
+from pydantic import VERSION as PYDANTIC_VERSION
 from pydantic import ValidationError
 
 from datamodel_code_generator import (
@@ -7574,6 +7575,127 @@ def test_main_jsonschema_additional_properties_schema_with_properties(output_fil
         expected_error_type="int_type",
         expected_attribute_path=("__pydantic_extra__",),
         expected_attribute_value={"size": 1},
+    )
+
+
+def test_main_jsonschema_property_names_additional_properties_schema_with_properties(output_file: Path) -> None:
+    """Test propertyNames constrains typed extra keys as well as their values."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "property_names_additional_properties_schema_with_properties.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="property_names_additional_properties_schema_with_properties.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    # Pydantic validates constrained typed-extra keys only in this supported range.
+    if not version.parse("2.11") <= version.parse(PYDANTIC_VERSION) < version.parse("2.13"):
+        return
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="property_names_additional_properties_schema_with_properties",
+        model_name="KnownAndNamedExtra",
+        valid_json='{"name":"known","valid_key":1}',
+        invalid_json='{"name":"known","Invalid":1}',
+        expected_error_type="string_pattern_mismatch",
+        expected_attribute_path=("__pydantic_extra__",),
+        expected_attribute_value={"valid_key": 1},
+    )
+
+
+def test_main_jsonschema_property_names_true_additional_properties_schema_with_properties(output_file: Path) -> None:
+    """Test unconstrained propertyNames keeps the typed-extra string-key fast path."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "property_names_true_additional_properties_schema_with_properties.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="property_names_true_additional_properties_schema_with_properties.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="property_names_true_additional_properties_schema_with_properties",
+        model_name="KnownAndAnyExtra",
+        valid_json='{"name":"known","extra":1}',
+        invalid_json='{"name":"known","extra":[]}',
+        expected_error_type="int_type",
+        expected_attribute_path=("__pydantic_extra__",),
+        expected_attribute_value={"extra": 1},
+    )
+
+
+def test_main_jsonschema_property_names_ref_additional_properties_schema_with_properties(output_file: Path) -> None:
+    """Test referenced propertyNames keeps typed-extra keys as strings."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "property_names_ref_additional_properties_schema_with_properties.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="property_names_ref_additional_properties_schema_with_properties.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="property_names_ref_additional_properties_schema_with_properties",
+        model_name="KnownAndReferencedExtra",
+        valid_json='{"name":"known","valid_key":1}',
+        invalid_json='{"name":"known","valid_key":[]}',
+        expected_error_type="int_type",
+        expected_attribute_path=("__pydantic_extra__",),
+        expected_attribute_value={"valid_key": 1},
+    )
+
+
+def test_main_jsonschema_property_names_type_non_string_additional_properties_schema_with_properties(
+    output_file: Path,
+) -> None:
+    """Test propertyNames with a non-string branch keeps typed-extra keys as strings."""
+    run_main_and_assert(
+        input_path=(
+            JSON_SCHEMA_DATA_PATH / "property_names_type_non_string_additional_properties_schema_with_properties.json"
+        ),
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="property_names_type_non_string_additional_properties_schema_with_properties.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+
+
+def test_main_jsonschema_property_names_forbidden_additional_properties_schema_with_properties(
+    output_file: Path,
+) -> None:
+    """Test an impossible direct propertyNames schema does not constrain typed extra keys."""
+    run_main_and_assert(
+        input_path=(
+            JSON_SCHEMA_DATA_PATH / "property_names_forbidden_additional_properties_schema_with_properties.json"
+        ),
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="property_names_forbidden_additional_properties_schema_with_properties.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
     )
 
 

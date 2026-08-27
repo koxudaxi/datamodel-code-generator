@@ -77,7 +77,7 @@ from datamodel_code_generator.model.pydantic_v2.base_model import (
 )
 from datamodel_code_generator.model.pydantic_v2.dataclass import DataClass as PydanticDataclassModel
 from datamodel_code_generator.model.pydantic_v2.dataclass import DataModelField as PydanticDataclassField
-from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_FIELD, IMPORT_MISSING
+from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_CONSTR, IMPORT_FIELD, IMPORT_MISSING
 from datamodel_code_generator.model.runtime_validation import (
     RequiredGroupsRule,
     SchemaRuntimeValidation,
@@ -982,6 +982,93 @@ def test_pydantic_v2_base_model_create_typed_extra_field() -> None:
     assert field.original_name == "__pydantic_extra__"
     assert field.data_type is data_type
     assert field.required is True
+
+
+@pytest.mark.parametrize(
+    ("dict_key", "is_supported"),
+    [
+        pytest.param(
+            DataType(type="constr", is_func=True, kwargs={"pattern": "^[a-z]+$"}, import_=IMPORT_CONSTR),
+            True,
+            id="constrained-string",
+        ),
+        pytest.param(DataType(literals=["named"]), True, id="string-literal"),
+        pytest.param(DataType(literals=[1]), False, id="non-string-literal"),
+        pytest.param(DataType(type="int", literals=["named"]), False, id="integer-with-string-literal"),
+        pytest.param(DataType(type="str"), False, id="plain-string"),
+        pytest.param(DataType(type="int"), False, id="integer"),
+        pytest.param(DataType(type="bool"), False, id="boolean"),
+        pytest.param(DataType(type="constr", import_=IMPORT_CONSTR), False, id="unconfigured-constr"),
+        pytest.param(DataType(enum_member_literals=[("Key", "member")]), False, id="enum-member-literal"),
+        pytest.param(DataType(is_optional=True), False, id="optional"),
+        pytest.param(DataType(is_dict=True), False, id="dict"),
+        pytest.param(DataType(is_list=True), False, id="list"),
+        pytest.param(DataType(is_set=True), False, id="set"),
+        pytest.param(DataType(is_frozen_set=True), False, id="frozen-set"),
+        pytest.param(DataType(is_mapping=True), False, id="mapping"),
+        pytest.param(DataType(is_sequence=True), False, id="sequence"),
+        pytest.param(DataType(is_tuple=True), False, id="tuple"),
+        pytest.param(
+            DataType(data_types=[DataType(type="str"), DataType(type="int")]),
+            False,
+            id="compound",
+        ),
+    ],
+)
+def test_pydantic_v2_base_model_typed_extra_dict_key_capability(
+    dict_key: DataType,
+    is_supported: bool,
+) -> None:
+    """Test Pydantic v2 keeps only supported typed-extra key types."""
+    data_type = DataType(data_types=[DataType(type="int")], is_dict=True, dict_key=dict_key)
+
+    field = BaseModel.create_typed_extra_field(
+        field_model=PydanticV2DataModelField,
+        data_type=data_type,
+    )
+
+    if not is_supported:
+        assert field.data_type.dict_key is None
+    else:
+        assert field.data_type.dict_key is dict_key
+
+
+def test_pydantic_v2_base_model_typed_extra_dict_key_capability_unregisters_references() -> None:
+    """Test discarded typed-extra key types leave no reverse-reference registration."""
+    reference = Reference(path="Key", original_name="Key", name="Key")
+    nested_data_type = DataType(reference=reference)
+    dict_key = DataType(data_types=[nested_data_type])
+    data_type = DataType(data_types=[DataType(type="int")], is_dict=True, dict_key=dict_key)
+
+    BaseModel.create_typed_extra_field(
+        field_model=PydanticV2DataModelField,
+        data_type=data_type,
+    )
+
+    assert data_type.dict_key is None
+    assert dict_key.parent is None
+    assert nested_data_type.parent is None
+    assert nested_data_type not in reference.children
+
+
+def test_pydantic_v2_base_model_typed_extra_dict_key_capability_fails_closed() -> None:
+    """Test typed-extra key constraints are discarded without a backend capability."""
+
+    class NoKeyCapabilityBaseModel(BaseModel):
+        _TYPED_EXTRA_DICT_KEY_CAPABILITY = None
+
+    data_type = DataType(
+        data_types=[DataType(type="int")],
+        is_dict=True,
+        dict_key=DataType(type="constr", is_func=True, kwargs={"pattern": "^[a-z]+$"}, import_=IMPORT_CONSTR),
+    )
+
+    field = NoKeyCapabilityBaseModel.create_typed_extra_field(
+        field_model=PydanticV2DataModelField,
+        data_type=data_type,
+    )
+
+    assert field.data_type.dict_key is None
 
 
 def test_data_model_dedup_key_uses_model_base_to_hashable_seam(monkeypatch: pytest.MonkeyPatch) -> None:
