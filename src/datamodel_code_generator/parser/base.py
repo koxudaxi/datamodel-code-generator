@@ -3673,8 +3673,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     descriptor,
                     can_retain_cache=can_retain_cache,
                 )
-            case _:  # pragma: no cover - future backend recipe
-                return False
+        return False  # pragma: no cover - future backend recipe
 
     def __deserialize_decimal_default(
         self,
