@@ -12,14 +12,12 @@ import pytest
 
 from datamodel_code_generator import chdir
 from datamodel_code_generator.__main__ import Exit
-from datamodel_code_generator.agent_skill import AgentSkillError, install_agent_skill
+from datamodel_code_generator.agent_skill import AgentName, AgentSkillError, SkillScope, install_agent_skill
 from tests.conftest import assert_exact_directory_content, assert_output, create_assert_file_content
 from tests.main.conftest import run_main_with_args
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-
-    from datamodel_code_generator.agent_skill import AgentName, SkillScope
 
 ROOT = Path(__file__).parents[2]
 SKILL_DIR = ROOT / "skills" / "datamodel-code-generator"
@@ -304,8 +302,8 @@ def test_install_skill_rejects_unsupported_destination_values(
     """The typed installer still fails safely if called by an untyped client."""
     with pytest.raises(AgentSkillError) as exception_info:
         install_agent_skill(
-            cast("AgentName", agent),
-            cast("SkillScope", scope),
+            cast(AgentName, agent),  # noqa: TC006
+            cast(SkillScope, scope),  # noqa: TC006
             overwrite=False,
             cwd=tmp_path,
         )

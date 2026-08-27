@@ -42,12 +42,13 @@ def _skill_destination(agent: AgentName, scope: SkillScope, cwd: Path) -> Path:
 
     match scope:
         case "project":
-            return cwd / skill_directory / SKILL_NAME
+            root = cwd
         case "user":
-            return Path.home() / skill_directory / SKILL_NAME
+            root = Path.home()
         case _:
             msg = f"Unsupported skill scope: {scope}"
             raise AgentSkillError(msg)
+    return root / skill_directory / SKILL_NAME
 
 
 def _copy_skill(source: Traversable, destination: Path) -> None:
