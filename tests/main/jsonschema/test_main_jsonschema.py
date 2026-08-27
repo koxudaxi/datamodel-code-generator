@@ -742,6 +742,25 @@ def test_main_simple_pydantic_v2_fields(output_file: Path) -> None:
     )
 
 
+def test_main_simple_pydantic_v2_fields_with_custom_template(output_file: Path) -> None:
+    """Keep empty field plans compatible with custom Pydantic v2 templates."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "simple_pydantic_v2_fields.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="simple_pydantic_v2_fields.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--field-constraints",
+            "--disable-timestamp",
+            "--custom-template-dir",
+            str(DATA_PATH / "templates_extensions"),
+        ],
+    )
+
+
 @pytest.mark.benchmark
 def test_main_autodetect(output_file: Path) -> None:
     """Test automatic input file type detection."""

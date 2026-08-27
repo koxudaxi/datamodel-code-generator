@@ -132,6 +132,7 @@ _CONFIG_ITEMS_TEMPLATE_DATA_KEY = "config_items"
 _NEUTRALIZE_ROOT_MODEL_EXTRA_CONFIG_TEMPLATE_DATA_KEY = "neutralize_root_model_extra_config"
 _MIN_QUOTED_STRING_LENGTH = 2
 _LEGACY_CONFIG_LITERAL_STRINGS: frozenset[str] = frozenset({"False", "None", "True"})
+_EMPTY_FIELD_RENDER_PLAN = _PydanticFieldRenderPlan("", None, (), None)
 _LEGACY_PYDANTIC_EXTRA_TEMPLATE_PATTERN = re.compile(
     r"{%-?\s*(?:if|elif)\s+(?:not\s+)?field\.use_pydantic_extra_annotation_assignment\b"
 )
@@ -452,6 +453,18 @@ class DataModelField(_PydanticBaseDataModelField):
 
     def _get_field_render_plan(self) -> _PydanticFieldRenderPlan:
         """Include the explicit null default required by Pydantic v2."""
+        can_use_empty_plan = (
+            type(self) is DataModelField
+            and not self.is_class_var
+            and not self._requires_null_default_field()
+            and not super()._may_have_field_statement()
+        )
+        if can_use_empty_plan:
+            can_use_empty_plan = self._alias_generator_name_from_parent() is None
+        if can_use_empty_plan:
+            can_use_empty_plan = (parent := self.parent) is None or not parent._uses_custom_root_template  # noqa: SLF001
+        if can_use_empty_plan:
+            return _EMPTY_FIELD_RENDER_PLAN
         plan = super()._get_field_render_plan()
         if plan.rendered or not self._requires_null_default_field():
             return plan
