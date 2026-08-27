@@ -26,6 +26,7 @@ from tests.main.conftest import (
     BACKEND_GOLDEN_CASES,
     BACKEND_GOLDEN_TARGET_ARGS,
     JSON_SCHEMA_DATA_PATH,
+    _validate_output_files,
     run_generate_file_and_assert,
     run_main_and_assert,
 )
@@ -413,7 +414,7 @@ def test_deserialize_decimal_defaults_reuses_existing_alias(alias_source: str, o
 
 
 def test_deserialize_decimal_defaults_preserves_python_decimal_override(output_file: Path) -> None:
-    """Keep public API Decimal overrides typed without attempting to deserialize them again."""
+    """Render public API Decimal overrides through structured imports."""
     with warnings.catch_warnings(record=True) as recorded_warnings:
         warnings.simplefilter("always", UserWarning)
         run_generate_file_and_assert(
@@ -438,6 +439,40 @@ def test_deserialize_decimal_defaults_preserves_python_decimal_override(output_f
         "emitted as serialized data instead of Decimal",
         "could not be deserialized",
     )
+
+
+@pytest.mark.parametrize(
+    "deserialize_default_values",
+    [(), (DefaultValueType.Decimal,)],
+    ids=["disabled", "decimal"],
+)
+def test_native_decimal_default_override_resolves_field_collision(
+    output_file: Path,
+    deserialize_default_values: tuple[DefaultValueType, ...],
+) -> None:
+    """Keep native Decimal overrides importable when a preceding field shadows Decimal."""
+    with warnings.catch_warnings(record=True) as recorded_warnings:
+        warnings.simplefilter("always", DefaultValueTypeWarning)
+        run_generate_file_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "native_decimal_default_constrained.json",
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            assert_func=assert_file_content,
+            expected_file="serialized_decimal_defaults/native_override_constrained.py",
+            target_python_version=PythonVersion.PY_310,
+            disable_timestamp=True,
+            formatters=[Formatter.BUILTIN],
+            builtin_format_line_length=88,
+            use_decimal_for_multiple_of=True,
+            deserialize_default_values=deserialize_default_values,
+            default_value_overrides={"NativeDecimalDefaultConstrained.amount": Decimal("1.25")},
+        )
+    _validate_output_files(
+        output_file,
+        ["--target-python-version", PythonVersion.PY_310.value],
+        force_exec_validation=True,
+    )
+    assert_warnings_do_not_contain(recorded_warnings, "Decimal default value")
 
 
 def test_deserialize_decimal_defaults_respects_import_override(output_file: Path) -> None:

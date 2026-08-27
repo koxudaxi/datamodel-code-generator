@@ -3687,20 +3687,19 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         """Deserialize one Decimal recipe after backend classification."""
         default_type = type(field.default)
         if default_type.__module__ == "decimal" and default_type.__name__ == "Decimal":
-            return False
-        if descriptor.option_kind not in self.deserialize_default_value_types:
+            # Retain the constructor identity for alias resolution.
+            value = str(field.default)
+        elif descriptor.option_kind not in self.deserialize_default_value_types:
             self.__record_decimal_default_warning(model, field)
             return False
+        else:
+            from decimal import Decimal, InvalidOperation  # noqa: PLC0415
 
-        from decimal import Decimal, InvalidOperation  # noqa: PLC0415
-
-        try:
-            decimal_default = Decimal(str(field.default))
-        except (InvalidOperation, TypeError, ValueError):
-            self.__record_decimal_default_warning(model, field)
-            return False
-
-        value = str(decimal_default)
+            try:
+                value = str(Decimal(str(field.default)))
+            except (InvalidOperation, TypeError, ValueError):
+                self.__record_decimal_default_warning(model, field)
+                return False
         field.default = PythonRuntimeExpression.from_import_call(
             descriptor.constructor_import, repr(value), value=value
         )
