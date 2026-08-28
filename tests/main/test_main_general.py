@@ -51,6 +51,7 @@ from datamodel_code_generator.__main__ import (
 )
 from datamodel_code_generator.arguments import _dataclass_arguments, arg_parser
 from datamodel_code_generator.config import GenerateConfig
+from datamodel_code_generator.deprecations import DEPRECATIONS, Deprecation
 from datamodel_code_generator.format import CodeFormatter, Formatter, PythonVersion
 from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.parser import LiteralType
@@ -994,6 +995,41 @@ def test_list_deprecations_json(capsys: pytest.CaptureFixture[str]) -> None:
         ["--list-deprecations", "json"],
         capsys=capsys,
         expected_stdout_path=EXPECTED_MAIN_PATH / "list_deprecations_json.txt",
+        assert_no_stderr=True,
+    )
+
+
+@pytest.mark.parametrize(
+    ("format_", "expected_file"),
+    [
+        ("table", "list_scheduled_deprecations.txt"),
+        ("json", "list_scheduled_deprecations_json.txt"),
+        ("markdown", "list_scheduled_deprecations_markdown.txt"),
+    ],
+)
+def test_list_scheduled_deprecations(
+    format_: str,
+    expected_file: str,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """List scheduled entries with their status through every CLI format."""
+    scheduled = Deprecation(
+        id="test.scheduled-change",
+        kind="cli-option",
+        target="--scheduled-change",
+        message="--scheduled-change will be deprecated.",
+        warning_since="8.0.0",
+        removal_version=None,
+        replacement="--replacement",
+        status="scheduled",
+    )
+    monkeypatch.setitem(DEPRECATIONS, scheduled.id, scheduled)
+
+    run_main_with_args(
+        ["--list-deprecations", format_],
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_MAIN_PATH / expected_file,
         assert_no_stderr=True,
     )
 

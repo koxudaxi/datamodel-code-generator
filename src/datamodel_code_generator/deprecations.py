@@ -185,7 +185,8 @@ def get_deprecation(deprecation_id: DeprecationId) -> Deprecation:
 
 def warn_deprecated(deprecation_id: DeprecationId, *, stacklevel: int = 2, details: str | None = None) -> None:
     """Emit a warning from the central registry."""
-    deprecation = get_deprecation(deprecation_id)
+    if (deprecation := get_deprecation(deprecation_id)).status == "scheduled":
+        return
     message = deprecation.message if details is None else f"{deprecation.message} {details}"
     warnings.warn(
         message,
@@ -219,15 +220,17 @@ def render_deprecations_table() -> str:
     return _render_registry_table([
         [
             "ID",
+            "Status",
             "Kind",
             "Target",
-            "Warning since",
+            "Since",
             "Removal",
             "Replacement",
         ],
         *[
             [
                 deprecation.id,
+                deprecation.status,
                 deprecation.kind,
                 deprecation.target,
                 deprecation.warning_since,
@@ -252,13 +255,13 @@ def render_deprecations_markdown(*, include_header: bool = True) -> str:
             "",
         ])
     lines.extend([
-        "| ID | Kind | Target | Warning since | Removal | Replacement |",
-        "|----|------|--------|---------------|---------|-------------|",
+        "| ID | Status | Kind | Target | Since | Removal | Replacement |",
+        "|----|--------|------|--------|-------|---------|-------------|",
     ])
     for deprecation in iter_deprecations():
         replacement = deprecation.replacement or "-"
         lines.append(
-            f"| `{deprecation.id}` | {deprecation.kind} | `{deprecation.target}` | "
+            f"| `{deprecation.id}` | {deprecation.status} | {deprecation.kind} | `{deprecation.target}` | "
             f"{deprecation.warning_since} | {_format_removal_version(deprecation)} | {replacement} |"
         )
     lines.extend(("", "## Details", ""))
@@ -266,9 +269,10 @@ def render_deprecations_markdown(*, include_header: bool = True) -> str:
         lines.extend([
             f"### `{deprecation.id}`",
             "",
+            f"- **Status:** {deprecation.status}",
             f"- **Kind:** {deprecation.kind}",
             f"- **Target:** `{deprecation.target}`",
-            f"- **Warning since:** {deprecation.warning_since}",
+            f"- **Since:** {deprecation.warning_since}",
             f"- **Planned removal:** {_format_removal_version(deprecation)}",
             f"- **Warning category:** `{deprecation.warning_category}`",
         ])
@@ -295,8 +299,18 @@ def render_deprecations(format_: DeprecationFormat) -> str:
 
 def render_release_note_deprecations(version: str) -> str:
     """Render release-note text for deprecations that start or end in a version."""
-    warning_started = [item for item in iter_deprecations() if item.warning_since == version]
-    removals = [item for item in iter_deprecations() if item.removal_version == version]
+    warning_started: list[Deprecation] = []
+    scheduled_changes: list[Deprecation] = []
+    removals: list[Deprecation] = []
+    for item in iter_deprecations():
+        if item.warning_since == version:
+            match item.status:
+                case "active":
+                    warning_started.append(item)
+                case "scheduled":  # pragma: no branch - DeprecationStatus is exhaustive
+                    scheduled_changes.append(item)
+        if item.removal_version == version:
+            removals.append(item)
 
     lines: list[str] = []
     if warning_started:
@@ -305,6 +319,15 @@ def render_release_note_deprecations(version: str) -> str:
             f"- `{item.target}` now emits `{item.warning_category}`. Planned removal: {_format_removal_version(item)}. "
             f"{item.message}"
             for item in warning_started
+        )
+        lines.append("")
+
+    if scheduled_changes:
+        lines.extend(["## Scheduled Breaking Changes", ""])
+        lines.extend(
+            f"- `{item.target}` is registered without a runtime warning. "
+            f"Planned removal: {_format_removal_version(item)}. {item.message}"
+            for item in scheduled_changes
         )
         lines.append("")
 
