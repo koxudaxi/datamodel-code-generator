@@ -61,6 +61,12 @@ repos:
     language: python
     files: ^src/datamodel_code_generator/parser/.*\.py$
     pass_filenames: false
+  - id: architecture-boundaries
+    name: Check architecture boundaries
+    entry: python scripts/check_architecture_boundaries.py
+    language: python
+    files: ^(src/datamodel_code_generator/.*\.py|scripts/check_architecture_boundaries\.py)$
+    pass_filenames: false
   - id: compiled-templates
     name: Check generated built-in template renderers
     entry: bash -c '[ -x .tox/dev/bin/python ] && PYTHON=.tox/dev/bin/python || PYTHON=.tox/dev/Scripts/python; test -x "$PYTHON" || tox run -e dev --notest -qq; "$PYTHON" scripts/compile_builtin_templates.py --check'

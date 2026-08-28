@@ -1,0 +1,29 @@
+import importlib
+
+import datamodel_code_generator.model.typed_dict
+from datamodel_code_generator.model import msgspec
+from ..model.pydantic_v2 import RootModel
+
+BACKEND_MODULE = "datamodel_code_generator.model.dataclass"
+
+
+def load_backends():
+    importlib.import_module(BACKEND_MODULE)
+    return __import__("datamodel_code_generator.model.pydantic_base")
+
+
+def inspect_backend(value):
+    direct = value.is_pydantic_extra_field
+    helpers = getattr(value, "SCHEMA_RUNTIME_VALIDATION_HELPERS_TEMPLATE_FILE_PATH", None)
+    identity = value.__module__ == "datamodel_code_generator.model.pydantic_v2.base_model" and value.__name__ == (
+        "DataModelField"
+    )
+    return direct, helpers, identity, msgspec, RootModel
+
+
+async def inspect_async_backend(value):
+    return value.is_pydantic_extra_field
+
+
+def build_backend(value):
+    return value(module=BACKEND_MODULE)

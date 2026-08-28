@@ -83,6 +83,28 @@ are intentionally outside the generated-output helper policy. Use
 reasonably be expressed with the shared helpers, such as external-request mock
 checks or intermediate-state checks.
 
+## Architecture boundaries
+
+Before adding a dependency between layers, check `docs/architecture.md` and run:
+
+```bash
+python scripts/check_architecture_boundaries.py
+```
+
+The guard rejects concrete output-backend imports and backend-name inspection in
+parsers, private `parser._*` imports from shared code, parser/backend dependencies
+from configuration, and local output-family mappings in `input_model.py`. Move
+output behavior to a neutral capability on `DataModel` or `DataModelFieldBase`,
+and move reusable helpers to a neutral package module. Do not add an allowlist
+entry for new code. Existing entries document compatibility debt, have bounded
+occurrence counts, and fail when stale.
+
+Tests for the checker use source fixtures and expected reports under
+`tests/data/architecture_boundaries/` and
+`tests/data/expected/architecture_boundaries/`. Keep diagnostics specific enough
+that a contributor or coding agent can identify the owning layer and the expected
+remediation without reading the checker implementation.
+
 ## Parser generation state
 
 Parser code must keep generated output, naming order, parse order, and
