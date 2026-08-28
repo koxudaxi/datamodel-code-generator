@@ -45,6 +45,7 @@ from datamodel_code_generator import (
     AllOfClassHierarchy,
     AllOfMergeMode,
     CollapseRootModelsNameStrategy,
+    DefaultValueTypeWarning,
     Error,
     FieldTypeCollisionStrategy,
     ModuleSplitMode,
@@ -57,7 +58,7 @@ from datamodel_code_generator import (
     _read_parser_source_data_from_path,
 )
 from datamodel_code_generator._format_types import Formatter, PythonVersion
-from datamodel_code_generator.enums import StrictTypes
+from datamodel_code_generator.enums import DefaultValueType, StrictTypes
 from datamodel_code_generator.imports import (
     IMPORT_ANNOTATIONS,
     IMPORT_LITERAL,
@@ -91,12 +92,21 @@ from datamodel_code_generator.parser._scc import find_circular_sccs, strongly_co
 from datamodel_code_generator.parser.generation import GenerationIndex, GenerationStore, set_model_base_classes
 from datamodel_code_generator.parser.schema_version import SchemaFeaturesT
 from datamodel_code_generator.python_literal import (
+    PythonCode,
+    PythonRuntimeExpression,
     _semantic_value_text,
     rewrite_runtime_expressions,
     rewrite_runtime_imports,
 )
 from datamodel_code_generator.reference import ModelResolver, ModelType, Reference, split_module_name
-from datamodel_code_generator.types import ANY, NONE, DataType, DataTypeManager
+from datamodel_code_generator.types import (
+    ANY,
+    NONE,
+    DataType,
+    DataTypeManager,
+    DefaultValueDescriptor,
+    DefaultValueRecipe,
+)
 from datamodel_code_generator.util import camel_to_snake, record_watch_dependency
 
 if TYPE_CHECKING:
@@ -138,6 +148,7 @@ _DEFERRED_INHERITED_TYPE_KEY: Final = "_deferred_inherited_type"
 _RAW_SCHEMA_DEFAULT_KEY: Final = "_raw_schema_default"
 _RAW_SCHEMA_DEFAULT_UNDEFINED: Final = object()
 _SOURCE_REFERENCE_PATH_KEY: Final = "_source_reference_path"
+_DECIMAL_WARNING_EXAMPLE_LIMIT: Final = 5
 
 
 @dataclass(frozen=True, slots=True)
@@ -817,6 +828,54 @@ def _needs_validate_default(data_type: DataType) -> bool:
     """Check if a field needs validate_default=True to coerce defaults into model instances."""
     resolved = _unwrap_type_alias(data_type)
     return _contains_model_reference(resolved)
+
+
+def _is_default_value_container(data_type: DataType) -> bool:
+    """Return whether a data type wraps a collection default rather than one scalar."""
+    return any((
+        data_type.is_dict,
+        data_type.is_list,
+        data_type.is_set,
+        data_type.is_frozen_set,
+        data_type.is_mapping,
+        data_type.is_sequence,
+        data_type.is_tuple,
+    ))
+
+
+def _unwrap_default_scalar_data_type(data_type: DataType) -> DataType:
+    """Unwrap aliases and nullable scalar wrappers without traversing unions or containers."""
+    if data_type.reference and isinstance(data_type.reference.source, TypeAliasBase):
+        data_type = _unwrap_type_alias(data_type)
+    while (
+        data_type.type is None
+        and data_type.reference is None
+        and len(data_type.data_types) == 1
+        and not _is_default_value_container(data_type)
+        and not data_type.literals
+        and not data_type.enum_member_literals
+    ):
+        data_type = data_type.data_types[0]
+        if data_type.reference and isinstance(data_type.reference.source, TypeAliasBase):
+            data_type = _unwrap_type_alias(data_type)
+    return data_type
+
+
+def _resolve_default_scalar_data_type(data_type: DataType) -> DataType | None:
+    """Resolve one backend-neutral scalar leaf without traversing unions or containers."""
+    if _is_default_value_container(data_type):
+        return None
+    if data_type.reference or data_type.data_types:
+        data_type = _unwrap_default_scalar_data_type(data_type)
+    if (
+        data_type.reference
+        or data_type.data_types
+        or _is_default_value_container(data_type)
+        or data_type.literals
+        or data_type.enum_member_literals
+    ):
+        return None
+    return data_type
 
 
 def _alias_base_class_imports(
@@ -2086,6 +2145,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.use_single_line_docstring: bool = config.use_single_line_docstring
         self.use_default_kwarg: bool = config.use_default_kwarg
         self.use_missing_sentinel: bool = config.use_missing_sentinel
+        self.deserialize_default_value_types: frozenset[DefaultValueType] = frozenset(config.deserialize_default_values)
+        self._decimal_default_warning_count = 0
+        self._decimal_default_warning_examples: list[str] | None = None
         self._data_model_field_common_kwargs_cache: dict[str, Any] = {"use_missing_sentinel": self.use_missing_sentinel}
         self.reuse_model: bool = config.reuse_model
         self.reuse_scope: ReuseScope | None = config.reuse_scope
@@ -3504,13 +3566,14 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     else:
                         enum_member.alias = data_type.alias
 
-    def __set_validate_default_on_fields(  # noqa: PLR6301
+    def __set_validate_default_on_fields(
         self,
         models: list[DataModel],
         *,
         can_retain_cache: bool,
     ) -> None:
         """Set validate_default=True on fields with structured defaults needing validation."""
+        deserialized_default = False
         for model in models:
             if isinstance(model, Enum):
                 continue
@@ -3521,10 +3584,170 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     continue
                 if isinstance(model_field.default, Member):
                     continue
-                if not _needs_validate_default(model_field.data_type):
-                    continue
-                if model_field.enable_structured_default_validation():
+                deserialized_default = (
+                    self.__deserialize_default_value(
+                        model,
+                        model_field,
+                        can_retain_cache=can_retain_cache,
+                    )
+                    or deserialized_default
+                )
+                if (
+                    _needs_validate_default(model_field.data_type)
+                    and model_field.enable_structured_default_validation()
+                ):
                     _clear_model_imports_cache_if_retained(model, can_retain_cache=can_retain_cache)
+        if deserialized_default:
+            self.__normalize_default_value_constraints(models)
+
+    def __normalize_default_value_constraints(self, models: list[DataModel]) -> None:
+        """Keep backend-declared runtime constraint values structured until alias resolution."""
+        from decimal import Decimal  # noqa: PLC0415
+
+        for model, _, data_type in iter_models_field_data_types(models):
+            if (
+                not model.SUPPORTS_DESERIALIZED_DEFAULT_VALUES
+                or not data_type.kwargs
+                or (resolved := self.__resolve_default_value_descriptor(data_type)) is None
+            ):
+                continue
+            annotation_import, descriptor = resolved
+            if not descriptor.normalize_constraints or self.__has_import_override(
+                annotation_import, descriptor.constructor_import
+            ):
+                continue
+            if descriptor.recipe is not DefaultValueRecipe.Decimal:  # pragma: no cover - future backend recipe
+                continue
+            kwargs = data_type.kwargs
+            for key, value in kwargs.items():
+                if not isinstance(value, Decimal):
+                    continue
+                if kwargs is data_type.kwargs:
+                    kwargs = kwargs.copy()
+                kwargs[key] = PythonRuntimeExpression.from_import_call(
+                    descriptor.constructor_import,
+                    repr(str(value)),
+                    value=str(value),
+                )
+            if kwargs is data_type.kwargs:
+                continue
+            data_type.kwargs = kwargs
+            runtime_imports = data_type.runtime_expression_imports
+            data_type._set_runtime_expression_imports((*runtime_imports, descriptor.constructor_import))  # noqa: SLF001
+            self._register_runtime_expression()
+
+    def __resolve_default_value_descriptor(self, data_type: DataType) -> tuple[Import, DefaultValueDescriptor] | None:
+        """Return a backend-declared scalar descriptor and its emitted annotation import."""
+        if (scalar_data_type := _resolve_default_scalar_data_type(data_type)) is None:
+            return None
+        if (annotation_import := scalar_data_type.import_) is None:
+            return None
+        if (descriptor := self.data_type_manager.get_default_value_descriptor(scalar_data_type)) is None:
+            return None
+        return annotation_import, descriptor
+
+    def __deserialize_default_value(
+        self,
+        model: DataModel,
+        field: DataModelFieldBase,
+        *,
+        can_retain_cache: bool,
+    ) -> bool:
+        """Deserialize one backend-declared scalar default or record its warning."""
+        if (
+            not model.SUPPORTS_DESERIALIZED_DEFAULT_VALUES
+            or field.has_default_factory
+            or isinstance(field.default, (PythonCode, PythonRuntimeExpression))
+        ):
+            return False
+        if (resolved := self.__resolve_default_value_descriptor(field.data_type)) is None:
+            return False
+        annotation_import, descriptor = resolved
+        if self.__has_import_override(annotation_import, descriptor.constructor_import):
+            return False
+        match descriptor.recipe:
+            case DefaultValueRecipe.Decimal:
+                return self.__deserialize_decimal_default(
+                    model,
+                    field,
+                    descriptor,
+                    can_retain_cache=can_retain_cache,
+                )
+        return False  # pragma: no cover - future backend recipe
+
+    def __deserialize_decimal_default(
+        self,
+        model: DataModel,
+        field: DataModelFieldBase,
+        descriptor: DefaultValueDescriptor,
+        *,
+        can_retain_cache: bool,
+    ) -> bool:
+        """Deserialize one Decimal recipe after backend classification."""
+        default_type = type(field.default)
+        if default_type.__module__ == "decimal" and default_type.__name__ == "Decimal":
+            # Retain the constructor identity for alias resolution.
+            value = str(field.default)
+        elif descriptor.option_kind not in self.deserialize_default_value_types:
+            self.__record_decimal_default_warning(model, field)
+            return False
+        else:
+            from decimal import Decimal, InvalidOperation  # noqa: PLC0415
+
+            try:
+                value = str(Decimal(str(field.default)))
+            except (InvalidOperation, TypeError, ValueError):
+                self.__record_decimal_default_warning(model, field)
+                return False
+        field.default = PythonRuntimeExpression.from_import_call(
+            descriptor.constructor_import, repr(value), value=value
+        )
+        field._set_runtime_expression_imports((descriptor.constructor_import,))  # noqa: SLF001
+        self._register_runtime_expression()
+        _clear_model_imports_cache_if_retained(model, can_retain_cache=can_retain_cache)
+        return True
+
+    def __has_import_override(self, *imports: Import) -> bool:
+        """Avoid changing generated defaults when an import policy redirects their bindings."""
+        if not self._import_overrides:
+            return False
+        return any(self._import_overrides.get(import_.import_, import_.from_) != import_.from_ for import_ in imports)
+
+    def __record_decimal_default_warning(self, model: DataModel, field: DataModelFieldBase) -> None:
+        """Record a bounded example set without retaining every affected field."""
+        self._decimal_default_warning_count += 1
+        examples = self._decimal_default_warning_examples
+        if examples is None:
+            self._decimal_default_warning_examples = [f"{model.class_name}.{field.name or '<root>'}"]
+        elif len(examples) < _DECIMAL_WARNING_EXAMPLE_LIMIT:
+            examples.append(f"{model.class_name}.{field.name or '<root>'}")
+
+    def __warn_about_decimal_defaults(self) -> None:
+        """Emit one actionable warning for all Decimal defaults in this generation."""
+        if not (count := self._decimal_default_warning_count):
+            return
+        examples = ", ".join(self._decimal_default_warning_examples or ())
+        remainder = (
+            f" and {count - len(self._decimal_default_warning_examples or ())} more"
+            if count > _DECIMAL_WARNING_EXAMPLE_LIMIT
+            else ""
+        )
+        plural = "s" if count != 1 else ""
+        verb = "were" if count != 1 else "was"
+        if DefaultValueType.Decimal in self.deserialize_default_value_types:
+            message = (
+                f"{count} Decimal default value{plural} could not be deserialized and {verb} kept serialized "
+                f"to keep generated modules importable: {examples}{remainder}."
+            )
+        else:
+            message = (
+                f"{count} Decimal default value{plural} {verb} emitted as serialized data instead of Decimal: "
+                f"{examples}{remainder}. Generated output is unchanged. "
+                "Use --deserialize-default-values decimal to enable Decimal deserialization."
+            )
+        self._decimal_default_warning_count = 0
+        self._decimal_default_warning_examples = None
+        warn(message, DefaultValueTypeWarning, stacklevel=2)
 
     def _apply_inherited_field_default(
         self,
@@ -5190,6 +5413,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             model_path_to_module_name=model_path_to_module_name,
             can_retain_cache=can_retain_cache,
         )
+        unused_models_start = len(unused_models)
         models = self.__process_module_models(
             models,
             unused_models=unused_models,
@@ -5200,8 +5424,12 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             use_deferred_annotations=config.use_deferred_annotations,
             can_retain_cache=can_retain_cache,
         )
+        current_unused_models: Sequence[DataModel] = ()
+        if unused_models_start != len(unused_models):
+            current_unused_models = unused_models[unused_models_start:]
         self.__finalize_module_models(
             models,
+            unused_models=current_unused_models,
             use_deferred_annotations=config.use_deferred_annotations,
             can_retain_cache=can_retain_cache,
         )
@@ -5276,6 +5504,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self,
         models: list[DataModel],
         *,
+        unused_models: Sequence[DataModel],
         use_deferred_annotations: bool,
         can_retain_cache: bool,
     ) -> None:
@@ -5287,7 +5516,12 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             use_deferred_annotations=use_deferred_annotations,
             can_retain_cache=can_retain_cache,
         )
-        self.__set_validate_default_on_fields(models, can_retain_cache=can_retain_cache)
+        if not unused_models:
+            live_models = models
+        else:
+            unused_model_ids = {id(model) for model in unused_models}
+            live_models = [model for model in models if id(model) not in unused_model_ids]
+        self.__set_validate_default_on_fields(live_models, can_retain_cache=can_retain_cache)
         if not can_retain_cache:
             _clear_model_imports_cache(models)
 
@@ -5406,15 +5640,6 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             # Renaming only changes synthetic helper names; capabilities and their
             # import set stay invariant. Keep snapshots synchronized defensively.
             self._sync_schema_runtime_validation_module_imports(contexts, model_imports)
-
-        for ctx in contexts:
-            self.__set_validate_default_on_fields(
-                ctx.models,
-                can_retain_cache=_can_retain_model_imports_cache(
-                    ctx.models,
-                    configured_types_are_builtin=self._configured_generation_types_are_builtin,
-                ),
-            )
 
         match self._import_overrides:
             case None:
@@ -5817,6 +6042,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             contexts.append(ctx)
 
         self._finalize_modules(contexts, unused_models, model_to_module_models, module_to_import)
+        self.__warn_about_decimal_defaults()
         if self.use_default_factory_for_optional_nested_models:
             self._set_nested_model_default_factory_metadata(contexts, require_update_action_models)
 

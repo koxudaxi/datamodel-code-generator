@@ -313,11 +313,11 @@ datamodel-codegen \
   --input schema.json \
   --input-file-type jsonschema \
   --output-model-type pydantic_v2.BaseModel \
-  --preset standard-py312-20260619 \
+  --preset standard-py312-20260826 \
   --output model.py
 ```
 
-This quick start uses `standard-py312-20260619` as the modern Python 3.12 baseline.
+This quick start uses `standard-py312-20260826` as the modern Python 3.12 baseline.
 Preset names include the target Python version: `py312` means Python 3.12.
 
 See [CLI Reference](cli-reference/index.md) for all options. See [Presets](presets.md),
@@ -325,7 +325,7 @@ See [CLI Reference](cli-reference/index.md) for all options. See [Presets](prese
 [`--output-model-type`](cli-reference/model-customization.md#output-model-type) for this command.
 
 For more schema-aware output that preserves schema-authored names, reuses models, and embeds generated
-documentation, use [`practical-py312-20260619`](presets.md#practical-py312-20260619).
+documentation, use [`practical-py312-20260826`](presets.md#practical-py312-20260826).
 
 <details>
 <summary>Input (<code>schema.json</code>)</summary>
@@ -442,11 +442,11 @@ datamodel-codegen \
   --input schema.json \
   --input-file-type jsonschema \
   --output-model-type pydantic_v2.BaseModel \
-  --preset standard-py312-20260619 \
+  --preset standard-py312-20260826 \
   --output model.py
 ```
 
-Use `standard-py312-20260619` for the project-recommended modern Python 3.12 baseline. Use `practical-py312-20260619` when you also want schema-authored names, model reuse, and schema descriptions embedded in the generated code.
+Use `standard-py312-20260826` for the project-recommended modern Python 3.12 baseline. Use `practical-py312-20260826` when you also want schema-authored names, model reuse, and schema descriptions embedded in the generated code.
 
 ## Override Preset Options
 
@@ -455,7 +455,7 @@ Preset options are defaults, not locks. Explicit options override preset-supplie
 ```bash
 datamodel-codegen \
   --input schema.json \
-  --preset standard-py312-20260619 \
+  --preset standard-py312-20260826 \
   --no-snake-case-field \
   --no-use-annotated \
   --enum-field-as-literal none
@@ -470,7 +470,7 @@ You can add any normal CLI option to a preset command. This is the recommended w
 ```bash
 datamodel-codegen \
   --input schema.json \
-  --preset standard-py312-20260619 \
+  --preset standard-py312-20260826 \
   --extra-fields forbid \
   --use-title-as-name \
   --output model.py
@@ -483,12 +483,12 @@ Presets can live in `[tool.datamodel-codegen]` or in a named profile. Profiles a
 ```toml title="pyproject.toml"
 [tool.datamodel-codegen]
 output-model-type = "pydantic_v2.BaseModel"
-preset = "standard-py312-20260619"
+preset = "standard-py312-20260826"
 
 [tool.datamodel-codegen.profiles.api]
 input = "schemas/api.json"
 output = "src/models/api.py"
-preset = "practical-py312-20260619"
+preset = "practical-py312-20260826"
 extra-fields = "forbid"
 
 [tool.datamodel-codegen.profiles.events]
@@ -513,7 +513,7 @@ datamodel-codegen \
   --input schema.json \
   --output model.py \
   --output-model-type pydantic_v2.BaseModel \
-  --preset practical-py312-20260619 \
+  --preset practical-py312-20260826 \
   --extra-fields forbid \
   --generate-pyproject-config
 ```
@@ -532,11 +532,11 @@ Use `--ignore-pyproject` when you want to test a preset command without loading 
 
 | Python target | Standard preset | Practical preset |
 |---------------|-----------------|------------------|
-| 3.10 | `standard-py310-20260619` | `practical-py310-20260619` |
-| 3.11 | `standard-py311-20260619` | `practical-py311-20260619` |
-| 3.12 | `standard-py312-20260619` | `practical-py312-20260619` |
-| 3.13 | `standard-py313-20260619` | `practical-py313-20260619` |
-| 3.14 | `standard-py314-20260619` | `practical-py314-20260619` |
+| 3.10 | `standard-py310-20260826` | `practical-py310-20260826` |
+| 3.11 | `standard-py311-20260826` | `practical-py311-20260826` |
+| 3.12 | `standard-py312-20260826` | `practical-py312-20260826` |
+| 3.13 | `standard-py313-20260826` | `practical-py313-20260826` |
+| 3.14 | `standard-py314-20260826` | `practical-py314-20260826` |
 
 Each preset name includes its Python target. Do not add `--target-python-version` just to use a preset; only expanded configuration without `--preset` needs a separate target option.
 
@@ -1129,6 +1129,617 @@ These snippets show the equivalent expanded configuration without `--preset` for
 | msgspec Struct output | `--snake-case-field`, `--use-standard-primitive-types` | Generate Pythonic field names with aliases and stdlib primitive types for schema formats. |
 | stdlib dataclass output | `--use-standard-primitive-types` | Use stdlib primitive types without renaming input keys because dataclasses do not carry aliases. |
 | TypedDict output | `--use-standard-primitive-types`, `--use-frozen-field` | Use stdlib primitive types and ReadOnly metadata without renaming dictionary keys. |
+| Practical model structure and names | `--reuse-model`, `--collapse-reuse-models`, `--use-title-as-name`, `--naming-strategy primary-first` | Deduplicate identical models without empty inheritance wrappers, prefer schema titles for class names, and keep primary definitions ahead of inline duplicate names. |
+| Practical typing and defaults | `--use-default-kwarg`, `--use-object-type`, `--use-tuple-for-fixed-items`, `--use-unique-items-as-set`, `--use-single-line-docstring` | Render defaults explicitly, prefer object for unconstrained values, preserve fixed and unique arrays, and keep short docstrings concise. |
+| Schema documentation | `--use-schema-description`, `--use-field-description`, `--use-field-description-example` | Preserve schema and field descriptions, including examples, in generated model documentation. |
+
+### `standard-py310-20260826`
+
+Recommended modern Python 3.10 output for new projects.
+
+This immutable preset enables the project-recommended Python output style for new code targeting Python 3.10. It is output-model aware and keeps stdlib dataclass and TypedDict keys compatible with their input names.
+
+- **Requires separate target Python version:** no
+- **Target Python version:** 3.10
+
+#### Included Options
+
+These snippets show the equivalent expanded configuration without `--preset` for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.10. Replace the input and output paths for your project.
+
+=== "pyproject.toml"
+
+    ```toml
+    [tool.datamodel-codegen]
+    allow-population-by-field-name = true
+    collapse-root-models = true
+    deserialize-default-values = ["decimal"]
+    disable-timestamp = true
+    enum-field-as-literal = "one"
+    input = "schema.json"
+    input-file-type = "jsonschema"
+    output = "model.py"
+    output-model-type = "pydantic_v2.BaseModel"
+    set-default-enum-member = true
+    snake-case-field = true
+    strict-nullable = true
+    target-python-version = "3.10"
+    use-annotated = true
+    use-frozen-field = true
+    use-standard-collections = true
+    use-subclass-enum = true
+    use-union-operator = true
+    ```
+
+=== "CLI"
+
+    ```bash
+    datamodel-codegen --allow-population-by-field-name --collapse-root-models --deserialize-default-values decimal --disable-timestamp --enum-field-as-literal one --input schema.json --input-file-type jsonschema --output model.py --output-model-type pydantic_v2.BaseModel --set-default-enum-member --snake-case-field --strict-nullable --target-python-version 3.10 --use-annotated --use-frozen-field --use-standard-collections --use-subclass-enum --use-union-operator
+    ```
+
+| Scope | Options | Notes |
+|-------|---------|-------|
+| All output model types | `--use-standard-collections`, `--use-union-operator`, `--use-annotated`, `--enum-field-as-literal one`, `--use-subclass-enum`, `--collapse-root-models`, `--strict-nullable`, `--set-default-enum-member`, `--disable-timestamp` | Use built-in collection syntax, PEP 604 unions, Annotated constraints, single-value enum Literals, typed enum subclasses, enum-member defaults, inline root wrappers, schema-accurate nullability, and reproducible file headers. |
+| Pydantic v2 BaseModel and dataclass output | `--snake-case-field`, `--allow-population-by-field-name`, `--use-frozen-field` | Generate Pythonic field names while preserving input aliases and readOnly immutability metadata. |
+| msgspec Struct output | `--snake-case-field`, `--use-standard-primitive-types` | Generate Pythonic field names with aliases and stdlib primitive types for schema formats. |
+| stdlib dataclass output | `--use-standard-primitive-types` | Use stdlib primitive types without renaming input keys because dataclasses do not carry aliases. |
+| TypedDict output | `--use-standard-primitive-types`, `--use-frozen-field` | Use stdlib primitive types and ReadOnly metadata without renaming dictionary keys. |
+| Serialized Decimal defaults | `--deserialize-default-values decimal` | Deserialize compatible serialized Decimal defaults into Decimal values while preserving defaults that cannot be converted safely. |
+
+### `standard-py311-20260826`
+
+Recommended modern Python 3.11 output for new projects.
+
+This immutable preset enables the project-recommended Python output style for new code targeting Python 3.11. It is output-model aware and keeps stdlib dataclass and TypedDict keys compatible with their input names.
+
+- **Requires separate target Python version:** no
+- **Target Python version:** 3.11
+
+#### Included Options
+
+These snippets show the equivalent expanded configuration without `--preset` for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.11. Replace the input and output paths for your project.
+
+=== "pyproject.toml"
+
+    ```toml
+    [tool.datamodel-codegen]
+    allow-population-by-field-name = true
+    collapse-root-models = true
+    deserialize-default-values = ["decimal"]
+    disable-timestamp = true
+    enum-field-as-literal = "one"
+    input = "schema.json"
+    input-file-type = "jsonschema"
+    output = "model.py"
+    output-model-type = "pydantic_v2.BaseModel"
+    set-default-enum-member = true
+    snake-case-field = true
+    strict-nullable = true
+    target-python-version = "3.11"
+    use-annotated = true
+    use-frozen-field = true
+    use-specialized-enum = true
+    use-standard-collections = true
+    use-subclass-enum = true
+    use-union-operator = true
+    ```
+
+=== "CLI"
+
+    ```bash
+    datamodel-codegen --allow-population-by-field-name --collapse-root-models --deserialize-default-values decimal --disable-timestamp --enum-field-as-literal one --input schema.json --input-file-type jsonschema --output model.py --output-model-type pydantic_v2.BaseModel --set-default-enum-member --snake-case-field --strict-nullable --target-python-version 3.11 --use-annotated --use-frozen-field --use-specialized-enum --use-standard-collections --use-subclass-enum --use-union-operator
+    ```
+
+| Scope | Options | Notes |
+|-------|---------|-------|
+| All output model types | `--use-standard-collections`, `--use-union-operator`, `--use-annotated`, `--enum-field-as-literal one`, `--use-subclass-enum`, `--collapse-root-models`, `--strict-nullable`, `--set-default-enum-member`, `--disable-timestamp` | Use built-in collection syntax, PEP 604 unions, Annotated constraints, single-value enum Literals, typed enum subclasses, enum-member defaults, inline root wrappers, schema-accurate nullability, and reproducible file headers. |
+| Python 3.11+ targets | `--use-specialized-enum` | Use StrEnum or IntEnum only when the selected target Python version supports it. |
+| Pydantic v2 BaseModel and dataclass output | `--snake-case-field`, `--allow-population-by-field-name`, `--use-frozen-field` | Generate Pythonic field names while preserving input aliases and readOnly immutability metadata. |
+| msgspec Struct output | `--snake-case-field`, `--use-standard-primitive-types` | Generate Pythonic field names with aliases and stdlib primitive types for schema formats. |
+| stdlib dataclass output | `--use-standard-primitive-types` | Use stdlib primitive types without renaming input keys because dataclasses do not carry aliases. |
+| TypedDict output | `--use-standard-primitive-types`, `--use-frozen-field` | Use stdlib primitive types and ReadOnly metadata without renaming dictionary keys. |
+| Serialized Decimal defaults | `--deserialize-default-values decimal` | Deserialize compatible serialized Decimal defaults into Decimal values while preserving defaults that cannot be converted safely. |
+
+### `standard-py312-20260826`
+
+Recommended modern Python 3.12 output for new projects.
+
+This immutable preset enables the project-recommended Python output style for new code targeting Python 3.12. It is output-model aware and keeps stdlib dataclass and TypedDict keys compatible with their input names.
+
+- **Requires separate target Python version:** no
+- **Target Python version:** 3.12
+
+#### Included Options
+
+These snippets show the equivalent expanded configuration without `--preset` for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.12. Replace the input and output paths for your project.
+
+=== "pyproject.toml"
+
+    ```toml
+    [tool.datamodel-codegen]
+    allow-population-by-field-name = true
+    collapse-root-models = true
+    deserialize-default-values = ["decimal"]
+    disable-timestamp = true
+    enum-field-as-literal = "one"
+    input = "schema.json"
+    input-file-type = "jsonschema"
+    output = "model.py"
+    output-model-type = "pydantic_v2.BaseModel"
+    set-default-enum-member = true
+    snake-case-field = true
+    strict-nullable = true
+    target-python-version = "3.12"
+    use-annotated = true
+    use-frozen-field = true
+    use-specialized-enum = true
+    use-standard-collections = true
+    use-subclass-enum = true
+    use-union-operator = true
+    ```
+
+=== "CLI"
+
+    ```bash
+    datamodel-codegen --allow-population-by-field-name --collapse-root-models --deserialize-default-values decimal --disable-timestamp --enum-field-as-literal one --input schema.json --input-file-type jsonschema --output model.py --output-model-type pydantic_v2.BaseModel --set-default-enum-member --snake-case-field --strict-nullable --target-python-version 3.12 --use-annotated --use-frozen-field --use-specialized-enum --use-standard-collections --use-subclass-enum --use-union-operator
+    ```
+
+| Scope | Options | Notes |
+|-------|---------|-------|
+| All output model types | `--use-standard-collections`, `--use-union-operator`, `--use-annotated`, `--enum-field-as-literal one`, `--use-subclass-enum`, `--collapse-root-models`, `--strict-nullable`, `--set-default-enum-member`, `--disable-timestamp` | Use built-in collection syntax, PEP 604 unions, Annotated constraints, single-value enum Literals, typed enum subclasses, enum-member defaults, inline root wrappers, schema-accurate nullability, and reproducible file headers. |
+| Python 3.11+ targets | `--use-specialized-enum` | Use StrEnum or IntEnum only when the selected target Python version supports it. |
+| Pydantic v2 BaseModel and dataclass output | `--snake-case-field`, `--allow-population-by-field-name`, `--use-frozen-field` | Generate Pythonic field names while preserving input aliases and readOnly immutability metadata. |
+| msgspec Struct output | `--snake-case-field`, `--use-standard-primitive-types` | Generate Pythonic field names with aliases and stdlib primitive types for schema formats. |
+| stdlib dataclass output | `--use-standard-primitive-types` | Use stdlib primitive types without renaming input keys because dataclasses do not carry aliases. |
+| TypedDict output | `--use-standard-primitive-types`, `--use-frozen-field` | Use stdlib primitive types and ReadOnly metadata without renaming dictionary keys. |
+| Serialized Decimal defaults | `--deserialize-default-values decimal` | Deserialize compatible serialized Decimal defaults into Decimal values while preserving defaults that cannot be converted safely. |
+
+### `standard-py313-20260826`
+
+Recommended modern Python 3.13 output for new projects.
+
+This immutable preset enables the project-recommended Python output style for new code targeting Python 3.13. It is output-model aware and keeps stdlib dataclass and TypedDict keys compatible with their input names.
+
+- **Requires separate target Python version:** no
+- **Target Python version:** 3.13
+
+#### Included Options
+
+These snippets show the equivalent expanded configuration without `--preset` for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.13. Replace the input and output paths for your project.
+
+=== "pyproject.toml"
+
+    ```toml
+    [tool.datamodel-codegen]
+    allow-population-by-field-name = true
+    collapse-root-models = true
+    deserialize-default-values = ["decimal"]
+    disable-timestamp = true
+    enum-field-as-literal = "one"
+    input = "schema.json"
+    input-file-type = "jsonschema"
+    output = "model.py"
+    output-model-type = "pydantic_v2.BaseModel"
+    set-default-enum-member = true
+    snake-case-field = true
+    strict-nullable = true
+    target-python-version = "3.13"
+    use-annotated = true
+    use-frozen-field = true
+    use-specialized-enum = true
+    use-standard-collections = true
+    use-subclass-enum = true
+    use-union-operator = true
+    ```
+
+=== "CLI"
+
+    ```bash
+    datamodel-codegen --allow-population-by-field-name --collapse-root-models --deserialize-default-values decimal --disable-timestamp --enum-field-as-literal one --input schema.json --input-file-type jsonschema --output model.py --output-model-type pydantic_v2.BaseModel --set-default-enum-member --snake-case-field --strict-nullable --target-python-version 3.13 --use-annotated --use-frozen-field --use-specialized-enum --use-standard-collections --use-subclass-enum --use-union-operator
+    ```
+
+| Scope | Options | Notes |
+|-------|---------|-------|
+| All output model types | `--use-standard-collections`, `--use-union-operator`, `--use-annotated`, `--enum-field-as-literal one`, `--use-subclass-enum`, `--collapse-root-models`, `--strict-nullable`, `--set-default-enum-member`, `--disable-timestamp` | Use built-in collection syntax, PEP 604 unions, Annotated constraints, single-value enum Literals, typed enum subclasses, enum-member defaults, inline root wrappers, schema-accurate nullability, and reproducible file headers. |
+| Python 3.11+ targets | `--use-specialized-enum` | Use StrEnum or IntEnum only when the selected target Python version supports it. |
+| Pydantic v2 BaseModel and dataclass output | `--snake-case-field`, `--allow-population-by-field-name`, `--use-frozen-field` | Generate Pythonic field names while preserving input aliases and readOnly immutability metadata. |
+| msgspec Struct output | `--snake-case-field`, `--use-standard-primitive-types` | Generate Pythonic field names with aliases and stdlib primitive types for schema formats. |
+| stdlib dataclass output | `--use-standard-primitive-types` | Use stdlib primitive types without renaming input keys because dataclasses do not carry aliases. |
+| TypedDict output | `--use-standard-primitive-types`, `--use-frozen-field` | Use stdlib primitive types and ReadOnly metadata without renaming dictionary keys. |
+| Serialized Decimal defaults | `--deserialize-default-values decimal` | Deserialize compatible serialized Decimal defaults into Decimal values while preserving defaults that cannot be converted safely. |
+
+### `standard-py314-20260826`
+
+Recommended modern Python 3.14 output for new projects.
+
+This immutable preset enables the project-recommended Python output style for new code targeting Python 3.14. It is output-model aware and keeps stdlib dataclass and TypedDict keys compatible with their input names.
+
+- **Requires separate target Python version:** no
+- **Target Python version:** 3.14
+
+#### Included Options
+
+These snippets show the equivalent expanded configuration without `--preset` for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.14. Replace the input and output paths for your project.
+
+=== "pyproject.toml"
+
+    ```toml
+    [tool.datamodel-codegen]
+    allow-population-by-field-name = true
+    collapse-root-models = true
+    deserialize-default-values = ["decimal"]
+    disable-timestamp = true
+    enum-field-as-literal = "one"
+    input = "schema.json"
+    input-file-type = "jsonschema"
+    output = "model.py"
+    output-model-type = "pydantic_v2.BaseModel"
+    set-default-enum-member = true
+    snake-case-field = true
+    strict-nullable = true
+    target-python-version = "3.14"
+    use-annotated = true
+    use-frozen-field = true
+    use-specialized-enum = true
+    use-standard-collections = true
+    use-subclass-enum = true
+    use-union-operator = true
+    ```
+
+=== "CLI"
+
+    ```bash
+    datamodel-codegen --allow-population-by-field-name --collapse-root-models --deserialize-default-values decimal --disable-timestamp --enum-field-as-literal one --input schema.json --input-file-type jsonschema --output model.py --output-model-type pydantic_v2.BaseModel --set-default-enum-member --snake-case-field --strict-nullable --target-python-version 3.14 --use-annotated --use-frozen-field --use-specialized-enum --use-standard-collections --use-subclass-enum --use-union-operator
+    ```
+
+| Scope | Options | Notes |
+|-------|---------|-------|
+| All output model types | `--use-standard-collections`, `--use-union-operator`, `--use-annotated`, `--enum-field-as-literal one`, `--use-subclass-enum`, `--collapse-root-models`, `--strict-nullable`, `--set-default-enum-member`, `--disable-timestamp` | Use built-in collection syntax, PEP 604 unions, Annotated constraints, single-value enum Literals, typed enum subclasses, enum-member defaults, inline root wrappers, schema-accurate nullability, and reproducible file headers. |
+| Python 3.11+ targets | `--use-specialized-enum` | Use StrEnum or IntEnum only when the selected target Python version supports it. |
+| Pydantic v2 BaseModel and dataclass output | `--snake-case-field`, `--allow-population-by-field-name`, `--use-frozen-field` | Generate Pythonic field names while preserving input aliases and readOnly immutability metadata. |
+| msgspec Struct output | `--snake-case-field`, `--use-standard-primitive-types` | Generate Pythonic field names with aliases and stdlib primitive types for schema formats. |
+| stdlib dataclass output | `--use-standard-primitive-types` | Use stdlib primitive types without renaming input keys because dataclasses do not carry aliases. |
+| TypedDict output | `--use-standard-primitive-types`, `--use-frozen-field` | Use stdlib primitive types and ReadOnly metadata without renaming dictionary keys. |
+| Serialized Decimal defaults | `--deserialize-default-values decimal` | Deserialize compatible serialized Decimal defaults into Decimal values while preserving defaults that cannot be converted safely. |
+
+### `practical-py310-20260826`
+
+Standard Python 3.10 output plus practical naming, deduplication, and schema documentation.
+
+This immutable preset extends `standard-py310-20260826` with options that make generated models easier to read and use in real projects. It favors schema-authored names, model reuse, and embedded schema documentation over the most conservative output-shape stability.
+
+- **Requires separate target Python version:** no
+- **Target Python version:** 3.10
+
+#### Included Options
+
+These snippets show the equivalent expanded configuration without `--preset` for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.10. Replace the input and output paths for your project.
+
+=== "pyproject.toml"
+
+    ```toml
+    [tool.datamodel-codegen]
+    allow-population-by-field-name = true
+    collapse-reuse-models = true
+    collapse-root-models = true
+    deserialize-default-values = ["decimal"]
+    disable-timestamp = true
+    enum-field-as-literal = "one"
+    input = "schema.json"
+    input-file-type = "jsonschema"
+    naming-strategy = "primary-first"
+    output = "model.py"
+    output-model-type = "pydantic_v2.BaseModel"
+    reuse-model = true
+    set-default-enum-member = true
+    snake-case-field = true
+    strict-nullable = true
+    target-python-version = "3.10"
+    use-annotated = true
+    use-default-kwarg = true
+    use-field-description = true
+    use-field-description-example = true
+    use-frozen-field = true
+    use-object-type = true
+    use-schema-description = true
+    use-single-line-docstring = true
+    use-standard-collections = true
+    use-subclass-enum = true
+    use-title-as-name = true
+    use-tuple-for-fixed-items = true
+    use-union-operator = true
+    use-unique-items-as-set = true
+    ```
+
+=== "CLI"
+
+    ```bash
+    datamodel-codegen --allow-population-by-field-name --collapse-reuse-models --collapse-root-models --deserialize-default-values decimal --disable-timestamp --enum-field-as-literal one --input schema.json --input-file-type jsonschema --naming-strategy primary-first --output model.py --output-model-type pydantic_v2.BaseModel --reuse-model --set-default-enum-member --snake-case-field --strict-nullable --target-python-version 3.10 --use-annotated --use-default-kwarg --use-field-description --use-field-description-example --use-frozen-field --use-object-type --use-schema-description --use-single-line-docstring --use-standard-collections --use-subclass-enum --use-title-as-name --use-tuple-for-fixed-items --use-union-operator --use-unique-items-as-set
+    ```
+
+| Scope | Options | Notes |
+|-------|---------|-------|
+| All output model types | `--use-standard-collections`, `--use-union-operator`, `--use-annotated`, `--enum-field-as-literal one`, `--use-subclass-enum`, `--collapse-root-models`, `--strict-nullable`, `--set-default-enum-member`, `--disable-timestamp` | Use built-in collection syntax, PEP 604 unions, Annotated constraints, single-value enum Literals, typed enum subclasses, enum-member defaults, inline root wrappers, schema-accurate nullability, and reproducible file headers. |
+| Pydantic v2 BaseModel and dataclass output | `--snake-case-field`, `--allow-population-by-field-name`, `--use-frozen-field` | Generate Pythonic field names while preserving input aliases and readOnly immutability metadata. |
+| msgspec Struct output | `--snake-case-field`, `--use-standard-primitive-types` | Generate Pythonic field names with aliases and stdlib primitive types for schema formats. |
+| stdlib dataclass output | `--use-standard-primitive-types` | Use stdlib primitive types without renaming input keys because dataclasses do not carry aliases. |
+| TypedDict output | `--use-standard-primitive-types`, `--use-frozen-field` | Use stdlib primitive types and ReadOnly metadata without renaming dictionary keys. |
+| Serialized Decimal defaults | `--deserialize-default-values decimal` | Deserialize compatible serialized Decimal defaults into Decimal values while preserving defaults that cannot be converted safely. |
+| Practical model structure and names | `--reuse-model`, `--collapse-reuse-models`, `--use-title-as-name`, `--naming-strategy primary-first` | Deduplicate identical models without empty inheritance wrappers, prefer schema titles for class names, and keep primary definitions ahead of inline duplicate names. |
+| Practical typing and defaults | `--use-default-kwarg`, `--use-object-type`, `--use-tuple-for-fixed-items`, `--use-unique-items-as-set`, `--use-single-line-docstring` | Render defaults explicitly, prefer object for unconstrained values, preserve fixed and unique arrays, and keep short docstrings concise. |
+| Schema documentation | `--use-schema-description`, `--use-field-description`, `--use-field-description-example` | Preserve schema and field descriptions, including examples, in generated model documentation. |
+
+### `practical-py311-20260826`
+
+Standard Python 3.11 output plus practical naming, deduplication, and schema documentation.
+
+This immutable preset extends `standard-py311-20260826` with options that make generated models easier to read and use in real projects. It favors schema-authored names, model reuse, and embedded schema documentation over the most conservative output-shape stability.
+
+- **Requires separate target Python version:** no
+- **Target Python version:** 3.11
+
+#### Included Options
+
+These snippets show the equivalent expanded configuration without `--preset` for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.11. Replace the input and output paths for your project.
+
+=== "pyproject.toml"
+
+    ```toml
+    [tool.datamodel-codegen]
+    allow-population-by-field-name = true
+    collapse-reuse-models = true
+    collapse-root-models = true
+    deserialize-default-values = ["decimal"]
+    disable-timestamp = true
+    enum-field-as-literal = "one"
+    input = "schema.json"
+    input-file-type = "jsonschema"
+    naming-strategy = "primary-first"
+    output = "model.py"
+    output-model-type = "pydantic_v2.BaseModel"
+    reuse-model = true
+    set-default-enum-member = true
+    snake-case-field = true
+    strict-nullable = true
+    target-python-version = "3.11"
+    use-annotated = true
+    use-default-kwarg = true
+    use-field-description = true
+    use-field-description-example = true
+    use-frozen-field = true
+    use-object-type = true
+    use-schema-description = true
+    use-single-line-docstring = true
+    use-specialized-enum = true
+    use-standard-collections = true
+    use-subclass-enum = true
+    use-title-as-name = true
+    use-tuple-for-fixed-items = true
+    use-union-operator = true
+    use-unique-items-as-set = true
+    ```
+
+=== "CLI"
+
+    ```bash
+    datamodel-codegen --allow-population-by-field-name --collapse-reuse-models --collapse-root-models --deserialize-default-values decimal --disable-timestamp --enum-field-as-literal one --input schema.json --input-file-type jsonschema --naming-strategy primary-first --output model.py --output-model-type pydantic_v2.BaseModel --reuse-model --set-default-enum-member --snake-case-field --strict-nullable --target-python-version 3.11 --use-annotated --use-default-kwarg --use-field-description --use-field-description-example --use-frozen-field --use-object-type --use-schema-description --use-single-line-docstring --use-specialized-enum --use-standard-collections --use-subclass-enum --use-title-as-name --use-tuple-for-fixed-items --use-union-operator --use-unique-items-as-set
+    ```
+
+| Scope | Options | Notes |
+|-------|---------|-------|
+| All output model types | `--use-standard-collections`, `--use-union-operator`, `--use-annotated`, `--enum-field-as-literal one`, `--use-subclass-enum`, `--collapse-root-models`, `--strict-nullable`, `--set-default-enum-member`, `--disable-timestamp` | Use built-in collection syntax, PEP 604 unions, Annotated constraints, single-value enum Literals, typed enum subclasses, enum-member defaults, inline root wrappers, schema-accurate nullability, and reproducible file headers. |
+| Python 3.11+ targets | `--use-specialized-enum` | Use StrEnum or IntEnum only when the selected target Python version supports it. |
+| Pydantic v2 BaseModel and dataclass output | `--snake-case-field`, `--allow-population-by-field-name`, `--use-frozen-field` | Generate Pythonic field names while preserving input aliases and readOnly immutability metadata. |
+| msgspec Struct output | `--snake-case-field`, `--use-standard-primitive-types` | Generate Pythonic field names with aliases and stdlib primitive types for schema formats. |
+| stdlib dataclass output | `--use-standard-primitive-types` | Use stdlib primitive types without renaming input keys because dataclasses do not carry aliases. |
+| TypedDict output | `--use-standard-primitive-types`, `--use-frozen-field` | Use stdlib primitive types and ReadOnly metadata without renaming dictionary keys. |
+| Serialized Decimal defaults | `--deserialize-default-values decimal` | Deserialize compatible serialized Decimal defaults into Decimal values while preserving defaults that cannot be converted safely. |
+| Practical model structure and names | `--reuse-model`, `--collapse-reuse-models`, `--use-title-as-name`, `--naming-strategy primary-first` | Deduplicate identical models without empty inheritance wrappers, prefer schema titles for class names, and keep primary definitions ahead of inline duplicate names. |
+| Practical typing and defaults | `--use-default-kwarg`, `--use-object-type`, `--use-tuple-for-fixed-items`, `--use-unique-items-as-set`, `--use-single-line-docstring` | Render defaults explicitly, prefer object for unconstrained values, preserve fixed and unique arrays, and keep short docstrings concise. |
+| Schema documentation | `--use-schema-description`, `--use-field-description`, `--use-field-description-example` | Preserve schema and field descriptions, including examples, in generated model documentation. |
+
+### `practical-py312-20260826`
+
+Standard Python 3.12 output plus practical naming, deduplication, and schema documentation.
+
+This immutable preset extends `standard-py312-20260826` with options that make generated models easier to read and use in real projects. It favors schema-authored names, model reuse, and embedded schema documentation over the most conservative output-shape stability.
+
+- **Requires separate target Python version:** no
+- **Target Python version:** 3.12
+
+#### Included Options
+
+These snippets show the equivalent expanded configuration without `--preset` for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.12. Replace the input and output paths for your project.
+
+=== "pyproject.toml"
+
+    ```toml
+    [tool.datamodel-codegen]
+    allow-population-by-field-name = true
+    collapse-reuse-models = true
+    collapse-root-models = true
+    deserialize-default-values = ["decimal"]
+    disable-timestamp = true
+    enum-field-as-literal = "one"
+    input = "schema.json"
+    input-file-type = "jsonschema"
+    naming-strategy = "primary-first"
+    output = "model.py"
+    output-model-type = "pydantic_v2.BaseModel"
+    reuse-model = true
+    set-default-enum-member = true
+    snake-case-field = true
+    strict-nullable = true
+    target-python-version = "3.12"
+    use-annotated = true
+    use-default-kwarg = true
+    use-field-description = true
+    use-field-description-example = true
+    use-frozen-field = true
+    use-object-type = true
+    use-schema-description = true
+    use-single-line-docstring = true
+    use-specialized-enum = true
+    use-standard-collections = true
+    use-subclass-enum = true
+    use-title-as-name = true
+    use-tuple-for-fixed-items = true
+    use-union-operator = true
+    use-unique-items-as-set = true
+    ```
+
+=== "CLI"
+
+    ```bash
+    datamodel-codegen --allow-population-by-field-name --collapse-reuse-models --collapse-root-models --deserialize-default-values decimal --disable-timestamp --enum-field-as-literal one --input schema.json --input-file-type jsonschema --naming-strategy primary-first --output model.py --output-model-type pydantic_v2.BaseModel --reuse-model --set-default-enum-member --snake-case-field --strict-nullable --target-python-version 3.12 --use-annotated --use-default-kwarg --use-field-description --use-field-description-example --use-frozen-field --use-object-type --use-schema-description --use-single-line-docstring --use-specialized-enum --use-standard-collections --use-subclass-enum --use-title-as-name --use-tuple-for-fixed-items --use-union-operator --use-unique-items-as-set
+    ```
+
+| Scope | Options | Notes |
+|-------|---------|-------|
+| All output model types | `--use-standard-collections`, `--use-union-operator`, `--use-annotated`, `--enum-field-as-literal one`, `--use-subclass-enum`, `--collapse-root-models`, `--strict-nullable`, `--set-default-enum-member`, `--disable-timestamp` | Use built-in collection syntax, PEP 604 unions, Annotated constraints, single-value enum Literals, typed enum subclasses, enum-member defaults, inline root wrappers, schema-accurate nullability, and reproducible file headers. |
+| Python 3.11+ targets | `--use-specialized-enum` | Use StrEnum or IntEnum only when the selected target Python version supports it. |
+| Pydantic v2 BaseModel and dataclass output | `--snake-case-field`, `--allow-population-by-field-name`, `--use-frozen-field` | Generate Pythonic field names while preserving input aliases and readOnly immutability metadata. |
+| msgspec Struct output | `--snake-case-field`, `--use-standard-primitive-types` | Generate Pythonic field names with aliases and stdlib primitive types for schema formats. |
+| stdlib dataclass output | `--use-standard-primitive-types` | Use stdlib primitive types without renaming input keys because dataclasses do not carry aliases. |
+| TypedDict output | `--use-standard-primitive-types`, `--use-frozen-field` | Use stdlib primitive types and ReadOnly metadata without renaming dictionary keys. |
+| Serialized Decimal defaults | `--deserialize-default-values decimal` | Deserialize compatible serialized Decimal defaults into Decimal values while preserving defaults that cannot be converted safely. |
+| Practical model structure and names | `--reuse-model`, `--collapse-reuse-models`, `--use-title-as-name`, `--naming-strategy primary-first` | Deduplicate identical models without empty inheritance wrappers, prefer schema titles for class names, and keep primary definitions ahead of inline duplicate names. |
+| Practical typing and defaults | `--use-default-kwarg`, `--use-object-type`, `--use-tuple-for-fixed-items`, `--use-unique-items-as-set`, `--use-single-line-docstring` | Render defaults explicitly, prefer object for unconstrained values, preserve fixed and unique arrays, and keep short docstrings concise. |
+| Schema documentation | `--use-schema-description`, `--use-field-description`, `--use-field-description-example` | Preserve schema and field descriptions, including examples, in generated model documentation. |
+
+### `practical-py313-20260826`
+
+Standard Python 3.13 output plus practical naming, deduplication, and schema documentation.
+
+This immutable preset extends `standard-py313-20260826` with options that make generated models easier to read and use in real projects. It favors schema-authored names, model reuse, and embedded schema documentation over the most conservative output-shape stability.
+
+- **Requires separate target Python version:** no
+- **Target Python version:** 3.13
+
+#### Included Options
+
+These snippets show the equivalent expanded configuration without `--preset` for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.13. Replace the input and output paths for your project.
+
+=== "pyproject.toml"
+
+    ```toml
+    [tool.datamodel-codegen]
+    allow-population-by-field-name = true
+    collapse-reuse-models = true
+    collapse-root-models = true
+    deserialize-default-values = ["decimal"]
+    disable-timestamp = true
+    enum-field-as-literal = "one"
+    input = "schema.json"
+    input-file-type = "jsonschema"
+    naming-strategy = "primary-first"
+    output = "model.py"
+    output-model-type = "pydantic_v2.BaseModel"
+    reuse-model = true
+    set-default-enum-member = true
+    snake-case-field = true
+    strict-nullable = true
+    target-python-version = "3.13"
+    use-annotated = true
+    use-default-kwarg = true
+    use-field-description = true
+    use-field-description-example = true
+    use-frozen-field = true
+    use-object-type = true
+    use-schema-description = true
+    use-single-line-docstring = true
+    use-specialized-enum = true
+    use-standard-collections = true
+    use-subclass-enum = true
+    use-title-as-name = true
+    use-tuple-for-fixed-items = true
+    use-union-operator = true
+    use-unique-items-as-set = true
+    ```
+
+=== "CLI"
+
+    ```bash
+    datamodel-codegen --allow-population-by-field-name --collapse-reuse-models --collapse-root-models --deserialize-default-values decimal --disable-timestamp --enum-field-as-literal one --input schema.json --input-file-type jsonschema --naming-strategy primary-first --output model.py --output-model-type pydantic_v2.BaseModel --reuse-model --set-default-enum-member --snake-case-field --strict-nullable --target-python-version 3.13 --use-annotated --use-default-kwarg --use-field-description --use-field-description-example --use-frozen-field --use-object-type --use-schema-description --use-single-line-docstring --use-specialized-enum --use-standard-collections --use-subclass-enum --use-title-as-name --use-tuple-for-fixed-items --use-union-operator --use-unique-items-as-set
+    ```
+
+| Scope | Options | Notes |
+|-------|---------|-------|
+| All output model types | `--use-standard-collections`, `--use-union-operator`, `--use-annotated`, `--enum-field-as-literal one`, `--use-subclass-enum`, `--collapse-root-models`, `--strict-nullable`, `--set-default-enum-member`, `--disable-timestamp` | Use built-in collection syntax, PEP 604 unions, Annotated constraints, single-value enum Literals, typed enum subclasses, enum-member defaults, inline root wrappers, schema-accurate nullability, and reproducible file headers. |
+| Python 3.11+ targets | `--use-specialized-enum` | Use StrEnum or IntEnum only when the selected target Python version supports it. |
+| Pydantic v2 BaseModel and dataclass output | `--snake-case-field`, `--allow-population-by-field-name`, `--use-frozen-field` | Generate Pythonic field names while preserving input aliases and readOnly immutability metadata. |
+| msgspec Struct output | `--snake-case-field`, `--use-standard-primitive-types` | Generate Pythonic field names with aliases and stdlib primitive types for schema formats. |
+| stdlib dataclass output | `--use-standard-primitive-types` | Use stdlib primitive types without renaming input keys because dataclasses do not carry aliases. |
+| TypedDict output | `--use-standard-primitive-types`, `--use-frozen-field` | Use stdlib primitive types and ReadOnly metadata without renaming dictionary keys. |
+| Serialized Decimal defaults | `--deserialize-default-values decimal` | Deserialize compatible serialized Decimal defaults into Decimal values while preserving defaults that cannot be converted safely. |
+| Practical model structure and names | `--reuse-model`, `--collapse-reuse-models`, `--use-title-as-name`, `--naming-strategy primary-first` | Deduplicate identical models without empty inheritance wrappers, prefer schema titles for class names, and keep primary definitions ahead of inline duplicate names. |
+| Practical typing and defaults | `--use-default-kwarg`, `--use-object-type`, `--use-tuple-for-fixed-items`, `--use-unique-items-as-set`, `--use-single-line-docstring` | Render defaults explicitly, prefer object for unconstrained values, preserve fixed and unique arrays, and keep short docstrings concise. |
+| Schema documentation | `--use-schema-description`, `--use-field-description`, `--use-field-description-example` | Preserve schema and field descriptions, including examples, in generated model documentation. |
+
+### `practical-py314-20260826`
+
+Standard Python 3.14 output plus practical naming, deduplication, and schema documentation.
+
+This immutable preset extends `standard-py314-20260826` with options that make generated models easier to read and use in real projects. It favors schema-authored names, model reuse, and embedded schema documentation over the most conservative output-shape stability.
+
+- **Requires separate target Python version:** no
+- **Target Python version:** 3.14
+
+#### Included Options
+
+These snippets show the equivalent expanded configuration without `--preset` for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.14. Replace the input and output paths for your project.
+
+=== "pyproject.toml"
+
+    ```toml
+    [tool.datamodel-codegen]
+    allow-population-by-field-name = true
+    collapse-reuse-models = true
+    collapse-root-models = true
+    deserialize-default-values = ["decimal"]
+    disable-timestamp = true
+    enum-field-as-literal = "one"
+    input = "schema.json"
+    input-file-type = "jsonschema"
+    naming-strategy = "primary-first"
+    output = "model.py"
+    output-model-type = "pydantic_v2.BaseModel"
+    reuse-model = true
+    set-default-enum-member = true
+    snake-case-field = true
+    strict-nullable = true
+    target-python-version = "3.14"
+    use-annotated = true
+    use-default-kwarg = true
+    use-field-description = true
+    use-field-description-example = true
+    use-frozen-field = true
+    use-object-type = true
+    use-schema-description = true
+    use-single-line-docstring = true
+    use-specialized-enum = true
+    use-standard-collections = true
+    use-subclass-enum = true
+    use-title-as-name = true
+    use-tuple-for-fixed-items = true
+    use-union-operator = true
+    use-unique-items-as-set = true
+    ```
+
+=== "CLI"
+
+    ```bash
+    datamodel-codegen --allow-population-by-field-name --collapse-reuse-models --collapse-root-models --deserialize-default-values decimal --disable-timestamp --enum-field-as-literal one --input schema.json --input-file-type jsonschema --naming-strategy primary-first --output model.py --output-model-type pydantic_v2.BaseModel --reuse-model --set-default-enum-member --snake-case-field --strict-nullable --target-python-version 3.14 --use-annotated --use-default-kwarg --use-field-description --use-field-description-example --use-frozen-field --use-object-type --use-schema-description --use-single-line-docstring --use-specialized-enum --use-standard-collections --use-subclass-enum --use-title-as-name --use-tuple-for-fixed-items --use-union-operator --use-unique-items-as-set
+    ```
+
+| Scope | Options | Notes |
+|-------|---------|-------|
+| All output model types | `--use-standard-collections`, `--use-union-operator`, `--use-annotated`, `--enum-field-as-literal one`, `--use-subclass-enum`, `--collapse-root-models`, `--strict-nullable`, `--set-default-enum-member`, `--disable-timestamp` | Use built-in collection syntax, PEP 604 unions, Annotated constraints, single-value enum Literals, typed enum subclasses, enum-member defaults, inline root wrappers, schema-accurate nullability, and reproducible file headers. |
+| Python 3.11+ targets | `--use-specialized-enum` | Use StrEnum or IntEnum only when the selected target Python version supports it. |
+| Pydantic v2 BaseModel and dataclass output | `--snake-case-field`, `--allow-population-by-field-name`, `--use-frozen-field` | Generate Pythonic field names while preserving input aliases and readOnly immutability metadata. |
+| msgspec Struct output | `--snake-case-field`, `--use-standard-primitive-types` | Generate Pythonic field names with aliases and stdlib primitive types for schema formats. |
+| stdlib dataclass output | `--use-standard-primitive-types` | Use stdlib primitive types without renaming input keys because dataclasses do not carry aliases. |
+| TypedDict output | `--use-standard-primitive-types`, `--use-frozen-field` | Use stdlib primitive types and ReadOnly metadata without renaming dictionary keys. |
+| Serialized Decimal defaults | `--deserialize-default-values decimal` | Deserialize compatible serialized Decimal defaults into Decimal values while preserving defaults that cannot be converted safely. |
 | Practical model structure and names | `--reuse-model`, `--collapse-reuse-models`, `--use-title-as-name`, `--naming-strategy primary-first` | Deduplicate identical models without empty inheritance wrappers, prefer schema titles for class names, and keep primary definitions ahead of inline duplicate names. |
 | Practical typing and defaults | `--use-default-kwarg`, `--use-object-type`, `--use-tuple-for-fixed-items`, `--use-unique-items-as-set`, `--use-single-line-docstring` | Render defaults explicitly, prefer object for unconstrained values, preserve fixed and unique arrays, and keep short docstrings concise. |
 | Schema documentation | `--use-schema-description`, `--use-field-description`, `--use-field-description-example` | Preserve schema and field descriptions, including examples, in generated model documentation. |
@@ -9637,7 +10248,7 @@ This documentation is auto-generated from test cases.
 |----------|---------|-------------|
 | 📁 [Base Options](base-options.md) | 13 | Input/output configuration |
 | 🔧 [Typing Customization](typing-customization.md) | 34 | Type annotation and import behavior |
-| 🏷️ [Field Customization](field-customization.md) | 27 | Field naming and docstring behavior |
+| 🏷️ [Field Customization](field-customization.md) | 29 | Field naming and docstring behavior |
 | 🏗️ [Model Customization](model-customization.md) | 44 | Model generation behavior |
 | 🎨 [Template Customization](template-customization.md) | 27 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 8 | OpenAPI-specific features |
@@ -9741,6 +10352,7 @@ These links are generated from CLI option metadata and summarize options that im
 - [`--dataclass-arguments`](model-customization.md#dataclass-arguments)
 - [`--debug`](utility-options.md#debug)
 - [`--default-values`](field-customization.md#default-values)
+- [`--deserialize-default-values`](field-customization.md#deserialize-default-values)
 - [`--diff-against`](general-options.md#diff-against)
 - [`--disable-appending-item-suffix`](template-customization.md#disable-appending-item-suffix)
 - [`--disable-future-imports`](typing-customization.md#disable-future-imports)
@@ -9834,6 +10446,7 @@ These links are generated from CLI option metadata and summarize options that im
 - [`--naming-strategy`](model-customization.md#naming-strategy)
 - [`--no-alias`](field-customization.md#no-alias)
 - [`--no-color`](utility-options.md#no-color)
+- [`--no-deserialize-default-values`](field-customization.md#no-deserialize-default-values)
 - [`--no-treat-dot-as-module`](template-customization.md#no-treat-dot-as-module)
 - [`--no-use-closed-typed-dict`](typing-customization.md#no-use-closed-typed-dict)
 - [`--no-use-specialized-enum`](typing-customization.md#no-use-specialized-enum)
@@ -17807,6 +18420,7 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/field-custom
 | [`--aliases`](#aliases) | Apply custom field and class name aliases via inline JSON or... |
 | [`--capitalize-enum-members`](#capitalize-enum-members) | Capitalize enum member names to UPPER_CASE format. |
 | [`--default-values`](#default-values) | Override field default values via inline JSON or a JSON file... |
+| [`--deserialize-default-values`](#deserialize-default-values) | Deserialize selected direct scalar field defaults into their... |
 | [`--empty-enum-field-name`](#empty-enum-field-name) | Name for empty string enum field values. |
 | [`--extra-fields`](#extra-fields) | Configure how generated models handle extra fields not defin... |
 | [`--field-constraints`](#field-constraints) | Generate Field() with validation constraints from schema. |
@@ -17816,6 +18430,7 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/field-custom
 | [`--field-type-collision-strategy`](#field-type-collision-strategy) | Rename type class instead of field when names collide (Pydan... |
 | [`--infer-union-variant-names`](#infer-union-variant-names) | Infer names for inline oneOf/anyOf object variants from lite... |
 | [`--no-alias`](#no-alias) | Disable Field alias generation for non-Python-safe property ... |
+| [`--no-deserialize-default-values`](#no-deserialize-default-values) | Keep serialized schema defaults instead of deserializing sel... |
 | [`--original-field-name-delimiter`](#original-field-name-delimiter) | Specify delimiter for original field names when using snake-... |
 | [`--remove-special-field-name-prefix`](#remove-special-field-name-prefix) | Remove the special prefix from field names. |
 | [`--serialization-aliases`](#serialization-aliases) | Apply custom Pydantic v2 serialization aliases via inline JS... |
@@ -18372,6 +18987,162 @@ Supports scoped format (ClassName.field) for hierarchical overrides.
         status: str | None = 'active'
         page: int | None = 1
     ```
+
+---
+
+## `--deserialize-default-values` {#deserialize-default-values}
+
+Deserialize selected direct scalar field defaults into their generated Python types.
+
+The `--deserialize-default-values` option accepts an explicit list of final generated scalar types. For example,
+`--deserialize-default-values decimal` emits a direct Decimal field's valid string default as a `Decimal` value.
+Container, union, and nested defaults keep their existing handling. Defaults that cannot be deserialized remain
+serialized so the generated module stays importable.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --deserialize-default-values decimal --target-python-version 3.10 # (1)!
+    ```
+
+    1. :material-arrow-left: `--deserialize-default-values` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Invoice",
+      "type": "object",
+      "properties": {
+        "amount": {
+          "type": "string",
+          "format": "decimal",
+          "default": "12.340"
+        },
+        "invalid_amount": {
+          "type": "string",
+          "format": "decimal",
+          "default": "not-a-decimal"
+        },
+        "nullable_amount": {
+          "type": ["string", "null"],
+          "format": "decimal",
+          "default": null
+        },
+        "label": {
+          "type": "string",
+          "default": "retail"
+        }
+      }
+    }
+    ```
+
+    **Output:**
+
+    === "Pydantic v2"
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  serialized_decimal_defaults.json
+
+        from __future__ import annotations
+
+        from decimal import Decimal
+
+        from pydantic import BaseModel
+
+
+        class Invoice(BaseModel):
+            amount: Decimal | None = Decimal('12.340')
+            invalid_amount: Decimal | None = 'not-a-decimal'
+            nullable_amount: Decimal | None = None
+            label: str | None = 'retail'
+        ```
+
+    === "Pydantic v2 dataclass"
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  serialized_decimal_defaults.json
+
+        from __future__ import annotations
+
+        from decimal import Decimal
+
+        from pydantic.dataclasses import dataclass
+
+
+        @dataclass
+        class Invoice:
+            amount: Decimal | None = Decimal('12.340')
+            invalid_amount: Decimal | None = 'not-a-decimal'
+            nullable_amount: Decimal | None = None
+            label: str | None = 'retail'
+        ```
+
+    === "dataclass"
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  serialized_decimal_defaults.json
+
+        from __future__ import annotations
+
+        from dataclasses import dataclass
+        from decimal import Decimal
+
+
+        @dataclass
+        class Invoice:
+            amount: Decimal | None = Decimal('12.340')
+            invalid_amount: Decimal | None = 'not-a-decimal'
+            nullable_amount: Decimal | None = None
+            label: str | None = 'retail'
+        ```
+
+    === "TypedDict"
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  serialized_decimal_defaults.json
+
+        from __future__ import annotations
+
+        from decimal import Decimal
+        from typing import TypedDict
+
+        from typing_extensions import NotRequired
+
+
+        class Invoice(TypedDict):
+            amount: NotRequired[Decimal]
+            invalid_amount: NotRequired[Decimal]
+            nullable_amount: NotRequired[Decimal | None]
+            label: NotRequired[str]
+        ```
+
+    === "msgspec"
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  serialized_decimal_defaults.json
+
+        from __future__ import annotations
+
+        from decimal import Decimal
+
+        from msgspec import UNSET, Struct, UnsetType
+
+
+        class Invoice(Struct):
+            amount: Decimal | UnsetType = Decimal('12.340')
+            invalid_amount: Decimal | UnsetType = 'not-a-decimal'
+            nullable_amount: Decimal | None | UnsetType = UNSET
+            label: str | UnsetType = 'retail'
+        ```
 
 ---
 
@@ -19756,6 +20527,82 @@ With this flag, only Python-safe names are used without aliases.
             last_name: str = Field(..., alias='last-name')
             email_address: str | None = None
         ```
+
+---
+
+## `--no-deserialize-default-values` {#no-deserialize-default-values}
+
+Keep serialized schema defaults instead of deserializing selected types.
+
+The `--no-deserialize-default-values` flag explicitly disables default-value deserialization, including when a
+preset enables it. Compatibility warnings still identify direct scalar defaults whose serialized form does not
+match the generated Python type.
+
+**Related:** [`--deserialize-default-values`](#deserialize-default-values), [`--preset`](base-options.md#preset)
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --preset standard-py310-20260826 --no-deserialize-default-values --disable-timestamp --formatters builtin # (1)!
+    ```
+
+    1. :material-arrow-left: `--no-deserialize-default-values` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Invoice",
+      "type": "object",
+      "properties": {
+        "amount": {
+          "type": "string",
+          "format": "decimal",
+          "default": "12.340"
+        },
+        "invalid_amount": {
+          "type": "string",
+          "format": "decimal",
+          "default": "not-a-decimal"
+        },
+        "nullable_amount": {
+          "type": ["string", "null"],
+          "format": "decimal",
+          "default": null
+        },
+        "label": {
+          "type": "string",
+          "default": "retail"
+        }
+      }
+    }
+    ```
+
+    **Output:**
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  serialized_decimal_defaults.json
+
+    from __future__ import annotations
+
+    from decimal import Decimal
+
+    from pydantic import BaseModel, ConfigDict
+
+
+    class Invoice(BaseModel):
+        model_config = ConfigDict(
+            populate_by_name=True,
+        )
+        amount: Decimal = '12.340'
+        invalid_amount: Decimal = 'not-a-decimal'
+        nullable_amount: Decimal | None = None
+        label: str = 'retail'
+    ```
 
 ---
 
@@ -38511,6 +39358,7 @@ datamodel-codegen [OPTIONS]
 | [`--aliases`](field-customization.md#aliases) | Apply custom field and class name aliases via inline JSON or a JSON file path. |
 | [`--capitalize-enum-members`](field-customization.md#capitalize-enum-members) | Capitalize enum member names to UPPER_CASE format. |
 | [`--default-values`](field-customization.md#default-values) | Override field default values via inline JSON or a JSON file path. |
+| [`--deserialize-default-values`](field-customization.md#deserialize-default-values) | Deserialize selected direct scalar field defaults into their generated Python ty... |
 | [`--empty-enum-field-name`](field-customization.md#empty-enum-field-name) | Name for empty string enum field values. |
 | [`--extra-fields`](field-customization.md#extra-fields) | Configure how generated models handle extra fields not defined in schema. |
 | [`--field-constraints`](field-customization.md#field-constraints) | Generate Field() with validation constraints from schema. |
@@ -38520,6 +39368,7 @@ datamodel-codegen [OPTIONS]
 | [`--field-type-collision-strategy`](field-customization.md#field-type-collision-strategy) | Rename type class instead of field when names collide (Pydantic v2 only). |
 | [`--infer-union-variant-names`](field-customization.md#infer-union-variant-names) | Infer names for inline oneOf/anyOf object variants from literal fields. |
 | [`--no-alias`](field-customization.md#no-alias) | Disable Field alias generation for non-Python-safe property names. |
+| [`--no-deserialize-default-values`](field-customization.md#no-deserialize-default-values) | Keep serialized schema defaults instead of deserializing selected types. |
 | [`--original-field-name-delimiter`](field-customization.md#original-field-name-delimiter) | Specify delimiter for original field names when using snake-case conversion. |
 | [`--remove-special-field-name-prefix`](field-customization.md#remove-special-field-name-prefix) | Remove the special prefix from field names. |
 | [`--serialization-aliases`](field-customization.md#serialization-aliases) | Apply custom Pydantic v2 serialization aliases via inline JSON or a JSON file pa... |
@@ -38725,6 +39574,7 @@ All options sorted alphabetically:
 - [`--dataclass-arguments`](model-customization.md#dataclass-arguments) - Customize dataclass decorator arguments via JSON dictionary.
 - [`--debug`](utility-options.md#debug) - Show debug messages during code generation
 - [`--default-values`](field-customization.md#default-values) - Override field default values via inline JSON or a JSON file...
+- [`--deserialize-default-values`](field-customization.md#deserialize-default-values) - Deserialize selected direct scalar field defaults into their...
 - [`--diff-against`](general-options.md#diff-against) - Compare generated code from a baseline input with the curren...
 - [`--disable-appending-item-suffix`](template-customization.md#disable-appending-item-suffix) - Disable appending 'Item' suffix to array item types.
 - [`--disable-future-imports`](typing-customization.md#disable-future-imports) - Prevent automatic addition of __future__ imports in generate...
@@ -38788,6 +39638,7 @@ All options sorted alphabetically:
 - [`--naming-strategy`](model-customization.md#naming-strategy) - Use parent-prefixed naming strategy for duplicate model name...
 - [`--no-alias`](field-customization.md#no-alias) - Disable Field alias generation for non-Python-safe property ...
 - [`--no-color`](utility-options.md#no-color) - Disable colorized output
+- [`--no-deserialize-default-values`](field-customization.md#no-deserialize-default-values) - Keep serialized schema defaults instead of deserializing sel...
 - [`--no-treat-dot-as-module`](template-customization.md#no-treat-dot-as-module) - Keep dots in schema names as underscores for flat output.
 - [`--no-use-closed-typed-dict`](typing-customization.md#no-use-closed-typed-dict) - Disable PEP 728 TypedDict closed/extra_items generation.
 - [`--no-use-specialized-enum`](typing-customization.md#no-use-specialized-enum) - Disable specialized Enum classes for Python 3.11+ code gener...
@@ -40246,16 +41097,16 @@ classDiagram
 
 | Config model | Field count | Purpose |
 | --- | ---: | --- |
-| `BaseGenerateConfig` | 150 | Shared generation options. |
-| `GenerateConfig` | 165 | Public `generate()` configuration. |
-| `ParserConfig` | 141 | Base parser dependency injection and parser options. |
-| `JSONSchemaParserConfig` | 143 | JSON Schema parser options. |
-| `OpenAPIParserConfig` | 149 | OpenAPI-specific parser options. |
-| `AsyncAPIParserConfig` | 150 | AsyncAPI-specific parser options. |
-| `XMLSchemaParserConfig` | 144 | XML Schema-specific parser options. |
-| `ProtobufParserConfig` | 144 | Protocol Buffers-specific parser options. |
-| `AvroParserConfig` | 143 | Avro-specific parser options. |
-| `GraphQLParserConfig` | 144 | GraphQL-specific parser options. |
+| `BaseGenerateConfig` | 151 | Shared generation options. |
+| `GenerateConfig` | 166 | Public `generate()` configuration. |
+| `ParserConfig` | 142 | Base parser dependency injection and parser options. |
+| `JSONSchemaParserConfig` | 144 | JSON Schema parser options. |
+| `OpenAPIParserConfig` | 150 | OpenAPI-specific parser options. |
+| `AsyncAPIParserConfig` | 151 | AsyncAPI-specific parser options. |
+| `XMLSchemaParserConfig` | 145 | XML Schema-specific parser options. |
+| `ProtobufParserConfig` | 145 | Protocol Buffers-specific parser options. |
+| `AvroParserConfig` | 144 | Avro-specific parser options. |
+| `GraphQLParserConfig` | 145 | GraphQL-specific parser options. |
 
 ### Formatter Names
 

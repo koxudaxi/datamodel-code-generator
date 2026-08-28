@@ -10,13 +10,17 @@ import black
 import pytest
 from packaging import version
 
-from datamodel_code_generator.enums import ExtraFields
+from datamodel_code_generator._format_types import PythonVersion
+from datamodel_code_generator.enums import DataModelType, DefaultValueType, ExtraFields, InputFileType
 from datamodel_code_generator.preset import (
     PresetConfig,
     PresetConfigItem,
+    PresetContext,
+    PresetOptionGroup,
     get_latest_preset_name,
     get_preset_infos,
     render_presets,
+    resolve_preset_config_updates,
 )
 from scripts import build_preset_docs
 from tests.conftest import assert_output
@@ -84,27 +88,74 @@ def test_marked_section_replacement_uses_end_marker_after_begin() -> None:
     )
 
 
-def test_preset_config_supports_enum_backed_string_options() -> None:
-    """Preset config keeps string-backed enum options typed after validation."""
+def test_preset_config_supports_enum_backed_string_and_sequence_options() -> None:
+    """Preset config keeps string-backed enum and sequence options typed after validation."""
     enum_item = PresetConfig(extra_fields=ExtraFields.Forbid).items()[0]
     string_item = PresetConfig(extra_fields="allow").items()[0]
+    sequence_item = PresetConfig(deserialize_default_values=(DefaultValueType.Decimal,)).items()[0]
+    enabled_group = PresetOptionGroup(
+        title="enabled",
+        config=PresetConfig(deserialize_default_values=(DefaultValueType.Decimal,)),
+        description="",
+    )
+    disabled_group = PresetOptionGroup(
+        title="disabled",
+        config=PresetConfig(deserialize_default_values=()),
+        description="",
+    )
     output = "\n".join((
         _render_preset_config_item(enum_item),
         _render_preset_config_item(string_item),
+        _render_preset_config_item(sequence_item),
+        f"enabled_cli: {enabled_group.options[0]}",
+        f"disabled_cli: {disabled_group.options[0]}",
         "",
     ))
 
     assert_output(output, EXPECTED_PRESET_DOCS_PATH / "preset_config_enum_values.txt")
 
 
+def test_dated_presets_keep_decimal_default_deserialization_immutable() -> None:
+    """Only the new preset family enables Decimal defaults, and explicit values override it."""
+    context = PresetContext(
+        input_file_type=InputFileType.JsonSchema,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        target_python_version=PythonVersion.PY_310,
+    )
+    cases = (
+        ("standard-py310-20260619", set()),
+        ("standard-py310-20260826", set()),
+        ("practical-py310-20260826", set()),
+        ("standard-py310-20260826", {"deserialize_default_values"}),
+    )
+    lines: list[str] = []
+    for preset_name, explicit_fields in cases:
+        resolved = resolve_preset_config_updates(
+            preset_name,
+            context=context,
+            use_annotated=False,
+            explicit_fields=explicit_fields,
+        )
+        values = next(
+            (item.applied_value for item in resolved.items if item.field_name == "deserialize_default_values"),
+            (),
+        )
+        if not isinstance(values, tuple):  # pragma: no cover
+            msg = f"Expected a tuple preset value, got {values!r}"
+            raise TypeError(msg)
+        label = f"{preset_name} explicit" if explicit_fields else preset_name
+        lines.append(f"{label}: {[value.value for value in values]}")
+
+    assert_output("\n".join((*lines, "")), EXPECTED_PRESET_DOCS_PATH / "preset_decimal_defaults.txt")
+
+
 def _render_preset_config_item(item: PresetConfigItem) -> str:
     match item.value, item.applied_value:
-        case ExtraFields(), ExtraFields():
+        case ExtraFields() as value, ExtraFields() as applied:
+            return f"{item.field_name}: value={value.value}, applied={applied.value}, pyproject={item.pyproject_value}"
+        case (DefaultValueType() as value,), (DefaultValueType() as applied,):
             return (
-                f"{item.field_name}: "
-                f"value={item.value.value}, "
-                f"applied={item.applied_value.value}, "
-                f"pyproject={item.pyproject_value}"
+                f"{item.field_name}: value=[{value.value}], applied=[{applied.value}], pyproject={item.pyproject_value}"
             )
     msg = f"Expected extra_fields preset config item, got {item!r}"  # pragma: no cover
     raise TypeError(msg)  # pragma: no cover

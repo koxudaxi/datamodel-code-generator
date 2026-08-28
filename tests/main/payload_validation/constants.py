@@ -69,8 +69,12 @@ PAYLOAD_FORMAT_ENUMS = {
     "ipv6": ["::1"],
     "uuid": ["00000000-0000-4000-8000-000000000000"],
 }
+SERIALIZED_DECIMAL_DEFAULT_PAYLOAD_EXCLUSION_REASON = (
+    "focused Decimal-default e2e fixture intentionally emits a compatibility warning in default generation"
+)
 EXCLUDED_FILES: dict[str, str] = {
     "jsonschema/allof_class_hierarchy.json": "intentionally invalid JSON fixture",
+    "jsonschema/collapse_root_models_decimal_defaults.json": SERIALIZED_DECIMAL_DEFAULT_PAYLOAD_EXCLUSION_REASON,
     "jsonschema/non_dict_files/list_only.json": "input is JSON data, not a JSON Schema document",
     "jsonschema/non_dict_files/list_only.yaml": "input is YAML data, not a JSON Schema document",
     "jsonschema/non_dict_files/whitespace_only.yaml": "empty YAML fixture",
@@ -80,6 +84,15 @@ EXCLUDED_FILES: dict[str, str] = {
     "jsonschema/schema_validators_multiple_aliases_property_count.json": (
         "opt-in schema-validator e2e fixture; payload validation intentionally uses default generation"
     ),
+    "jsonschema/serialized_decimal_default_alias.json": SERIALIZED_DECIMAL_DEFAULT_PAYLOAD_EXCLUSION_REASON,
+    "jsonschema/serialized_decimal_default_alias_from_import.json": SERIALIZED_DECIMAL_DEFAULT_PAYLOAD_EXCLUSION_REASON,
+    "jsonschema/serialized_decimal_default_alias_from_type.json": SERIALIZED_DECIMAL_DEFAULT_PAYLOAD_EXCLUSION_REASON,
+    "jsonschema/serialized_decimal_default_collision.json": SERIALIZED_DECIMAL_DEFAULT_PAYLOAD_EXCLUSION_REASON,
+    "jsonschema/serialized_decimal_default_condecimal_collision.json": (
+        SERIALIZED_DECIMAL_DEFAULT_PAYLOAD_EXCLUSION_REASON
+    ),
+    "jsonschema/serialized_decimal_default_scope.json": SERIALIZED_DECIMAL_DEFAULT_PAYLOAD_EXCLUSION_REASON,
+    "jsonschema/serialized_decimal_defaults.json": SERIALIZED_DECIMAL_DEFAULT_PAYLOAD_EXCLUSION_REASON,
     "jsonschema/unique_items_prefix_items_draft7.json": (
         "opt-in schema-validator dialect e2e fixture; Draft 7 ignores prefixItems, "
         "which hypothesis-jsonschema cannot satisfy for generic payload validation"

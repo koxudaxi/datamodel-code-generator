@@ -65,6 +65,7 @@ class TypedDict(DataModel):
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_TYPED_DICT,)
     REQUIRES_ADDITIONAL_PROPERTIES_REFERENCE_CLASSES: ClassVar[bool] = True
     SUPPORTS_TYPED_DICT_TOTAL_FALSE: ClassVar[bool] = True
+    SUPPORTS_DESERIALIZED_DEFAULT_VALUES: ClassVar[bool] = False
 
     def __init__(  # noqa: PLR0913
         self,

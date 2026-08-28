@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, ClassVar
 
 import pytest
 
-from datamodel_code_generator.imports import IMPORT_ANY, IMPORT_TUPLE
+from datamodel_code_generator.imports import IMPORT_ANY, IMPORT_DECIMAL, IMPORT_TUPLE, Import
 from datamodel_code_generator.python_literal import (
     PythonCode,
     _normalize_string,
@@ -288,6 +288,21 @@ def test_hostname_regex_aliases_canonical_data_type_manager() -> None:
     assert pydantic_v2_types.HOSTNAME_REGEX is BaseDataTypeManager.HOSTNAME_REGEX
     assert pydantic_v2_types._PydanticDataTypeManager.HOSTNAME_REGEX is BaseDataTypeManager.HOSTNAME_REGEX
     assert pydantic_v2_types.DataTypeManager.HOSTNAME_REGEX is BaseDataTypeManager.HOSTNAME_REGEX
+
+
+def test_common_data_type_manager_declares_only_decimal_value_semantics() -> None:
+    """Common Python model outputs classify Decimal without knowing Pydantic helpers."""
+    from datamodel_code_generator.model.types import DataTypeManager as CommonDataTypeManager
+    from datamodel_code_generator.types import DECIMAL_DEFAULT_VALUE_DESCRIPTOR
+
+    data_type_manager = CommonDataTypeManager()
+
+    assert (
+        data_type_manager.get_default_value_descriptor(DataType(import_=IMPORT_DECIMAL))
+        is DECIMAL_DEFAULT_VALUE_DESCRIPTOR
+    )
+    assert data_type_manager.get_default_value_descriptor(DataType()) is None
+    assert data_type_manager.get_default_value_descriptor(DataType(import_=Import("condecimal", "pydantic"))) is None
 
 
 def test_python_literal_helpers_render_code_and_tuple_values() -> None:

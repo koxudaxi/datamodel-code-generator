@@ -10,7 +10,7 @@ This documentation is auto-generated from test cases.
 |----------|---------|-------------|
 | 📁 [Base Options](base-options.md) | 13 | Input/output configuration |
 | 🔧 [Typing Customization](typing-customization.md) | 34 | Type annotation and import behavior |
-| 🏷️ [Field Customization](field-customization.md) | 27 | Field naming and docstring behavior |
+| 🏷️ [Field Customization](field-customization.md) | 29 | Field naming and docstring behavior |
 | 🏗️ [Model Customization](model-customization.md) | 44 | Model generation behavior |
 | 🎨 [Template Customization](template-customization.md) | 27 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 8 | OpenAPI-specific features |
@@ -114,6 +114,7 @@ These links are generated from CLI option metadata and summarize options that im
 - [`--dataclass-arguments`](model-customization.md#dataclass-arguments)
 - [`--debug`](utility-options.md#debug)
 - [`--default-values`](field-customization.md#default-values)
+- [`--deserialize-default-values`](field-customization.md#deserialize-default-values)
 - [`--diff-against`](general-options.md#diff-against)
 - [`--disable-appending-item-suffix`](template-customization.md#disable-appending-item-suffix)
 - [`--disable-future-imports`](typing-customization.md#disable-future-imports)
@@ -207,6 +208,7 @@ These links are generated from CLI option metadata and summarize options that im
 - [`--naming-strategy`](model-customization.md#naming-strategy)
 - [`--no-alias`](field-customization.md#no-alias)
 - [`--no-color`](utility-options.md#no-color)
+- [`--no-deserialize-default-values`](field-customization.md#no-deserialize-default-values)
 - [`--no-treat-dot-as-module`](template-customization.md#no-treat-dot-as-module)
 - [`--no-use-closed-typed-dict`](typing-customization.md#no-use-closed-typed-dict)
 - [`--no-use-specialized-enum`](typing-customization.md#no-use-specialized-enum)

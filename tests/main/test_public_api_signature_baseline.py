@@ -22,6 +22,7 @@ from datamodel_code_generator.enums import (
     CollapseRootModelsNameStrategy,
     CustomFileHeaderMode,
     DataModelType,
+    DefaultValueType,
     FieldTypeCollisionStrategy,
     GraphQLScope,
     HTTPBackend,
@@ -78,6 +79,8 @@ _PUBLIC_MODULE_EXPORTS: dict[str, frozenset[str]] = {
         "DanglingRefWarning",
         "DateClassType",
         "DatetimeClassType",
+        "DefaultValueType",
+        "DefaultValueTypeWarning",
         "DefaultPutDict",
         "Error",
         "FieldTypeCollisionStrategy",
@@ -142,6 +145,7 @@ _PUBLIC_MODULE_EXPORTS: dict[str, frozenset[str]] = {
         "CustomFileHeaderMode",
         "DataModelType",
         "DataclassArguments",
+        "DefaultValueType",
         "FieldTypeCollisionStrategy",
         "GraphQLScope",
         "HTTPBackend",
@@ -311,6 +315,7 @@ def _baseline_generate(
     use_inline_field_description: bool = False,
     use_single_line_docstring: bool = False,
     use_default_kwarg: bool = False,
+    deserialize_default_values: Sequence[DefaultValueType] = (),
     use_missing_sentinel: bool = False,
     reuse_model: bool = False,
     reuse_scope: ReuseScope = ReuseScope.Module,
@@ -523,6 +528,7 @@ class _BaselineParser:
         use_inline_field_description: bool = False,
         use_single_line_docstring: bool = False,
         use_default_kwarg: bool = False,
+        deserialize_default_values: Sequence[DefaultValueType] = (),
         use_missing_sentinel: bool = False,
         reuse_model: bool = False,
         reuse_scope: ReuseScope | None = None,
@@ -977,7 +983,9 @@ def test_generate_signature_matches_baseline() -> None:
     from datamodel_code_generator.model.pydantic_v2 import UnionMode
     from datamodel_code_generator.types import StrictTypes
 
-    GenerateConfig.model_rebuild(_types_namespace={"StrictTypes": StrictTypes, "UnionMode": UnionMode})
+    GenerateConfig.model_rebuild(
+        _types_namespace={"DefaultValueType": DefaultValueType, "StrictTypes": StrictTypes, "UnionMode": UnionMode}
+    )
 
     for name, param in baseline_params.items():
         config_default = GenerateConfig.model_fields[name].default
@@ -1055,12 +1063,14 @@ def test_parser_signature_matches_baseline() -> None:
         )
 
     from datamodel_code_generator.config import ParserConfig
+    from datamodel_code_generator.enums import DefaultValueType
     from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
     from datamodel_code_generator.model.pydantic_v2 import UnionMode
     from datamodel_code_generator.types import DataTypeManager, StrictTypes
 
     ParserConfig.model_rebuild(
         _types_namespace={
+            "DefaultValueType": DefaultValueType,
             "StrictTypes": StrictTypes,
             "UnionMode": UnionMode,
             "DataModel": DataModel,
@@ -1101,6 +1111,7 @@ def test_config_models_force_rebuild_after_defer_build() -> None:
     """Ensure deferred config model schemas can still be rebuilt at import-test time."""
     from pydantic import BaseModel as PydanticBaseModel
 
+    from datamodel_code_generator.enums import DefaultValueType
     from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
     from datamodel_code_generator.model.pydantic_v2 import UnionMode
     from datamodel_code_generator.types import DataTypeManager, StrictTypes
@@ -1129,6 +1140,7 @@ def test_config_models_force_rebuild_after_defer_build() -> None:
         "DataModel": DataModel,
         "DataModelFieldBase": DataModelFieldBase,
         "DataTypeManager": DataTypeManager,
+        "DefaultValueType": DefaultValueType,
         "StrictTypes": StrictTypes,
         "UnionMode": UnionMode,
     }
@@ -1273,11 +1285,13 @@ def test_parse_config_defaults_match_parse_signature() -> None:
 def test_generate_with_config_produces_same_result_as_kwargs(tmp_path: Path) -> None:
     """Ensure generate() with GenerateConfig produces same result as kwargs."""
     from datamodel_code_generator.config import GenerateConfig
-    from datamodel_code_generator.enums import DataModelType
+    from datamodel_code_generator.enums import DataModelType, DefaultValueType
     from datamodel_code_generator.model.pydantic_v2 import UnionMode
     from datamodel_code_generator.types import StrictTypes
 
-    GenerateConfig.model_rebuild(_types_namespace={"StrictTypes": StrictTypes, "UnionMode": UnionMode})
+    GenerateConfig.model_rebuild(
+        _types_namespace={"DefaultValueType": DefaultValueType, "StrictTypes": StrictTypes, "UnionMode": UnionMode}
+    )
 
     schema = '{"type": "object", "properties": {"name": {"type": "string"}}}'
     output_kwargs = tmp_path / "output_kwargs.py"

@@ -45,6 +45,7 @@ from datamodel_code_generator.enums import (
     CustomFileHeaderMode,
     DataclassArguments,
     DataModelType,
+    DefaultValueType,
     FieldTypeCollisionStrategy,
     GraphQLScope,
     HTTPBackend,
@@ -718,6 +719,10 @@ def _validate_generation_path_conflicts(  # noqa: PLR0912
 
 class DanglingRefWarning(UserWarning):
     """Warn that a local JSON pointer target was not found."""
+
+
+class DefaultValueTypeWarning(UserWarning):
+    """Warn that a generated default is still serialized instead of its runtime type."""
 
 
 class InvalidClassNameError(Error):
@@ -2696,6 +2701,8 @@ __all__ = [
     "DateClassType",
     "DatetimeClassType",
     "DefaultPutDict",
+    "DefaultValueType",
+    "DefaultValueTypeWarning",
     "Error",
     "FieldTypeCollisionStrategy",
     "GeneratedModules",

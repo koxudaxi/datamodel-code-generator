@@ -10,12 +10,14 @@ from __future__ import annotations
 import re
 from abc import ABC, abstractmethod
 from copy import deepcopy
+from dataclasses import dataclass
 from decimal import Decimal
 from enum import Enum, auto
 from fractions import Fraction
 from functools import cache, lru_cache
 from itertools import chain, repeat
 from re import Pattern
+from types import MappingProxyType
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -46,6 +48,7 @@ from datamodel_code_generator._format_types import (
     PythonVersion,
     PythonVersionMin,
 )
+from datamodel_code_generator.enums import DefaultValueType
 from datamodel_code_generator.imports import (
     IMPORT_ABC_MAPPING,
     IMPORT_ABC_SEQUENCE,
@@ -75,6 +78,40 @@ OPTIONAL = "Optional"
 OPTIONAL_PREFIX = f"{OPTIONAL}["
 
 _RUNTIME_EXPRESSION_IMPORTS_DATA_TYPE_KEY = "_runtime_expression_imports"
+
+
+class DefaultValueRecipe(Enum):
+    """Describe how a serialized schema value becomes a runtime expression."""
+
+    Decimal = auto()
+
+
+@dataclass(frozen=True, slots=True)
+class DefaultValueDescriptor:
+    """Backend-declared semantics for one generated scalar type.
+
+    ``option_kind`` selects the opt-in configuration, while ``recipe`` remains
+    deliberately separate so future temporal and identifier values can have
+    their own parsing policies without inferring them from an import name.
+    """
+
+    option_kind: DefaultValueType
+    recipe: DefaultValueRecipe
+    constructor_import: Import
+    normalize_constraints: bool = False
+
+
+DECIMAL_DEFAULT_VALUE_DESCRIPTOR = DefaultValueDescriptor(
+    option_kind=DefaultValueType.Decimal,
+    recipe=DefaultValueRecipe.Decimal,
+    constructor_import=IMPORT_DECIMAL,
+)
+CONSTRAINED_DECIMAL_DEFAULT_VALUE_DESCRIPTOR = DefaultValueDescriptor(
+    option_kind=DefaultValueType.Decimal,
+    recipe=DefaultValueRecipe.Decimal,
+    constructor_import=IMPORT_DECIMAL,
+    normalize_constraints=True,
+)
 
 UNION = "Union"
 UNION_PREFIX = f"{UNION}["
@@ -117,7 +154,7 @@ __getattr__ = create_module_getattr(
 
 if TYPE_CHECKING:
     import builtins
-    from collections.abc import Callable, Iterable, Iterator, Sequence
+    from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 
     from datamodel_code_generator._python_type_binding import BoundPythonType
     from datamodel_code_generator.enums import StrictTypes
@@ -1175,6 +1212,7 @@ class DataTypeManager(ABC):
     CONSTRAINED_TYPE_CONSUMED_KEYS: ClassVar[dict[str, tuple[str, ...]]] = {}
     SUPPORTS_ANNOTATED_CONSTRAINTS: ClassVar[bool] = False
     ANNOTATED_CONSTRAINTS_CONTEXT: ClassVar[object | None] = None
+    DEFAULT_VALUE_DESCRIPTORS: ClassVar[Mapping[tuple[str | None, str], DefaultValueDescriptor]] = MappingProxyType({})
 
     def __init__(  # noqa: PLR0913, PLR0917
         self,
@@ -1225,6 +1263,12 @@ class DataTypeManager(ABC):
     def get_data_type(self, types: Types, **kwargs: Any) -> DataType:
         """Map a Types enum value to a DataType. Must be implemented by subclasses."""
         raise NotImplementedError
+
+    def get_default_value_descriptor(self, data_type: DataType) -> DefaultValueDescriptor | None:
+        """Return this backend's semantic descriptor for an emitted scalar import."""
+        if (import_ := data_type.import_) is None:
+            return None
+        return self.DEFAULT_VALUE_DESCRIPTORS.get((import_.from_, import_.import_))
 
     @staticmethod
     def copy_data_type(data_type: DataType) -> DataType:
