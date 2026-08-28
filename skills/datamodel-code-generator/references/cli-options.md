@@ -77,7 +77,7 @@ Field naming, aliases, defaults, and constraints.
 - `--use-title-as-name`: use titles as class names of models
 - `--infer-union-variant-names`: Infer inline oneOf/anyOf branch model names from literal discriminator-style fields
 - `--field-constraints`: Use field constraints and not con* annotations
-- `--set-default-enum-member`: Set enum members as default values for enum field
+- `--set-default-enum-member` (deprecated): Deprecated: --set-default-enum-member is deprecated. Use --deserialize-default-values enum instead.
 - `--use-enum-values-in-discriminator`: Use enum member literals in discriminator fields instead of string literals
 - `--capitalise-enum-members`: Capitalize field names on enum
 - `--capitalize-enum-members`: Capitalize field names on enum
@@ -101,7 +101,7 @@ Field naming, aliases, defaults, and constraints.
 - `--field-type-collision-strategy`: Strategy for handling field name and type name collisions (Pydantic v2 only). 'rename-field': rename field with suffix and add alias (default). 'rename-type': rename type class with suffix to preserve field name. Choices: `rename-field`, `rename-type`.
 - `--aliases`: Alias mapping as inline JSON or a JSON file path for renaming fields. Format: {'<schema_field>': '<python_name>'} - the schema field name becomes the Pydantic alias. Supports hierarchical formats: Flat: {'id': 'id_'} applies to all occurrences. Scoped: {'User.name': 'user_name'} applies to specific class. Priority: scoped > flat. Multiple aliases (Pydantic v2 only): {'field': ['alt1', 'alt2']} uses AliasChoices for validation. Example: {'User.name': 'user_name', 'id': 'id_'} generates `id_: ... = Field(alias='id')`.
 - `--default-values`: Default value overrides as inline JSON or a JSON file path. Supports hierarchical formats: Flat: {'field': value} applies to all occurrences. Scoped: {'ClassName.field': value} applies to specific class. Priority: scoped > flat. Note: Scoped keys use the generated class name for JSON Schema/OpenAPI. Required fields remain required unless --use-default is also specified. Example: {'User.status': 'active', 'page': 1, 'limit': 10}
-- `--deserialize-default-values`: Deserialize serialized schema defaults for selected generated types. Supported values: decimal. Choices: `decimal`.
+- `--deserialize-default-values`: Deserialize serialized schema defaults for selected generated types. Supported values: decimal, enum. Choices: `decimal`, `enum`.
 - `--no-deserialize-default-values`: Disable schema default value deserialization.
 
 ## Model Customization

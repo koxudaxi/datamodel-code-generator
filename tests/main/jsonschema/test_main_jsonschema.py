@@ -28,6 +28,7 @@ from datamodel_code_generator import (
     MIN_VERSION,
     DanglingRefWarning,
     DataModelType,
+    DefaultValueType,
     Error,
     InputFileType,
     InvalidFileFormatError,
@@ -1170,9 +1171,9 @@ def test_main_complicated_enum_default_member(
 
 @pytest.mark.cli_doc(
     options=["--set-default-enum-member"],
-    option_description="""Set the first enum member as the default value for enum fields.
+    option_description="""Use the legacy flag for deserializing enum defaults.
 
-The `--set-default-enum-member` flag configures the code generation behavior.""",
+The `--set-default-enum-member` flag is deprecated. Use `--deserialize-default-values enum` instead.""",
     input_schema="jsonschema/duplicate_enum.json",
     cli_args=["--reuse-model", "--set-default-enum-member"],
     golden_output="jsonschema/json_reuse_enum_default_member.py",
@@ -6104,16 +6105,26 @@ def test_main_jsonschema_modular_default_enum_member(output_dir: Path) -> None:
         )
 
 
-def test_main_jsonschema_falsy_default_enum_member(output_file: Path) -> None:
+@pytest.mark.parametrize(
+    "deserialize_args",
+    [
+        pytest.param(["--deserialize-default-values", "enum"], id="generic-option"),
+        pytest.param(["--set-default-enum-member"], id="legacy-option"),
+    ],
+)
+def test_main_jsonschema_falsy_default_enum_member(deserialize_args: list[str], output_file: Path) -> None:
     """Test enum member mapping for falsy default values."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "falsy_default_enum_member.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="falsy_default_enum_member.py",
-        extra_args=["--set-default-enum-member"],
-    )
+    with warnings.catch_warnings(record=True) as recorded_warnings:
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "falsy_default_enum_member.json",
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file="falsy_default_enum_member.py",
+            extra_args=deserialize_args,
+        )
+
+    assert_warnings_do_not_contain(recorded_warnings, "--set-default-enum-member is deprecated")
 
 
 @pytest.mark.skipif(
@@ -17988,42 +17999,87 @@ def test_main_dataclass_enum_member_special_defaults(output_file: Path) -> None:
         input_path=JSON_SCHEMA_DATA_PATH / "enum_member_special_defaults.json",
         output_path=output_file,
         input_file_type="jsonschema",
-        extra_args=["--output-model-type", "dataclasses.dataclass"],
+        extra_args=["--output-model-type", "dataclasses.dataclass", "--no-deserialize-default-values"],
         assert_func=assert_file_content,
         expected_file="dataclass_enum_member_special_defaults.py",
         importable_module_name="generated_dataclass_enum_member_special_defaults",
     )
 
 
-def test_main_jsonschema_enum_member_typed_defaults(output_file: Path) -> None:
+def test_main_jsonschema_enum_member_special_defaults(output_file: Path) -> None:
+    """Deserialize quoted scalar and list defaults through the generic option."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_member_special_defaults.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--deserialize-default-values", "enum"],
+        assert_func=assert_file_content,
+        expected_file="enum_member_special_defaults.py",
+        importable_module_name="generated_enum_member_special_defaults",
+    )
+
+
+@pytest.mark.parametrize(
+    "deserialize_args",
+    [
+        pytest.param(["--deserialize-default-values", "enum"], id="generic-option"),
+        pytest.param(["--set-default-enum-member"], id="legacy-option"),
+    ],
+)
+def test_main_jsonschema_enum_member_typed_defaults(deserialize_args: list[str], output_file: Path) -> None:
     """Test enum defaults resolve to the member with a matching JSON type."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "enum_member_typed_defaults.json",
         output_path=output_file,
         input_file_type="jsonschema",
-        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--set-default-enum-member"],
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", *deserialize_args],
         assert_func=assert_file_content,
         expected_file="enum_member_typed_defaults.py",
         importable_module_name="generated_enum_member_typed_defaults",
     )
 
 
+def test_main_jsonschema_enum_deserialization_preset_opt_out(output_file: Path) -> None:
+    """Let an explicit no-option disable preset enum deserialization."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_member_typed_defaults.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--preset",
+            "standard-py310-20260826",
+            "--no-deserialize-default-values",
+            "--formatters",
+            "builtin",
+        ],
+        assert_func=assert_file_content,
+        expected_file="enum_member_typed_defaults_preset_opt_out.py",
+        importable_module_name="generated_enum_member_typed_defaults_preset_opt_out",
+    )
+
+
 @pytest.mark.parametrize(
-    "custom_template_dir",
+    ("custom_template_dir", "default_options"),
     [
-        pytest.param(None, id="builtin-template"),
-        pytest.param(DATA_PATH / "templates_extensions", id="existing-custom-enum-template"),
+        pytest.param(None, {"deserialize_default_values": (DefaultValueType.Enum,)}, id="generic-option"),
+        pytest.param(
+            DATA_PATH / "templates_extensions",
+            {"set_default_enum_member": True},
+            id="legacy-option-custom-template",
+        ),
     ],
 )
-def test_generate_jsonschema_structured_enum_values(custom_template_dir: Path | None) -> None:
+def test_generate_jsonschema_structured_enum_values(
+    custom_template_dir: Path | None, default_options: dict[str, object]
+) -> None:
     """Keep raw enum values distinct from rendered source through the generate API."""
     run_generate_and_assert(
         input_=JSON_SCHEMA_DATA_PATH / "structured_enum_values.json",
         expected_file=EXPECTED_JSON_SCHEMA_PATH / "structured_enum_values.py",
         input_file_type=InputFileType.JsonSchema,
         output_model_type=DataModelType.PydanticV2BaseModel,
-        set_default_enum_member=True,
         custom_template_dir=custom_template_dir,
+        **default_options,
     )
 
 

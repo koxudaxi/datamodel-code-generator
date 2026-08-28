@@ -3543,7 +3543,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         *,
         can_retain_cache: bool,
     ) -> None:
-        if not self.set_default_enum_member:
+        if not self.set_default_enum_member and DefaultValueType.Enum not in self.deserialize_default_value_types:
             return
         for model, model_field, data_type in iter_models_field_data_types(models):
             if model_field.default is None:

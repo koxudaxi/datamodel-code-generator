@@ -6,6 +6,7 @@ behavior.remote-ref-default                 active     behavior    Remote $ref f
 cli.allow-extra-fields                      active     cli-option  --allow-extra-fields                                     0.31.0  TBD      --extra-fields=allow
 cli.parent-scoped-naming                    active     cli-option  --parent-scoped-naming                                   0.48.0  TBD      --naming-strategy parent-prefixed
 test.scheduled-change                       scheduled  cli-option  --scheduled-change                                       8.0.0   TBD      --replacement
+cli.set-default-enum-member                 scheduled  cli-option  --set-default-enum-member                                0.76.0  TBD      --deserialize-default-values enum
 cli.validation                              active     cli-option  --validation                                             0.24.0  TBD      --field-constraints
 config.json-config-strict-validation        active     config      JSON configuration values accepted by legacy validation  0.64.2  TBD      Update the JSON configuration to match --output-format-json-schema config.
 config.yaml-non-lowercase-bool              active     config      YAML bool values True, False, TRUE, FALSE                0.48.0  TBD      Use lowercase true or false.

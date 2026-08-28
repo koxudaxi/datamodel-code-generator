@@ -723,7 +723,7 @@ typing_options.add_argument(
 )
 typing_options.add_argument(
     "--set-default-enum-member",
-    help="Set enum members as default values for enum field",
+    help=f"Deprecated: {deprecation_message('cli.set-default-enum-member')}",
     action="store_true",
     default=None,
 )
@@ -1123,7 +1123,7 @@ template_options.add_argument(
 )
 template_options.add_argument(
     "--deserialize-default-values",
-    help="Deserialize serialized schema defaults for selected generated types. Supported values: decimal.",
+    help="Deserialize serialized schema defaults for selected generated types. Supported values: decimal, enum.",
     choices=[default_value_type.value for default_value_type in DefaultValueType],
     nargs="+",
     default=None,

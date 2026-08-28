@@ -68,7 +68,7 @@ DatetimeClassType: TypeAlias = Literal[
 ]
 
 
-DefaultValueType: TypeAlias = Literal['decimal']
+DefaultValueType: TypeAlias = Literal['decimal', 'enum']
 
 
 FieldTypeCollisionStrategy: TypeAlias = Literal['rename-field', 'rename-type']

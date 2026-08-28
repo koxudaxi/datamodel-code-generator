@@ -385,13 +385,31 @@ _STANDARD_20260619_OPTION_GROUPS: tuple[PresetOptionGroup, ...] = (
 )
 
 _STANDARD_20260826_OPTION_GROUPS: tuple[PresetOptionGroup, ...] = (
-    *_STANDARD_20260619_OPTION_GROUPS,
     PresetOptionGroup(
-        title="Serialized Decimal defaults",
-        config=PresetConfig(deserialize_default_values=(DefaultValueType.Decimal,)),
+        title="All output model types",
+        config=PresetConfig(
+            use_standard_collections=True,
+            use_union_operator=True,
+            use_annotated=True,
+            enum_field_as_literal=LiteralType.One,
+            use_subclass_enum=True,
+            collapse_root_models=True,
+            strict_nullable=True,
+            disable_timestamp=True,
+        ),
         description=(
-            "Deserialize compatible serialized Decimal defaults into Decimal values while preserving defaults "
-            "that cannot be converted safely."
+            "Use built-in collection syntax, PEP 604 unions, Annotated constraints, "
+            "single-value enum Literals, typed enum subclasses, inline root wrappers, "
+            "schema-accurate nullability, and reproducible file headers."
+        ),
+    ),
+    *_STANDARD_20260619_OPTION_GROUPS[1:],
+    PresetOptionGroup(
+        title="Serialized defaults",
+        config=PresetConfig(deserialize_default_values=(DefaultValueType.Decimal, DefaultValueType.Enum)),
+        description=(
+            "Deserialize compatible serialized Decimal and enum defaults into generated Python values while "
+            "preserving defaults that cannot be converted safely."
         ),
     ),
 )

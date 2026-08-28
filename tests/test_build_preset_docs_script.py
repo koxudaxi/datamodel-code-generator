@@ -92,10 +92,12 @@ def test_preset_config_supports_enum_backed_string_and_sequence_options() -> Non
     """Preset config keeps string-backed enum and sequence options typed after validation."""
     enum_item = PresetConfig(extra_fields=ExtraFields.Forbid).items()[0]
     string_item = PresetConfig(extra_fields="allow").items()[0]
-    sequence_item = PresetConfig(deserialize_default_values=(DefaultValueType.Decimal,)).items()[0]
+    sequence_item = PresetConfig(deserialize_default_values=(DefaultValueType.Decimal, DefaultValueType.Enum)).items()[
+        0
+    ]
     enabled_group = PresetOptionGroup(
         title="enabled",
-        config=PresetConfig(deserialize_default_values=(DefaultValueType.Decimal,)),
+        config=PresetConfig(deserialize_default_values=(DefaultValueType.Decimal, DefaultValueType.Enum)),
         description="",
     )
     disabled_group = PresetOptionGroup(
@@ -115,8 +117,8 @@ def test_preset_config_supports_enum_backed_string_and_sequence_options() -> Non
     assert_output(output, EXPECTED_PRESET_DOCS_PATH / "preset_config_enum_values.txt")
 
 
-def test_dated_presets_keep_decimal_default_deserialization_immutable() -> None:
-    """Only the new preset family enables Decimal defaults, and explicit values override it."""
+def test_dated_presets_keep_default_deserialization_immutable() -> None:
+    """Only the new preset family enables default deserialization, and explicit values override it."""
     context = PresetContext(
         input_file_type=InputFileType.JsonSchema,
         output_model_type=DataModelType.PydanticV2BaseModel,
@@ -127,6 +129,7 @@ def test_dated_presets_keep_decimal_default_deserialization_immutable() -> None:
         ("standard-py310-20260826", set()),
         ("practical-py310-20260826", set()),
         ("standard-py310-20260826", {"deserialize_default_values"}),
+        ("practical-py310-20260826", {"deserialize_default_values"}),
     )
     lines: list[str] = []
     for preset_name, explicit_fields in cases:
@@ -143,8 +146,12 @@ def test_dated_presets_keep_decimal_default_deserialization_immutable() -> None:
         if not isinstance(values, tuple):  # pragma: no cover
             msg = f"Expected a tuple preset value, got {values!r}"
             raise TypeError(msg)
+        legacy = next(
+            (item.applied_value for item in resolved.items if item.field_name == "set_default_enum_member"),
+            False,
+        )
         label = f"{preset_name} explicit" if explicit_fields else preset_name
-        lines.append(f"{label}: {[value.value for value in values]}")
+        lines.append(f"{label}: {[value.value for value in values]}, legacy={legacy}")
 
     assert_output("\n".join((*lines, "")), EXPECTED_PRESET_DOCS_PATH / "preset_decimal_defaults.txt")
 
@@ -153,9 +160,10 @@ def _render_preset_config_item(item: PresetConfigItem) -> str:
     match item.value, item.applied_value:
         case ExtraFields() as value, ExtraFields() as applied:
             return f"{item.field_name}: value={value.value}, applied={applied.value}, pyproject={item.pyproject_value}"
-        case (DefaultValueType() as value,), (DefaultValueType() as applied,):
+        case (DefaultValueType(), *_) as values, (DefaultValueType(), *_) as applied_values:
             return (
-                f"{item.field_name}: value=[{value.value}], applied=[{applied.value}], pyproject={item.pyproject_value}"
+                f"{item.field_name}: value=[{', '.join(value.value for value in values)}], "
+                f"applied=[{', '.join(value.value for value in applied_values)}], pyproject={item.pyproject_value}"
             )
     msg = f"Expected extra_fields preset config item, got {item!r}"  # pragma: no cover
     raise TypeError(msg)  # pragma: no cover
