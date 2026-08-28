@@ -27,6 +27,10 @@ HEAVY_INFERENCE_MODULES = (
     "datamodel_code_generator.parser.jsonschema",
     "datamodel_code_generator.parser.xmlschema",
 )
+DETECTION_MODULES = (
+    "datamodel_code_generator._avro_detection",
+    "datamodel_code_generator._xmlschema_detection",
+)
 SUBPROCESS_TIMEOUT_SECONDS = 15
 
 
@@ -51,7 +55,8 @@ loaded = sorted(
     for module_name in sys.modules
     if module_name in heavy_modules or module_name.startswith("datamodel_code_generator.model.")
 )
-print(json.dumps({{"loaded": loaded, "outcome": outcome}}))
+loaded_detection = sorted(module_name for module_name in sys.modules if module_name in {DETECTION_MODULES!r})
+print(json.dumps({{"loaded": loaded, "loaded_detection": loaded_detection, "outcome": outcome}}))
 """
     env = os.environ.copy()
     env.pop("PYTHONWARNINGS", None)
@@ -244,20 +249,40 @@ def test_infer_input_type_non_schema_xml() -> None:
 
 
 @pytest.mark.parametrize(
-    ("text", "expected_outcome"),
+    ("text", "expected_outcome", "expected_detection"),
     [
-        ('{"type": "record", "name": "User", "fields": []}', InputFileType.Avro.value),
-        ('{"type": "object"}', InputFileType.JsonSchema.value),
-        ('<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" />', InputFileType.XMLSchema.value),
-        ("<root />", Error.__name__),
+        (
+            '{"type": "record", "name": "User", "fields": []}',
+            InputFileType.Avro.value,
+            ["datamodel_code_generator._avro_detection"],
+        ),
+        ('{"type": "object"}', InputFileType.JsonSchema.value, ["datamodel_code_generator._avro_detection"]),
+        (
+            '<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" />',
+            InputFileType.XMLSchema.value,
+            ["datamodel_code_generator._xmlschema_detection"],
+        ),
+        (
+            "<root />",
+            Error.__name__,
+            [
+                "datamodel_code_generator._avro_detection",
+                "datamodel_code_generator._xmlschema_detection",
+            ],
+        ),
     ],
 )
-def test_infer_input_type_fast_path_does_not_import_heavy_modules(text: str, expected_outcome: str) -> None:
+def test_infer_input_type_fast_path_does_not_import_heavy_modules(
+    text: str,
+    expected_outcome: str,
+    expected_detection: list[str],
+) -> None:
     """Test input inference avoids concrete parsers and output models."""
     probe = _probe_infer_input_type(text)
 
     assert probe["outcome"] == expected_outcome
     assert probe["loaded"] == []
+    assert probe["loaded_detection"] == expected_detection
 
 
 def test_public_detection_helpers_keep_parser_module_surface() -> None:
@@ -285,6 +310,22 @@ def test_public_detection_helpers_keep_parser_module_surface() -> None:
     assert xmlschema.is_xml_schema_text('<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" />')
     assert xmlschema.XML_SCHEMA_NAMESPACE == "http://www.w3.org/2001/XMLSchema"
     assert xmlschema.XML_SCHEMA_TAG == "{http://www.w3.org/2001/XMLSchema}schema"
+
+
+def test_private_detection_reexports_preserve_identity_and_metadata() -> None:
+    """Legacy lightweight detection modules stay import-compatible."""
+    from datamodel_code_generator import _avro_detection as shared_avro_detection
+    from datamodel_code_generator import _xmlschema_detection as shared_xmlschema_detection
+    from datamodel_code_generator.parser import _avro_detection as legacy_avro_detection
+    from datamodel_code_generator.parser import _xmlschema_detection as legacy_xmlschema_detection
+
+    assert legacy_avro_detection.is_avro_schema_data is shared_avro_detection.is_avro_schema_data
+    assert legacy_xmlschema_detection.is_xml_schema_text is shared_xmlschema_detection.is_xml_schema_text
+    assert legacy_avro_detection.is_avro_schema_data.__module__ == "datamodel_code_generator.parser._avro_detection"
+    assert (
+        legacy_xmlschema_detection.is_xml_schema_text.__module__
+        == "datamodel_code_generator.parser._xmlschema_detection"
+    )
 
 
 def test_probe_infer_input_type_reports_subprocess_timeout(monkeypatch: pytest.MonkeyPatch) -> None:

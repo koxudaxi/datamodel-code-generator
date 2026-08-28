@@ -51,6 +51,7 @@ from datamodel_code_generator import (
 from datamodel_code_generator._format_types import (
     DatetimeClassType,
 )
+from datamodel_code_generator._shared_types import DefaultPutDict, LiteralType
 from datamodel_code_generator.deprecations import warn_deprecated
 from datamodel_code_generator.enums import AliasGenerator
 from datamodel_code_generator.imports import IMPORT_ANY, Import
@@ -79,7 +80,6 @@ from datamodel_code_generator.model.runtime_validation import (
     _is_internal_schema_runtime_validation,
     _make_internal_schema_runtime_validation,
 )
-from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.parser._output_context import OutputModelContext
 from datamodel_code_generator.parser.base import (
     _DEFERRED_INHERITED_CLASS_KEY,

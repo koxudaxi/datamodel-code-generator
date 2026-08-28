@@ -11,13 +11,12 @@ from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, cast
 
 from typing_extensions import Unpack
 
-from datamodel_code_generator import Error, YamlValue, load_yaml
-from datamodel_code_generator.parser import _avro_detection
-from datamodel_code_generator.parser._avro_detection import (
+from datamodel_code_generator import Error, YamlValue, _avro_detection, load_yaml
+from datamodel_code_generator._avro_detection import (
     NAMED_TYPES,
     PRIMITIVE_TYPES,
 )
-from datamodel_code_generator.parser._avro_detection import (
+from datamodel_code_generator._avro_detection import (
     is_avro_schema_data as _is_avro_schema_data,
 )
 from datamodel_code_generator.parser._convert_common import _copy_schema, _namespace_name, _unique_name
