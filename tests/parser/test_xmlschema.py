@@ -25,6 +25,7 @@ from datamodel_code_generator.parser.xmlschema import (
     _safe_float,
     _safe_time_expression,
 )
+from datamodel_code_generator.python_literal import runtime_expression_imports
 from tests.conftest import assert_output
 from tests.main.conftest import DATA_PATH, XML_SCHEMA_DATA_PATH
 
@@ -34,7 +35,7 @@ from tests.main.conftest import DATA_PATH, XML_SCHEMA_DATA_PATH
     ("reexported", "original"),
     [
         (_PythonExpression, _xmlschema_literals._PythonExpression),
-        (_collect_python_expression_imports, _xmlschema_literals._collect_python_expression_imports),
+        (_collect_python_expression_imports, runtime_expression_imports),
         (_safe_bool, _xmlschema_literals._safe_bool),
         (_safe_float, _xmlschema_literals._safe_float),
         (_safe_date_expression, _xmlschema_literals._safe_date_expression),
@@ -64,6 +65,7 @@ def test_xmlschema_literal_reexport_contract_is_explicit() -> None:
         "XSD_WHITESPACE_CHARS": XSD_WHITESPACE_CHARS,
         "_datetime_expression": _datetime_expression,
         "_normalize_timezone": _normalize_timezone,
+        "_collect_python_expression_imports": _collect_python_expression_imports,
     }
 
 

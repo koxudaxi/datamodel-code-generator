@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
+from dataclasses import FrozenInstanceError
+
 import pytest
 
 from datamodel_code_generator._python_type_annotation import PythonTypeBoundName, PythonTypeName
@@ -9,6 +12,17 @@ from datamodel_code_generator._python_type_binding import BoundPythonType, alias
 from datamodel_code_generator.imports import Import, Imports
 from datamodel_code_generator.model.pydantic_v2.base_model import BaseModel, DataModelField
 from datamodel_code_generator.parser._python_type_imports import resolve_python_type_import_aliases
+from datamodel_code_generator.parser.base import (
+    _alias_base_class_imports,
+    _apply_structured_import_aliases,
+    _ordinary_field_shadow_aliases,
+)
+from datamodel_code_generator.python_literal import (
+    PythonRuntimeExpression,
+    rewrite_runtime_expressions,
+    rewrite_runtime_imports,
+    runtime_expression_imports,
+)
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType
 
@@ -141,3 +155,170 @@ def test_resolver_reserves_unimported_base_class_names() -> None:
     aliases = resolve_python_type_import_aliases([_bound_data_type("external", "LocalBase")], [model], set())
 
     assert aliases["external", "LocalBase"].alias == "LocalBase_aliased"
+
+
+@pytest.mark.allow_direct_assert
+def test_runtime_expressions_rewrite_immutable_containers_and_keep_semantic_values() -> None:
+    """Runtime source identities rewrite without changing their string-compatible semantic value."""
+    decimal = Import(from_="decimal", import_="Decimal")
+    aliased_decimal = Import(from_="decimal", import_="Decimal", alias="Decimal_aliased")
+    aliases = {("decimal", "Decimal"): aliased_decimal}
+    expression = PythonRuntimeExpression.from_import_call(decimal, "'0.1'", value="0.1")
+
+    rewritten_tuple = rewrite_runtime_expressions((expression,), aliases)
+    rewritten_mapping = rewrite_runtime_expressions({"value": [expression]}, aliases)
+    rewritten_set = rewrite_runtime_expressions({expression}, aliases)
+    rewritten_frozenset = rewrite_runtime_expressions(frozenset((expression,)), aliases)
+
+    assert repr(rewritten_tuple[0]) == "Decimal_aliased('0.1')"
+    assert repr(rewritten_mapping["value"][0]) == "Decimal_aliased('0.1')"
+    assert repr(next(iter(rewritten_set))) == "Decimal_aliased('0.1')"
+    assert repr(next(iter(rewritten_frozenset))) == "Decimal_aliased('0.1')"
+    assert str(rewritten_tuple[0]) == "0.1"
+    assert expression.imports == (decimal,)
+    assert rewrite_runtime_expressions(expression, {}) is expression
+    assert rewrite_runtime_expressions((expression,), {}) == (expression,)
+    assert rewrite_runtime_expressions({"expression": expression}, {}) == {"expression": expression}
+    assert deepcopy(expression) is expression
+    with pytest.raises(FrozenInstanceError):
+        expression.prefix = "other"
+    assert rewrite_runtime_imports((decimal,), {}) == (decimal,)
+    assert rewrite_runtime_imports((decimal,), {("other", "Decimal"): aliased_decimal}) == (decimal,)
+
+
+@pytest.mark.allow_direct_assert
+def test_runtime_expression_imports_walks_exact_builtin_containers_once() -> None:
+    """Producers can scan nested built-ins once before import collection becomes O(1)."""
+    import_ = Import(from_="decimal", import_="Decimal")
+    expression = PythonRuntimeExpression.from_import_call(import_, "'0.1'")
+    cycle: list[object] = []
+    cycle.extend((cycle, expression))
+    value = {"key": [({expression}, frozenset((expression,))), cycle]}
+
+    assert runtime_expression_imports(value) == (import_, import_, import_)
+    assert runtime_expression_imports("not an expression") == ()
+
+
+@pytest.mark.allow_direct_assert
+def test_data_type_runtime_expression_metadata_rewrites_kwargs_without_rescanning() -> None:
+    """Producer metadata keeps constrained kwargs structural until the final alias pass."""
+    decimal = Import(from_="decimal", import_="Decimal")
+    expression = PythonRuntimeExpression.from_import_call(decimal, "'0.1'")
+    data_type = DataType(type="condecimal", is_func=True, kwargs={"multiple_of": (expression,)})
+    data_type._set_runtime_expression_imports(runtime_expression_imports(data_type.kwargs))
+    field = DataModelField(name="Decimal", data_type=data_type)
+    model = BaseModel(reference=Reference(path="model", name="Model"), fields=[field])
+
+    aliases = resolve_python_type_import_aliases([data_type], [model], {"Decimal"})
+    _apply_structured_import_aliases([model], aliases, can_retain_cache=True)
+    copied_data_type = deepcopy(data_type)
+
+    assert aliases == {("decimal", "Decimal"): Import(from_="decimal", import_="Decimal", alias="Decimal_aliased")}
+    assert repr(data_type.kwargs["multiple_of"][0]) == "Decimal_aliased('0.1')"
+    assert data_type.runtime_expression_imports == (aliases["decimal", "Decimal"],)
+    assert copied_data_type.runtime_expression_imports == (aliases["decimal", "Decimal"],)
+    assert tuple(data_type.imports) == ()
+    data_type._set_runtime_expression_imports(())
+    assert not data_type.runtime_expression_imports
+
+
+@pytest.mark.allow_direct_assert
+def test_apply_realiases_all_additional_imports_that_share_runtime_identity() -> None:
+    """A re-aliased module binding updates default expressions and every aggregate import."""
+    original = Import(from_="decimal", import_="Decimal", alias="Taken")
+    canonical = Import(from_="decimal", import_="Decimal", alias="Taken_aliased")
+    field = DataModelField(
+        name="Taken",
+        data_type=DataType(type="str"),
+        default=PythonRuntimeExpression.from_import_call(original, "'0.1'"),
+    )
+    field._set_runtime_expression_imports((original,))
+    model = BaseModel(reference=Reference(path="model", name="Model"), fields=[field])
+    model._additional_imports.extend((original, original))
+
+    _apply_structured_import_aliases(
+        [model],
+        {("decimal", "Decimal"): canonical},
+        can_retain_cache=True,
+    )
+
+    assert repr(field.default) == "Taken_aliased('0.1')"
+    assert model._additional_imports.count(canonical) == 2
+    assert original not in model._additional_imports
+
+
+@pytest.mark.allow_direct_assert
+def test_structured_alias_scan_and_apply_cover_each_runtime_consumer() -> None:
+    """Type, bound annotation, and registered kwargs imports receive one canonical binding."""
+    ordinary_import = Import(from_="ordinary", import_="Taken")
+    bound_import = Import(from_="bound", import_="Bound")
+    runtime_import = Import(from_="decimal", import_="Decimal")
+    runtime_expression = PythonRuntimeExpression.from_import_call(runtime_import, "'0.1'")
+    ordinary = DataType(type="Taken", import_=ordinary_import)
+    bound = DataType(
+        type="Bound",
+        python_type=BoundPythonType(PythonTypeBoundName("Bound", "bound", "Bound"), (bound_import,)),
+    )
+    runtime = DataType(type="condecimal", is_func=True, kwargs={"multiple_of": runtime_expression})
+    runtime._set_runtime_expression_imports((runtime_import,))
+    model = BaseModel(
+        reference=Reference(path="model", name="Model"),
+        fields=[
+            DataModelField(name="ordinary", data_type=ordinary),
+            DataModelField(name="bound", data_type=bound),
+            DataModelField(name="runtime", data_type=runtime),
+        ],
+    )
+    aliases, has_python_type, has_runtime_expressions = _ordinary_field_shadow_aliases([model], {"Taken"})
+    canonical = {
+        ("ordinary", "Taken"): Import(from_="ordinary", import_="Taken", alias="Taken_aliased"),
+        ("bound", "Bound"): Import(from_="bound", import_="Bound", alias="Bound_aliased"),
+        ("decimal", "Decimal"): Import(from_="decimal", import_="Decimal", alias="Decimal_aliased"),
+    }
+
+    _apply_structured_import_aliases([model], canonical, can_retain_cache=False)
+
+    assert aliases == {("ordinary", "Taken"): canonical["ordinary", "Taken"]}
+    assert has_python_type
+    assert has_runtime_expressions
+    assert ordinary.import_ is canonical["ordinary", "Taken"]
+    assert bound.type == "Bound_aliased"
+    assert repr(runtime.kwargs["multiple_of"]) == "Decimal_aliased('0.1')"
+
+
+@pytest.mark.allow_direct_assert
+def test_structured_aliasing_skips_registered_runtime_imports_without_a_collision() -> None:
+    """Registered expressions do not rewrite their kwargs when no identity is aliased."""
+    import_ = Import(from_="decimal", import_="Decimal")
+    expression = PythonRuntimeExpression.from_import_call(import_, "'0.1'")
+    data_type = DataType(type="condecimal", is_func=True, kwargs={"multiple_of": expression})
+    data_type._set_runtime_expression_imports((import_,))
+    model = BaseModel(
+        reference=Reference(path="model", name="Model"),
+        fields=[DataModelField(name="value", data_type=data_type)],
+    )
+
+    _apply_structured_import_aliases([model], {}, can_retain_cache=True)
+
+    assert data_type.kwargs["multiple_of"] is expression
+
+
+@pytest.mark.allow_direct_assert
+def test_base_class_aliasing_skips_an_already_canonical_binding() -> None:
+    """Base class imports update once and remain stable on the late finalization pass."""
+    original = Import(from_="external", import_="Base")
+    canonical = Import(from_="external", import_="Base", alias="Base_aliased")
+    reference = Reference(path="base", name="Base")
+    model = BaseModel(reference=Reference(path="model", name="Model"), fields=[], base_classes=[reference])
+    model.base_classes[0].import_ = original
+
+    assert _alias_base_class_imports(model, {("external", "Base"): canonical})
+    assert not _alias_base_class_imports(model, {("external", "Base"): canonical})
+
+
+@pytest.mark.allow_direct_assert
+def test_import_binding_name_covers_alias_module_and_from_imports() -> None:
+    """All consumers share the effective Python name of an import identity."""
+    assert Import(import_="datetime").binding_name == "datetime"
+    assert Import(from_="datetime", import_="date").binding_name == "date"
+    assert Import(import_="datetime", alias="datetime_module").binding_name == "datetime_module"

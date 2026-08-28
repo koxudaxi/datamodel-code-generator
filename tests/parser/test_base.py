@@ -131,6 +131,25 @@ def test_parser() -> None:
     assert c.base_class == "Base"
     # Test schema_features property of test stub
     assert c.schema_features.prefix_items is True
+    c._register_runtime_expression()
+    assert c._has_runtime_expressions is True
+
+
+def test_parser_aliases_plain_shadowed_imports_without_structured_consumers(parser_fixture: C) -> None:
+    """The original no-IR alias path remains available for ordinary field type collisions."""
+    field = DataModelField(
+        name="date",
+        data_type=DataType(type="date", import_=Import(from_="datetime", import_="date")),
+    )
+    model = BaseModel(reference=_reference("Model"), fields=[field])
+
+    parser_fixture._Parser__alias_shadowed_imports(
+        [model],
+        {"date"},
+        can_retain_cache=True,
+    )
+
+    assert field.data_type.type == "date_aliased"
 
 
 def test_parser_iterates_mapping_source_without_serializing_it() -> None:

@@ -40,9 +40,7 @@ def python_type_import_key(import_: Import) -> tuple[str | None, str]:
 
 def python_type_import_name(import_: Import) -> str:
     """Return the identifier currently bound by an import statement."""
-    if import_.alias:
-        return import_.alias
-    return import_.import_.partition(".")[0] if import_.from_ is None else import_.import_
+    return import_.binding_name
 
 
 def alias_bound_python_type(

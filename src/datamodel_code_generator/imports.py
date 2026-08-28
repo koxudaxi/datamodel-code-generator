@@ -30,6 +30,13 @@ class Import:
         """Check if this is a __future__ import."""
         return self.from_ == "__future__"
 
+    @property
+    def binding_name(self) -> str:
+        """Return the identifier introduced by this import statement."""
+        if self.alias:
+            return self.alias
+        return self.import_.partition(".")[0] if self.from_ is None else self.import_
+
     @classmethod
     @lru_cache(maxsize=4096)
     def from_full_path(cls, class_path: str) -> Import:

@@ -7,10 +7,12 @@ import datetime as datetime_module
 import re
 from decimal import Decimal
 from math import isfinite
-from typing import Any
 
 from datamodel_code_generator.imports import Import
-from datamodel_code_generator.python_literal import _safe_non_finite_float
+from datamodel_code_generator.python_literal import (
+    PythonRuntimeExpression,
+    _safe_non_finite_float,
+)
 
 XML_DATE_PATTERN = re.compile(r"^(?P<date>-?\d{4,}-\d{2}-\d{2})(?:Z|[+-]\d{2}:\d{2})?$")
 DAY_TIME_DURATION_PATTERN = re.compile(
@@ -21,27 +23,9 @@ XSD_WHITESPACE_CHARS = " \t\n\r"
 IMPORT_DATETIME_MODULE = Import(import_="datetime", alias="datetime_module")
 
 
-class _PythonExpression:
-    """Raw Python expression rendered through repr() with required imports."""
-
-    __slots__ = ("code", "imports")
-
-    def __init__(self, code: str, *imports: Import) -> None:
-        self.code = code
-        self.imports = imports
-
-    def __repr__(self) -> str:
-        return self.code
-
-
-def _collect_python_expression_imports(value: Any) -> tuple[Import, ...]:
-    if isinstance(value, _PythonExpression):
-        return value.imports
-    if isinstance(value, dict):
-        return tuple(import_ for item in value.values() for import_ in _collect_python_expression_imports(item))
-    if isinstance(value, (list, tuple, set)):
-        return tuple(import_ for item in value for import_ in _collect_python_expression_imports(item))
-    return ()
+# Compatibility aliases for existing parser integrations. New runtime expressions
+# retain their import identity in the shared source-literal representation.
+_PythonExpression = PythonRuntimeExpression
 
 
 def _safe_float(value: str, *, source_safe_non_finite: bool = False) -> float | None:
@@ -69,8 +53,8 @@ def _safe_bool(value: str) -> bool | None:
     return None
 
 
-def _datetime_expression(code: str) -> _PythonExpression:
-    return _PythonExpression(code, IMPORT_DATETIME_MODULE)
+def _datetime_expression(suffix: str, *, prefix: str = "") -> _PythonExpression:
+    return _PythonExpression(IMPORT_DATETIME_MODULE, prefix, suffix)
 
 
 def _normalize_timezone(value: str) -> str:
@@ -87,7 +71,7 @@ def _safe_date_expression(value: str) -> _PythonExpression | None:
         return None
     with contextlib.suppress(ValueError):
         datetime_module.date.fromisoformat(date_value)
-        return _datetime_expression(f"datetime_module.date.fromisoformat({date_value!r})")
+        return _datetime_expression(f".date.fromisoformat({date_value!r})")
     return None
 
 
@@ -96,7 +80,7 @@ def _safe_time_expression(value: str) -> _PythonExpression | None:
     normalized = _normalize_timezone(value)
     with contextlib.suppress(ValueError):
         datetime_module.time.fromisoformat(normalized)
-        return _datetime_expression(f"datetime_module.time.fromisoformat({normalized!r})")
+        return _datetime_expression(f".time.fromisoformat({normalized!r})")
     return None
 
 
@@ -105,7 +89,7 @@ def _safe_datetime_expression(value: str) -> _PythonExpression | None:
     normalized = _normalize_timezone(value)
     with contextlib.suppress(ValueError):
         datetime_module.datetime.fromisoformat(normalized)
-        return _datetime_expression(f"datetime_module.datetime.fromisoformat({normalized!r})")
+        return _datetime_expression(f".datetime.fromisoformat({normalized!r})")
     return None
 
 
@@ -140,7 +124,8 @@ def _safe_day_time_duration_expression(value: str) -> _PythonExpression | None:
         if microseconds:
             arguments.append(f"microseconds={microseconds}")
 
-    expression = f"datetime_module.timedelta({', '.join(arguments)})" if arguments else "datetime_module.timedelta(0)"
-    if duration_match["sign"]:
-        expression = f"-{expression}"
-    return _datetime_expression(expression)
+    arguments_text = ", ".join(arguments) if arguments else "0"
+    return _datetime_expression(
+        f".timedelta({arguments_text})",
+        prefix="-" if duration_match["sign"] else "",
+    )
