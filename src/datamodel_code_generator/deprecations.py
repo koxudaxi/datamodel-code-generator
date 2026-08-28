@@ -307,7 +307,7 @@ def render_release_note_deprecations(version: str) -> str:
             match item.status:
                 case "active":
                     warning_started.append(item)
-                case "scheduled":
+                case "scheduled":  # pragma: no branch - DeprecationStatus is exhaustive
                     scheduled_changes.append(item)
         if item.removal_version == version:
             removals.append(item)
