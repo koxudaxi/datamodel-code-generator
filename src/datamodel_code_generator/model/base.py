@@ -43,11 +43,12 @@ from datamodel_code_generator.types import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Collection, Iterator, Mapping, Sequence
+    from collections.abc import Callable, Collection, Iterable, Iterator, Mapping, Sequence
 
     from jinja2 import Environment, Template
 
     from datamodel_code_generator import DataclassArguments
+    from datamodel_code_generator.imports import Imports
 
 TEMPLATE_DIR: Path = Path(__file__).parents[0] / "template"
 _TYPING_IMPORT_NAMES: frozenset[str] = frozenset({
@@ -92,7 +93,43 @@ _BUILTIN_TEMPLATE_INTERNAL_DATA_KEYS: frozenset[str] = frozenset({
     "typed_dict_kwargs",
     "typed_dict_kwargs_suffix",
 })
+_RESOLVE_REFERENCE_ACTION_CAPABILITIES_MARKER = "__datamodel_code_generator_resolve_reference_action_capabilities__"
 MroT = TypeVar("MroT")
+
+
+@dataclass(frozen=True, slots=True)
+class ResolveReferenceActionCapabilities:
+    """Output-owned behavior used by parser resolve-action fast paths."""
+
+    filter_forward_references: bool = False
+    generated_formatter_safe: bool = False
+
+
+_DEFAULT_RESOLVE_REFERENCE_ACTION_CAPABILITIES = ResolveReferenceActionCapabilities()
+
+
+def declare_resolve_reference_action_capabilities(
+    action: Callable[[Iterable[str]], str],
+    *,
+    filter_forward_references: bool = False,
+    generated_formatter_safe: bool = False,
+) -> Callable[[Iterable[str]], str]:
+    """Attach immutable output-owned capabilities to a resolve action."""
+    action.__dict__[_RESOLVE_REFERENCE_ACTION_CAPABILITIES_MARKER] = ResolveReferenceActionCapabilities(
+        filter_forward_references=filter_forward_references,
+        generated_formatter_safe=generated_formatter_safe,
+    )
+    return action
+
+
+def get_resolve_reference_action_capabilities(action: object) -> ResolveReferenceActionCapabilities:
+    """Return immutable output capabilities, failing closed for custom callables."""
+    capabilities = getattr(action, _RESOLVE_REFERENCE_ACTION_CAPABILITIES_MARKER, None)
+    return (
+        capabilities
+        if isinstance(capabilities, ResolveReferenceActionCapabilities)
+        else _DEFAULT_RESOLVE_REFERENCE_ACTION_CAPABILITIES
+    )
 
 
 class _MissingCustomTemplateState:
@@ -457,6 +494,7 @@ class ConstraintsBase(_BaseModel):
 class DataModelFieldBase(_BaseModel):  # noqa: PLR0904
     """Base class for model field representation and rendering."""
 
+    PARSER_CONSTRUCTOR: ClassVar[Callable[..., DataModelFieldBase] | None] = None
     _FIELD_IMPORTS_CACHE_MAX_SIZE: ClassVar[int] = 4096
     _field_imports_cache: ClassVar[dict[tuple[Any, ...], tuple[Import, ...]]] = {}
     _SEMANTIC_CACHE_KEYS: ClassVar[tuple[str, ...]] = (
@@ -518,6 +556,11 @@ class DataModelFieldBase(_BaseModel):  # noqa: PLR0904
 
     def process_const(self) -> None:
         """Process const fields in subclasses."""
+
+    @property
+    def requires_immediate_forward_reference_resolution(self) -> bool:
+        """Return whether this field's annotation is evaluated in the class body."""
+        return bool(getattr(self, "is_pydantic_extra_field", False))
 
     def _process_const_as_literal(self) -> None:
         """Process const values by converting to literal type. Used by subclasses."""
@@ -1518,6 +1561,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     TYPED_EXTRA_PLAIN_ANNOTATION_TEMPLATE_DATA_KEY: ClassVar[str | None] = None
     REQUIRES_RUNTIME_IMPORTS_WITH_RUFF_CHECK: ClassVar[bool] = False
     REQUIRES_EXPLICIT_DEFERRED_ANNOTATIONS_FOR_FORWARD_REFS: ClassVar[bool] = False
+    SUPPORTS_SCHEMA_RUNTIME_VALIDATION: ClassVar[bool] = False
     DOCSTRING_INDENT: ClassVar[int] = 4
     FIELD_DOCSTRING_INDENT: ClassVar[int] = 4
     FORMAT_DESCRIPTION_AS_DOCSTRING: ClassVar[bool] = True
@@ -1527,6 +1571,15 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     _TYPED_EXTRA_DICT_KEY_CAPABILITY: ClassVar[Callable[[DataType], bool] | None] = None
     _IMPORTS_CACHE_KEY: ClassVar[str] = "_cached_imports"
     has_forward_reference: bool = False
+
+    @classmethod
+    def resolve_module_import_conflicts(
+        cls,
+        models: Iterable[DataModel],
+        model_imports: Mapping[DataModel, tuple[Import, ...]],
+        imports: Imports,
+    ) -> None:
+        """Resolve output-owned conflicts after module imports are finalized."""
 
     @classmethod
     def create_typed_extra_field(

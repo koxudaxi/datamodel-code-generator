@@ -544,6 +544,11 @@ class DataModelField(_PydanticBaseDataModelField):
         return self.name == self._PYDANTIC_EXTRA_FIELD_NAME
 
     @property
+    def requires_immediate_forward_reference_resolution(self) -> bool:
+        """Keep typed-extra class-body annotations quoted until their targets exist."""
+        return self.name == self._PYDANTIC_EXTRA_FIELD_NAME
+
+    @property
     def use_pydantic_extra_plain_annotation(self) -> bool:
         """Return whether typed extras can use a regular class annotation."""
         return bool(
@@ -756,6 +761,13 @@ def _construct_parser_simple_field(**data: Unpack[_ParserSimpleFieldData]) -> Da
     return field
 
 
+# The output field owns its validation-free construction contract. Parser code
+# resolves this exact-class capability once and keeps calling this function
+# directly on the hot path. External subclasses intentionally use normal
+# Pydantic construction unless they declare their own constructor.
+DataModelField.PARSER_CONSTRUCTOR = _construct_parser_simple_field
+
+
 def has_lookaround_pattern(
     fields: list[DataModelFieldBase],
     *,
@@ -809,6 +821,7 @@ class BaseModel(BaseModelBase):
     SUPPORTS_INHERITED_DISCRIMINATOR_ENUM: ClassVar[bool] = True
     SUPPORTS_FIELD_RENAMING: ClassVar[bool] = True
     SUPPORTS_ANNOTATED_CONSTRAINTS: ClassVar[bool] = True
+    SUPPORTS_SCHEMA_RUNTIME_VALIDATION: ClassVar[bool] = True
     ANNOTATED_CONSTRAINTS_CONTEXT: ClassVar[object | None] = _ANNOTATED_CONSTRAINTS_CONTEXT
     SUPPORTS_CONFIG_EXTRA: ClassVar[bool] = True
     SUPPORTS_ARBITRARY_TYPES_ALLOWED: ClassVar[bool] = True

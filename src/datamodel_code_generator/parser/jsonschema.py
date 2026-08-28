@@ -6742,7 +6742,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     )
                 if (
                     not source.is_alias
-                    and getattr(source, "SCHEMA_RUNTIME_VALIDATION_HELPERS_TEMPLATE_FILE_PATH", None)
+                    and source.SUPPORTS_SCHEMA_RUNTIME_VALIDATION
                     and isinstance(runtime_validation, SchemaRuntimeValidation)
                     and _is_internal_schema_runtime_validation(runtime_validation)
                 ):

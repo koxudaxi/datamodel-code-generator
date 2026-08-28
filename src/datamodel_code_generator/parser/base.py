@@ -81,12 +81,12 @@ from datamodel_code_generator.model.base import (
     _refresh_custom_template_paths,
     _set_nested_model_default_factory_order,
     get_inherited_fields,
+    get_resolve_reference_action_capabilities,
     linearize_data_models,
     sort_data_models_for_mro,
 )
 from datamodel_code_generator.model.enum import Enum, Member, get_raw_enum_member_value
 from datamodel_code_generator.model.enum import escape_characters as _enum_escape_characters
-from datamodel_code_generator.model.imports import IMPORT_TYPED_DICT, IMPORT_TYPED_DICT_BACKPORT
 from datamodel_code_generator.model.type_alias import TypeAliasBase, TypeStatement
 from datamodel_code_generator.parser._scc import find_circular_sccs, strongly_connected_components
 from datamodel_code_generator.parser.generation import GenerationIndex, GenerationStore, set_model_base_classes
@@ -112,15 +112,10 @@ from datamodel_code_generator.util import camel_to_snake, record_watch_dependenc
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 
-    from typing_extensions import Protocol
-
     from datamodel_code_generator._types import ParserConfigDict
     from datamodel_code_generator.config import ParserConfig
     from datamodel_code_generator.format import CodeFormatter
     from datamodel_code_generator.http import _HTTPFetchSession
-    from datamodel_code_generator.model.pydantic_v2.base_model import (
-        _ParserSimpleFieldData,
-    )
     from datamodel_code_generator.model_metadata import GeneratedModelMetadata, ModelFieldMetadata, ModelMetadata
 
 
@@ -137,7 +132,6 @@ to_hashable = _internal_utils.to_hashable
 # Keep these as module-name checks so non-pydantic-v2 outputs do not import the
 # pydantic_v2 generator package and its runtime feature gates.
 _PYDANTIC_V2_BASE_MODEL_MODULE: Final = "datamodel_code_generator.model.pydantic_v2.base_model"
-_PYDANTIC_V2_MODULE: Final = "datamodel_code_generator.model.pydantic_v2"
 _MODEL_MODULE_PREFIX: Final = "datamodel_code_generator.model."
 _CLASS_NAME_SEPARATOR_PATTERN: Final = re.compile(r"[^A-Za-z0-9]+")
 _TOP_LEVEL_FUTURE_IMPORT_PATTERN: Final = re.compile(r"(?m)^from __future__ import ")
@@ -182,25 +176,21 @@ def _is_pydantic_v2_data_model_field(value: object) -> bool:
     return _type_mro_contains_type(_model_type(value), module=_PYDANTIC_V2_BASE_MODEL_MODULE, name="DataModelField")
 
 
-if TYPE_CHECKING:
-
-    class _DataModelFieldConstructor(Protocol):
-        def __call__(self, **data: Unpack[_ParserSimpleFieldData]) -> DataModelFieldBase:
-            raise NotImplementedError
+def _get_model_field_constructor(
+    field_type: type[DataModelFieldBase],
+) -> Callable[..., DataModelFieldBase]:
+    """Resolve an exact output field's parser construction capability."""
+    if constructor := field_type.__dict__.get("PARSER_CONSTRUCTOR"):
+        return cast("Callable[..., DataModelFieldBase]", constructor)
+    return field_type
 
 
 def _get_builtin_pydantic_v2_field_constructor(
     field_type: type[DataModelFieldBase],
-) -> _DataModelFieldConstructor | None:
-    """Return the internal constructor only for the exact built-in v2 field."""
-    if field_type.__module__ != _PYDANTIC_V2_BASE_MODEL_MODULE or field_type.__name__ != "DataModelField":
-        return None
-    from datamodel_code_generator.model.pydantic_v2.base_model import (  # noqa: PLC0415
-        DataModelField,
-        _construct_parser_simple_field,
-    )
-
-    return _construct_parser_simple_field if field_type is DataModelField else None
+) -> Callable[..., DataModelFieldBase] | None:
+    """Return a declared exact-class constructor through the legacy helper."""
+    constructor = _get_model_field_constructor(field_type)
+    return None if constructor is field_type else constructor
 
 
 def _get_field_dependency_ordering_model_type(model_type: type[DataModel]) -> type[DataModel] | None:
@@ -218,10 +208,9 @@ def _is_pydantic_v2_root_model(model: DataModel, root_model_type: type[DataModel
 
 
 def _is_pydantic_v2_dump_resolve_reference_action(value: object) -> bool:
-    return (
-        getattr(value, "__module__", None) == _PYDANTIC_V2_MODULE
-        and getattr(value, "__name__", None) == "dump_resolve_reference_action"
-    )
+    """Query the output-owned action capability through the legacy helper."""
+    capabilities = get_resolve_reference_action_capabilities(value)
+    return capabilities.filter_forward_references and capabilities.generated_formatter_safe
 
 
 def __getattr__(name: str) -> Any:
@@ -2092,13 +2081,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             self.data_model_root_type
         )
         self.data_model_field_type: type[DataModelFieldBase] = config.data_model_field_type
-        self._data_model_field_constructor: type[DataModelFieldBase] | _DataModelFieldConstructor = (
-            self.data_model_field_type
-        )
-        if (
-            simple_field_constructor := _get_builtin_pydantic_v2_field_constructor(self.data_model_field_type)
-        ) is not None:
-            self._data_model_field_constructor = simple_field_constructor
+        self._data_model_field_constructor = _get_model_field_constructor(self.data_model_field_type)
         self._configured_generation_types_are_builtin = all(
             generation_type.__module__.startswith(_MODEL_MODULE_PREFIX)
             for generation_type in (
@@ -4238,7 +4221,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             # while constructing the class, so their forward references must stay quoted.
             process_all_fields = is_type_alias_or_root or not use_deferred_annotations
             if not process_all_fields and not any(
-                getattr(field, "is_pydantic_extra_field", False) for field in model.fields
+                field.requires_immediate_forward_reference_resolution for field in model.fields
             ):
                 continue
             if isinstance(model, TypeStatement):
@@ -4246,7 +4229,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
             has_aliased_forward_ref = False
             for field in model.fields:
-                if not process_all_fields and not getattr(field, "is_pydantic_extra_field", False):
+                if not process_all_fields and not field.requires_immediate_forward_reference_resolution:
                     continue
                 for data_type in field.data_type.all_data_types:
                     if not data_type.reference:
@@ -4876,7 +4859,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         if (
             use_deferred_annotations
             and required_paths_in_module
-            and _is_pydantic_v2_dump_resolve_reference_action(self.dump_resolve_reference_action)
+            and get_resolve_reference_action_capabilities(self.dump_resolve_reference_action).filter_forward_references
         ):
             module_positions = {m.reference.short_name: i for i, m in enumerate(models) if m.reference}
             module_model_names = set(module_positions)
@@ -5616,15 +5599,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             ctx.imports.remove_unused(used_names)
 
         for ctx in contexts:
-            # If any model in this module needs typing_extensions.TypedDict (e.g. for PEP 728
-            # closed/extra_items backport), remove typing.TypedDict to avoid duplicate imports.
-            if (
-                any(IMPORT_TYPED_DICT_BACKPORT in model_imports[model] for model in ctx.models)
-                and IMPORT_TYPED_DICT_BACKPORT.import_ in ctx.imports.get(IMPORT_TYPED_DICT_BACKPORT.from_, set())
-                and IMPORT_TYPED_DICT.import_ in ctx.imports.get(IMPORT_TYPED_DICT.from_, set())
-            ):
-                while ctx.imports.counter.get((IMPORT_TYPED_DICT.from_, IMPORT_TYPED_DICT.import_), 0) > 0:
-                    ctx.imports.remove(IMPORT_TYPED_DICT)
+            self.data_model_type.resolve_module_import_conflicts(ctx.models, model_imports, ctx.imports)
 
         renamed_models = False
         for ctx in contexts:
@@ -5986,7 +5961,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 parser_config.alias_generator,
                 parser_config.custom_class_name_generator,
                 parser_config.dump_resolve_reference_action is not None
-                and not _is_pydantic_v2_dump_resolve_reference_action(parser_config.dump_resolve_reference_action),
+                and not get_resolve_reference_action_capabilities(
+                    parser_config.dump_resolve_reference_action
+                ).generated_formatter_safe,
                 parser_config.type_mappings,
                 parser_config.type_overrides,
                 parser_config.import_overrides,
