@@ -46,10 +46,11 @@ from datamodel_code_generator._python_type_annotation import (
     render_python_type_expr,
     rewrite_python_type_expr,
 )
-from datamodel_code_generator.enums import InputModelRefStrategy
+from datamodel_code_generator.enums import InputModelRefStrategy, _get_output_model_family
 
 if TYPE_CHECKING:
     from datamodel_code_generator import DataModelType, InputFileType
+    from datamodel_code_generator.enums import _OutputModelFamily
 
 
 class Error(Exception):
@@ -662,26 +663,7 @@ def _get_type_family(tp: type) -> str:  # noqa: PLR0911
     return _TYPE_FAMILY_OTHER  # pragma: no cover
 
 
-def _get_output_family(output_model_type: DataModelType) -> str:
-    """Get the type family corresponding to a DataModelType."""
-    from datamodel_code_generator import DataModelType  # noqa: PLC0415
-
-    pydantic_types = {
-        DataModelType.PydanticV2BaseModel,
-        DataModelType.PydanticV2Dataclass,
-    }
-    if output_model_type in pydantic_types:
-        return _TYPE_FAMILY_PYDANTIC
-    if output_model_type == DataModelType.DataclassesDataclass:
-        return _TYPE_FAMILY_DATACLASS
-    if output_model_type == DataModelType.TypingTypedDict:
-        return _TYPE_FAMILY_TYPEDDICT
-    if output_model_type == DataModelType.MsgspecStruct:
-        return _TYPE_FAMILY_MSGSPEC
-    return _TYPE_FAMILY_OTHER  # pragma: no cover
-
-
-def _should_reuse_type(source_family: str, output_family: str) -> bool:
+def _should_reuse_type(source_family: str, output_family: _OutputModelFamily) -> bool:
     """Determine if a source type can be reused without conversion."""
     if source_family == _TYPE_FAMILY_ENUM:
         return True
@@ -691,7 +673,7 @@ def _should_reuse_type(source_family: str, output_family: str) -> bool:
 def _filter_defs_by_strategy(
     schema: dict[str, Any],
     nested_models: dict[str, type],
-    output_model_type: DataModelType,
+    output_family: _OutputModelFamily | None,
     strategy: InputModelRefStrategy,
 ) -> dict[str, Any]:
     """Filter $defs based on ref strategy, marking reused types with x-python-import."""
@@ -701,7 +683,6 @@ def _filter_defs_by_strategy(
     if "$defs" not in schema:  # pragma: no cover
         return schema
 
-    output_family = _get_output_family(output_model_type)
     new_defs: dict[str, Any] = {}
 
     for def_name, def_schema in schema["$defs"].items():
@@ -712,9 +693,13 @@ def _filter_defs_by_strategy(
         nested_type = nested_models[def_name]
         type_family = _get_type_family(nested_type)
 
-        should_reuse = strategy == InputModelRefStrategy.ReuseAll or (
-            strategy == InputModelRefStrategy.ReuseForeign and _should_reuse_type(type_family, output_family)
-        )
+        match strategy:
+            case InputModelRefStrategy.ReuseAll:
+                should_reuse = True
+            case InputModelRefStrategy.ReuseForeign if output_family is not None:
+                should_reuse = _should_reuse_type(type_family, output_family)
+            case _:  # pragma: no cover
+                should_reuse = False  # pragma: no cover
 
         if should_reuse:
             new_defs[def_name] = {
@@ -884,20 +869,18 @@ def _load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
     output_model_type: DataModelType | None,
     expression_collector: PythonTypeExpressionCollector | None = None,
 ) -> dict[str, object]:
-    from datamodel_code_generator import (  # noqa: PLC0415
-        DataModelType,
-        InputFileType,
-    )
+    from datamodel_code_generator import InputFileType  # noqa: PLC0415
 
-    if output_model_type is None:
-        output_model_type = DataModelType.PydanticV2BaseModel
+    output_family: _OutputModelFamily | None = None
+    if ref_strategy is InputModelRefStrategy.ReuseForeign:
+        output_family = _get_output_model_family(output_model_type)
 
     if len(input_models) == 1:
         return _load_single_model_schema(
             input_models[0],
             input_file_type,
             ref_strategy,
-            output_model_type,
+            output_family,
             expression_collector,
         )
 
@@ -982,7 +965,7 @@ def _load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
             all_nested_models: dict[str, type] = {}
             for model_class in model_classes:
                 all_nested_models.update(_collect_nested_models(model_class))
-            final_schema = _filter_defs_by_strategy(final_schema, all_nested_models, output_model_type, ref_strategy)
+            final_schema = _filter_defs_by_strategy(final_schema, all_nested_models, output_family, ref_strategy)
 
         return final_schema
     finally:
@@ -994,7 +977,7 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0915
     input_model: str,
     input_file_type: InputFileType,
     ref_strategy: InputModelRefStrategy | None,
-    output_model_type: DataModelType,
+    output_family: _OutputModelFamily | None,
     expression_collector: PythonTypeExpressionCollector | None = None,
 ) -> dict[str, object]:
     """Load schema from a Python import path.
@@ -1003,7 +986,7 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0915
         input_model: Import path in 'module.path:ObjectName' format
         input_file_type: Current input file type setting for validation
         ref_strategy: Strategy for handling referenced types
-        output_model_type: Target output model type for reuse-foreign strategy
+        output_family: Target output compatibility family for reuse-foreign strategy
 
     Returns:
         Schema dict
@@ -1068,7 +1051,7 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0915
                 schema_defs = cast("dict[str, object]", schema.get("$defs", {}))
                 if model_name and model_name in schema_defs:  # pragma: no cover
                     nested_models[model_name] = obj
-                schema = _filter_defs_by_strategy(schema, nested_models, output_model_type, ref_strategy)
+                schema = _filter_defs_by_strategy(schema, nested_models, output_family, ref_strategy)
 
             return schema
 
@@ -1092,7 +1075,7 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0915
                 obj_name = getattr(obj, "__name__", None)
                 if obj_name and "$defs" in schema and obj_name in schema["$defs"]:  # pragma: no cover
                     nested_models[obj_name] = obj_type
-                schema = _filter_defs_by_strategy(schema, nested_models, output_model_type, ref_strategy)
+                schema = _filter_defs_by_strategy(schema, nested_models, output_family, ref_strategy)
 
             return schema
 
