@@ -5,6 +5,45 @@ This changelog is automatically generated from GitHub Releases.
 
 ---
 
+## [0.76.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.76.0) - 2026-08-29
+
+## Breaking Changes
+
+
+### API/CLI Changes
+* `--list-deprecations` output format changed - The deprecations listing now includes a new `Status` column and renames the `Warning since` column header to `Since` across all output formats (`table`, `json`, and `markdown`). Table rows also no longer emit trailing whitespace padding, so column widths and spacing differ. Scripts or tooling that parse the `--list-deprecations` output may need to be updated. The JSON output additionally gains a `status` field per entry (the existing `warning_since` field is retained). (#3810)
+```text
+# Before
+ID   Kind   Target   Warning since   Removal   Replacement
+
+# After
+ID   Status   Kind   Target   Since   Removal   Replacement
+```
+
+## What's Changed
+* Update CHANGELOG for 0.75.1 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3789
+* Update release benchmark data by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3790
+* Cache local reference file resolution by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3799
+* Reuse empty Pydantic field render plans by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3800
+* Optimize unconstrained array schemas by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3801
+* Skip child traversal for leaf schemas by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3802
+* Bump the github-actions group with 5 updates by @dependabot[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3798
+* Install bundled Agent Skill by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3804
+* Validate Pydantic extra property names by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3794
+* Deserialize Decimal defaults by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3792
+* Structure runtime expression imports by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3795
+* Complete scheduled deprecation support by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3810
+* Deserialize enum defaults by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3811
+* Move shared parser helpers by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3805
+* Refactor input model compatibility by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3806
+* Decouple parser backend capabilities by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3807
+* Enforce architecture boundaries by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3808
+
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.75.1...0.76.0
+
+---
+
 ## [0.75.1](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.75.1) - 2026-08-24
 
 ## What's Changed
