@@ -634,16 +634,24 @@ def test_pydantic_v2_legacy_runtime_exclusions_are_version_gated() -> None:
         for case_id in PYDANTIC_V2_FLOAT_MULTIPLE_OF_CASE_IDS
     ],
 )
+@pytest.mark.parametrize(
+    "exclusion_groups",
+    [
+        pytest.param(PYDANTIC_V2_LEGACY_RUNTIME_EXCLUSION_GROUPS, id="default"),
+        pytest.param(PYDANTIC_V2_LEGACY_RUNTIME_ROUND_TRIP_EXCLUSION_GROUPS, id="round-trip"),
+    ],
+)
 @pytest.mark.allow_direct_assert
 def test_pydantic_v2_float_multiple_of_exclusions_are_version_gated(
     backend: PayloadBackend,
     case_id: str,
+    exclusion_groups: PydanticV2LegacyRuntimeExclusionGroups,
 ) -> None:
     """Pydantic before 2.5.2 rejects some source-valid float multipleOf payloads."""
     case = SCHEMA_CASE_BY_ID[case_id]
-    assert _pydantic_v2_legacy_runtime_exclusion_reason(case, backend, Version("2.5.1"))
+    assert _pydantic_v2_legacy_runtime_exclusion_reason(case, backend, Version("2.5.1"), exclusion_groups)
     exclusion_reason = _pydantic_v2_legacy_runtime_exclusion_reason(
-        case, backend, PYDANTIC_V2_FLOAT_MULTIPLE_OF_RUNTIME_MIN
+        case, backend, PYDANTIC_V2_FLOAT_MULTIPLE_OF_RUNTIME_MIN, exclusion_groups
     )
     assert exclusion_reason is None
 
