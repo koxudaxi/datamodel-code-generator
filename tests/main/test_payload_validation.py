@@ -25,6 +25,7 @@ from .payload_validation import (
     PAYLOAD_VALIDATION_BACKENDS,
     PYDANTIC_V2_0_RUNTIME_MAX_VERSION,
     PYDANTIC_V2_0_RUNTIME_ROUND_TRIP_EXCLUDED_CASES,
+    PYDANTIC_V2_FLOAT_MULTIPLE_OF_RUNTIME_EXCLUDED_CASES,
     PYDANTIC_V2_FULL_PAYLOAD_RUNTIME_MIN_VERSION,
     PYDANTIC_V2_LEGACY_RUNTIME_EXCLUDED_CASES,
     PYDANTIC_V2_LEGACY_RUNTIME_ROUND_TRIP_EXCLUDED_CASES,
@@ -51,7 +52,11 @@ from .payload_validation import (
 )
 from .payload_validation import codegen as payload_codegen
 from .payload_validation.conformance import _msgspec_type_statement_exclusion_reason
-from .payload_validation.constants import PAYLOAD_TARGET_PYTHON_VERSION
+from .payload_validation.constants import (
+    PAYLOAD_TARGET_PYTHON_VERSION,
+    PYDANTIC_V2_FLOAT_MULTIPLE_OF_CASE_IDS,
+    PYDANTIC_V2_FLOAT_MULTIPLE_OF_RUNTIME_MIN_VERSION,
+)
 
 
 def _max_examples_from_env(raw_examples: str | None = None) -> int:
@@ -93,15 +98,18 @@ PYDANTIC_V2_FULL_PAYLOAD_RUNTIME_MIN = Version(PYDANTIC_V2_FULL_PAYLOAD_RUNTIME_
 PYDANTIC_V2_0_RUNTIME_MAX = Version(PYDANTIC_V2_0_RUNTIME_MAX_VERSION)
 PYDANTIC_V2_MISSING_SENTINEL_RUNTIME_MIN = Version(PYDANTIC_V2_MISSING_SENTINEL_RUNTIME_MIN_VERSION)
 PYDANTIC_V2_TYPE_ALIAS_RUNTIME_MIN = Version(PYDANTIC_V2_TYPE_ALIAS_RUNTIME_MIN_VERSION)
+PYDANTIC_V2_FLOAT_MULTIPLE_OF_RUNTIME_MIN = Version(PYDANTIC_V2_FLOAT_MULTIPLE_OF_RUNTIME_MIN_VERSION)
 PydanticV2LegacyRuntimeExclusions: TypeAlias = Mapping[PayloadBackend, Mapping[str, str]]
 PydanticV2LegacyRuntimeExclusionGroups: TypeAlias = Sequence[tuple[Version, PydanticV2LegacyRuntimeExclusions]]
 PYDANTIC_V2_LEGACY_RUNTIME_EXCLUSION_GROUPS: PydanticV2LegacyRuntimeExclusionGroups = (
     (PYDANTIC_V2_FULL_PAYLOAD_RUNTIME_MIN, PYDANTIC_V2_LEGACY_RUNTIME_EXCLUDED_CASES),
+    (PYDANTIC_V2_FLOAT_MULTIPLE_OF_RUNTIME_MIN, PYDANTIC_V2_FLOAT_MULTIPLE_OF_RUNTIME_EXCLUDED_CASES),
     (PYDANTIC_V2_TYPE_ALIAS_RUNTIME_MIN, PYDANTIC_V2_TYPE_ALIAS_RUNTIME_EXCLUDED_CASES),
     (PYDANTIC_V2_MISSING_SENTINEL_RUNTIME_MIN, PYDANTIC_V2_MISSING_SENTINEL_RUNTIME_EXCLUDED_CASES),
 )
 PYDANTIC_V2_LEGACY_RUNTIME_ROUND_TRIP_EXCLUSION_GROUPS: PydanticV2LegacyRuntimeExclusionGroups = (
     (PYDANTIC_V2_FULL_PAYLOAD_RUNTIME_MIN, PYDANTIC_V2_LEGACY_RUNTIME_EXCLUDED_CASES),
+    (PYDANTIC_V2_FLOAT_MULTIPLE_OF_RUNTIME_MIN, PYDANTIC_V2_FLOAT_MULTIPLE_OF_RUNTIME_EXCLUDED_CASES),
     (PYDANTIC_V2_0_RUNTIME_MAX, PYDANTIC_V2_0_RUNTIME_ROUND_TRIP_EXCLUDED_CASES),
     (PYDANTIC_V2_FULL_PAYLOAD_RUNTIME_MIN, PYDANTIC_V2_LEGACY_RUNTIME_ROUND_TRIP_EXCLUDED_CASES),
     (PYDANTIC_V2_MISSING_SENTINEL_RUNTIME_MIN, PYDANTIC_V2_MISSING_SENTINEL_RUNTIME_EXCLUDED_CASES),
@@ -616,6 +624,28 @@ def test_pydantic_v2_legacy_runtime_exclusions_are_version_gated() -> None:
             )
             is None
         )
+
+
+@pytest.mark.parametrize(
+    ("backend", "case_id"),
+    [
+        pytest.param(backend, case_id, id=f"{backend.value}:{case_id}")
+        for backend in (PayloadBackend.PYDANTIC_V2, PayloadBackend.PYDANTIC_V2_DATACLASS)
+        for case_id in PYDANTIC_V2_FLOAT_MULTIPLE_OF_CASE_IDS
+    ],
+)
+@pytest.mark.allow_direct_assert
+def test_pydantic_v2_float_multiple_of_exclusions_are_version_gated(
+    backend: PayloadBackend,
+    case_id: str,
+) -> None:
+    """Pydantic before 2.5.2 rejects some source-valid float multipleOf payloads."""
+    case = SCHEMA_CASE_BY_ID[case_id]
+    assert _pydantic_v2_legacy_runtime_exclusion_reason(case, backend, Version("2.5.1"))
+    exclusion_reason = _pydantic_v2_legacy_runtime_exclusion_reason(
+        case, backend, PYDANTIC_V2_FLOAT_MULTIPLE_OF_RUNTIME_MIN
+    )
+    assert exclusion_reason is None
 
 
 @pytest.mark.parametrize("backend", [PayloadBackend.PYDANTIC_V2, PayloadBackend.PYDANTIC_V2_DATACLASS])

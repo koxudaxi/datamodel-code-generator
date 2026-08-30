@@ -212,6 +212,14 @@ PYDANTIC_V2_FULL_PAYLOAD_RUNTIME_MIN_VERSION = "2.5.0"
 PYDANTIC_V2_0_RUNTIME_MAX_VERSION = "2.1.0"
 PYDANTIC_V2_MISSING_SENTINEL_RUNTIME_MIN_VERSION = "2.12.0"
 PYDANTIC_V2_TYPE_ALIAS_RUNTIME_MIN_VERSION = "2.10.0"
+PYDANTIC_V2_FLOAT_MULTIPLE_OF_RUNTIME_MIN_VERSION = "2.5.2"
+PYDANTIC_V2_FLOAT_MULTIPLE_OF_CASE_IDS = (
+    "jsonschema/native_decimal_default_constrained.json",
+    "jsonschema/serialized_decimal_default_multiple_of.json",
+)
+PYDANTIC_V2_FLOAT_MULTIPLE_OF_EXCLUSION_REASON = (
+    "Pydantic before 2.5.2 can reject schema-valid float multipleOf values near float boundaries"
+)
 PYDANTIC_V2_LEGACY_LOOKAROUND_EXCLUDED_CASES: dict[str, str] = {
     "jsonschema/lookaround_anyof_nullable.json": (
         "Pydantic before 2.5.0 cannot apply regex_engine='python-re' to lookaround pattern validators"
@@ -274,6 +282,13 @@ PYDANTIC_V2_LEGACY_RUNTIME_EXCLUDED_CASES: dict[PayloadBackend, dict[str, str]] 
             "Pydantic before 2.5.0 can reject schema-valid dataclass float multipleOf values near float boundaries"
         ),
     },
+}
+PYDANTIC_V2_FLOAT_MULTIPLE_OF_RUNTIME_EXCLUDED_CASES: dict[PayloadBackend, dict[str, str]] = {
+    backend: dict.fromkeys(
+        PYDANTIC_V2_FLOAT_MULTIPLE_OF_CASE_IDS,
+        PYDANTIC_V2_FLOAT_MULTIPLE_OF_EXCLUSION_REASON,
+    )
+    for backend in (PayloadBackend.PYDANTIC_V2, PayloadBackend.PYDANTIC_V2_DATACLASS)
 }
 PYDANTIC_V2_TYPE_ALIAS_RUNTIME_EXCLUDED_CASES: dict[PayloadBackend, dict[str, str]] = {
     PayloadBackend.PYDANTIC_V2_DATACLASS: {
