@@ -7726,10 +7726,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         runtime_validation = self.extra_template_data[reference_path].get("schema_runtime_validation")
         if not _is_internal_schema_runtime_validation(runtime_validation) or not runtime_validation:
             return data_model_root_type
-
-        from datamodel_code_generator.model.pydantic_v2.root_model import RootModel  # noqa: PLC0415
-
-        return RootModel
+        if (root_model_factory := self.data_model_type.SCHEMA_RUNTIME_VALIDATION_ROOT_MODEL) is None:
+            self.extra_template_data[reference_path].pop("schema_runtime_validation")
+            return data_model_root_type
+        return root_model_factory()
 
     def _apply_root_model_sequence_interface(
         self,
