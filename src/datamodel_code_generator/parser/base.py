@@ -3313,7 +3313,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.__validate_shared_module_name(module_models)
         return self.__create_shared_module_from_duplicates(module_models, duplicates, require_update_action_models)
 
-    def __collapse_root_models(  # noqa: PLR0912, PLR0914, PLR0915
+    def __collapse_root_models(
         self,
         models: list[DataModel],
         unused_models: list[DataModel],
@@ -3324,6 +3324,23 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         if not self.collapse_root_models:
             return
 
+        with self.generation_store._collapse_root_reference_scope():  # noqa: SLF001
+            self.__collapse_root_models_in_scope(
+                models,
+                unused_models,
+                imports,
+                scoped_model_resolver,
+                model_path_to_module_name,
+            )
+
+    def __collapse_root_models_in_scope(  # noqa: PLR0912, PLR0914, PLR0915
+        self,
+        models: list[DataModel],
+        unused_models: list[DataModel],
+        imports: Imports,
+        scoped_model_resolver: ModelResolver,
+        model_path_to_module_name: dict[str, str] | None = None,
+    ) -> None:
         generation_store = self.generation_store
         generation_index = generation_store.index
         circular_root_model_paths = getattr(self, "_circular_root_model_paths", ())
@@ -3409,12 +3426,16 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                                 new_path=root_type_model.reference.path,
                             )
 
-                        assert isinstance(root_type_model, DataModel)
-
-                        has_remaining_root_references = generation_index.has_data_type_references_other_than(
-                            root_type_model.reference,
-                            data_type,
-                        )
+                        if (
+                            has_remaining_root_references := generation_store._root_collapse_has_data_type_references(  # noqa: SLF001
+                                root_type_model.reference,
+                                excluded_data_type=data_type,
+                            )
+                        ) is None:
+                            has_remaining_root_references = generation_index.has_data_type_references_other_than(
+                                root_type_model.reference,
+                                data_type,
+                            )
                         generation_store.collapse_root_data_type(data_type, inner_reference)
 
                         imports.remove_referenced_imports(root_type_model.path)
@@ -3425,6 +3446,17 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
                     # set copied data_type
                     copied_data_type = root_type_field.data_type.model_copy()
+                    if (
+                        has_remaining_root_references := generation_store._root_collapse_has_data_type_references(  # noqa: SLF001
+                            root_type_model.reference,
+                            excluded_data_type=data_type,
+                        )
+                    ) is None:
+                        has_remaining_root_references = generation_index.has_data_type_references_other_than(
+                            root_type_model.reference,
+                            data_type,
+                        )
+
                     replacement_context = None
                     if isinstance(field_ := data_type.parent, self.data_model_field_type):
                         # for field
@@ -3510,10 +3542,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                             field_imports = [i for i in original_field.imports if i not in excluded_imports]
                             imports.append(field_imports)
 
-                    assert isinstance(root_type_model, DataModel)
-
                     imports.remove_referenced_imports(root_type_model.path)
-                    if not generation_index.has_data_type_references(root_type_model.reference):
+                    if not has_remaining_root_references:
                         unused_models.append(root_type_model)
 
     def __set_circular_root_model_paths(self, module_models: ModuleModels) -> None:
