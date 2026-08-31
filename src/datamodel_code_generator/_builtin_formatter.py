@@ -263,21 +263,28 @@ def _replace_pep695_type_aliases_with_placeholders(code: str) -> str:
     return "\n".join(placeholder_lines)
 
 
-def _parse_builtin_code(code: str, python_version: PythonVersion | None) -> ast.Module | None:
+def _parse_builtin_code_with_source_validity(
+    code: str,
+    python_version: PythonVersion | None,
+) -> tuple[ast.Module | None, bool]:
     feature_version = python_version.version_key if python_version is not None else None
     try:
-        return ast.parse(code, feature_version=feature_version)
+        return ast.parse(code, feature_version=feature_version), True
     except SyntaxError:
         if not _needs_pep695_type_alias_placeholders(python_version):
-            return None
+            return None, False
 
     placeholder_code = _replace_pep695_type_aliases_with_placeholders(code)
     if placeholder_code == code:
-        return None
+        return None, False
     try:
-        return ast.parse(placeholder_code, feature_version=feature_version)
+        return ast.parse(placeholder_code, feature_version=feature_version), False
     except SyntaxError:
-        return None
+        return None, False
+
+
+def _parse_builtin_code(code: str, python_version: PythonVersion | None) -> ast.Module | None:
+    return _parse_builtin_code_with_source_validity(code, python_version)[0]
 
 
 def _format_import_node_without_reordering(
@@ -1957,10 +1964,22 @@ def _normalize_string_quotes(code: str) -> str:
     return tokenize.untokenize(tokens)
 
 
-def _finalize_builtin_code(code: str, *, string_normalization: bool) -> str:
+def _normalize_string_quotes_if_needed(code: str, *, source_is_valid: bool) -> str:
+    """Normalize string quotes when the already-validated source may contain a candidate."""
+    if type(code) is not str or not source_is_valid or "'" in code or "\t" in code or "\f" in code:
+        return _normalize_string_quotes(code)
+    return code
+
+
+def _finalize_builtin_code(
+    code: str,
+    *,
+    string_normalization: bool,
+    source_is_valid: bool = False,
+) -> str:
     formatted_code = _normalize_top_level_blank_lines(code.strip("\n"))
     if string_normalization:
-        formatted_code = _normalize_string_quotes(formatted_code)
+        formatted_code = _normalize_string_quotes_if_needed(formatted_code, source_is_valid=source_is_valid)
     return f"{formatted_code}\n"
 
 
@@ -2094,7 +2113,7 @@ def apply_builtin_formatter(  # noqa: PLR0913
     if not code:
         return ""
 
-    tree = _parse_builtin_code(code, python_version)
+    tree, source_is_valid = _parse_builtin_code_with_source_validity(code, python_version)
     if tree is None:
         return f"{code}\n"
 
@@ -2112,7 +2131,11 @@ def apply_builtin_formatter(  # noqa: PLR0913
 
     if not import_nodes:
         formatted_lines = _apply_line_replacements(lines, replacements)
-        return _finalize_builtin_code("\n".join(formatted_lines), string_normalization=string_normalization)
+        return _finalize_builtin_code(
+            "\n".join(formatted_lines),
+            string_normalization=string_normalization,
+            source_is_valid=source_is_valid,
+        )
 
     first_line = import_nodes[0].lineno
     last_line = import_nodes[-1].end_lineno or import_nodes[-1].lineno
@@ -2124,4 +2147,8 @@ def apply_builtin_formatter(  # noqa: PLR0913
     if body:
         separator = "\n\n\n" if body.startswith(("class ", "def ", "async def ", "@")) else "\n\n"
         formatted_code = f"{formatted_code}{separator}{body}" if formatted_code else body
-    return _finalize_builtin_code(formatted_code, string_normalization=string_normalization)
+    return _finalize_builtin_code(
+        formatted_code,
+        string_normalization=string_normalization,
+        source_is_valid=source_is_valid,
+    )
