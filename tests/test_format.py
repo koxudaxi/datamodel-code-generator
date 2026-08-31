@@ -7,6 +7,7 @@ import pickle
 import shutil
 import subprocess
 import sys
+import tokenize
 import warnings
 from pathlib import Path
 from typing import cast
@@ -63,6 +64,12 @@ BUILTIN_FORMATTER_LOCAL_CONSTANTS = {
     "STRING_PREFIX_PATTERN",
 }
 BUILTIN_FORMATTER_EXPECTED_PATH = Path(__file__).parent / "data" / "expected" / "builtin_formatter"
+BUILTIN_STRING_NORMALIZATION_INPUT_PATH = (
+    Path(__file__).parent / "data" / "python" / "builtin_formatter_string_normalization.txt"
+)
+BUILTIN_STRING_NORMALIZATION_EXPECTED_PATH = BUILTIN_FORMATTER_EXPECTED_PATH / "string_normalization.txt"
+BUILTIN_PEP695_INVALID_INPUT_PATH = Path(__file__).parent / "data" / "python" / "builtin_formatter_pep695_invalid.txt"
+BUILTIN_PEP695_INVALID_EXPECTED_PATH = BUILTIN_FORMATTER_EXPECTED_PATH / "pep695_invalid.txt"
 
 
 def test_builtin_formatter_moved_names_are_reexported() -> None:
@@ -838,6 +845,84 @@ def test_apply_builtin_formatter_normalizes_simple_string_quotes() -> None:
         "\n"
         "class Model(BaseModel):\n"
         '    mode: Literal["MODE_2D"] = Field(..., alias="mapViewMode")\n'
+    )
+
+
+def test_builtin_formatter_string_normalization_fixture() -> None:
+    """Keep quote normalization and its no-op path byte-compatible across source shapes."""
+    formatted_cases: list[str] = []
+    corpus = BUILTIN_STRING_NORMALIZATION_INPUT_PATH.read_text(encoding="utf-8")
+    for case in corpus.split("\n---CASE---\n"):
+        name, source = case.split("\n", 1)
+        formatted = apply_builtin_formatter(
+            source,
+            string_normalization=True,
+        )
+        formatted_cases.append(f"[{name}]\n{formatted}")
+
+    assert_output(
+        "\n".join(formatted_cases),
+        BUILTIN_STRING_NORMALIZATION_EXPECTED_PATH,
+    )
+
+
+def test_builtin_formatter_string_normalization_preserves_pep695_invalid_errors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Keep tokenizer errors from invalid PEP 695 fallback sources unchanged."""
+    monkeypatch.setattr(builtin_formatter.sys, "version_info", (3, 11, 0, "final", 0))
+    formatted_cases: list[str] = []
+    corpus = BUILTIN_PEP695_INVALID_INPUT_PATH.read_text(encoding="utf-8")
+    for case in corpus.split("\n---CASE---\n"):
+        name, source = case.split("\n", 1)
+        with pytest.raises(tokenize.TokenError) as error_info:
+            apply_builtin_formatter(
+                source,
+                python_version=PythonVersion.PY_312,
+                string_normalization=True,
+            )
+        formatted_cases.append(f"[{name}]\n{type(error_info.value).__name__}\n")
+
+    assert_output(
+        "\n".join(formatted_cases),
+        BUILTIN_PEP695_INVALID_EXPECTED_PATH,
+    )
+
+
+def test_builtin_formatter_string_normalization_fallback_handles_private_inputs() -> None:
+    """Keep the private normalization helper safe for non-exact strings and lexical whitespace."""
+    assert (
+        builtin_formatter._normalize_string_quotes_if_needed(
+            'value = "ok"',
+            source_is_valid=False,
+        )
+        == 'value = "ok"'
+    )
+    assert (
+        builtin_formatter._normalize_string_quotes_if_needed(
+            "value\t=1",
+            source_is_valid=True,
+        )
+        == "value =1"
+    )
+    assert (
+        builtin_formatter._normalize_string_quotes_if_needed(
+            "value = 1\f+2",
+            source_is_valid=True,
+        )
+        == "value = 1 +2"
+    )
+
+    class StringSubclass(str):  # noqa: FURB189, SLOT000 - intentionally exercises a hostile string subclass
+        def __contains__(self, _item: object) -> bool:
+            raise AssertionError
+
+    assert (
+        builtin_formatter._normalize_string_quotes_if_needed(
+            StringSubclass('value = "ok"'),
+            source_is_valid=True,
+        )
+        == 'value = "ok"'
     )
 
 

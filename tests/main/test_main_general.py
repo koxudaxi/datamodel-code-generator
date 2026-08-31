@@ -4225,6 +4225,41 @@ def test_generate_multimodule_builtin_directory_matches_fixture(output_dir: Path
     assert_directory_content(output_dir, EXPECTED_MAIN_PATH / "jsonschema" / "all_exports_multi_file")
 
 
+def test_generate_builtin_string_normalization_matches_fixture(output_file: Path) -> None:
+    """Keep double-quote normalization byte-compatible with the external fixture."""
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
+        input_file_type=InputFileType.JsonSchema,
+        formatters=[Formatter.BUILTIN],
+        use_double_quotes=True,
+        disable_timestamp=True,
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_PATH / "jsonschema" / "person_use_double_quotes.py",
+    )
+
+
+def test_generate_builtin_string_normalization_module_split(output_dir: Path) -> None:
+    """Keep double-quote normalization byte-compatible for every generated module."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "module_split_single" / "input.json",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+            "--use-double-quotes",
+            "--module-split-mode",
+            "single",
+            "--all-exports-scope",
+            "recursive",
+            "--use-exact-imports",
+        ],
+        expected_directory=EXPECTED_MAIN_PATH / "jsonschema" / "module_split_single",
+    )
+
+
 @pytest.mark.allow_direct_assert
 def test_generated_modules_type_alias_is_exported() -> None:
     """Test that GeneratedModules is exported from the module."""
