@@ -70,9 +70,9 @@ enum:
 ```python
 # Generated code (strings preserved)
 class MyEnum(Enum):
-    YES = 'YES'
-    NO = 'NO'
-    NOT_APPLICABLE = 'NOT_APPLICABLE'
+    YES = "YES"
+    NO = "NO"
+    NOT_APPLICABLE = "NOT_APPLICABLE"
 ```
 
 This matches the expected behavior when `type: string` is specified in your schema. If you need the previous behavior where YAML bool keywords were converted to Python booleans, please [open an issue](https://github.com/koxudaxi/datamodel-code-generator/issues) describing your use case.
@@ -129,7 +129,7 @@ JSON/YAML property names with spaces, dashes, or special characters are converte
 
 ```python
 class Model(BaseModel):
-    my_field: str = Field(..., alias='my-field')
+    my_field: str = Field(..., alias="my-field")
 ```
 
 To disable aliases:
@@ -150,7 +150,7 @@ This generates snake_case field names with camelCase aliases:
 
 ```python
 class User(BaseModel):
-    first_name: str = Field(..., alias='firstName')
+    first_name: str = Field(..., alias="firstName")
 ```
 
 ---
