@@ -178,6 +178,19 @@ def unique_items_performance_schema() -> dict[str, object]:
 
 
 @pytest.fixture(scope="module")
+def scalar_root_performance_schema() -> dict[str, object]:
+    """Prepare unshared scalar root references outside the measured call."""
+    field_count = 500
+    return {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "ScalarRootPerformance",
+        "type": "object",
+        "properties": {f"value_{index}": {"$ref": "#/$defs/Value"} for index in range(field_count)},
+        "$defs": {"Value": {"type": "string"}},
+    }
+
+
+@pytest.fixture(scope="module")
 def unique_items_runtime_model(tmp_path_factory: pytest.TempPathFactory) -> Generator[Any, None, None]:
     """Generate and import one validated RootModel outside the runtime benchmarks."""
     output_path = tmp_path_factory.mktemp("unique-items-runtime") / "model.py"
@@ -521,6 +534,25 @@ def test_perf_unique_items_collapsed_builtin(
     assert isinstance(result, str)
     assert "class UniqueItemsPerformance(BaseModel):" in result
     assert result.endswith("    value_499: list[int] | None = None")
+
+
+@pytest.mark.perf
+@pytest.mark.benchmark
+def test_perf_scalar_root_collapsed_builtin(
+    scalar_root_performance_schema: dict[str, object],
+) -> None:
+    """Track incremental root-reference counts with the builtin formatter."""
+    result = generate(
+        scalar_root_performance_schema,
+        input_file_type=InputFileType.JsonSchema,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        collapse_root_models=True,
+        disable_timestamp=True,
+        formatters=[Formatter.BUILTIN],
+    )
+    assert isinstance(result, str)
+    assert "class ScalarRootPerformance(BaseModel):" in result
+    assert result.endswith("    value_499: str | None = None")
 
 
 @pytest.mark.perf

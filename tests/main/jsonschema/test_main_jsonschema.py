@@ -12766,6 +12766,17 @@ def test_main_jsonschema_collapse_root_models_atomic_replace(output_file: Path) 
     )
 
 
+def test_main_jsonschema_collapse_root_models_scalar_atomic_replace(output_file: Path) -> None:
+    """Track unshared scalar root replacements without changing generated output."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_scalar_atomic_replace.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=["--collapse-root-models", "--disable-timestamp", "--formatters", "builtin"],
+    )
+
+
 def test_main_jsonschema_collapse_root_models_self_reference(output_file: Path) -> None:
     """Keep self-referential root models named instead of collapsing them infinitely."""
     run_main_and_assert(
