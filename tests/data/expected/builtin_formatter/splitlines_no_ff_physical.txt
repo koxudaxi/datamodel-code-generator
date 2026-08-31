@@ -1,0 +1,4 @@
+'first\n'
+'second\r'
+'third\n'
+'last\n'

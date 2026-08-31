@@ -4185,6 +4185,20 @@ def test_main_jsonschema_builtin_formatter_preserves_unicode_line_separators(out
         )
 
 
+@pytest.mark.isolate_builtin_formatter_config
+def test_main_jsonschema_builtin_formatter_preserves_all_line_separators(output_file: Path) -> None:
+    """Preserve physical and non-physical separators through the built-in formatter."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "builtin_line_separators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="builtin_line_separators_builtin.py",
+        extra_args=["--disable-timestamp", "--formatters", "builtin"],
+        force_exec_validation=True,
+    )
+
+
 @pytest.mark.cli_doc(
     options=["--special-field-name-prefix"],
     option_description="""Prefix to add to special field names (like reserved keywords).

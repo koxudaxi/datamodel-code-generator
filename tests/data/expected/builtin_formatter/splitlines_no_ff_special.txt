@@ -1,0 +1,3 @@
+'alpha\x0bbravo\x0cchar\x1cfile\x1dgroup\x1erecord\x85next\u2028line\u2029para\r'
+'cr-only\r'
+'omega\n'

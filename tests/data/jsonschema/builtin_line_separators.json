@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BuiltinLineSeparators",
+  "type": "string",
+  "enum": [
+    "empty",
+    "lf\nvalue",
+    "cr\rvalue",
+    "crlf\r\nvalue",
+    "vertical\u000btab",
+    "form\u000cfeed",
+    "file\u001cseparator",
+    "group\u001dseparator",
+    "record\u001eseparator",
+    "next\u0085line",
+    "line\u2028separator",
+    "paragraph\u2029separator"
+  ]
+}

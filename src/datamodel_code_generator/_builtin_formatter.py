@@ -51,6 +51,7 @@ MAX_SHORT_DEFAULT_OVERFLOW = 13
 LONG_TARGET_PREFIX_LENGTH = 30
 TYPE_ALIAS_INLINE_ARGUMENT_COUNT = 2
 STRING_PREFIX_PATTERN = re.compile(r"(?i)^([rubf]*)(\"\"\"|'''|\"|')")
+_NON_PHYSICAL_LINE_SEPARATOR_PATTERN = re.compile(r"[\v\f\x1c-\x1e\x85\u2028\u2029]")
 PEP695_TYPE_ALIAS_START_PATTERN = re.compile(r"^(?P<indent>\s*)type\s+(?P<target>[A-Za-z_]\w*(?:\[.*?\])?)\s*=")
 PEP695_TYPE_ALIAS_PLACEHOLDER = "__datamodel_codegen_builtin_type_alias__"
 _SOURCE_LINES_CACHE: list[tuple[str, list[str]]] = []
@@ -449,6 +450,9 @@ def _is_type_checking_if(node: ast.AST) -> TypeGuard[ast.If]:
 
 def _splitlines_no_ff(source: str) -> list[str]:
     """Split source lines like the Python parser, without form-feed splitting."""
+    if type(source) is str and _NON_PHYSICAL_LINE_SEPARATOR_PATTERN.search(source) is None:
+        return source.splitlines(keepends=True)
+
     index = 0
     lines: list[str] = []
     next_line = ""

@@ -1573,6 +1573,40 @@ def test_builtin_formatter_splits_only_physical_python_lines(source: str, expect
     assert builtin_formatter._split_python_lines(source) == expected
 
 
+@pytest.mark.parametrize(
+    ("input_name", "expected_name", "strip_fixture_newline"),
+    [
+        ("builtin_formatter_splitlines_no_ff_physical.txt", "splitlines_no_ff_physical.txt", False),
+        ("builtin_formatter_splitlines_no_ff_special.txt", "splitlines_no_ff_special.txt", False),
+        ("builtin_formatter_splitlines_no_ff_escaped.txt", "splitlines_no_ff_escaped.txt", True),
+    ],
+)
+def test_builtin_formatter_splitlines_no_ff_matches_external_fixtures(
+    input_name: str, expected_name: str, strip_fixture_newline: bool
+) -> None:
+    """The fast and compatibility line splitters preserve external fixture bytes."""
+    source_bytes = (Path(__file__).parent / "data" / "python" / input_name).read_bytes()
+    source = source_bytes.decode("unicode_escape") if input_name.endswith("escaped.txt") else source_bytes.decode()
+    if strip_fixture_newline:
+        source = source.removesuffix("\n")
+    output = "\n".join(repr(line) for line in builtin_formatter._splitlines_no_ff(source)) + "\n"
+    assert_output(output, BUILTIN_FORMATTER_EXPECTED_PATH / expected_name)
+
+
+def test_builtin_formatter_splitlines_no_ff_preserves_str_subclass_semantics() -> None:
+    """Keep the compatibility scanner for str subclasses with overridden methods."""
+
+    class SplitlinesOverride(str):  # noqa: FURB189
+        __slots__ = ()
+
+        def splitlines(self, keepends: bool = False) -> list[str]:
+            msg = f"override must not be called: {keepends=}"
+            raise AssertionError(msg)
+
+    source = SplitlinesOverride("first\nsecond")
+    assert builtin_formatter._splitlines_no_ff(source) == ["first\n", "second"]
+
+
 def test_builtin_formatter_splits_nested_annotated_formatting_as_python_lines() -> None:
     """Nested Annotated formatting uses the physical-line splitter."""
     annotated_union_source = "Annotated[str, Field(..., description='long generated field description')] | None"
