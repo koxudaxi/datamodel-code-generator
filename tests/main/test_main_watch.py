@@ -3493,15 +3493,13 @@ def test_batch_watch_nested_dependency_reruns_full_batch_without_output_loop(tmp
         child_file.write_text(
             (WATCH_DATA_PATH / "nested_ref/child_changed.json").read_text(encoding="utf-8"), encoding="utf-8"
         )
+        # Do not open batch destinations until their atomic publication completes. On Windows,
+        # a reader can temporarily prevent replacement and make the test race with the watch CLI.
         _wait_for_watch_cli(
             process,
             stdout_lines,
             stderr_lines,
-            lambda: (
-                _file_contains(first_output, "age: int | None = None")
-                and second_output.read_text(encoding="utf-8") != "stale\n"
-                and second_metadata.read_text(encoding="utf-8") != "stale\n"
-            ),
+            lambda: sum(line.strip() == "Done." for line in stdout_lines) > done_count,
             "the full watched batch to be republished",
         )
         assert_output(first_output.read_text(encoding="utf-8"), EXPECTED_MAIN_PATH / "watch_nested_ref_change.py")

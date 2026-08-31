@@ -14,6 +14,7 @@ from datamodel_code_generator.imports import IMPORT_OPTIONAL, IMPORT_UNION, Impo
 from datamodel_code_generator.model import DataModel, DataModelFieldBase, _rebuild_model_with_datamodel_namespace
 from datamodel_code_generator.model._constraints import PatternConstraints as _Constraints
 from datamodel_code_generator.model.base import UNDEFINED, BaseClassDataType, _nested_model_default_factory
+from datamodel_code_generator.model.field_name import MsgspecFieldNameResolver
 from datamodel_code_generator.model.imports import (
     IMPORT_MSGSPEC_CONVERT,
     IMPORT_MSGSPEC_FIELD,
@@ -29,7 +30,7 @@ from datamodel_code_generator.python_literal import (
     represent_python_value,
     represent_untrusted_python_value,
 )
-from datamodel_code_generator.reference import ModelType
+from datamodel_code_generator.reference import FieldNameResolver, ModelType
 from datamodel_code_generator.types import (
     NONE,
     DataType,
@@ -48,6 +49,8 @@ class _UNSET:
 
 
 UNSET = _UNSET()
+
+
 _ANNOTATED_CONSTRAINTS_CONTEXT: object = object()
 
 
@@ -119,6 +122,7 @@ class Struct(DataModel):
     FIELD_ASSIGNMENT_CHECKER = staticmethod(has_field_assignment)
     FIELD_DEFAULT_CLASSIFIER = staticmethod(get_field_default_info)
     FIELD_NAME_MODEL_TYPE: ClassVar[ModelType] = ModelType.MSGSPEC
+    FIELD_NAME_RESOLVER_CLASS: ClassVar[type[FieldNameResolver]] = MsgspecFieldNameResolver
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = True
     SUPPORTS_INHERITED_DISCRIMINATOR_ENUM: ClassVar[bool] = True
     SUPPORTS_KW_ONLY: ClassVar[bool] = True

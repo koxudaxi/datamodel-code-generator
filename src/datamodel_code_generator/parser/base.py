@@ -2298,6 +2298,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             skip_affix_for_root=config.class_name is not None,
             default_value_overrides=config.default_value_overrides,
             http_backend=config.http_backend,
+            field_name_resolver_classes=(
+                {self.field_name_model_type: field_name_resolver_class}
+                if (field_name_resolver_class := self.data_model_type.FIELD_NAME_RESOLVER_CLASS) is not None
+                else None
+            ),
         )
         self.class_name: str | None = config.class_name
         self.allow_leading_underscore_class_name: bool = config.allow_leading_underscore_class_name
