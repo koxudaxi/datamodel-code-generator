@@ -25,9 +25,9 @@ from datamodel_code_generator import (
     Error,
     InputFileType,
     OpenAPIScope,
-    YamlValue,
     snooper_to_methods,
 )
+from datamodel_code_generator._source import YamlValue
 from datamodel_code_generator.deprecations import warn_deprecated
 from datamodel_code_generator.enums import OpenAPIVersion, VersionMode
 from datamodel_code_generator.parser.base import Result, get_special_path

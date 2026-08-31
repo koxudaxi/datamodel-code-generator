@@ -10,19 +10,16 @@ import contextlib
 import os
 import sys
 import warnings
-from collections import OrderedDict, defaultdict
+from collections import defaultdict
 from collections.abc import Callable, Iterator, Mapping
 from datetime import datetime, timezone
 from functools import lru_cache as _lru_cache
 from functools import partial as _partial
-from hashlib import sha256
 from pathlib import Path
-from threading import RLock
 from typing import (
     IO,
     TYPE_CHECKING,
     Any,
-    TextIO,
     TypeAlias,
     TypeVar,
     cast,
@@ -31,6 +28,32 @@ from urllib.parse import ParseResult
 
 from datamodel_code_generator._process_state import PROCESS_STATE_LOCK
 from datamodel_code_generator._shared_types import DefaultPutDict, LiteralType
+from datamodel_code_generator._source import (
+    _clear_parser_source_data_cache as _clear_parser_source_data_cache,
+)
+from datamodel_code_generator._source import (
+    _is_json_text,
+    _is_protobuf_text,
+    _is_xml_text,
+    enable_parsed_source_cache,
+    load_data,
+    load_data_from_path,
+    load_yaml,
+    load_yaml_dict,
+    load_yaml_dict_from_path,
+)
+from datamodel_code_generator._source import (
+    _is_parsed_source_cache_enabled as _is_parsed_source_cache_enabled,
+)
+from datamodel_code_generator._source import (
+    _load_parser_source_data_from_path_bytes as _load_parser_source_data_from_path_bytes,
+)
+from datamodel_code_generator._source import (
+    _parser_source_data_cache as _parser_source_data_cache,
+)
+from datamodel_code_generator._source import (
+    _read_parser_source_data_from_path as _read_parser_source_data_from_path,
+)
 from datamodel_code_generator.enums import (
     DEFAULT_SHARED_MODULE_NAME,
     MAX_VERSION,
@@ -110,6 +133,16 @@ T = TypeVar("T")
 YamlScalar: TypeAlias = str | int | float | bool | None
 YamlValue = TypeAliasType("YamlValue", "dict[str, YamlValue] | list[YamlValue] | YamlScalar")
 
+for _public_source_export in (
+    enable_parsed_source_cache,
+    load_data,
+    load_data_from_path,
+    load_yaml,
+    load_yaml_dict,
+    load_yaml_dict_from_path,
+):
+    _public_source_export.__module__ = __name__
+del _public_source_export
 
 if TYPE_CHECKING:
     _SchemaVersion = TypeVar(
@@ -196,268 +229,6 @@ def _apply_generate_config_preset(config: GenerateConfig) -> GenerateConfig:
 
 
 DEFAULT_BASE_CLASS: str = "pydantic.BaseModel"
-_IGNORED_TEXT_PREFIX_CHARS: frozenset[str] = frozenset({"\ufeff", " ", "\t", "\r", "\n"})
-_PARSER_SOURCE_DATA_CACHE_MAX_SIZE = 128
-_ParserSourceDataCacheKey: TypeAlias = tuple[Path, str, str, str]
-_ParserSourceDataSeenKey: TypeAlias = tuple[Path, str]
-# Serialized snapshots isolate mutable callers and are faster to restore than reparsing source text.
-_parser_source_data_cache: OrderedDict[_ParserSourceDataCacheKey, bytes] = OrderedDict()
-_parser_source_data_seen_keys: OrderedDict[_ParserSourceDataSeenKey, None] = OrderedDict()
-_parser_source_data_cache_lock = RLock()
-_parsed_source_cache_enable_count = 0
-_enable_parsed_source_cache = False
-
-
-def enable_parsed_source_cache() -> Callable[[], None]:
-    """Enable the process-local parsed source cache and return a restore callback."""
-    global _enable_parsed_source_cache, _parsed_source_cache_enable_count  # noqa: PLW0603
-
-    with _parser_source_data_cache_lock:
-        _parsed_source_cache_enable_count += 1
-        _enable_parsed_source_cache = True
-    restored = False
-
-    def restore() -> None:
-        nonlocal restored
-        global _enable_parsed_source_cache, _parsed_source_cache_enable_count  # noqa: PLW0603
-
-        with _parser_source_data_cache_lock:
-            if restored:
-                return
-            restored = True
-            _parsed_source_cache_enable_count -= 1
-            _enable_parsed_source_cache = _parsed_source_cache_enable_count > 0
-
-    return restore
-
-
-def _is_parsed_source_cache_enabled() -> bool:
-    return _enable_parsed_source_cache
-
-
-def load_yaml(stream: str | TextIO) -> YamlValue:
-    """Load YAML content using ryaml (if available) or PyYAML."""
-    from datamodel_code_generator.util import get_yaml_backend, reject_unsupported_yaml_tags  # noqa: PLC0415
-
-    text = stream if isinstance(stream, str) else stream.read()
-    reject_unsupported_yaml_tags(text)
-
-    if get_yaml_backend() == "ryaml":
-        import ryaml  # noqa: PLC0415  # ty: ignore[unresolved-import]
-
-        from datamodel_code_generator.util import warn_yaml_deprecated_bool_values  # noqa: PLC0415
-
-        warn_yaml_deprecated_bool_values(text)
-        return ryaml.loads(text)
-
-    import yaml  # noqa: PLC0415
-
-    from datamodel_code_generator.util import SafeLoader  # noqa: PLC0415
-
-    return yaml.load(text, Loader=SafeLoader)  # noqa: S506
-
-
-def load_yaml_dict(stream: str | TextIO) -> dict[str, YamlValue]:
-    """Load YAML and return as dict. Raises TypeError if result is not a dict."""
-    result = load_yaml(stream)
-    if not isinstance(result, dict):
-        msg = f"Expected dict, got {type(result).__name__}"
-        raise TypeError(msg)
-    return result
-
-
-def load_yaml_dict_from_path(path: Path, encoding: str) -> dict[str, YamlValue]:
-    """Load YAML and return as dict from a file path.
-
-    Uses LRU cache with (path, mtime) as key for performance optimization.
-    This avoids re-reading the same file multiple times during $ref resolution.
-    """
-    from datamodel_code_generator.util import record_watch_dependency  # noqa: PLC0415
-
-    record_watch_dependency(path)
-    return _load_yaml_dict_from_path_cached(path, path.stat().st_mtime, encoding)
-
-
-@_lru_cache(maxsize=128)
-def _load_yaml_dict_from_path_cached(
-    path: Path,
-    mtime: float,  # noqa: ARG001  # Used as cache key for invalidation
-    encoding: str,
-) -> dict[str, YamlValue]:
-    """Load YAML dict from path with caching (internal implementation)."""
-    with path.open(encoding=encoding) as f:
-        return load_yaml_dict(f)
-
-
-def _first_significant_text_char(text: str) -> str | None:
-    for ch in text:
-        if ch not in _IGNORED_TEXT_PREFIX_CHARS:
-            return ch
-    return None
-
-
-def _is_json_text(text: str) -> bool:
-    """Check if text likely contains JSON by examining the first non-whitespace character.
-
-    Skips BOM, spaces, tabs, carriage returns, and newlines.
-    Returns True if the first significant character is '{' or '['.
-    """
-    return _first_significant_text_char(text) in {"{", "["}
-
-
-def _is_xml_text(text: str) -> bool:
-    """Check if text likely contains XML by examining the first non-whitespace character."""
-    return _first_significant_text_char(text) == "<"
-
-
-def _is_protobuf_text(text: str) -> bool:
-    """Check if text likely contains a Protocol Buffers schema."""
-    for line in text.splitlines():
-        stripped = line.lstrip()
-        if not stripped or stripped.startswith("//"):
-            continue
-        if stripped.startswith("syntax"):
-            return '"proto2"' in stripped or '"proto3"' in stripped
-        if stripped.startswith("edition"):
-            return '"2023"' in stripped
-        if stripped.startswith(("package ", "import ", "message ", "enum ", "service ")):
-            return True
-    return False
-
-
-def load_data(text: str) -> dict[str, YamlValue]:
-    """Load text as JSON or YAML based on content.
-
-    For stdin/string input: tries JSON first if content looks like JSON,
-    falls back to YAML on failure.
-    """
-    import json  # noqa: PLC0415
-
-    if _is_json_text(text):
-        with contextlib.suppress(json.JSONDecodeError):
-            result = json.loads(text)
-            if isinstance(result, dict):
-                return result
-    return load_yaml_dict(text)
-
-
-def load_data_from_path(path: Path, encoding: str) -> dict[str, YamlValue]:
-    """Load file as JSON or YAML based on file extension.
-
-    For file input: tries json.load() for .json files (more efficient than
-    read_text + json.loads), falls back to YAML if JSON parsing fails
-    (e.g., trailing commas), and requires the parsed content to be a dict.
-    Uses YAML for all other extensions.
-    """
-    result = _load_parser_source_data_from_path(path, encoding)
-    if not isinstance(result, dict):
-        msg = f"Expected dict, got {type(result).__name__}"
-        raise TypeError(msg)
-    return result
-
-
-def _load_parser_source_data_from_path(
-    path: Path,
-    encoding: str,
-) -> YamlValue:
-    return _read_parser_source_data_from_path(path, encoding)[1]
-
-
-def _read_parser_source_data_from_path(path: Path, encoding: str) -> tuple[bytes, YamlValue]:
-    resolved_path = path.resolve()
-    from datamodel_code_generator.util import record_watch_dependency  # noqa: PLC0415
-
-    record_watch_dependency(resolved_path)
-    data = resolved_path.read_bytes()
-    return data, _load_parser_source_data_from_path_bytes(resolved_path, data, encoding)
-
-
-def _load_parser_source_data_from_path_bytes(resolved_path: Path, data: bytes, encoding: str) -> YamlValue:
-    seen_key = (resolved_path, encoding)
-    with _parser_source_data_cache_lock:
-        use_cache = seen_key in _parser_source_data_seen_keys
-        _parser_source_data_seen_keys[seen_key] = None
-        _parser_source_data_seen_keys.move_to_end(seen_key)
-        while len(_parser_source_data_seen_keys) > _PARSER_SOURCE_DATA_CACHE_MAX_SIZE:
-            _parser_source_data_seen_keys.popitem(last=False)
-
-    if not use_cache:
-        return _load_parser_source_data_from_bytes(resolved_path, data, encoding)
-
-    digest = sha256(data).hexdigest()
-    return _load_parser_source_data_from_bytes_with_cache(resolved_path, data, digest, encoding)
-
-
-def _load_cached_parser_source_data(cache_key: _ParserSourceDataCacheKey) -> YamlValue | None:
-    with _parser_source_data_cache_lock:
-        if (cached_data := _parser_source_data_cache.get(cache_key)) is None:
-            return None
-        _parser_source_data_cache.move_to_end(cache_key)
-
-    import marshal  # noqa: PLC0415
-
-    # Entries are process-local values emitted by marshal.dumps below, never external bytes.
-    return marshal.loads(cached_data)  # noqa: S302
-
-
-def _store_parser_source_data(cache_key: _ParserSourceDataCacheKey, parsed_data: YamlValue) -> YamlValue:
-    import marshal  # noqa: PLC0415
-
-    try:
-        cached_data = marshal.dumps(parsed_data)
-    except Exception:  # noqa: BLE001
-        # Values outside the primitive YamlValue shape remain valid uncached input.
-        return parsed_data
-    with _parser_source_data_cache_lock:
-        _parser_source_data_cache[cache_key] = cached_data
-        _parser_source_data_cache.move_to_end(cache_key)
-        while len(_parser_source_data_cache) > _PARSER_SOURCE_DATA_CACHE_MAX_SIZE:
-            _parser_source_data_cache.popitem(last=False)
-    return parsed_data
-
-
-def _load_parser_source_data_from_bytes_with_cache(
-    path: Path,
-    data: bytes,
-    digest: str,
-    encoding: str,
-) -> YamlValue:
-    import json  # noqa: PLC0415
-
-    text = data.decode(encoding)
-    if path.suffix.lower() == ".json":
-        cache_key = (path, digest, encoding, "json")
-        if (cached_data := _load_cached_parser_source_data(cache_key)) is not None:
-            return cached_data
-
-        with contextlib.suppress(json.JSONDecodeError):
-            return _store_parser_source_data(cache_key, json.loads(text))
-
-    from datamodel_code_generator.util import get_yaml_backend  # noqa: PLC0415
-
-    parser_backend = f"yaml:{get_yaml_backend()}"
-    cache_key = (path, digest, encoding, parser_backend)
-    if (cached_data := _load_cached_parser_source_data(cache_key)) is not None:
-        return cached_data
-
-    return _store_parser_source_data(cache_key, load_yaml(text))
-
-
-def _load_parser_source_data_from_bytes(path: Path, data: bytes, encoding: str) -> YamlValue:
-    import json  # noqa: PLC0415
-
-    text = data.decode(encoding)
-    if path.suffix.lower() == ".json":
-        with contextlib.suppress(json.JSONDecodeError):
-            return json.loads(text)
-
-    return load_yaml(text)
-
-
-def _clear_parser_source_data_cache() -> None:
-    with _parser_source_data_cache_lock:
-        _parser_source_data_cache.clear()
-        _parser_source_data_seen_keys.clear()
 
 
 @_lru_cache(maxsize=256)

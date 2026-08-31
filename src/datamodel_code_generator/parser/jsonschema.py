@@ -42,16 +42,18 @@ from datamodel_code_generator import (
     ReadOnlyWriteOnlyModelType,
     SchemaParseError,
     VersionMode,
-    YamlValue,
-    _load_parser_source_data_from_path_bytes,
-    load_data,
-    load_data_from_path,
     snooper_to_methods,
 )
 from datamodel_code_generator._format_types import (
     DatetimeClassType,
 )
 from datamodel_code_generator._shared_types import DefaultPutDict, LiteralType
+from datamodel_code_generator._source import (
+    YamlValue,
+    _load_parser_source_data_from_path_bytes,
+    load_data,
+    load_data_from_path,
+)
 from datamodel_code_generator.deprecations import warn_deprecated
 from datamodel_code_generator.enums import AliasGenerator
 from datamodel_code_generator.imports import IMPORT_ANY, Import
