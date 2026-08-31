@@ -1251,11 +1251,11 @@ def _prepare_parser_common_options(  # noqa: PLR0912, PLR0913, PLR0917
     if source_override is not None:
         source = dict(source_override)
     elif isinstance(input_, Mapping) and input_file_type not in RAW_DATA_TYPES:
-        from datamodel_code_generator._input_model_transport import LoadedInputModelSchema  # noqa: PLC0415
+        from datamodel_code_generator.input_model_result import LoadedInputModelSchema  # noqa: PLC0415
 
         if isinstance(input_, LoadedInputModelSchema):
             source = dict(input_.schema)
-            python_type_expressions = input_.python_type_expressions
+            python_type_expressions = input_.legacy_python_type_expressions
         else:
             source = dict(input_)
     else:

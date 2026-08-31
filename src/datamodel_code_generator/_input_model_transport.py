@@ -1,38 +1,17 @@
-"""Private transport for input-model schemas and structured type expressions."""
+"""Private build transport for input-model structured type expressions."""
 
 from __future__ import annotations
 
-from collections.abc import Iterator, Mapping
-from dataclasses import dataclass
-from types import MappingProxyType
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from datamodel_code_generator._python_type_annotation import PythonTypeExpr
 
+from datamodel_code_generator.input_model_result import LoadedInputModelSchema, PythonTypeSchemaAnnotation
+
 _PYTHON_TYPE_TOKEN_PREFIX = "<datamodel-code-generator-python-type:"  # noqa: S105
-
-
-@dataclass(frozen=True, slots=True)
-class LoadedInputModelSchema(Mapping[str, object]):
-    """An internal schema view with parser-owned expression identities."""
-
-    schema: dict[str, object]
-    python_type_expressions: Mapping[str, PythonTypeExpr]
-
-    def __getitem__(self, key: str) -> object:
-        return self.schema[key]
-
-    def __iter__(self) -> Iterator[str]:
-        return iter(self.schema)
-
-    def __len__(self) -> int:
-        return len(self.schema)
-
-    @property
-    def name(self) -> str:
-        """Preserve the historical header name of the former JSON text input."""
-        return "<stdin>"
 
 
 class PythonTypeExpressionCollector:
@@ -59,10 +38,8 @@ class PythonTypeExpressionCollector:
         return token
 
     def loaded_schema(self, schema: dict[str, object]) -> LoadedInputModelSchema:
-        """Freeze the surviving token table and release the build-only reverse map."""
-        used_tokens = _collect_python_type_tokens(schema)
-        expressions = {token: expression for token, expression in self._expressions.items() if token in used_tokens}
-        return LoadedInputModelSchema(schema, MappingProxyType(expressions))
+        """Resolve build-only tokens into neutral IR at the input-model boundary."""
+        return LoadedInputModelSchema(_resolve_python_type_expressions(schema, self._expressions))
 
 
 def is_python_type_token(value: object) -> bool:
@@ -70,31 +47,36 @@ def is_python_type_token(value: object) -> bool:
     return isinstance(value, str) and value.startswith(_PYTHON_TYPE_TOKEN_PREFIX) and value.endswith(">")
 
 
-def _collect_python_type_tokens(value: object) -> set[str]:
-    """Collect only tokens retained by the final transformed schema."""
-    tokens: set[str] = set()
-    pending = [value]
-    while pending:
-        match pending.pop():
-            case Mapping() as mapping:
-                if is_python_type_token(token := mapping.get("x-python-type")):
-                    tokens.add(token)
-                pending.extend(mapping.values())
-            case list() | tuple() as sequence:
-                pending.extend(sequence)
-            case _:
-                continue
-    return tokens
-
-
 def externalize_python_type_token(value: Any, expressions: Mapping[str, PythonTypeExpr] | None) -> Any:
-    """Render a private token only when data crosses into generated output metadata."""
+    """Preserve the historical token externalizer for private callers."""
     if expressions is None or not isinstance(value, str) or (expression := expressions.get(value)) is None:
         return value
 
     from datamodel_code_generator._python_type_annotation import render_python_type_expr  # noqa: PLC0415
 
     return render_python_type_expr(expression)
+
+
+def _resolve_python_type_expressions(
+    schema: dict[str, object],
+    expressions: Mapping[str, PythonTypeExpr],
+) -> dict[str, object]:
+    """Replace surviving build tokens in place without copying the schema tree."""
+    pending: list[object] = [schema]
+    while pending:
+        match pending.pop():
+            case dict() as mapping:
+                if (
+                    isinstance(token := mapping.get("x-python-type"), str)
+                    and (expression := expressions.get(token)) is not None
+                ):
+                    mapping["x-python-type"] = PythonTypeSchemaAnnotation(expression, token)
+                pending.extend(mapping.values())
+            case list() | tuple() as sequence:
+                pending.extend(sequence)
+            case _:
+                continue
+    return schema
 
 
 __all__ = [

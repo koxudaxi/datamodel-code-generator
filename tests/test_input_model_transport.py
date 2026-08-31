@@ -1,4 +1,4 @@
-"""Tests for the private input-model Python type transport."""
+"""Tests for the input-model Python type IR boundary."""
 
 from __future__ import annotations
 
@@ -20,6 +20,7 @@ from datamodel_code_generator._python_type_annotation import (
     PythonTypeRuntimeSymbol,
 )
 from datamodel_code_generator.input_model import _transport_python_type_expr, load_model_schema
+from datamodel_code_generator.input_model_result import LoadedInputModelSchema, PythonTypeSchemaAnnotation
 from datamodel_code_generator.parser.jsonschema import JsonSchemaObject, JsonSchemaParser
 from tests.conftest import assert_output
 
@@ -41,13 +42,20 @@ def test_python_type_expression_collector_preserves_identity_and_prunes() -> Non
 
     assert collector.add(PythonTypeName("Alias")) == name_token
     assert name_token != opaque_token
-    assert unused_token not in loaded.python_type_expressions
+    assert unused_token not in repr(loaded.schema)
+    annotation = loaded.schema["properties"]["value"]["x-python-type"]  # type: ignore[index]
+    assert isinstance(annotation, PythonTypeSchemaAnnotation)
+    assert annotation.expression == PythonTypeOpaqueText("Alias")
     assert loaded.python_type_expressions == {opaque_token: PythonTypeOpaqueText("Alias")}
+    first_python_type_expressions = loaded.python_type_expressions
+    assert first_python_type_expressions is loaded.python_type_expressions
     assert dict(loaded) == loaded.schema
     assert len(loaded) == 2
     assert list(loaded) == ["type", "properties"]
     assert loaded["type"] == "object"
     assert loaded.name == "<stdin>"
+    assert isinstance(loaded, LoadedInputModelSchema)
+    assert LoadedInputModelSchema.__module__ == "datamodel_code_generator._input_model_transport"
     assert is_python_type_token(opaque_token)
     assert not is_python_type_token("Alias")
     assert externalize_python_type_token(opaque_token, loaded.python_type_expressions) == "Alias"
@@ -56,6 +64,13 @@ def test_python_type_expression_collector_preserves_identity_and_prunes() -> Non
     assert externalize_python_type_token(object(), loaded.python_type_expressions).__class__ is object
     with pytest.raises(TypeError):
         loaded.python_type_expressions[opaque_token] = PythonTypeName("Changed")  # type: ignore[index]
+
+    legacy = LoadedInputModelSchema(
+        {"type": "string", "x-python-type": name_token},
+        {name_token: PythonTypeName("Alias")},
+    )
+    assert legacy.legacy_python_type_expressions == {name_token: PythonTypeName("Alias")}
+    assert legacy.python_type_expressions == {name_token: PythonTypeName("Alias")}
 
 
 @pytest.mark.allow_direct_assert
@@ -74,6 +89,11 @@ def test_input_model_transport_normalizes_unqualified_runtime_symbols() -> None:
         ]
     })
 
+    annotations = [item["x-python-type"] for item in loaded.schema["anyOf"]]  # type: ignore[union-attr]
+    assert [annotation.expression for annotation in annotations] == [
+        PythonTypeName("Alias"),
+        PythonTypeQualifiedName(("Namespace", "Nested")),
+    ]
     assert loaded.python_type_expressions == {
         name_token: PythonTypeName("Alias"),
         qualified_token: PythonTypeQualifiedName(("Namespace", "Nested")),
@@ -81,8 +101,8 @@ def test_input_model_transport_normalizes_unqualified_runtime_symbols() -> None:
 
 
 @pytest.mark.allow_direct_assert
-def test_input_model_transport_rejects_a_token_without_its_context() -> None:
-    """Losing the envelope fails explicitly instead of invoking runtime parsing."""
+def test_jsonschema_parser_rejects_transport_token_without_context() -> None:
+    """Keep the historical explicit failure when a build token loses its context."""
     collector = PythonTypeExpressionCollector()
     token = collector.add(PythonTypeName("str"))
     obj = JsonSchemaObject.model_validate({"type": "string", "x-python-type": token})
@@ -148,6 +168,36 @@ def test_input_model_transport_property_names_uses_expression(
     assert_output(f"{generated}\n", EXPECTED_INPUT_MODEL_PATH / expected_file)
 
 
+def test_input_model_transport_property_names_survives_schema_copy() -> None:
+    """Keep neutral key IR through the parser's real patternProperties schema copy."""
+    collector = PythonTypeExpressionCollector()
+    token = collector.add(PythonTypeName("int"))
+    loaded = collector.loaded_schema({
+        "title": "PatternLookup",
+        "type": "object",
+        "propertyNames": {"x-python-type": token},
+        "patternProperties": {"^value": {"type": "string"}},
+    })
+    legacy_loaded = LoadedInputModelSchema(
+        {
+            "title": "PatternLookup",
+            "type": "object",
+            "propertyNames": {"x-python-type": token},
+            "patternProperties": {"^value": {"type": "string"}},
+        },
+        {token: PythonTypeName("int")},
+    )
+    JsonSchemaParser("")._parse_simple_property_name_key_type(
+        JsonSchemaObject.model_validate({"x-python-type": PythonTypeSchemaAnnotation(PythonTypeName("int"))})
+    )
+
+    for source in (loaded, legacy_loaded):
+        generated = generate(source, input_file_type=InputFileType.JsonSchema, disable_timestamp=True, formatters=[])
+        if not isinstance(generated, str):  # pragma: no cover
+            pytest.fail(f"Expected one generated module, got {type(generated)!r}")
+        assert_output(f"{generated}\n", EXPECTED_INPUT_MODEL_PATH / "transport_property_names_pattern.py")
+
+
 def test_input_model_transport_externalizes_field_metadata() -> None:
     """Field metadata receives canonical text, never an internal token."""
     collector = PythonTypeExpressionCollector()
@@ -173,16 +223,21 @@ def test_input_model_transport_externalizes_field_metadata() -> None:
 
 def test_input_model_transport_externalizes_schema_extensions() -> None:
     """Template and model extras receive canonical extension text."""
-    parser = JsonSchemaParser("", model_extra_keys={"x-python-type"})
-    parser._python_type_expressions = {"private-token": PythonTypeName("str")}
-    obj = JsonSchemaObject.model_validate({"x-python-type": "private-token", "x-note": "kept"})
+    for value, expressions in (
+        (PythonTypeSchemaAnnotation(PythonTypeName("str")), None),
+        ("private-token", {"private-token": PythonTypeName("str")}),
+        ("str", None),
+    ):
+        parser = JsonSchemaParser("", model_extra_keys={"x-python-type"})
+        parser._python_type_expressions = expressions
+        obj = JsonSchemaObject.model_validate({"x-python-type": value, "x-note": "kept"})
 
-    parser.set_schema_extensions("#", obj)
+        parser.set_schema_extensions("#", obj)
 
-    assert_output(
-        f"{json.dumps(parser.extra_template_data['#'], indent=2, sort_keys=True)}\n",
-        EXPECTED_INPUT_MODEL_PATH / "transport_schema_extras.txt",
-    )
+        assert_output(
+            f"{json.dumps(parser.extra_template_data['#'], indent=2, sort_keys=True)}\n",
+            EXPECTED_INPUT_MODEL_PATH / "transport_schema_extras.txt",
+        )
 
 
 def test_input_model_transport_survives_local_ref_and_allof_merges() -> None:
@@ -227,8 +282,9 @@ def test_input_model_transport_survives_external_ref() -> None:
         "required": ["value", "person"],
     })
 
-    assert loaded.python_type_expressions == {token: PythonTypeName("int")}
-    assert loaded.schema["properties"]["value"]["x-python-type"] == token  # type: ignore[index]
+    annotation = loaded.schema["properties"]["value"]["x-python-type"]  # type: ignore[index]
+    assert isinstance(annotation, PythonTypeSchemaAnnotation)
+    assert annotation.expression == PythonTypeName("int")
     generated = generate(loaded, input_file_type=InputFileType.JsonSchema, disable_timestamp=True, formatters=[])
     if not isinstance(generated, str):  # pragma: no cover
         pytest.fail(f"Expected one generated module, got {type(generated)!r}")
@@ -256,15 +312,14 @@ def test_input_model_transport_parses_only_external_raw_python_type() -> None:
 
 
 @pytest.mark.allow_direct_assert
-def test_input_model_transport_fingerprint_includes_expression_table() -> None:
-    """Retry safety detects equal schema text backed by different IR tables."""
-    raw_schema = {"type": "string", "x-python-type": "private-token"}
-    first = JsonSchemaParser(raw_schema)
-    second = JsonSchemaParser(raw_schema)
-    first.raw_obj = raw_schema
-    second.raw_obj = raw_schema
-    first._python_type_expressions = {"private-token": PythonTypeName("str")}
-    second._python_type_expressions = {"private-token": PythonTypeName("int")}
+def test_input_model_transport_fingerprint_includes_expression_ir() -> None:
+    """Retry safety detects equal schema structure carrying different neutral IR."""
+    first_schema = {"type": "string", "x-python-type": PythonTypeSchemaAnnotation(PythonTypeName("str"))}
+    second_schema = {"type": "string", "x-python-type": PythonTypeSchemaAnnotation(PythonTypeName("int"))}
+    first = JsonSchemaParser(first_schema)
+    second = JsonSchemaParser(second_schema)
+    first.raw_obj = first_schema
+    second.raw_obj = second_schema
 
     first_fingerprint = first._get_source_data_fingerprint()
     second_fingerprint = second._get_source_data_fingerprint()
