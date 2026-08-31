@@ -506,6 +506,25 @@ def test_perf_unique_items_schema_validators(
 
 @pytest.mark.perf
 @pytest.mark.benchmark
+def test_perf_unique_items_collapsed_builtin(
+    unique_items_performance_schema: dict[str, object],
+) -> None:
+    """Track collapsed root-model replacement with the builtin formatter."""
+    result = generate(
+        unique_items_performance_schema,
+        input_file_type=InputFileType.JsonSchema,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        collapse_root_models=True,
+        disable_timestamp=True,
+        formatters=[Formatter.BUILTIN],
+    )
+    assert isinstance(result, str)
+    assert "class UniqueItemsPerformance(BaseModel):" in result
+    assert result.endswith("    value_499: list[int] | None = None")
+
+
+@pytest.mark.perf
+@pytest.mark.benchmark
 def test_perf_unique_items_runtime_scalar_validation(
     unique_items_runtime_model: Any,
     unique_items_scalar_payload: list[int],
