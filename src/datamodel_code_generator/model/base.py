@@ -31,7 +31,11 @@ from datamodel_code_generator.imports import (
     IMPORT_UNION,
     Import,
 )
-from datamodel_code_generator.python_literal import _normalize_string, represent_python_value
+from datamodel_code_generator.python_literal import (
+    _make_internal_type_expression,
+    _normalize_string,
+    represent_python_value,
+)
 from datamodel_code_generator.reference import Reference, _BaseModel
 from datamodel_code_generator.types import (
     ANY,
@@ -57,6 +61,9 @@ _TYPING_IMPORT_NAMES: frozenset[str] = frozenset({
     IMPORT_UNION.import_,
 })
 _ADDITIONAL_PROPERTIES_REFERENCE_CLASSES_TEMPLATE_DATA_KEY = "additionalPropertiesReferenceClasses"
+_ADDITIONAL_PROPERTIES_TEMPLATE_DATA_KEY = "additionalProperties"
+_ADDITIONAL_PROPERTIES_TYPE_TEMPLATE_DATA_KEY = "additionalPropertiesType"
+_USE_TYPED_DICT_BACKPORT_TEMPLATE_DATA_KEY = "use_typeddict_backport"
 _MODULE_NAME_INVALID_CHAR_PATTERN = re.compile(r"[^0-9a-zA-Z_]")
 _MODULE_NAME_INVALID_CHAR_WITH_DOTS_PATTERN = re.compile(r"[^0-9a-zA-Z_.]")
 _MAX_MISSING_CUSTOM_TEMPLATE_SUBDIRS = 128
@@ -1641,6 +1648,67 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         return configured_root_model_type
 
     @staticmethod
+    def store_additional_properties_value(
+        extra_template_data: dict[str, Any],
+        *,
+        value: bool,
+        use_backport: bool = False,
+    ) -> None:
+        """Store an additional-properties constraint in model-owned metadata."""
+        extra_template_data[_ADDITIONAL_PROPERTIES_TEMPLATE_DATA_KEY] = value
+        if use_backport:
+            extra_template_data[_USE_TYPED_DICT_BACKPORT_TEMPLATE_DATA_KEY] = True
+
+    @staticmethod
+    def has_additional_properties_type(extra_template_data: dict[str, Any]) -> bool:
+        """Return whether model metadata contains a typed additional-properties entry."""
+        return _ADDITIONAL_PROPERTIES_TYPE_TEMPLATE_DATA_KEY in extra_template_data
+
+    @classmethod
+    def store_additional_properties_type(
+        cls,
+        extra_template_data: dict[str, Any],
+        type_hint: str,
+        reference_classes: set[str] | None = None,
+        *,
+        root_model_type: type[DataModel] | None = None,
+        use_backport: bool = False,
+    ) -> None:
+        """Store typed additional-properties metadata and its dependencies."""
+        expression = repr(str(type_hint)) if reference_classes else type_hint
+        extra_template_data[_ADDITIONAL_PROPERTIES_TYPE_TEMPLATE_DATA_KEY] = _make_internal_type_expression(
+            type_hint,
+            expression,
+        )
+        if use_backport:
+            extra_template_data[_USE_TYPED_DICT_BACKPORT_TEMPLATE_DATA_KEY] = True
+        if reference_classes is not None:
+            cls.store_additional_properties_reference_classes(
+                extra_template_data,
+                reference_classes,
+                root_model_type=root_model_type,
+            )
+
+    @classmethod
+    def store_additional_properties_reference_classes(
+        cls,
+        extra_template_data: dict[str, Any],
+        reference_classes: set[str],
+        *,
+        root_model_type: type[DataModel] | None = None,
+    ) -> None:
+        """Store dependency metadata for every configured output model shape."""
+        store_data_model_metadata = cls._store_additional_properties_reference_classes
+        store_data_model_metadata(extra_template_data, reference_classes)
+        if root_model_type is None or root_model_type is cls:
+            return
+        # Keep legacy custom output hooks working without exposing them to parsers.
+        store_root_model_metadata = root_model_type._store_additional_properties_reference_classes  # noqa: SLF001
+        if store_root_model_metadata is store_data_model_metadata:
+            return
+        store_root_model_metadata(extra_template_data, reference_classes)
+
+    @staticmethod
     def _store_additional_properties_reference_classes(
         extra_template_data: dict[str, Any],
         reference_classes: set[str],
@@ -1652,6 +1720,11 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     def _additional_properties_reference_classes(self) -> Collection[str]:
         """Return model-owned dependencies contributed by additional properties."""
         return self.extra_template_data.get(_ADDITIONAL_PROPERTIES_REFERENCE_CLASSES_TEMPLATE_DATA_KEY, ())
+
+    @property
+    def additional_properties_reference_classes(self) -> Collection[str]:
+        """Return dependencies contributed by model-owned additional properties."""
+        return self._additional_properties_reference_classes
 
     def __init__(  # noqa: PLR0913
         self,

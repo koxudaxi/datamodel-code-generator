@@ -66,6 +66,7 @@ from datamodel_code_generator.model.enum import (
     EnumMemberValue,
     StrEnum,
 )
+from datamodel_code_generator.model.output import OutputModelContext
 from datamodel_code_generator.model.runtime_validation import (
     UNIQUE_ITEMS_ARRAY_TAIL_PATH_STEP,
     UNIQUE_ITEMS_MAPPING_ADDITIONAL_VALUES_PATH_STEP,
@@ -82,7 +83,6 @@ from datamodel_code_generator.model.runtime_validation import (
     _is_internal_schema_runtime_validation,
     _make_internal_schema_runtime_validation,
 )
-from datamodel_code_generator.parser._output_context import OutputModelContext
 from datamodel_code_generator.parser.base import (
     _DEFERRED_INHERITED_CLASS_KEY,
     _DEFERRED_INHERITED_FIELD_KEY,
@@ -2561,7 +2561,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         """Rewrite TypedDict extra-item metadata to the matching model variant."""
         metadata = self.extra_template_data[reference_path]
         if (
-            not self._output_model_context._has_additional_properties_type(metadata)  # noqa: SLF001
+            not self._output_model_context.has_additional_properties_type(metadata)
             or not isinstance(obj.additionalProperties, JsonSchemaObject)
             or (additional_type := self._build_lightweight_type(obj.additionalProperties)) is None
         ):
@@ -2570,7 +2570,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         reference_classes = {
             data_type.reference.path for data_type in additional_type.all_data_types if data_type.reference
         }
-        self._output_model_context._store_additional_properties_type(  # noqa: SLF001
+        self._output_model_context.store_additional_properties_type(
             metadata,
             additional_type.type_hint,
             reference_classes,
@@ -3074,14 +3074,21 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if isinstance(obj.additionalProperties, bool):
             if not self.use_closed_typed_dict:
                 return
-            self.extra_template_data[path]["additionalProperties"] = obj.additionalProperties
-            if obj.additionalProperties is False and not self.target_python_version.has_typed_dict_closed:
-                self.extra_template_data[path]["use_typeddict_backport"] = True
+            self._output_model_context.store_additional_properties_value(
+                self.extra_template_data[path],
+                value=obj.additionalProperties,
+                use_backport=(
+                    obj.additionalProperties is False and not self.target_python_version.has_typed_dict_closed
+                ),
+            )
         elif isinstance(obj.additionalProperties, JsonSchemaObject):
             # A schema-valued additionalProperties still means extra keys are accepted.
             # Keep typed extra validation out of this bugfix; PEP 728 TypedDict uses
-            # additionalPropertiesType below when explicitly enabled.
-            self.extra_template_data[path]["additionalProperties"] = True
+            # output-owned type metadata below when explicitly enabled.
+            self._output_model_context.store_additional_properties_value(
+                self.extra_template_data[path],
+                value=True,
+            )
             if not self.use_closed_typed_dict:
                 return
             additional_props_type = self._build_lightweight_type(obj.additionalProperties)
@@ -3095,13 +3102,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     if self._output_model_context.requires_additional_properties_reference_classes
                     else None
                 )
-                self._output_model_context._store_additional_properties_type(  # noqa: SLF001
+                self._output_model_context.store_additional_properties_type(
                     self.extra_template_data[path],
                     additional_props_type.type_hint,
                     reference_classes,
+                    use_backport=not self.target_python_version.has_typed_dict_closed,
                 )
-                if not self.target_python_version.has_typed_dict_closed:  # pragma: no branch
-                    self.extra_template_data[path]["use_typeddict_backport"] = True
 
     def set_unevaluated_properties(self, path: str, obj: JsonSchemaObject) -> None:
         """Set unevaluated properties flag in extra template data."""

@@ -9126,6 +9126,31 @@ def test_main_typed_dict_extra_items(output_file: Path) -> None:
     )
 
 
+@pytest.mark.parametrize(("output_model_type", "expected_name"), BACKEND_GOLDEN_CASES)
+def test_main_additional_properties_output_context(
+    output_file: Path,
+    output_model_type: str,
+    expected_name: str,
+) -> None:
+    """Preserve typed additional-properties output across every backend."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "typed_dict_extra_items.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=f"output_context/typed_extra_{expected_name}.py",
+        extra_args=[
+            *BACKEND_GOLDEN_TARGET_ARGS,
+            "--formatters",
+            "builtin",
+            "--output-model-type",
+            output_model_type,
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+    )
+
+
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "22",
     reason="Installed black doesn't support Python version 3.10",

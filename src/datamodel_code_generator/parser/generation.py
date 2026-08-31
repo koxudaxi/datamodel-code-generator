@@ -484,7 +484,7 @@ class GenerationIndex:
             if (reference := (fact := facts.data_type_facts[data_type_id]).reference) is not None
             if include_dict_key_references or fact.role != "dict_key"
         )
-        if len(additional_properties_references := model._additional_properties_reference_classes):  # noqa: SLF001
+        if len(additional_properties_references := model.additional_properties_reference_classes):
             reference_classes = reference_classes.union(additional_properties_references)
         self._reference_classes_cache[model_id] = reference_classes
         return reference_classes
@@ -506,7 +506,7 @@ class GenerationIndex:
                 for data_type_id in facts.data_types_by_model.get(model_id, ())
                 if (reference := facts.data_type_facts[data_type_id].reference) is not None
             )
-        if len(additional_properties_references := model._additional_properties_reference_classes):  # noqa: SLF001
+        if len(additional_properties_references := model.additional_properties_reference_classes):
             return reference_classes.union(additional_properties_references)
         return reference_classes
 
