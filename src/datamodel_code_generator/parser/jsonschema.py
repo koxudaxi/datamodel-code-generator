@@ -1165,7 +1165,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         )
 
         # Normalize external ref mapping paths to absolute for reliable matching
-        raw_mapping = self.config.external_ref_mapping
+        raw_mapping = self._source_context.external_ref_mapping
         self._external_ref_mapping: dict[str, str] = {}
         if raw_mapping:
             for file_path, python_package in raw_mapping.items():
