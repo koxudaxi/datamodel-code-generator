@@ -435,6 +435,19 @@ class _ConstructorFieldPolicy(NamedTuple):
 
 
 @dataclass(frozen=True, slots=True)
+class ParserRunContext:
+    """Immutable parser settings scoped to one facade-managed run."""
+
+    diagnostic_source_path: Path | None = None
+    formatter_cwd: Path | None = None
+    preserve_circular_root_models: bool = False
+    suppress_parse_warnings: bool = False
+
+
+_DEFAULT_PARSER_RUN_CONTEXT = ParserRunContext()
+
+
+@dataclass(frozen=True, slots=True)
 class _ReuseOptimizationContext:
     """Parser-owned semantic constraints for model reuse optimizations."""
 
@@ -1973,8 +1986,80 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
     _config_class_name: ClassVar[str] = "ParserConfig"
     _cache_local_sources_during_parse: ClassVar[bool] = False
     _cache_parsed_sources_from_path: ClassVar[bool] = False
-    _formatter_cwd: Path | None = None
     _http_fetch_session: _HTTPFetchSession | None = None
+
+    @property
+    def run_context(self) -> ParserRunContext:
+        """Return the immutable settings for the current facade-managed run."""
+        return self._run_context or _DEFAULT_PARSER_RUN_CONTEXT
+
+    def configure_run_context(
+        self,
+        *,
+        diagnostic_source_path: Path | None = None,
+        formatter_cwd: Path | None = None,
+        preserve_circular_root_models: bool = False,
+        suppress_parse_warnings: bool = False,
+    ) -> None:
+        """Configure parser run state without exposing implementation attributes."""
+        if (
+            diagnostic_source_path is None
+            and formatter_cwd is None
+            and not preserve_circular_root_models
+            and not suppress_parse_warnings
+        ):
+            self._run_context = None
+            return
+        self._run_context = ParserRunContext(
+            diagnostic_source_path=diagnostic_source_path,
+            formatter_cwd=formatter_cwd,
+            preserve_circular_root_models=preserve_circular_root_models,
+            suppress_parse_warnings=suppress_parse_warnings,
+        )
+
+    def _configure_legacy_run_context_attribute(self, attribute: str, value: object) -> None:
+        """Keep historical private state writes as a parser-local compatibility facade."""
+        context = self.run_context
+        diagnostic_source_path = context.diagnostic_source_path
+        formatter_cwd = context.formatter_cwd
+        preserve_circular_root_models = context.preserve_circular_root_models
+        match attribute:
+            case "diagnostic_source_path":
+                diagnostic_source_path = cast("Path | None", value)
+            case "formatter_cwd":
+                formatter_cwd = cast("Path | None", value)
+            case _:
+                preserve_circular_root_models = cast("bool", value)
+        self.configure_run_context(
+            diagnostic_source_path=diagnostic_source_path,
+            formatter_cwd=formatter_cwd,
+            preserve_circular_root_models=preserve_circular_root_models,
+            suppress_parse_warnings=context.suppress_parse_warnings,
+        )
+
+    @property
+    def _diagnostic_source_path(self) -> Path | None:
+        return self.run_context.diagnostic_source_path
+
+    @_diagnostic_source_path.setter
+    def _diagnostic_source_path(self, value: Path | None) -> None:
+        self._configure_legacy_run_context_attribute("diagnostic_source_path", value)
+
+    @property
+    def _formatter_cwd(self) -> Path | None:
+        return self.run_context.formatter_cwd
+
+    @_formatter_cwd.setter
+    def _formatter_cwd(self, value: Path | None) -> None:
+        self._configure_legacy_run_context_attribute("formatter_cwd", value)
+
+    @property
+    def _preserve_circular_root_models(self) -> bool:
+        return self.run_context.preserve_circular_root_models
+
+    @_preserve_circular_root_models.setter
+    def _preserve_circular_root_models(self, value: bool) -> None:
+        self._configure_legacy_run_context_attribute("preserve_circular_root_models", value)
 
     @classmethod
     def _get_config_class(cls) -> type[ParserConfig]:
@@ -2166,7 +2251,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
         self.remote_text_cache: DefaultPutDict[str, str] = config.remote_text_cache or DefaultPutDict()
         self.current_source_path: Path | None = None
-        self._diagnostic_source_path: Path | None = None
+        self._run_context: ParserRunContext | None = None
         self.use_title_as_name: bool = config.use_title_as_name
         self.infer_union_variant_names: bool = config.infer_union_variant_names
         self.use_operation_id_as_name: bool = config.use_operation_id_as_name
@@ -2522,8 +2607,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         """Return source context without changing parser path semantics."""
         if source_path is not None and source_path.parts:
             return source_path.as_posix()
-        if self._diagnostic_source_path is not None:
-            return self._diagnostic_source_path.as_posix()
+        if (diagnostic_source_path := self.run_context.diagnostic_source_path) is not None:
+            return diagnostic_source_path.as_posix()
         return "<input>"
 
     def _append_additional_imports(self, additional_imports: list[str] | None) -> None:
@@ -5084,7 +5169,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             builtin_format_line_length=self.builtin_format_line_length,
             use_type_checking_imports=effective_use_type_checking_imports,
             defer_formatting=self.defer_formatting,
-            formatter_cwd=self._formatter_cwd,
+            formatter_cwd=self.run_context.formatter_cwd,
         )
 
     def _find_invalid_inferred_modules(  # noqa: PLR6301
@@ -5901,12 +5986,24 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.model_resolver.references.clear()
         self._reset_local_source_cache()
 
+    def dispose(self) -> None:
+        """Release parser-owned resources after a facade-managed run."""
+        self._dispose()
+
     def _reset_local_source_cache(self) -> None:
         self._cache_local_sources = False
         self._local_source_cache = None
 
     def _report_parse_diagnostics(self) -> None:
         """Report diagnostics collected while parsing the input schema."""
+
+    def _run_with_suppressed_warnings(self, callback: Callable[[], None]) -> None:  # noqa: PLR6301
+        """Invoke one retry hook without repeating user-visible warnings."""
+        import warnings  # noqa: PLC0415
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            callback()
 
     def parse(  # noqa: PLR0913, PLR0917
         self,
@@ -5949,11 +6046,19 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self._set_typed_extra_annotation_mode(
             use_deferred_annotations=self._uses_deferred_annotations(with_import, disable_future_imports)
         )
+        run_context = self._run_context
+        suppress_parse_warnings = run_context is not None and run_context.suppress_parse_warnings
         try:
-            self.parse_raw()
+            if suppress_parse_warnings:
+                self._run_with_suppressed_warnings(self.parse_raw)
+            else:
+                self.parse_raw()
         finally:
             self._close_http_fetch_session()
-        self._report_parse_diagnostics()
+        if suppress_parse_warnings:
+            self._run_with_suppressed_warnings(self._report_parse_diagnostics)
+        else:
+            self._report_parse_diagnostics()
 
         config = self._prepare_parse_config(
             with_import,
@@ -6059,7 +6164,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         module_to_import: dict[ModulePath, Imports] = {}
         contexts: list[ModuleContext] = []
 
-        if self.collapse_root_models and getattr(self, "_preserve_circular_root_models", False):
+        if self.collapse_root_models and self.run_context.preserve_circular_root_models:
             self.__set_circular_root_model_paths(module_models)
 
         for module_, models in module_models:
