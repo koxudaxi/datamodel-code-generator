@@ -13,10 +13,19 @@ from typing import Final, Literal, TypeAlias
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE_ROOT = ROOT / "src" / "datamodel_code_generator"
 
-Layer: TypeAlias = Literal["parser", "config", "input-model", "shared"]
+Layer: TypeAlias = Literal[
+    "entrypoint",
+    "parser",
+    "config",
+    "input-model",
+    "reference",
+    "output-model",
+    "shared",
+]
 
 CONCRETE_BACKEND_ROOTS: Final = frozenset({
     "dataclass",
+    "field_name",
     "msgspec",
     "pydantic_base",
     "pydantic_v2",
@@ -26,6 +35,9 @@ PARSER_BACKEND_ATTRIBUTES: Final = frozenset({
     "SCHEMA_RUNTIME_VALIDATION_HELPERS_TEMPLATE_FILE_PATH",
     "is_pydantic_extra_field",
 })
+REFERENCE_BACKEND_DEFINITION_MARKERS: Final = ("dataclass", "msgspec", "pydantic", "typeddict")
+REFERENCE_EXTERNAL_BACKEND_ROOTS: Final = frozenset({"msgspec"})
+DYNAMIC_ATTRIBUTE_MIN_ARGS: Final = 2
 _BACKEND_MODULE_PART_COUNT: Final = 3
 
 
@@ -135,6 +147,30 @@ DEFAULT_ALLOWLIST: Final[dict[BoundaryKey, AllowlistEntry]] = {
         "backend-import",
         "datamodel_code_generator.model.typed_dict",
     ): AllowlistEntry("Keep the lazy legacy parser.jsonschema.TypedDictModel compatibility export"),
+    BoundaryKey(
+        "src/datamodel_code_generator/reference.py",
+        "_default_field_name_resolver_class",
+        "reference-backend-import",
+        "datamodel_code_generator.model.field_name.PydanticFieldNameResolver",
+    ): AllowlistEntry("Keep the lazy legacy default Pydantic field-name resolver lookup"),
+    BoundaryKey(
+        "src/datamodel_code_generator/reference.py",
+        "_default_field_name_resolver_class",
+        "reference-backend-import",
+        "datamodel_code_generator.model.field_name.MsgspecFieldNameResolver",
+    ): AllowlistEntry("Keep the lazy legacy default msgspec field-name resolver lookup"),
+    BoundaryKey(
+        "src/datamodel_code_generator/reference.py",
+        "__getattr__",
+        "reference-backend-import",
+        "datamodel_code_generator.model.field_name.PydanticFieldNameResolver",
+    ): AllowlistEntry("Keep the lazy legacy reference.PydanticFieldNameResolver compatibility export"),
+    BoundaryKey(
+        "src/datamodel_code_generator/reference.py",
+        "__getattr__",
+        "reference-backend-import",
+        "datamodel_code_generator.model.field_name.MsgspecFieldNameResolver",
+    ): AllowlistEntry("Keep the lazy legacy reference.MsgspecFieldNameResolver compatibility export"),
 }
 
 
@@ -150,9 +186,12 @@ def _module_name(path: Path, layer: Layer) -> str:
         relative = path.resolve().relative_to(SOURCE_ROOT)
     except ValueError:
         return {
+            "entrypoint": "datamodel_code_generator.entrypoint_fixture",
             "parser": "datamodel_code_generator.parser.fixture",
             "config": "datamodel_code_generator.config_fixture",
             "input-model": "datamodel_code_generator.input_model_fixture",
+            "reference": "datamodel_code_generator.reference_fixture",
+            "output-model": "datamodel_code_generator.model.fixture",
             "shared": "datamodel_code_generator.shared_fixture",
         }[layer]
 
@@ -180,6 +219,11 @@ def _concrete_backend_module(target: str) -> str | None:
     return ".".join((*prefix, parts[2]))
 
 
+def _is_reference_backend_import(target: str) -> bool:
+    """Return whether a reference import owns output-framework policy."""
+    return bool(_concrete_backend_module(target) or target.partition(".")[0] in REFERENCE_EXTERNAL_BACKEND_ROOTS)
+
+
 def _attribute_chain(node: ast.AST) -> tuple[str, ...]:
     parts: list[str] = []
     current = node
@@ -204,6 +248,7 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
         self.qualnames: list[str] = []
         self.violations: list[Violation] = []
         self.backend_aliases: dict[str, str] = {}
+        self.package_root_aliases: set[str] = set()
         self.data_model_type_aliases = {"DataModelType"}
         self.string_constants = self._collect_string_constants(tree)
 
@@ -225,25 +270,36 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
 
     def visit_ClassDef(self, node: ast.ClassDef) -> None:
         """Track class context for stable allowlist entries."""
-        self.qualnames.append(node.name)
-        self.generic_visit(node)
-        self.qualnames.pop()
+        self._visit_named_scope(node)
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
         """Track function context for stable allowlist entries."""
-        self.qualnames.append(node.name)
-        self.generic_visit(node)
-        self.qualnames.pop()
+        self._visit_named_scope(node)
 
     def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
         """Track async function context for stable allowlist entries."""
+        self._visit_named_scope(node)
+
+    def _visit_named_scope(self, node: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef) -> None:
+        """Track one scope and reject output-specific definitions in reference code."""
         self.qualnames.append(node.name)
+        if self.layer == "reference" and any(
+            marker in node.name.replace("_", "").casefold() for marker in REFERENCE_BACKEND_DEFINITION_MARKERS
+        ):
+            self._add(
+                node,
+                "reference-backend-definition",
+                node.name,
+                "reference code must not define concrete output-backend policy; move it to the output model",
+            )
         self.generic_visit(node)
         self.qualnames.pop()
 
     def visit_Import(self, node: ast.Import) -> None:
         """Check direct absolute backend and private-parser imports."""
         for alias in node.names:
+            if alias.name == "datamodel_code_generator":
+                self.package_root_aliases.add(alias.asname or alias.name)
             self._record_import_alias(alias.asname or alias.name.partition(".")[0], alias.name)
             self._check_import(node, alias.name)
 
@@ -252,6 +308,13 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
         module = _normalize_import(node.module, node.level, self.current_module, self.path)
         for alias in node.names:
             target = f"{module}.{alias.name}" if module else alias.name
+            if self.layer == "parser" and module == "datamodel_code_generator" and alias.name.startswith("_"):
+                self._add(
+                    node,
+                    "parser-root-private-import",
+                    target,
+                    "parser code must import private helpers from their neutral module, not the package facade",
+                )
             if (
                 module in {"datamodel_code_generator", "datamodel_code_generator.enums"}
                 and alias.name == "DataModelType"
@@ -262,24 +325,40 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
                 self._check_import(node, target)
                 continue
             self._record_import_alias(alias.asname or alias.name, module)
-            self._check_import(node, module)
+            self._check_import(node, target if self.layer == "reference" else module)
 
     def visit_Call(self, node: ast.Call) -> None:
         """Check dynamic imports, semantic getattr, and backend module identity helpers."""
         chain = _attribute_chain(node.func)
         dynamic_target = None
         match self.layer, chain[-1:], node.args:
-            case ("parser" | "config", ("__import__" | "import_module",), [first_argument, *_]):
+            case ("parser" | "config" | "reference", ("__import__" | "import_module",), [first_argument, *_]):
                 dynamic_target = self._resolved_string(first_argument)
             case _:
                 pass
-        if dynamic_target and _concrete_backend_module(dynamic_target):
-            self._add(
-                node,
-                "backend-dynamic-import",
-                dynamic_target,
-                "parser/config layers must not dynamically import output backends; declare a neutral capability",
-            )
+        if dynamic_target and (
+            _is_reference_backend_import(dynamic_target)
+            if self.layer == "reference"
+            else _concrete_backend_module(dynamic_target)
+        ):
+            match self.layer:
+                case "reference":
+                    self._add(
+                        node,
+                        "reference-backend-import",
+                        dynamic_target,
+                        "reference code must not import concrete output backends except bounded compatibility exports",
+                    )
+                case _:
+                    self._add(
+                        node,
+                        "backend-dynamic-import",
+                        dynamic_target,
+                        "parser/config layers must not dynamically import output backends; "
+                        "declare a neutral capability",
+                    )
+
+        self._check_entrypoint_private_call(node, chain)
 
         if (
             chain
@@ -342,13 +421,31 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
 
     def visit_Attribute(self, node: ast.Attribute) -> None:
         """Check backend-specific semantic attributes and output policy references."""
-        if self.layer == "parser" and node.attr in PARSER_BACKEND_ATTRIBUTES:
+        if self.layer == "entrypoint" and node.attr.startswith("_") and self._is_parser_instance(node.value):
             self._add(
                 node,
-                "backend-semantic-inspection",
+                "entrypoint-parser-private-access",
                 node.attr,
-                "parser code must query a neutral DataModel or DataModelFieldBase capability",
+                "entrypoint code must use the Parser public lifecycle and run-context API",
             )
+        elif self.layer == "parser":
+            match node.value:
+                case ast.Name(id=root_alias) if root_alias in self.package_root_aliases and node.attr.startswith("_"):
+                    self._add(
+                        node,
+                        "parser-root-private-import",
+                        f"datamodel_code_generator.{node.attr}",
+                        "parser code must import private helpers from their neutral module, not the package facade",
+                    )
+                case _ if node.attr in PARSER_BACKEND_ATTRIBUTES:
+                    self._add(
+                        node,
+                        "backend-semantic-inspection",
+                        node.attr,
+                        "parser code must query a neutral DataModel or DataModelFieldBase capability",
+                    )
+                case _:
+                    pass
         elif self.layer == "config":
             chain = _attribute_chain(node)
             if chain and (backend := self.backend_aliases.get(chain[0])):
@@ -370,11 +467,47 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
                 )
         self.generic_visit(node)
 
+    @staticmethod
+    def _is_parser_instance(node: ast.AST) -> bool:
+        """Recognize local Parser instances without following arbitrary object graphs."""
+        match node:
+            case ast.Name(id=name) | ast.Attribute(attr=name):
+                return name == "parser" or name.endswith(("_parser", "_parser_instance"))
+        return False
+
+    def _check_entrypoint_private_call(self, node: ast.Call, chain: tuple[str, ...]) -> None:
+        """Reject indirect private access on a Parser instance from the entrypoint."""
+        if self.layer != "entrypoint" or chain[-1:] not in {
+            ("getattr",),
+            ("hasattr",),
+            ("setattr",),
+            ("delattr",),
+        }:
+            return
+        if len(node.args) < DYNAMIC_ATTRIBUTE_MIN_ARGS or not self._is_parser_instance(node.args[0]):
+            return
+        if (attribute := self._resolved_string(node.args[1])) is None or not attribute.startswith("_"):
+            return
+        self._add(
+            node,
+            "entrypoint-parser-private-access",
+            attribute,
+            "entrypoint code must use the Parser public lifecycle and run-context API",
+        )
+
     def _record_import_alias(self, alias: str, target: str) -> None:
         if backend := _concrete_backend_module(target):
             self.backend_aliases[alias] = backend
 
     def _check_import(self, node: ast.AST, target: str) -> None:
+        if self.layer == "reference" and _is_reference_backend_import(target):
+            self._add(
+                node,
+                "reference-backend-import",
+                target,
+                "reference code must not import concrete output backends except bounded compatibility exports",
+            )
+            return
         if self.layer == "parser" and _concrete_backend_module(target):
             self._add(
                 node,
@@ -396,7 +529,7 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
                 node,
                 "private-parser-import",
                 target,
-                "shared code outside parser must move reusable helpers to a neutral package module",
+                "code outside parser must move reusable helpers to a neutral package module",
             )
         elif self.layer == "config" and (
             target == "datamodel_code_generator.parser" or target.startswith("datamodel_code_generator.parser.")
@@ -432,13 +565,19 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
 
 def _classify_source_path(path: Path) -> Layer:
     relative = path.resolve().relative_to(SOURCE_ROOT)
-    if relative.parts[0] == "parser":
-        return "parser"
-    if relative == Path("config.py"):
-        return "config"
-    if relative == Path("input_model.py"):
-        return "input-model"
-    return "shared"
+    match relative.parts:
+        case ("__init__.py",):
+            return "entrypoint"
+        case ("parser", *_):
+            return "parser"
+        case ("config.py" | "input_model.py" as filename,):
+            return "config" if filename == "config.py" else "input-model"
+        case ("reference.py",):
+            return "reference"
+        case ("model", *_):
+            return "output-model"
+        case _:
+            return "shared"
 
 
 def iter_python_files(paths: list[Path]) -> list[Path]:
