@@ -107,6 +107,7 @@ class _GenerateParseAbort(BaseException):
 @pytest.mark.allow_direct_assert
 def test_collapse_root_models_retry_reraises_second_recursion_error(mocker: MockerFixture) -> None:
     """Retry root-model collapsing exactly once and expose the second recursion error."""
+    assert datamodel_code_generator._CollapseRootModelsRecursionError.__module__ == "datamodel_code_generator"
     retry_error = RecursionError("retry parse recursion")
 
     def raise_collapse_recursion(*_: Any, **__: Any) -> None:

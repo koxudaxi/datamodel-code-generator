@@ -26,7 +26,11 @@ from typing import (
 from urllib.parse import ParseResult
 
 from datamodel_code_generator._process_state import PROCESS_STATE_LOCK
-from datamodel_code_generator._shared_types import DefaultPutDict, LiteralType
+from datamodel_code_generator._shared_types import (
+    DefaultPutDict,
+    LiteralType,
+    _CollapseRootModelsRecursionError,
+)
 from datamodel_code_generator._source import (
     _clear_parser_source_data_cache as _clear_parser_source_data_cache,
 )
@@ -128,6 +132,9 @@ if TYPE_CHECKING:
     from datamodel_code_generator.remote_lock import RemoteReferenceLock
 
 T = TypeVar("T")
+
+# Preserve the historical private facade identity for repr and pickling compatibility.
+_CollapseRootModelsRecursionError.__module__ = __name__
 
 YamlScalar: TypeAlias = str | int | float | bool | None
 YamlValue = TypeAliasType("YamlValue", "dict[str, YamlValue] | list[YamlValue] | YamlScalar")
@@ -393,10 +400,6 @@ class Error(Exception):
     def __str__(self) -> str:
         """Return string representation."""
         return self.message
-
-
-class _CollapseRootModelsRecursionError(RecursionError):
-    """Signal that collapsing root models needs its circular-reference fallback."""
 
 
 def _normalized_absolute_path(path: Path, *, resolve_aliases: bool = False) -> Path:

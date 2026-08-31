@@ -15,6 +15,10 @@ TV = TypeVar("TV")
 _LEGACY_MODULE = "datamodel_code_generator.parser"
 
 
+class _CollapseRootModelsRecursionError(RecursionError):
+    """Signal that collapsing root models needs its circular-reference fallback."""
+
+
 class LiteralType(Enum):
     """Options for handling enum fields as literals."""
 
