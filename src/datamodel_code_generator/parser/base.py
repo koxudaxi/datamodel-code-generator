@@ -3425,7 +3425,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
                     # set copied data_type
                     copied_data_type = root_type_field.data_type.model_copy()
-                    if isinstance(data_type.parent, self.data_model_field_type):
+                    replacement_context = None
+                    if isinstance(field_ := data_type.parent, self.data_model_field_type):
                         # for field
                         # override empty field by root-type field
                         model_field.extras = {
@@ -3439,9 +3440,14 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                                 root_type_field.constraints, model_field.constraints
                             )
 
-                        self.generation_store.replace_field_type(data_type.parent, copied_data_type)
+                        replacement_context = generation_store._replace_data_type_and_detach_data_type_ref(  # noqa: SLF001
+                            data_type,
+                            copied_data_type,
+                            owner=field_,
+                            replacement_kind="field",
+                        )
 
-                    elif isinstance(data_type.parent, DataType) and data_type.parent.is_list:
+                    elif isinstance(parent_data_type := data_type.parent, DataType) and parent_data_type.is_list:
                         if self.field_constraints:
                             model_field.constraints = ConstraintsBase.merge_constraints(
                                 root_type_field.constraints, model_field.constraints
@@ -3466,33 +3472,43 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                                     mapping,
                                 ):
                                     copied_data_type.discriminator = field_name
-                        assert isinstance(data_type.parent, DataType)
-                        self.generation_store.replace_nested_data_type(data_type.parent, data_type, copied_data_type)
+                        replacement_context = generation_store._replace_data_type_and_detach_data_type_ref(  # noqa: SLF001
+                            data_type,
+                            copied_data_type,
+                            owner=parent_data_type,
+                            replacement_kind="nested",
+                        )
 
-                    elif isinstance(data_type.parent, DataType):
+                    elif isinstance(parent_data_type := data_type.parent, DataType):
                         # for data_type
-                        self.generation_store.replace_nested_data_type(data_type.parent, data_type, copied_data_type)
+                        replacement_context = generation_store._replace_data_type_and_detach_data_type_ref(  # noqa: SLF001
+                            data_type,
+                            copied_data_type,
+                            owner=parent_data_type,
+                            replacement_kind="nested",
+                        )
                     else:  # pragma: no cover
                         continue
 
-                    for d in copied_data_type.all_data_types:
-                        _register_data_type_import(
-                            d,
-                            model,
-                            imports,
-                            scoped_model_resolver,
-                            model_path_to_module_name,
-                        )
+                    if replacement_context is None:  # pragma: no cover
+                        continue
+                    with replacement_context:
+                        for d in copied_data_type.all_data_types:
+                            _register_data_type_import(
+                                d,
+                                model,
+                                imports,
+                                scoped_model_resolver,
+                                model_path_to_module_name,
+                            )
 
-                    original_field = get_most_of_parent(data_type, DataModelFieldBase)
-                    if original_field:  # pragma: no cover
-                        # TODO: Improve detection of reference type
-                        # Use list instead of set because Import is not hashable
-                        excluded_imports = [IMPORT_OPTIONAL, IMPORT_UNION]
-                        field_imports = [i for i in original_field.imports if i not in excluded_imports]
-                        imports.append(field_imports)
-
-                    generation_store.detach_data_type_ref(data_type)
+                        original_field = get_most_of_parent(data_type, DataModelFieldBase)
+                        if original_field:  # pragma: no cover
+                            # TODO: Improve detection of reference type
+                            # Use list instead of set because Import is not hashable
+                            excluded_imports = [IMPORT_OPTIONAL, IMPORT_UNION]
+                            field_imports = [i for i in original_field.imports if i not in excluded_imports]
+                            imports.append(field_imports)
 
                     assert isinstance(root_type_model, DataModel)
 

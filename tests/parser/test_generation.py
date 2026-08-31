@@ -1182,6 +1182,49 @@ def test_generation_store_nested_data_type_mutations_clear_cached_imports_contra
     })
 
 
+def test_generation_store_atomic_replace_invalidates_shared_base_owner_cache() -> None:
+    """Atomic replacement keeps cache invalidation for a shared field/base DataType."""
+
+    class CustomDataModelField(DataModelField):
+        pass
+
+    old_reference = Reference(path="Old", original_name="Old", name="Old")
+    shared_data_type = BaseClassDataType(reference=old_reference)
+    field = CustomDataModelField(data_type=shared_data_type)
+    field_owner = _base_model("FieldOwner", fields=[field])
+    base_owner = _base_model("BaseOwner")
+    base_owner.base_classes.append(shared_data_type)
+    store = GenerationStore()
+    store.register_model(field_owner)
+    store.register_model(base_owner)
+
+    base_owner.get_dedup_key()
+    assert base_owner._dedup_key_cache
+
+    replacement = DataType(type="int")
+    with store._replace_data_type_and_detach_data_type_ref(
+        shared_data_type,
+        replacement,
+        owner=field,
+        replacement_kind="field",
+    ):
+        pass
+
+    assert {
+        "field_replaced": field.data_type is replacement,
+        "old_parent": shared_data_type.parent,
+        "old_reference": shared_data_type.reference,
+        "old_children": old_reference.children,
+        "base_cache": base_owner._dedup_key_cache,
+    } == snapshot({
+        "field_replaced": True,
+        "old_parent": None,
+        "old_reference": None,
+        "old_children": [],
+        "base_cache": {},
+    })
+
+
 def test_generation_store_reference_detach_helpers_clear_cached_imports_contract() -> None:
     """Bulk reference helpers must clear the cache through their delegated mutations."""
     reference = Reference(path="Referenced", original_name="Referenced", name="Referenced")

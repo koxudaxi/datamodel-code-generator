@@ -801,6 +801,30 @@ class GenerationStore:  # noqa: PLR0904
             (data_type for data_type in (*parent_data_type.data_types, new_data_type) if id(data_type) != old_id),
         )
 
+    @contextmanager
+    def _replace_data_type_and_detach_data_type_ref(
+        self,
+        data_type: DataType,
+        new_data_type: DataType,
+        *,
+        owner: Any,
+        replacement_kind: Literal["field", "nested"],
+    ) -> Generator[None, None, None]:
+        """Replace a data type, then detach its old reference after surrounding work."""
+        facts = self._facts if not self._dirty else self.current_facts()
+        has_base_owner_alias = id(data_type) in facts.base_owner_model_ids_by_object
+        match replacement_kind:
+            case "field":
+                self.replace_field_type(owner, new_data_type)
+            case "nested":  # pragma: no branch
+                self.replace_nested_data_type(owner, data_type, new_data_type)
+        yield
+        if data_type.parent is not None or has_base_owner_alias:
+            self.detach_data_type_ref(data_type)
+            return
+        self._replace_data_type_reference(data_type, None)
+        self._invalidate_after_mutation()
+
     def set_nested_data_types(self, data_type: DataType, nested_data_types: Iterable[DataType]) -> None:
         """Replace nested data types and invalidate derived facts."""
         cache_owners = self._cache_owners_for_data_type(data_type)
