@@ -1562,6 +1562,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     REQUIRES_RUNTIME_IMPORTS_WITH_RUFF_CHECK: ClassVar[bool] = False
     REQUIRES_EXPLICIT_DEFERRED_ANNOTATIONS_FOR_FORWARD_REFS: ClassVar[bool] = False
     SUPPORTS_SCHEMA_RUNTIME_VALIDATION: ClassVar[bool] = False
+    SCHEMA_RUNTIME_VALIDATION_ROOT_MODEL: ClassVar[Callable[[], type[DataModel]] | None] = None
     DOCSTRING_INDENT: ClassVar[int] = 4
     FIELD_DOCSTRING_INDENT: ClassVar[int] = 4
     FORMAT_DESCRIPTION_AS_DOCSTRING: ClassVar[bool] = True

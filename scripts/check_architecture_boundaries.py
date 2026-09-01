@@ -135,12 +135,6 @@ DEFAULT_ALLOWLIST: Final[dict[BoundaryKey, AllowlistEntry]] = {
         "backend-import",
         "datamodel_code_generator.model.typed_dict",
     ): AllowlistEntry("Keep the lazy legacy parser.jsonschema.TypedDictModel compatibility export"),
-    BoundaryKey(
-        "src/datamodel_code_generator/parser/jsonschema.py",
-        "JsonSchemaParser._get_runtime_validation_root_model_type",
-        "backend-import",
-        "datamodel_code_generator.model.pydantic_v2.root_model",
-    ): AllowlistEntry("Keep the lazy executable RootModel fallback for runtime validators on alias outputs"),
 }
 
 
