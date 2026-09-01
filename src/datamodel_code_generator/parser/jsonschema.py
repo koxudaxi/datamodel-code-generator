@@ -846,7 +846,7 @@ class JsonSchemaObject(BaseModel):
     dynamicAnchor: Optional[str] = Field(default=None, alias="$dynamicAnchor")  # noqa: N815, UP045
     nullable: Optional[bool] = None  # noqa: UP045
     x_enum_varnames: list[str] = Field(default_factory=list, alias="x-enum-varnames")
-    x_enum_descriptions: list[str] = Field(default_factory=list, alias="x-enum-descriptions")
+    x_enum_descriptions: list[str | None] = Field(default_factory=list, alias="x-enum-descriptions")
     x_enum_names: list[str] = Field(default_factory=list, alias="x-enumNames")
     x_enum_field_as_literal: Optional[bool] = Field(default=None, alias="x-enum-field-as-literal")  # noqa: UP045
     description: Optional[str] = None  # noqa: UP045

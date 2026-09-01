@@ -9192,6 +9192,18 @@ def test_main_openapi_x_enum_names(output_file: Path) -> None:
     )
 
 
+def test_main_openapi_x_enum_descriptions_null(output_file: Path) -> None:
+    """Treat null x-enum-descriptions entries as missing descriptions."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "x_enum_descriptions_null.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="x_enum_descriptions_null.py",
+        extra_args=["--use-field-description"],
+    )
+
+
 def test_main_enum_builtin_conflict(output_file: Path) -> None:
     """Test enum member names that conflict with str methods get underscore suffix."""
     with freeze_time(TIMESTAMP):
