@@ -41211,7 +41211,7 @@ paths:
 - Output models inject reserved-field and generated-import conflict handling through `FIELD_NAME_RESOLVER_CLASS`;
   `ModelResolver` owns only neutral normalization and lazily creates the selected resolver.
   Legacy resolver imports and default `ModelResolver` policies resolve those output-owned providers lazily.
-- Reusable graph, detection, enum, and cache helpers belong in neutral package modules. Code outside `parser/` must not
+- Reusable graph, detection, enum, cache, and parser retry-signal helpers belong in neutral package modules. Code outside `parser/` must not
   import private `parser._*` helpers.
 - Input-model conversion reads output-family compatibility from the output selection registry. It must not maintain a
   second `DataModelType`-to-backend mapping.

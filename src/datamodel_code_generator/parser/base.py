@@ -51,7 +51,6 @@ from datamodel_code_generator import (
     ModuleSplitMode,
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
-    _CollapseRootModelsRecursionError,
 )
 from datamodel_code_generator._format_types import Formatter, PythonVersion
 from datamodel_code_generator._graph import stable_toposort
@@ -59,7 +58,11 @@ from datamodel_code_generator._internal_utils import (
     HashableComparable,
     get_most_of_parent,
 )
-from datamodel_code_generator._shared_types import DefaultPutDict, LiteralType
+from datamodel_code_generator._shared_types import (
+    DefaultPutDict,
+    LiteralType,
+    _CollapseRootModelsRecursionError,
+)
 from datamodel_code_generator._source import (
     YamlValue,
     _is_parsed_source_cache_enabled,
