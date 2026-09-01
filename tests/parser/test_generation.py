@@ -134,17 +134,23 @@ def test_parser_layers_treat_output_template_metadata_as_opaque() -> None:
     """Parser facts must use model capabilities instead of backend template keys."""
     generation_path = Path(__file__).parents[2] / "src/datamodel_code_generator/parser/generation.py"
     jsonschema_path = generation_path.with_name("jsonschema.py")
-    attributes = {
-        node.attr
-        for node in ast.walk(ast.parse(generation_path.read_text(encoding="utf-8")))
-        if isinstance(node, ast.Attribute)
+    parser_trees = tuple(ast.parse(path.read_text(encoding="utf-8")) for path in (generation_path, jsonschema_path))
+    generation_attributes = {node.attr for node in ast.walk(parser_trees[0]) if isinstance(node, ast.Attribute)}
+    attributes = {node.attr for tree in parser_trees for node in ast.walk(tree) if isinstance(node, ast.Attribute)}
+    string_literals = {
+        node.value
+        for tree in parser_trees
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Constant) and isinstance(node.value, str)
     }
 
-    assert "extra_template_data" not in attributes
-    assert all(
-        "additionalPropertiesReferenceClasses" not in path.read_text(encoding="utf-8")
-        for path in (generation_path, jsonschema_path)
-    )
+    assert "extra_template_data" not in generation_attributes
+    assert "_additional_properties_reference_classes" not in attributes
+    assert not {
+        "additionalPropertiesReferenceClasses",
+        "additionalPropertiesType",
+        "use_typeddict_backport",
+    }.intersection(string_literals)
 
 
 def test_generation_index_does_not_use_metadata_collection_truthiness() -> None:

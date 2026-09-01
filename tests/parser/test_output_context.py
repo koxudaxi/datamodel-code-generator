@@ -13,8 +13,9 @@ from datamodel_code_generator import DataModelType, PythonVersion
 from datamodel_code_generator.config import JSONSchemaParserConfig
 from datamodel_code_generator.model import get_data_model_types
 from datamodel_code_generator.model.base import UNDEFINED, DataModel, DataModelFieldBase
+from datamodel_code_generator.model.output import OutputModelContext
 from datamodel_code_generator.model.type_alias import TypeAliasTypeBackport
-from datamodel_code_generator.parser._output_context import OutputModelContext
+from datamodel_code_generator.parser._output_context import OutputModelContext as ParserOutputModelContext
 from datamodel_code_generator.parser.jsonschema import JsonSchemaObject, JsonSchemaParser
 from datamodel_code_generator.reference import Reference
 
@@ -34,6 +35,13 @@ _OUTPUT_CAPABILITIES: dict[DataModelType, tuple[bool, bool, bool, bool]] = {
 def test_output_capability_matrix_covers_every_data_model_type() -> None:
     """Require every output target to declare an intentional capability contract."""
     assert set(_OUTPUT_CAPABILITIES) == set(DataModelType)
+
+
+@pytest.mark.allow_direct_assert
+def test_parser_output_context_import_preserves_model_context_identity() -> None:
+    """Keep the established parser import path as a zero-cost compatibility alias."""
+    assert ParserOutputModelContext is OutputModelContext
+    assert OutputModelContext.__module__ == "datamodel_code_generator.parser._output_context"
 
 
 @pytest.mark.parametrize(
@@ -270,10 +278,20 @@ def test_output_context_stores_reference_metadata_for_data_and_root_model_types(
         use_annotated=False,
     )
     reference_classes = {"Dependency"}
+    legacy_metadata: dict[str, Any] = {}
     separate_metadata: dict[str, Any] = {}
     shared_metadata: dict[str, Any] = {}
 
-    context._store_additional_properties_reference_classes(separate_metadata, reference_classes)
+    context._store_additional_properties_type(legacy_metadata, "Dependency")
+    context.store_additional_properties_value(separate_metadata, value=True)
+    context.store_additional_properties_type(
+        separate_metadata,
+        "Dependency",
+        reference_classes,
+        use_backport=True,
+    )
+    assert context.has_additional_properties_type(separate_metadata)
+    assert OutputModelContext._has_additional_properties_type(separate_metadata)
     OutputModelContext.from_generation_types(
         data_model_type=data_model_type,
         data_model_root_type=data_model_type,
@@ -296,18 +314,44 @@ def test_output_context_stores_reference_metadata_for_data_and_root_model_types(
 
     assert {
         "metadata": separate_metadata,
-        "data_model_references": set(data_model._additional_properties_reference_classes),
-        "root_model_references": set(root_model._additional_properties_reference_classes),
+        "legacy_metadata": legacy_metadata,
+        "data_model_references": set(data_model.additional_properties_reference_classes),
+        "root_model_references": set(root_model.additional_properties_reference_classes),
         "shared_metadata": shared_metadata,
     } == {
         "metadata": {
+            "additionalProperties": True,
+            "additionalPropertiesType": "Dependency",
+            "use_typeddict_backport": True,
             "data_model_references": {"Dependency"},
             "root_model_references": {"Dependency"},
         },
+        "legacy_metadata": {"additionalPropertiesType": "Dependency"},
         "data_model_references": {"Dependency"},
         "root_model_references": {"Dependency"},
         "shared_metadata": {"data_model_references": {"Dependency"}},
     }
+
+
+@pytest.mark.allow_direct_assert
+def test_output_context_capabilities_preserve_mutability() -> None:
+    """Keep the established mutable compatibility surface after moving ownership."""
+    model_types = get_data_model_types(
+        DataModelType.DataclassesDataclass,
+        target_python_version=PythonVersion.PY_311,
+    )
+    context = OutputModelContext.from_generation_types(
+        data_model_type=model_types.data_model,
+        data_model_root_type=model_types.root_model,
+        data_model_field_type=model_types.field_model,
+        data_type_manager_type=model_types.data_type_manager,
+        configured_types_are_builtin=True,
+        use_annotated=False,
+    )
+
+    context.supports_boolean_literals = False
+
+    assert context.supports_boolean_literals is False
 
 
 @pytest.mark.parametrize(

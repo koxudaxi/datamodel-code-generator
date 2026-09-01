@@ -144,7 +144,7 @@ class TypedDict(DataModel):
         elif additional_props_type and not is_base_class:
             if isinstance(additional_props_type, _InternalTypeExpression):
                 typed_dict_kwargs["extra_items"] = additional_props_type.code
-            elif len(self._additional_properties_reference_classes):
+            elif len(self.additional_properties_reference_classes):
                 typed_dict_kwargs["extra_items"] = represent_untrusted_python_value(additional_props_type)
             else:
                 typed_dict_kwargs["extra_items"] = represent_untrusted_public_type_name(additional_props_type)
