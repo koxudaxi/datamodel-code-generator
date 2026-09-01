@@ -31,6 +31,7 @@ from datamodel_code_generator.model.base import (
     DataModelFieldBase,
     _get_template_with_custom_dir,
 )
+from datamodel_code_generator.model.field_name import PydanticFieldNameResolver
 from datamodel_code_generator.model.imports import IMPORT_CLASSVAR
 from datamodel_code_generator.model.pydantic_base import (
     BaseModelBase,
@@ -76,7 +77,7 @@ from datamodel_code_generator.python_literal import (
     _normalize_string,
     represent_untrusted_python_value,
 )
-from datamodel_code_generator.reference import ModelResolver, ModelType
+from datamodel_code_generator.reference import FieldNameResolver, ModelResolver, ModelType
 from datamodel_code_generator.types import chain_as_tuple
 
 if TYPE_CHECKING:
@@ -824,6 +825,7 @@ class BaseModel(BaseModelBase):
     BASE_CLASS_ALIAS: ClassVar[str] = "_BaseModel"
     SUPPORTS_TREE_SCOPE_REUSE_MODEL_INHERITANCE: ClassVar[bool] = True
     FIELD_NAME_MODEL_TYPE: ClassVar[ModelType] = ModelType.PYDANTIC
+    FIELD_NAME_RESOLVER_CLASS: ClassVar[type[FieldNameResolver]] = PydanticFieldNameResolver
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = True
     SUPPORTS_INHERITED_DISCRIMINATOR_ENUM: ClassVar[bool] = True
     SUPPORTS_FIELD_RENAMING: ClassVar[bool] = True

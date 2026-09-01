@@ -24,6 +24,7 @@ from typing import (
     NamedTuple,
     Optional,
     Protocol,
+    SupportsIndex,
     TypeVar,
     cast,
     runtime_checkable,
@@ -46,6 +47,8 @@ if TYPE_CHECKING:
 
     from datamodel_code_generator.model.base import DataModel
     from datamodel_code_generator.types import DataType
+
+    DEFAULT_FIELD_NAME_RESOLVERS: dict[ModelType, type[FieldNameResolver]]
 
 
 def split_module_name(
@@ -448,67 +451,6 @@ class FieldNameResolver:
         )
 
 
-class PydanticFieldNameResolver(FieldNameResolver):
-    """Field name resolver that avoids Pydantic reserved names."""
-
-    def get_valid_name(
-        self,
-        name: str,
-        excludes: set[str] | None = None,
-        ignore_snake_case_field: bool = False,  # noqa: FBT001, FBT002
-        upper_camel: bool = False,  # noqa: FBT001, FBT002
-    ) -> str:
-        """Convert a name to a valid Pydantic field name."""
-        if (
-            fast_name := self._get_valid_name_fast_path(
-                name,
-                excludes,
-                ignore_snake_case_field,
-                upper_camel,
-            )
-        ) is not None:
-            return fast_name
-        return super().get_valid_name(name, excludes, ignore_snake_case_field, upper_camel)
-
-    def _get_valid_name_fast_path(
-        self,
-        name: str,
-        excludes: set[str] | None,
-        ignore_snake_case_field: bool,  # noqa: FBT001
-        upper_camel: bool,  # noqa: FBT001
-    ) -> str | None:
-        """Skip normalization for ordinary Pydantic field names.
-
-        Limit this to the exact built-in resolver so subclasses retain the
-        extension behavior of the conventional normalization path.
-        """
-        if type(self) is not PydanticFieldNameResolver:
-            return None
-        if not name.isascii() or not name.isidentifier() or name.startswith("_"):
-            return None
-        if iskeyword(name) or self.capitalise_enum_members or upper_camel:
-            return None
-        if self.snake_case_field and not ignore_snake_case_field:
-            return None
-        if excludes and name in excludes:
-            return None
-        return name if self._validate_field_name(name) else None
-
-    def _validate_field_name(self, field_name: str) -> bool:  # noqa: PLR6301
-        """Check field name doesn't conflict with BaseModel attributes."""
-        # TODO: Support Pydantic V2
-        return not hasattr(BaseModel, field_name)
-
-
-class MsgspecFieldNameResolver(FieldNameResolver):
-    """Field name resolver that avoids shadowing msgspec's imported ``field``."""
-
-    def _validate_field_name(self, field_name: str) -> bool:  # noqa: PLR6301
-        # A field named ``field`` would shadow the ``from msgspec import field``
-        # used for other fields' ``field(...)`` calls, breaking the generated module.
-        return field_name != "field"
-
-
 class EnumFieldNameResolver(FieldNameResolver):
     """Field name resolver for enum members with special handling for reserved names."""
 
@@ -551,12 +493,144 @@ class ModelType(Enum):
     MSGSPEC = auto()
 
 
-DEFAULT_FIELD_NAME_RESOLVERS: dict[ModelType, type[FieldNameResolver]] = {
-    ModelType.ENUM: EnumFieldNameResolver,
-    ModelType.PYDANTIC: PydanticFieldNameResolver,
-    ModelType.CLASS: FieldNameResolver,
-    ModelType.MSGSPEC: MsgspecFieldNameResolver,
-}
+_FIELD_NAME_RESOLVER_MODEL_TYPES = (
+    ModelType.ENUM,
+    ModelType.PYDANTIC,
+    ModelType.CLASS,
+    ModelType.MSGSPEC,
+)
+
+
+def _default_field_name_resolver_class(model_type: ModelType) -> type[FieldNameResolver]:
+    """Resolve legacy defaults lazily while output models own their policies."""
+    resolver_class: type[FieldNameResolver] = FieldNameResolver
+    match model_type:
+        case ModelType.PYDANTIC:
+            from datamodel_code_generator.model.field_name import (  # noqa: PLC0415
+                PydanticFieldNameResolver,
+            )
+
+            resolver_class = PydanticFieldNameResolver
+        case ModelType.MSGSPEC:
+            from datamodel_code_generator.model.field_name import MsgspecFieldNameResolver  # noqa: PLC0415
+
+            resolver_class = MsgspecFieldNameResolver
+        case ModelType.ENUM:
+            resolver_class = EnumFieldNameResolver
+        case _:
+            resolver_class = FieldNameResolver
+    return resolver_class
+
+
+def __getattr__(name: str) -> Any:
+    """Lazily preserve legacy resolver imports without owning output policy."""
+    match name:
+        case "PydanticFieldNameResolver":
+            from datamodel_code_generator.model.field_name import (  # noqa: PLC0415
+                PydanticFieldNameResolver,
+            )
+
+            value = PydanticFieldNameResolver
+        case "MsgspecFieldNameResolver":
+            from datamodel_code_generator.model.field_name import MsgspecFieldNameResolver  # noqa: PLC0415
+
+            value = MsgspecFieldNameResolver
+        case "DEFAULT_FIELD_NAME_RESOLVERS":
+            value = {
+                model_type: _default_field_name_resolver_class(model_type)
+                for model_type in _FIELD_NAME_RESOLVER_MODEL_TYPES
+            }
+        case "__all__":
+            value = (
+                *(public_name for public_name in globals() if not public_name.startswith("_")),
+                "PydanticFieldNameResolver",
+                "MsgspecFieldNameResolver",
+                "DEFAULT_FIELD_NAME_RESOLVERS",
+            )
+        case _:
+            msg = f"module {__name__!r} has no attribute {name!r}"
+            raise AttributeError(msg)
+    globals()[name] = value
+    return value
+
+
+def __dir__() -> list[str]:
+    """Include lazily preserved exports in module discovery."""
+    return sorted((*globals(), "PydanticFieldNameResolver", "MsgspecFieldNameResolver", "DEFAULT_FIELD_NAME_RESOLVERS"))
+
+
+class _FieldNameResolverOptions(NamedTuple):
+    """Construction options retained for lazy field-name resolver creation."""
+
+    aliases: Mapping[str, str | list[str]] | None
+    snake_case_field: bool
+    empty_field_name: str | None
+    original_delimiter: str | None
+    special_field_name_prefix: str | None
+    remove_special_field_name_prefix: bool
+    capitalise_enum_members: bool
+    no_alias: bool
+    use_subclass_enum: bool
+    target_python_version: PythonVersion | None
+
+
+class _FieldNameResolvers:
+    """Create output-owned resolvers only when the neutral resolver needs them."""
+
+    __slots__ = ("_model_types", "_options", "_resolved", "_resolver_classes", "_strict_resolver_classes")
+
+    def __init__(
+        self,
+        resolver_classes: dict[ModelType, type[FieldNameResolver]] | None,
+        options: _FieldNameResolverOptions,
+    ) -> None:
+        if (legacy_defaults := globals().get("DEFAULT_FIELD_NAME_RESOLVERS")) is None:
+            self._resolver_classes = () if resolver_classes is None else tuple(resolver_classes.items())
+            self._model_types = _FIELD_NAME_RESOLVER_MODEL_TYPES
+            self._strict_resolver_classes = False
+        else:
+            merged_resolver_classes = legacy_defaults.copy()
+            if resolver_classes:
+                merged_resolver_classes.update(resolver_classes)
+            self._resolver_classes = tuple(merged_resolver_classes.items())
+            self._model_types = tuple(merged_resolver_classes)
+            self._strict_resolver_classes = True
+        self._options = options
+        self._resolved: dict[ModelType, FieldNameResolver] = {}
+
+    def __getitem__(self, model_type: ModelType) -> FieldNameResolver:
+        if (resolved := self._resolved.get(model_type)) is not None:
+            return resolved
+        resolver_class = None
+        for configured_model_type, configured_resolver_class in self._resolver_classes:
+            if configured_model_type is model_type:
+                resolver_class = configured_resolver_class
+                break
+        if resolver_class is None and self._strict_resolver_classes:
+            raise KeyError(model_type)
+        if resolver_class is None:
+            resolver_class = _default_field_name_resolver_class(model_type)
+        is_enum = model_type is ModelType.ENUM
+        options = self._options
+        resolver = resolver_class(
+            aliases=options.aliases,
+            snake_case_field=options.snake_case_field,
+            empty_field_name=options.empty_field_name,
+            original_delimiter=options.original_delimiter,
+            special_field_name_prefix=options.special_field_name_prefix,
+            remove_special_field_name_prefix=options.remove_special_field_name_prefix,
+            capitalise_enum_members=options.capitalise_enum_members if is_enum else False,
+            no_alias=options.no_alias,
+            use_subclass_enum=options.use_subclass_enum if is_enum else False,
+            target_python_version=options.target_python_version if is_enum else None,
+        )
+        self._resolved[model_type] = resolver
+        return resolver
+
+    def materialize(self) -> dict[ModelType, FieldNameResolver]:
+        """Return the exact eager mapping exposed by earlier releases."""
+        self._resolved = {model_type: self[model_type] for model_type in self._model_types}
+        return self._resolved
 
 
 class ClassName(NamedTuple):
@@ -609,6 +683,8 @@ class ModelResolver:  # noqa: PLR0904
         "enum": "Enum",
     }
     _MAX_RESOLVED_LOCAL_FILE_PARTS: ClassVar[int] = 256
+    _MIN_STATEFUL_REDUCE_ITEMS: ClassVar[int] = 3
+    _SLOTTED_STATE_ITEMS: ClassVar[int] = 2
 
     def __init__(  # noqa: PLR0913, PLR0917
         self,
@@ -657,24 +733,21 @@ class ModelResolver:  # noqa: PLR0904
         self.singular_name_suffix: str = (
             singular_name_suffix if isinstance(singular_name_suffix, str) else SINGULAR_NAME_SUFFIX
         )
-        merged_field_name_resolver_classes = DEFAULT_FIELD_NAME_RESOLVERS.copy()
-        if field_name_resolver_classes:  # pragma: no cover
-            merged_field_name_resolver_classes.update(field_name_resolver_classes)
-        self.field_name_resolvers: dict[ModelType, FieldNameResolver] = {
-            k: v(
-                aliases=aliases,
+        self._field_name_resolvers: dict[ModelType, FieldNameResolver] | _FieldNameResolvers = _FieldNameResolvers(
+            field_name_resolver_classes,
+            _FieldNameResolverOptions(
+                aliases=None if aliases is None else {**aliases},
                 snake_case_field=snake_case_field,
                 empty_field_name=empty_field_name,
                 original_delimiter=original_field_name_delimiter,
                 special_field_name_prefix=special_field_name_prefix,
                 remove_special_field_name_prefix=remove_special_field_name_prefix,
-                capitalise_enum_members=capitalise_enum_members if k == ModelType.ENUM else False,
+                capitalise_enum_members=capitalise_enum_members,
                 no_alias=no_alias,
-                use_subclass_enum=use_subclass_enum if k == ModelType.ENUM else False,
-                target_python_version=target_python_version if k == ModelType.ENUM else None,
-            )
-            for k, v in merged_field_name_resolver_classes.items()
-        }
+                use_subclass_enum=use_subclass_enum,
+                target_python_version=target_python_version,
+            ),
+        )
         self.class_name_generator = custom_class_name_generator or self.default_class_name_generator
         self._base_path: Path = base_path or Path.cwd()
         self._current_base_path: Path | None = self._base_path
@@ -713,6 +786,65 @@ class ModelResolver:  # noqa: PLR0904
         self.default_value_overrides: Mapping[str, Any] = (
             {} if default_value_overrides is None else {**default_value_overrides}
         )
+
+    def __reduce_ex__(self, protocol: SupportsIndex, /) -> str | tuple[Any, ...]:
+        """Serialize resolver state in the public layout used by earlier releases."""
+        reduced = super().__reduce_ex__(protocol)
+        if isinstance(reduced, str) or len(reduced) < self._MIN_STATEFUL_REDUCE_ITEMS:
+            return reduced
+        state = reduced[2]
+        if isinstance(state, dict):
+            if "_field_name_resolvers" not in state:
+                return reduced
+            instance_state = state
+            slot_state = None
+        elif (
+            isinstance(state, tuple)
+            and len(state) == self._SLOTTED_STATE_ITEMS
+            and isinstance(state[0], dict)
+            and isinstance(state[1], dict)
+            and "_field_name_resolvers" in state[0]
+        ):
+            instance_state, slot_state = state
+        else:
+            return reduced
+        resolvers = instance_state["_field_name_resolvers"]
+        if isinstance(resolvers, _FieldNameResolvers):
+            resolvers = resolvers.materialize()
+            self._field_name_resolvers = resolvers
+        instance_state = instance_state.copy()
+        instance_state["field_name_resolvers"] = resolvers
+        del instance_state["_field_name_resolvers"]
+        state = instance_state if slot_state is None else (instance_state, slot_state.copy())
+        return (*reduced[:2], state, *reduced[3:])
+
+    def __setstate__(
+        self,
+        state: dict[str, Any] | tuple[dict[str, Any], dict[str, Any]],
+    ) -> None:
+        """Migrate resolver mappings serialized by earlier releases."""
+        if isinstance(state, tuple):
+            instance_state, slot_state = state
+        else:
+            instance_state, slot_state = state, {}
+        if "field_name_resolvers" in instance_state:
+            instance_state["_field_name_resolvers"] = instance_state.pop("field_name_resolvers")
+        self.__dict__.update(instance_state)
+        for name, value in slot_state.items():
+            setattr(self, name, value)
+
+    @property
+    def field_name_resolvers(self) -> dict[ModelType, FieldNameResolver]:
+        """Expose the same eager plain dictionary as earlier releases."""
+        if isinstance(resolvers := self._field_name_resolvers, _FieldNameResolvers):
+            resolvers = resolvers.materialize()
+            self._field_name_resolvers = resolvers
+        return resolvers
+
+    @field_name_resolvers.setter
+    def field_name_resolvers(self, resolvers: dict[ModelType, FieldNameResolver]) -> None:
+        """Preserve replacement of the public resolver mapping."""
+        self._field_name_resolvers = resolvers
 
     def _get_model_name_map_value(self, path: str, generated_name: str, original_name: str) -> str | None:
         """Return an explicit model rename for a source path or generated name."""
@@ -1266,7 +1398,7 @@ class ModelResolver:  # noqa: PLR0904
     def default_class_name_generator(self, name: str) -> str:
         """Generate a valid class name from a string."""
         # TODO: create a validate for class name
-        return self.field_name_resolvers[ModelType.CLASS].get_valid_name(
+        return self._field_name_resolvers[ModelType.CLASS].get_valid_name(
             name, ignore_snake_case_field=True, upper_camel=True
         )
 
@@ -1352,7 +1484,7 @@ class ModelResolver:  # noqa: PLR0904
         if split_name:
             prefix = ".".join(
                 # TODO: create a validate for class name
-                self.field_name_resolvers[ModelType.CLASS].get_valid_name(n, ignore_snake_case_field=True)
+                self._field_name_resolvers[ModelType.CLASS].get_valid_name(n, ignore_snake_case_field=True)
                 for n in split_name[:-1]
             )
             prefix += "."
@@ -1462,7 +1594,7 @@ class ModelResolver:  # noqa: PLR0904
         model_type: ModelType = ModelType.PYDANTIC,
     ) -> str:
         """Get a valid field name for the specified model type."""
-        return self.field_name_resolvers[model_type].get_valid_name(name, excludes)
+        return self._field_name_resolvers[model_type].get_valid_name(name, excludes)
 
     def _get_unique_field_name(self, name: str) -> str:
         """Return a unique class field name without creating a Reference."""
@@ -1492,7 +1624,7 @@ class ModelResolver:  # noqa: PLR0904
               or list[str] for multiple aliases (Pydantic v2 AliasChoices).
         """
         del path
-        return self.field_name_resolvers[model_type].get_valid_field_name_and_alias(
+        return self._field_name_resolvers[model_type].get_valid_field_name_and_alias(
             field_name, excludes, class_name=class_name
         )
 
