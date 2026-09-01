@@ -29,9 +29,12 @@ def test_source_tree_respects_architecture_boundaries() -> None:
 def test_architecture_boundary_detector_reports_cross_layer_dependencies() -> None:
     """Cover static, relative, dynamic, semantic, and private import violations."""
     files: list[tuple[Path, check_architecture_boundaries.Layer]] = [
+        (FIXTURE_ROOT / "entrypoint" / "forbidden.py", "entrypoint"),
         (FIXTURE_ROOT / "parser" / "forbidden.py", "parser"),
         (FIXTURE_ROOT / "config" / "forbidden.py", "config"),
         (FIXTURE_ROOT / "input_model" / "forbidden.py", "input-model"),
+        (FIXTURE_ROOT / "reference" / "forbidden.py", "reference"),
+        (FIXTURE_ROOT / "output_model" / "forbidden.py", "output-model"),
         (FIXTURE_ROOT / "shared" / "forbidden.py", "shared"),
     ]
     violations = check_architecture_boundaries.check_files(files, allowlist={})
@@ -40,6 +43,27 @@ def test_architecture_boundary_detector_reports_cross_layer_dependencies() -> No
         check_architecture_boundaries.format_report(violations),
         EXPECTED_ROOT / "violations.txt",
     )
+
+
+def test_architecture_boundary_source_classification() -> None:
+    """Keep entrypoint, reference, and output-model ownership explicit."""
+    source_root = ROOT / "src" / "datamodel_code_generator"
+    paths = (
+        source_root / "__init__.py",
+        source_root / "parser" / "base.py",
+        source_root / "config.py",
+        source_root / "input_model.py",
+        source_root / "reference.py",
+        source_root / "model" / "base.py",
+        source_root / "model" / "__init__.py",
+        source_root / "types.py",
+    )
+    classification = "".join(
+        f"{path.relative_to(source_root).as_posix()}: {check_architecture_boundaries._classify_source_path(path)}\n"
+        for path in paths
+    )
+
+    assert_output(classification, EXPECTED_ROOT / "classifications.txt")
 
 
 def test_architecture_boundary_detector_reports_stale_allowlist_entries() -> None:
@@ -61,6 +85,28 @@ def test_architecture_boundary_detector_reports_stale_allowlist_entries() -> Non
     assert_output(
         check_architecture_boundaries.format_report(violations),
         EXPECTED_ROOT / "stale_allowlist.txt",
+    )
+
+
+def test_reference_allowlist_is_symbol_specific() -> None:
+    """Do not let a compatibility import allowance hide another backend symbol."""
+    fixture = FIXTURE_ROOT / "reference" / "symbol_specific.py"
+    key = check_architecture_boundaries.BoundaryKey(
+        "tests/data/architecture_boundaries/reference/symbol_specific.py",
+        "load_unrelated_backend_symbol",
+        "reference-backend-import",
+        "datamodel_code_generator.model.field_name.PydanticFieldNameResolver",
+    )
+    violations = check_architecture_boundaries.check_files(
+        [(fixture, "reference")],
+        allowlist={
+            key: check_architecture_boundaries.AllowlistEntry("fixture for symbol-specific compatibility import")
+        },
+    )
+
+    assert_output(
+        check_architecture_boundaries.format_report(violations),
+        EXPECTED_ROOT / "reference_allowlist.txt",
     )
 
 
@@ -102,13 +148,13 @@ def test_architecture_boundary_cli_reports_actionable_failures(
     clean_output = capsys.readouterr()
 
     legacy_key = check_architecture_boundaries.BoundaryKey(
-        "src/datamodel_code_generator/parser/base.py",
-        "__getattr__",
-        "backend-import",
-        "datamodel_code_generator.model.dataclass",
+        "src/datamodel_code_generator/reference.py",
+        "_default_field_name_resolver_class",
+        "reference-backend-import",
+        "datamodel_code_generator.model.field_name.PydanticFieldNameResolver",
     )
     monkeypatch.delitem(check_architecture_boundaries.DEFAULT_ALLOWLIST, legacy_key)
-    failure_code = check_architecture_boundaries.main([str(ROOT / "src" / "datamodel_code_generator" / "parser")])
+    failure_code = check_architecture_boundaries.main([str(ROOT / "src" / "datamodel_code_generator" / "reference.py")])
     failure_output = capsys.readouterr()
     monkeypatch.undo()
 
