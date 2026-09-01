@@ -3,7 +3,7 @@ clean stdout: ''
 clean stderr: ''
 failure exit: 1
 Architecture boundary violations found:
-src/datamodel_code_generator/parser/base.py:225:13: [backend-import] datamodel_code_generator.model.dataclass: parser code must depend on neutral model capabilities, not a concrete output backend (in __getattr__)
+src/datamodel_code_generator/parser/base.py:248:13: [backend-import] datamodel_code_generator.model.dataclass: parser code must depend on neutral model capabilities, not a concrete output backend (in __getattr__)
 entrypoint exit: 0
 entrypoint stdout: ''
 entrypoint stderr: ''

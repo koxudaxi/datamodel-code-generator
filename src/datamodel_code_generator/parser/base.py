@@ -58,6 +58,7 @@ from datamodel_code_generator._internal_utils import (
     HashableComparable,
     get_most_of_parent,
 )
+from datamodel_code_generator._parser_context import ParserSourceContext
 from datamodel_code_generator._shared_types import (
     DefaultPutDict,
     LiteralType,
@@ -188,6 +189,28 @@ def _get_model_field_constructor(
     if constructor := field_type.__dict__.get("PARSER_CONSTRUCTOR"):
         return cast("Callable[..., DataModelFieldBase]", constructor)
     return field_type
+
+
+def _source_context_from_config(config: ParserConfig) -> ParserSourceContext:
+    """Adapt a public parser config to the neutral source policy."""
+    remote_lock = getattr(config, "remote_lock", None)
+    response_observer = remote_lock.record_response if remote_lock is not None else None
+    return ParserSourceContext(
+        base_path=config.base_path,
+        encoding=config.encoding,
+        remote_text_cache=config.remote_text_cache,
+        allow_remote_refs=config.allow_remote_refs,
+        strict_refs=config.strict_refs,
+        allow_private_network=config.allow_private_network,
+        http_backend=config.http_backend,
+        http_headers=config.http_headers,
+        http_local_ref_path=config.http_local_ref_path,
+        http_ignore_tls=config.http_ignore_tls,
+        http_query_parameters=config.http_query_parameters,
+        http_timeout=config.http_timeout,
+        external_ref_mapping=config.external_ref_mapping,
+        remote_response_observer=response_observer,
+    )
 
 
 def _get_builtin_pydantic_v2_field_constructor(
@@ -2148,6 +2171,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             config = self._create_default_config(options)  # ty: ignore[invalid-argument-type]
 
         self.config = config
+        self._source_context = getattr(config, "_source_context", None) or _source_context_from_config(config)
         self._has_bound_python_types = False
         self._has_runtime_expressions = False
 
@@ -2230,7 +2254,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.reuse_model: bool = config.reuse_model
         self.reuse_scope: ReuseScope | None = config.reuse_scope
         self.shared_module_name: str = config.shared_module_name
-        self.encoding: str = config.encoding
+        self.encoding: str = self._source_context.encoding
         self.enum_field_as_literal: LiteralType | None = config.enum_field_as_literal
         self.enum_field_as_literal_map: dict[str, str] = config.enum_field_as_literal_map or {}
         self.ignore_enum_constraints: bool = config.ignore_enum_constraints
@@ -2242,9 +2266,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.use_union_operator: bool = config.use_union_operator
         self.enable_faux_immutability: bool = config.enable_faux_immutability
         self.custom_class_name_generator: Callable[[str], str] | None = config.custom_class_name_generator
-        self.repair_invalid_dotted_stdout: bool = getattr(config, "repair_invalid_dotted_stdout", False)
-        self.forced_invalid_dotted_stdout_repair_modules: tuple[ModulePath, ...] = getattr(
-            config, "forced_invalid_dotted_stdout_repair_modules", ()
+        self.repair_invalid_dotted_stdout: bool = config.repair_invalid_dotted_stdout
+        self.forced_invalid_dotted_stdout_repair_modules: tuple[ModulePath, ...] = (
+            config.forced_invalid_dotted_stdout_repair_modules
         )
         self.field_extra_keys: set[str] = config.field_extra_keys or set()
         self.field_extra_keys_without_x_prefix: set[str] = config.field_extra_keys_without_x_prefix or set()
@@ -2252,7 +2276,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.model_extra_keys_without_x_prefix: set[str] = config.model_extra_keys_without_x_prefix or set()
         self.field_include_all_keys: bool = config.field_include_all_keys
 
-        self.remote_text_cache: DefaultPutDict[str, str] = config.remote_text_cache or DefaultPutDict()
+        self.remote_text_cache: DefaultPutDict[str, str] = self._source_context.remote_text_cache or DefaultPutDict()
         self.current_source_path: Path | None = None
         self._run_context: ParserRunContext | None = None
         self.use_title_as_name: bool = config.use_title_as_name
@@ -2267,8 +2291,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.allof_class_hierarchy: AllOfClassHierarchy = config.allof_class_hierarchy
         self.dataclass_arguments = config.dataclass_arguments
 
-        if config.base_path:
-            self.base_path = config.base_path
+        if self._source_context.base_path:
+            self.base_path = self._source_context.base_path
         elif isinstance(source, Path):
             self.base_path = source.absolute() if source.is_dir() else source.absolute().parent
         else:
@@ -2385,7 +2409,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             class_name_affix_scope=config.class_name_affix_scope,
             skip_affix_for_root=config.class_name is not None,
             default_value_overrides=config.default_value_overrides,
-            http_backend=config.http_backend,
+            http_backend=self._source_context.http_backend,
             field_name_resolver_classes=(
                 {self.field_name_model_type: field_name_resolver_class}
                 if (field_name_resolver_class := self.data_model_type.FIELD_NAME_RESOLVER_CLASS) is not None
@@ -2395,17 +2419,16 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.class_name: str | None = config.class_name
         self.allow_leading_underscore_class_name: bool = config.allow_leading_underscore_class_name
         self.wrap_string_literal: bool | None = config.wrap_string_literal
-        self.allow_remote_refs: bool | None = config.allow_remote_refs
-        self.strict_refs: bool = config.strict_refs
-        self.allow_private_network: bool = config.allow_private_network
-        self.http_backend = config.http_backend
-        self.http_headers: Sequence[tuple[str, str]] | None = config.http_headers
-        self.http_local_ref_path: Path | None = config.http_local_ref_path
-        self.http_query_parameters: Sequence[tuple[str, str]] | None = config.http_query_parameters
-        self.http_ignore_tls: bool = config.http_ignore_tls
-        self.http_timeout: float | None = config.http_timeout
-        remote_lock = getattr(config, "remote_lock", None)
-        self._remote_response_observer = remote_lock.record_response if remote_lock is not None else None
+        self.allow_remote_refs: bool | None = self._source_context.allow_remote_refs
+        self.strict_refs: bool = self._source_context.strict_refs
+        self.allow_private_network: bool = self._source_context.allow_private_network
+        self.http_backend = self._source_context.http_backend
+        self.http_headers: Sequence[tuple[str, str]] | None = self._source_context.http_headers
+        self.http_local_ref_path: Path | None = self._source_context.http_local_ref_path
+        self.http_query_parameters: Sequence[tuple[str, str]] | None = self._source_context.http_query_parameters
+        self.http_ignore_tls: bool = self._source_context.http_ignore_tls
+        self.http_timeout: float | None = self._source_context.http_timeout
+        self._remote_response_observer = self._source_context.remote_response_observer
         self.use_annotated: bool = config.use_annotated
         if self.use_annotated and not self.field_constraints:  # pragma: no cover
             msg = "`use_annotated=True` has to be used with `field_constraints=True`"

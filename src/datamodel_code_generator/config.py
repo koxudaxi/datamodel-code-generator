@@ -9,7 +9,7 @@ from pathlib import Path  # noqa: TC003 - used at runtime by Pydantic
 from threading import RLock
 from typing import TYPE_CHECKING, Annotated, Any
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator
 
 from datamodel_code_generator._format_types import (
     DateClassType,
@@ -63,6 +63,8 @@ DumpResolveReferenceAction = Callable[[Iterable[str]], str]
 _CONFIG_REBUILD_LOCK = RLock()
 DefaultPutDictSchema = DefaultPutDict[str, str]
 if TYPE_CHECKING:
+    from datamodel_code_generator._parser_context import ParserSourceContext
+
     ExtraTemplateDataType = defaultdict[str, dict[str, Any]]
 else:
     ExtraTemplateDataType = defaultdict[str, Annotated[dict[str, Any], Field(default_factory=dict)]]
@@ -128,6 +130,22 @@ class ParserConfig(BaseModel):
         protected_namespaces=(),
         defer_build=True,
     )
+
+    _source_context: ParserSourceContext | None = PrivateAttr(default=None)
+    # These CLI-only flags are kept private while the stdout repair flow is
+    # migrated out of the parser configuration in a later boundary change.
+    _repair_invalid_dotted_stdout: bool = PrivateAttr(default=False)
+    _forced_invalid_dotted_stdout_repair_modules: tuple[tuple[str, ...], ...] = PrivateAttr(default=())
+
+    @property
+    def repair_invalid_dotted_stdout(self) -> bool:
+        """Return the internal stdout repair switch used by generation retries."""
+        return self._repair_invalid_dotted_stdout
+
+    @property
+    def forced_invalid_dotted_stdout_repair_modules(self) -> tuple[tuple[str, ...], ...]:
+        """Return modules explicitly selected by the stdout repair retry."""
+        return self._forced_invalid_dotted_stdout_repair_modules
 
     data_model_type: type[DataModel] = pydantic_v2.BaseModel
     data_model_root_type: type[DataModel] = pydantic_v2.RootModel

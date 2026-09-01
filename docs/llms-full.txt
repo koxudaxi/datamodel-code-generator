@@ -41217,6 +41217,8 @@ paths:
   second `DataModelType`-to-backend mapping.
 - Configuration must not acquire new parser or concrete output-backend dependencies. Historical concrete defaults are
   narrowly allowlisted until they can be migrated without changing the public `ParserConfig` surface.
+- Entry points project source and reference settings into a frozen `ParserSourceContext` attached to their lightweight,
+  already-validated config; direct parser APIs retain typed configuration and validation.
 
 Run `python scripts/check_architecture_boundaries.py` to validate these rules. The checker parses imports and semantic
 backend inspection with the Python AST, including lazy and dynamic imports. Its legacy allowlist is keyed by file,

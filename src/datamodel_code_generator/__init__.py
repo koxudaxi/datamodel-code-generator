@@ -112,6 +112,7 @@ if TYPE_CHECKING:
         PythonVersion,
         PythonVersionMin,
     )
+    from datamodel_code_generator._parser_context import ParserSourceContext
     from datamodel_code_generator._publication import PublicationAnchor
     from datamodel_code_generator._python_type_annotation import PythonTypeExpr
     from datamodel_code_generator._types import (
@@ -125,13 +126,17 @@ if TYPE_CHECKING:
         XMLSchemaParserConfigDict,
     )
     from datamodel_code_generator._types.generate_config_dict import GenerateConfigDict
-    from datamodel_code_generator.config import GenerateConfig
+    from datamodel_code_generator.config import (
+        GenerateConfig,
+        ParserConfig,
+    )
     from datamodel_code_generator.model import DataModelSet
     from datamodel_code_generator.model_metadata import ModelMetadata
     from datamodel_code_generator.parser.base import Result
     from datamodel_code_generator.remote_lock import RemoteReferenceLock
 
 T = TypeVar("T")
+ParserConfigT = TypeVar("ParserConfigT", bound="ParserConfig")
 
 # Preserve the historical private facade identity for repr and pickling compatibility.
 _CollapseRootModelsRecursionError.__module__ = __name__
@@ -843,7 +848,7 @@ def _build_module_content(
 
 @_lru_cache(maxsize=1)
 def _get_internal_parser_config_model() -> type[Any]:
-    """Return a lightweight Pydantic model for already-validated parser options."""
+    """Return the historical permissive parser config for private callers."""
     from pydantic import BaseModel, ConfigDict  # noqa: PLC0415
 
     class _InternalParserConfig(BaseModel):
@@ -864,6 +869,8 @@ _INTERNAL_PARSER_CONFIG_DEFAULTS: dict[str, Any] = {
     "force_optional_for_required_fields": False,
     "known_third_party": None,
     "remote_text_cache": None,
+    "repair_invalid_dotted_stdout": False,
+    "forced_invalid_dotted_stdout_repair_modules": (),
     "target_date_class": None,
     "target_datetime_class": None,
 }
@@ -919,18 +926,80 @@ def _warn_on_input_string_path_failure(
         raise
 
 
+def _create_parser_source_context(
+    values: Mapping[str, Any],
+    generate_config: GenerateConfig,
+) -> ParserSourceContext:
+    """Build one immutable source policy from validated generation options."""
+    from datamodel_code_generator._parser_context import ParserSourceContext  # noqa: PLC0415
+
+    remote_lock = generate_config.remote_lock
+    response_observer = remote_lock.record_response if remote_lock is not None else None
+    return ParserSourceContext(
+        base_path=values.get("base_path"),
+        encoding=values.get("encoding", "utf-8"),
+        remote_text_cache=values.get("remote_text_cache"),
+        allow_remote_refs=values.get("allow_remote_refs"),
+        strict_refs=values.get("strict_refs", False),
+        allow_private_network=values.get("allow_private_network", False),
+        http_backend=values.get("http_backend", HTTPBackend.AUTO),
+        http_headers=values.get("http_headers"),
+        http_local_ref_path=values.get("http_local_ref_path"),
+        http_ignore_tls=values.get("http_ignore_tls", False),
+        http_query_parameters=values.get("http_query_parameters"),
+        http_timeout=values.get("http_timeout"),
+        external_ref_mapping=values.get("external_ref_mapping"),
+        remote_response_observer=response_observer,
+    )
+
+
 def _create_parser_config(
     generate_config: GenerateConfig,
     additional_options: ParserConfigDict,
 ) -> Any:
+    """Create the lightweight config for already-validated generation options."""
+    values = {**_INTERNAL_PARSER_CONFIG_DEFAULTS, **_generate_config_values(generate_config)}
+    values.update(dict(additional_options))
+    parser_config = _get_internal_parser_config_model().model_construct(**values)
+    return _configure_parser_config_context(parser_config, values, generate_config)
+
+
+def _configure_parser_config_context(
+    parser_config: ParserConfigT,
+    values: Mapping[str, Any],
+    generate_config: GenerateConfig,
+) -> ParserConfigT:
+    """Attach neutral source and retry policies without importing typed config models."""
+    parser_config._source_context = _create_parser_source_context(values, generate_config)  # noqa: SLF001
+    if type(parser_config) is _get_internal_parser_config_model():
+        return parser_config
+    parser_config._repair_invalid_dotted_stdout = values.get("repair_invalid_dotted_stdout", False)  # noqa: SLF001
+    parser_config._forced_invalid_dotted_stdout_repair_modules = values.get(  # noqa: SLF001
+        "forced_invalid_dotted_stdout_repair_modules", ()
+    )
+    return parser_config
+
+
+def _create_typed_parser_config(
+    generate_config: GenerateConfig,
+    parser_config_type: type[ParserConfigT],
+    additional_options: ParserConfigDict,
+) -> ParserConfigT:
     """Create a parser config from GenerateConfig with additional options.
 
     ``generate_config`` is already validated by the CLI or public generate()
     entrypoint. Public Parser(..., **options) still validates separately.
+
+    Only fields declared by the selected parser config are copied.  Generation
+    and CLI-only options remain owned by ``GenerateConfig`` instead of leaking
+    into an ``extra=allow`` parser bag.
     """
     values = {**_INTERNAL_PARSER_CONFIG_DEFAULTS, **_generate_config_values(generate_config)}
     values.update(dict(additional_options))
-    return _get_internal_parser_config_model().model_construct(**values)
+    # ``extra="forbid"`` makes model_construct ignore non-parser generation
+    # fields without allocating a second filtered dictionary.
+    parser_config = parser_config_type.model_construct(**values)
+    return _configure_parser_config_context(parser_config, values, generate_config)
 
 
 _SchemaVersions: TypeAlias = tuple[

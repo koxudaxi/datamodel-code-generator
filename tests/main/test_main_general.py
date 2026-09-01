@@ -34,9 +34,10 @@ from datamodel_code_generator import (
     HTTPBackend,
     InputFileType,
     SchemaParseError,
+    _create_parser_config,
+    _create_typed_parser_config,
     _find_future_import_insertion_point,
     _generate_config_values,
-    _get_internal_parser_config_model,
     chdir,
     generate,
     snooper_to_methods,
@@ -1218,23 +1219,6 @@ def test_create_config_pyproject_branch_keeps_input_source_override() -> None:
 
 
 @pytest.mark.allow_direct_assert
-def test_internal_parser_config_model_copy_supports_deep_update() -> None:
-    """The internal parser config keeps the parser-facing model_copy contract."""
-    nested = {"items": [1]}
-    config = _get_internal_parser_config_model().model_construct(name="before", nested=nested)
-    plain_copy = config.model_copy()
-    copied = config.model_copy(
-        update={"name": "after"},
-        deep=True,
-    )
-    nested["items"].append(2)
-
-    assert plain_copy.name == "before"
-    assert copied.name == "after"
-    assert copied.nested == {"items": [1]}
-
-
-@pytest.mark.allow_direct_assert
 def test_generate_config_values_supports_non_pydantic_config() -> None:
     """Non-Pydantic config-like objects keep the public generate(config=...) fallback."""
 
@@ -1245,6 +1229,59 @@ def test_generate_config_values_supports_non_pydantic_config() -> None:
     config_like.dynamic = "value"
 
     assert _generate_config_values(cast("Any", config_like)) == {"dynamic": "value"}
+
+
+@pytest.mark.allow_direct_assert
+def test_internal_parser_config_model_copy_supports_deep_update() -> None:
+    """The private compatibility config keeps its model-copy contract."""
+    nested = {"items": [1]}
+    config = _create_parser_config(
+        GenerateConfig(),
+        cast("Any", {"name": "before", "nested": nested}),
+    )
+    plain_copy = config.model_copy()
+    copied = config.model_copy(update={"name": "after"}, deep=True)
+    retry_copy = config.model_copy(
+        update={
+            "repair_invalid_dotted_stdout": False,
+            "forced_invalid_dotted_stdout_repair_modules": (("models",),),
+        }
+    )
+    nested["items"].append(2)
+
+    assert plain_copy.name == "before"
+    assert copied.name == "after"
+    assert copied.nested == {"items": [1]}
+    assert retry_copy.repair_invalid_dotted_stdout is False
+    assert retry_copy.forced_invalid_dotted_stdout_repair_modules == (("models",),)
+    assert config._source_context is not None
+    assert config._source_context.encoding == "utf-8"
+
+
+@pytest.mark.allow_direct_assert
+def test_create_parser_config_filters_generation_fields_and_freezes_source_context() -> None:
+    """Parser config owns declared fields while source policy stays in a typed context."""
+    from dataclasses import FrozenInstanceError
+
+    from datamodel_code_generator._parser_context import ParserSourceContext
+    from datamodel_code_generator.config import JSONSchemaParserConfig
+
+    config = GenerateConfig(output=Path("generated.py"), encoding="utf-16", http_timeout=3.5)
+    parser_config = _create_typed_parser_config(
+        config,
+        JSONSchemaParserConfig,
+        cast("Any", {"schema_version_mode": None}),
+    )
+    source_context = parser_config._source_context
+
+    assert isinstance(source_context, ParserSourceContext)
+    assert parser_config.http_timeout == pytest.approx(3.5)
+    assert not hasattr(parser_config, "output")
+    assert source_context.encoding == "utf-16"
+    assert not hasattr(source_context, "__dict__")
+    attribute = "encoding"
+    with pytest.raises(FrozenInstanceError):
+        setattr(source_context, attribute, "utf-8")
 
 
 @pytest.mark.allow_direct_assert
