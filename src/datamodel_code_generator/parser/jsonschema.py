@@ -1224,22 +1224,27 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         *,
         config: JSONSchemaParserConfig,
     ) -> JsonSchemaParser:
-        """Construct one parser with its private input-model expression table."""
-        # Parser accepts in-memory dict sources; this private factory is the only
-        # path that bypasses JsonSchemaParser's public file/URL source contract.
+        """Preserve the historical private token-table construction path."""
         parser = cls(source=cast("str | Path | list[Path] | ParseResult", source), config=config)
         parser._python_type_expressions = python_type_expressions
         return parser
 
     def _externalize_schema_extra(self, key: str, value: Any) -> Any:
-        """Prevent private transport tokens from reaching fields or templates."""
+        """Render neutral type IR only when it crosses into generated metadata."""
         if key != "x-python-type":
             return value
-        from datamodel_code_generator._input_model_transport import (  # noqa: PLC0415
-            externalize_python_type_token,
-        )
+        from datamodel_code_generator._python_type_annotation import render_python_type_expr  # noqa: PLC0415
+        from datamodel_code_generator.input_model_result import PythonTypeSchemaAnnotation  # noqa: PLC0415
 
-        return externalize_python_type_token(value, self._python_type_expressions)
+        if isinstance(value, PythonTypeSchemaAnnotation):
+            return render_python_type_expr(value.expression)
+        if (
+            isinstance(value, str)
+            and self._python_type_expressions is not None
+            and (expression := self._python_type_expressions.get(value)) is not None
+        ):
+            return render_python_type_expr(expression)
+        return value
 
     def get_field_extras(self, obj: JsonSchemaObject) -> dict[str, Any]:
         """Extract extra field metadata from a JSON Schema object."""
@@ -3231,17 +3236,20 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _get_x_python_type(self, obj: JsonSchemaObject) -> PythonTypeExpr | None:
         """Resolve internal IR or parse external text at the schema boundary."""
         x_python_type = obj.extras.get("x-python-type")
-        if not x_python_type or not isinstance(x_python_type, str):
+        if not x_python_type:
             return None
+        if not isinstance(x_python_type, str):
+            from datamodel_code_generator.input_model_result import PythonTypeSchemaAnnotation  # noqa: PLC0415
+
+            return x_python_type.expression if isinstance(x_python_type, PythonTypeSchemaAnnotation) else None
         if (
             self._python_type_expressions is not None
             and (expression := self._python_type_expressions.get(x_python_type)) is not None
         ):
             return expression
+        from datamodel_code_generator.input_model_result import is_legacy_python_type_token  # noqa: PLC0415
 
-        from datamodel_code_generator._input_model_transport import is_python_type_token  # noqa: PLC0415
-
-        if is_python_type_token(x_python_type):
+        if is_legacy_python_type_token(x_python_type):
             msg = "Internal x-python-type context is unavailable"
             raise Error(msg)
 
@@ -8525,8 +8533,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 not type(self)._property_names_forbids_all_keys(property_names)  # noqa: SLF001
                 and (
                     (
-                        isinstance(x_python_type := property_names.extras.get("x-python-type"), str)
-                        and bool(x_python_type)
+                        bool(x_python_type := property_names.extras.get("x-python-type"))
+                        and (isinstance(x_python_type, str) or self._get_x_python_type(property_names) is not None)
                     )
                     or property_names.pattern is not None
                     or property_names.minLength is not None

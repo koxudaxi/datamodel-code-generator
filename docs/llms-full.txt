@@ -41215,6 +41215,9 @@ paths:
   import private `parser._*` helpers.
 - Input-model conversion reads output-family compatibility from the output selection registry. It must not maintain a
   second `DataModelType`-to-backend mapping.
+- Input-model build tokens must resolve to neutral `input_model_result` schema annotations before parser construction.
+  Parsers consume that IR and must not import the private input-model transport. The former token table and parser
+  factory remain lazy private compatibility paths and are not allocated by normal generation.
 - Configuration must not acquire new parser or concrete output-backend dependencies. Historical concrete defaults are
   narrowly allowlisted until they can be migrated without changing the public `ParserConfig` surface.
 - Entry points project source and reference settings into a frozen `ParserSourceContext` attached to their lightweight,

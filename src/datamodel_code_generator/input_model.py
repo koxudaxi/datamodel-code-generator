@@ -31,10 +31,7 @@ from typing import TYPE_CHECKING, Annotated, Any, Union, cast, get_args, get_ori
 
 from pydantic import BaseModel
 
-from datamodel_code_generator._input_model_transport import (
-    LoadedInputModelSchema,
-    PythonTypeExpressionCollector,
-)
+from datamodel_code_generator._input_model_transport import PythonTypeExpressionCollector
 from datamodel_code_generator._process_state import PROCESS_STATE_LOCK
 from datamodel_code_generator._python_type_annotation import (
     PythonTypeExpr,
@@ -51,6 +48,7 @@ from datamodel_code_generator.enums import InputModelRefStrategy, _get_output_mo
 if TYPE_CHECKING:
     from datamodel_code_generator import DataModelType, InputFileType
     from datamodel_code_generator.enums import _OutputModelFamily
+    from datamodel_code_generator.input_model_result import LoadedInputModelSchema
 
 
 class Error(Exception):
