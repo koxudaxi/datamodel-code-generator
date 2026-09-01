@@ -1346,7 +1346,11 @@ def test_builtin_formatter_comment_token_guard_skips_lines_without_hash(
     def fail_generate_tokens(*_args: object, **_kwargs: object) -> None:
         pytest.fail("comment-token guard should skip tokenization")  # pragma: no cover
 
-    monkeypatch.setattr(builtin_formatter.tokenize, "generate_tokens", fail_generate_tokens)
+    monkeypatch.setattr(
+        builtin_formatter,
+        "tokenize",
+        mock.Mock(wraps=builtin_formatter.tokenize, generate_tokens=fail_generate_tokens),
+    )
 
     assert not builtin_formatter._has_comment_token("value = 1")
 
@@ -1371,12 +1375,17 @@ def test_builtin_formatter_blank_line_guard_skips_tokenize_without_multiline_str
     def fail_generate_tokens(*_args: object, **_kwargs: object) -> None:
         pytest.fail("blank-line guard should skip tokenization")  # pragma: no cover
 
-    monkeypatch.setattr(builtin_formatter.tokenize, "generate_tokens", fail_generate_tokens)
+    monkeypatch.setattr(
+        builtin_formatter,
+        "tokenize",
+        mock.Mock(wraps=builtin_formatter.tokenize, generate_tokens=fail_generate_tokens),
+    )
 
     code = "class Model:\n    pass\n\n\n\nclass OtherModel:\n    pass"
 
-    assert builtin_formatter._normalize_top_level_blank_lines(code) == (
-        "class Model:\n    pass\n\n\nclass OtherModel:\n    pass"
+    assert_output(
+        f"{builtin_formatter._normalize_top_level_blank_lines(code)}\n",
+        BUILTIN_FORMATTER_EXPECTED_PATH / "blank_line_normalization.txt",
     )
 
 

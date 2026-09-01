@@ -51,15 +51,20 @@ from datamodel_code_generator import (
     ModuleSplitMode,
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
-    YamlValue,
     _CollapseRootModelsRecursionError,
-    _internal_utils,
-    _is_parsed_source_cache_enabled,
-    _read_parser_source_data_from_path,
 )
 from datamodel_code_generator._format_types import Formatter, PythonVersion
 from datamodel_code_generator._graph import stable_toposort
+from datamodel_code_generator._internal_utils import (
+    HashableComparable,
+    get_most_of_parent,
+)
 from datamodel_code_generator._shared_types import DefaultPutDict, LiteralType
+from datamodel_code_generator._source import (
+    YamlValue,
+    _is_parsed_source_cache_enabled,
+    _read_parser_source_data_from_path,
+)
 from datamodel_code_generator.enums import DefaultValueType, StrictTypes
 from datamodel_code_generator.imports import (
     IMPORT_ANNOTATIONS,
@@ -125,9 +130,6 @@ escape_characters = _enum_escape_characters
 ParserConfigT = TypeVar("ParserConfigT", bound="ParserConfig")
 _ConstructorFieldAdjustment: TypeAlias = Literal["assignment", "keyword_only"]
 
-
-HashableComparable = _internal_utils.HashableComparable
-to_hashable = _internal_utils.to_hashable
 
 # Keep these as module-name checks so non-pydantic-v2 outputs do not import the
 # pydantic_v2 generator package and its runtime feature gates.
@@ -224,12 +226,17 @@ def __getattr__(name: str) -> Any:
             from datamodel_code_generator.model import msgspec as msgspec_model  # noqa: PLC0415
 
             return msgspec_model
+        case "Child" | "T" | "to_hashable":
+            from datamodel_code_generator._internal_utils import Child, T, to_hashable  # noqa: PLC0415
+
+            match name:
+                case "Child":
+                    return Child
+                case "T":
+                    return T
+                case _:
+                    return to_hashable
     raise AttributeError(name)
-
-
-Child = _internal_utils.Child
-T = _internal_utils.T
-get_most_of_parent = _internal_utils.get_most_of_parent
 
 
 ModelName: TypeAlias = str
