@@ -292,16 +292,14 @@ def test_model_resolver_reference_name_cache_preserves_multiplicity() -> None:
     legacy_allocated = restored_resolver.add(["third"], "User", class_name=True)
 
     assert_output(
-        "".join(
-            (
-                f"delete retained: {delete_retained.name if delete_retained else None}\n",
-                f"delete allocated: {delete_allocated.name}\n",
-                f"rename retained: {rename_retained.name if rename_retained else None}\n",
-                f"rename allocated: {rename_allocated.name}\n",
-                f"same-name update: {same_name_update.name}\n",
-                f"legacy cache allocated: {legacy_allocated.name}\n",
-            )
-        ),
+        "".join((
+            f"delete retained: {delete_retained.name if delete_retained else None}\n",
+            f"delete allocated: {delete_allocated.name}\n",
+            f"rename retained: {rename_retained.name if rename_retained else None}\n",
+            f"rename allocated: {rename_allocated.name}\n",
+            f"same-name update: {same_name_update.name}\n",
+            f"legacy cache allocated: {legacy_allocated.name}\n",
+        )),
         EXPECTED_RESOLVER_PATH / "reference_name_multiplicity.txt",
     )
 

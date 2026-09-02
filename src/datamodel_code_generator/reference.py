@@ -40,7 +40,7 @@ from datamodel_code_generator.enums import ClassNameAffixScope, HTTPBackend
 from datamodel_code_generator.util import camel_to_snake
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator, Iterator, Mapping, Sequence
+    from collections.abc import Callable, Collection, Generator, Iterator, Mapping, Sequence
     from collections.abc import Set as AbstractSet
 
     import inflect
@@ -1580,7 +1580,7 @@ class ModelResolver:  # noqa: PLR0904
         return delimiter.join((name, str(count)))
 
     @staticmethod
-    def _is_unique_name_available(candidate: str, reference_names: set[str], exclude_names: set[str]) -> bool:
+    def _is_unique_name_available(candidate: str, reference_names: Collection[str], exclude_names: set[str]) -> bool:
         """Return whether a duplicate-name candidate is currently free."""
         return candidate not in reference_names and candidate not in exclude_names
 
