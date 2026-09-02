@@ -260,6 +260,52 @@ def test_model_resolver_pickles_are_compatible_across_the_resolver_state_rename(
     assert_output("".join(outputs), EXPECTED_RESOLVER_PATH / "model_resolver_pickle_compatibility.txt")
 
 
+def test_model_resolver_reference_name_cache_preserves_multiplicity() -> None:
+    """Keep a name reserved until every non-unique reference releases it."""
+    delete_resolver = ModelResolver()
+    delete_resolver.add(["first"], "User", class_name=True, unique=False)
+    delete_resolver.add(["second"], "User", class_name=True, unique=False)
+    delete_resolver.delete(["first"])
+    delete_retained = delete_resolver.get(["second"])
+    delete_allocated = delete_resolver.add(["third"], "User", class_name=True)
+
+    rename_resolver = ModelResolver()
+    rename_resolver.add(["first"], "User", class_name=True, unique=False)
+    rename_resolver.add(["second"], "User", class_name=True, unique=False)
+    rename_resolver.add(["first"], "Admin", class_name=True, unique=False)
+    rename_retained = rename_resolver.get(["second"])
+    rename_allocated = rename_resolver.add(["third"], "User", class_name=True)
+
+    same_name_resolver = ModelResolver()
+    same_name_resolver.add(["entry"], "user-name", class_name=True)
+    same_name_update = same_name_resolver.add(["entry"], "user_name", class_name=True)
+    same_name_resolver.refresh_reference_names()
+
+    legacy_cache_resolver = ModelResolver()
+    legacy_cache_resolver.add(["first"], "User", class_name=True, unique=False)
+    legacy_cache_resolver.add(["second"], "User", class_name=True, unique=False)
+    legacy_state = legacy_cache_resolver.__dict__.copy()
+    legacy_state["_reference_names_cache"] = {"User"}
+    restored_resolver = ModelResolver.__new__(ModelResolver)
+    restored_resolver.__setstate__(legacy_state)
+    restored_resolver.delete(["first"])
+    legacy_allocated = restored_resolver.add(["third"], "User", class_name=True)
+
+    assert_output(
+        "".join(
+            (
+                f"delete retained: {delete_retained.name if delete_retained else None}\n",
+                f"delete allocated: {delete_allocated.name}\n",
+                f"rename retained: {rename_retained.name if rename_retained else None}\n",
+                f"rename allocated: {rename_allocated.name}\n",
+                f"same-name update: {same_name_update.name}\n",
+                f"legacy cache allocated: {legacy_allocated.name}\n",
+            )
+        ),
+        EXPECTED_RESOLVER_PATH / "reference_name_multiplicity.txt",
+    )
+
+
 @pytest.mark.parametrize(
     (
         "name",

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import re
 import stat
-from collections import defaultdict
+from collections import Counter, defaultdict
 from contextlib import contextmanager
 from enum import Enum, auto
 from functools import cached_property, lru_cache
@@ -785,8 +785,8 @@ class ModelResolver:  # noqa: PLR0904
         self.skip_affix_for_root: bool = skip_affix_for_root
         self.model_name_map: Mapping[str, str] = {} if model_name_map is None else {**model_name_map}
 
-        # Incrementally maintained set of reference names for O(1) uniqueness checking
-        self._reference_names_cache: set[str] = set()
+        # Incrementally maintained multiset of reference names for O(1) uniqueness checking
+        self._reference_names_cache: Counter[str] = Counter()
         self._unique_name_start_hints: dict[tuple[str, str, str], int] = {}
 
         # Default value overrides from external JSON file
@@ -836,6 +836,10 @@ class ModelResolver:  # noqa: PLR0904
             instance_state, slot_state = state, {}
         if "field_name_resolvers" in instance_state:
             instance_state["_field_name_resolvers"] = instance_state.pop("field_name_resolvers")
+        if not isinstance(instance_state.get("_reference_names_cache"), Counter):
+            instance_state["_reference_names_cache"] = Counter(
+                reference.name for reference in instance_state.get("references", {}).values()
+            )
         self.__dict__.update(instance_state)
         self.__dict__.setdefault("_resolved_base_path_cache", None)
         for name, value in slot_state.items():
@@ -922,25 +926,29 @@ class ModelResolver:  # noqa: PLR0904
         self._reference_names_cache.clear()
         self._unique_name_start_hints.clear()
 
-    def _get_reference_names(self) -> set[str]:
-        """Get the set of all reference names for uniqueness checking."""
+    def _get_reference_names(self) -> Counter[str]:
+        """Get the multiset of all reference names for uniqueness checking."""
         return self._reference_names_cache
 
     def _update_reference_name(self, old_name: str | None, new_name: str) -> None:
         """Update the reference names cache when a reference name changes."""
-        if old_name and old_name != new_name:
-            self._reference_names_cache.discard(old_name)
-            self._invalidate_unique_name_hints(old_name)
-        self._reference_names_cache.add(new_name)
+        if old_name == new_name:
+            return
+        if old_name:
+            self._remove_reference_name(old_name)
+        self._reference_names_cache[new_name] += 1
 
     def _remove_reference_name(self, name: str) -> None:
         """Remove a name from the reference names cache."""
-        self._reference_names_cache.discard(name)
+        if (count := self._reference_names_cache.get(name, 0)) > 1:
+            self._reference_names_cache[name] = count - 1
+            return
+        self._reference_names_cache.pop(name, None)
         self._invalidate_unique_name_hints(name)
 
     def refresh_reference_names(self) -> None:
         """Refresh cached names after a batch reference rename."""
-        self._reference_names_cache = {reference.name for reference in self.references.values()}
+        self._reference_names_cache = Counter(reference.name for reference in self.references.values())
         self._unique_name_start_hints.clear()
 
     @property

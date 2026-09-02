@@ -1,0 +1,6 @@
+delete retained: User
+delete allocated: User1
+rename retained: User
+rename allocated: User1
+same-name update: UserName
+legacy cache allocated: User1
