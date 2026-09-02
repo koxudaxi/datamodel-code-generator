@@ -1353,6 +1353,12 @@ def _clear_custom_template_caches() -> None:
         _get_template_with_custom_dir.cache_clear()
         _get_environment_with_absolute_path.cache_clear()
         _get_template_with_absolute_path.cache_clear()
+        if (
+            pydantic_v2_base_model := sys.modules.get("datamodel_code_generator.model.pydantic_v2.base_model")
+        ) is not None:
+            legacy_template_cache = getattr(pydantic_v2_base_model, "_uses_legacy_pydantic_extra_template", None)
+            if (cache_clear := getattr(legacy_template_cache, "cache_clear", None)) is not None:
+                cache_clear()
         _missing_custom_template_state.paths.clear()
         _missing_custom_template_state.count = 0
         _missing_custom_template_state.overflow = False
