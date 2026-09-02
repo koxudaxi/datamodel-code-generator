@@ -13,6 +13,7 @@ from tests.main.conftest import (
     EXPECTED_GRAPHQL_PATH,
     GRAPHQL_DATA_PATH,
     LEGACY_BLACK_SKIP,
+    assert_generated_model_json_validation,
     run_main_and_assert,
 )
 from tests.main.graphql.conftest import assert_file_content
@@ -80,6 +81,27 @@ def test_main_graphql_different_types_of_fields(output_file: Path) -> None:
         input_file_type="graphql",
         assert_func=assert_file_content,
         expected_file="different_types_of_fields.py",
+    )
+
+
+def test_main_graphql_root_type_references(output_file: Path) -> None:
+    """Resolve operation roots to Any while retaining non-root types named Query."""
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "root_type_references.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="root_type_references.py",
+        extra_args=["--disable-timestamp"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="generated_graphql_root_type_references",
+        model_name="Payload",
+        valid_json='{"queryRoot":{"anything":1},"ordinaryQuery":{"label":"ok"}}',
+        invalid_json='{"ordinaryQuery":{"label":1}}',
+        expected_error_type="string_type",
     )
 
 
