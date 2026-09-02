@@ -4,15 +4,17 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
+
+from datamodel_code_generator import Error, InputFileType
 from datamodel_code_generator.__main__ import Exit
-from tests.conftest import assert_output
-from tests.main.conftest import JSON_SCHEMA_DATA_PATH, run_main_and_assert
+from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+from tests.conftest import assert_output, validate_generated_code
+from tests.main.conftest import JSON_SCHEMA_DATA_PATH, run_generate_file_and_assert, run_main_and_assert
 from tests.main.jsonschema.conftest import EXPECTED_JSON_SCHEMA_PATH, assert_file_content
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-    import pytest
 
 
 def test_main_jsonschema_nested_external_definitions_collapse_root_models(output_file: Path) -> None:
@@ -40,3 +42,30 @@ def test_main_jsonschema_directory_external_ref_is_wrapped(
         expected_exit=Exit.ERROR,
     )
     assert_output(capsys.readouterr().err, EXPECTED_JSON_SCHEMA_PATH / "directory_external_ref.txt")
+
+
+def test_generate_jsonschema_nested_external_ref_with_relative_base_path(output_file: Path) -> None:
+    """Keep the relative-base fast path working for nested external references."""
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "nested_external_defs" / "root.json",
+        output_path=output_file,
+        input_file_type=InputFileType.JsonSchema,
+        assert_func=assert_file_content,
+        expected_file="nested_external_defs.py",
+        disable_timestamp=True,
+        collapse_root_models=True,
+    )
+    validate_generated_code(output_file.read_text(encoding="utf-8"), str(output_file), do_exec=True)
+
+
+def test_jsonschema_file_uri_directory_external_ref_is_wrapped() -> None:
+    """Wrap actual file-URI directory reads in the generator error type."""
+    directory = JSON_SCHEMA_DATA_PATH / "external_ref_errors" / "directory"
+    parser = JsonSchemaParser("", base_path=directory.parent)
+    file_uri = directory.as_uri()
+
+    with pytest.raises(Error) as exception_info:
+        parser._get_ref_body_from_url(file_uri)
+
+    output = f"{str(exception_info.value).replace(file_uri, '{file_uri}')}\n"
+    assert_output(output, EXPECTED_JSON_SCHEMA_PATH / "file_uri_directory_external_ref.txt")

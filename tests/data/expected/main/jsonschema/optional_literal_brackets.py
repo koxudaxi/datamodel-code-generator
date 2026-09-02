@@ -9,4 +9,4 @@ from pydantic import BaseModel
 
 
 class OptionalLiteralBrackets(BaseModel):
-    value: Optional[Union[Literal[']'], int]] = None
+    value: Optional[Union[Literal[']'], Literal['quote[\'"]'], int]] = None

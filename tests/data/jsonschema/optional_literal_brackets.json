@@ -5,6 +5,7 @@
     "value": {
       "oneOf": [
         {"const": "]"},
+        {"const": "quote['\"]"},
         {"type": "null"},
         {"type": "integer"}
       ]

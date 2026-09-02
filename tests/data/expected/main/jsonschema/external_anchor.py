@@ -16,4 +16,5 @@ class LegacyChild(BaseModel):
 
 class ExternalAnchor(BaseModel):
     anchored: AnchoredChild | None = None
+    anchored_again: AnchoredChild | None = None
     legacy: LegacyChild | None = None

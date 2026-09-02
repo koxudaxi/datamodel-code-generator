@@ -3,9 +3,11 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, PositiveFloat, confloat
 
 
 class Draft4ExclusiveWithoutBound(BaseModel):
     upper: float | None = None
     lower: float | None = None
+    upper_bounded: confloat(lt=5.0) | None = None
+    lower_bounded: PositiveFloat | None = None
