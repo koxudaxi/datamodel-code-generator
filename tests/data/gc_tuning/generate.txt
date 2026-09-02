@@ -1,0 +1,3 @@
+mapping_size=4
+tuned_during_generation=True
+restored_after_generation=True
