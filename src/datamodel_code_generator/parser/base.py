@@ -1621,6 +1621,42 @@ def _copy_resolved_inherited_field(  # noqa: PLR0913, PLR0915
     return copied_field
 
 
+def _restore_inherited_field_names_for_unique_aliases(
+    fields: list[DataModelFieldBase],
+    inherited_fields: Mapping[str, DataModelFieldBase],
+) -> bool:
+    """Keep a required inherited field's Python name when wire aliases must be unique."""
+    for field in fields:
+        if not (original_name := field.original_name):
+            continue
+        inherited_field = inherited_fields.get(original_name)
+        if (
+            inherited_field is None
+            or inherited_field.original_name != original_name
+            or not (inherited_name := inherited_field.name)
+            or field.name == inherited_name
+        ):
+            continue
+        for colliding_field in fields:
+            if colliding_field is field or colliding_field.name != inherited_name:
+                continue
+            if colliding_field.original_name == original_name or field.name is None:
+                continue
+            colliding_field.name = field.name
+            if colliding_field.alias is None:
+                colliding_field.alias = colliding_field.original_name
+            field.name = inherited_name
+            return True
+    return False
+
+
+def _rename_field_preserving_alias(field: DataModelFieldBase, new_name: str) -> None:
+    """Rename a Python field without losing an existing source-name alias."""
+    if field.alias is None:
+        field.alias = field.name
+    field.name = new_name
+
+
 class Result(BaseModel):
     """Generated code result with optional source file reference."""
 
@@ -4028,6 +4064,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     copied_original_field.use_default_with_required = True
                 resolved_fields.append(copied_original_field)
                 changed = True
+            if model.REQUIRES_UNIQUE_FIELD_ALIASES:
+                _restore_inherited_field_names_for_unique_aliases(resolved_fields, inherited_fields)
             self.generation_store.set_fields(model, resolved_fields)
         if changed and not can_retain_cache:
             _clear_model_imports_cache(models)
@@ -4093,8 +4131,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     resolver._reset_for_reuse(reference_type_names)  # noqa: SLF001
                     new_filed_name = resolver._get_unique_field_name(cast("str", filed_name))  # noqa: SLF001
                     if filed_name != new_filed_name:
-                        field.alias = filed_name
-                        field.name = new_filed_name
+                        _rename_field_preserving_alias(field, new_filed_name)
                         _clear_model_imports_cache_if_retained(model, can_retain_cache=can_retain_cache)
 
                 if (current_name := field.name) in self.builtin_names and any(
@@ -4118,6 +4155,16 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     model_field.nullable = False
                 _clear_model_imports_cache_if_retained(model, can_retain_cache=can_retain_cache)
 
+    @staticmethod
+    def __restore_inherited_field_names_for_unique_aliases(models: list[DataModel]) -> None:
+        """Reserve inherited Python names for output models with unique wire aliases."""
+        for model in models:
+            if model.REQUIRES_UNIQUE_FIELD_ALIASES and _restore_inherited_field_names_for_unique_aliases(
+                model.fields,
+                get_inherited_fields(_find_base_classes(model)),
+            ):
+                model.clear_imports_cache()
+
     def __fix_constructor_field_ordering(self, models: list[DataModel]) -> None:
         """Fix constructor field ordering after inherited defaults are resolved."""
         for model in models:
@@ -4128,7 +4175,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 )
 
             if (inherited := self.__get_inherited_constructor_info(model)) is None:
-                if restored_inherited_state:  # pragma: no cover - marker requires a generated base
+                field_policy = Parser._get_constructor_field_policy(model)
+                if self.__has_local_constructor_ordering_conflict(model, field_policy):
+                    model.clear_imports_cache()
+                    self.generation_store.set_fields(model, sorted(model.fields, key=field_policy.has_assignment))
+                elif restored_inherited_state:  # pragma: no cover - marker requires a generated base
                     model.clear_imports_cache()
                 continue
             field_policy = Parser._get_constructor_field_policy(model)
@@ -4162,6 +4213,27 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             )
             model.clear_imports_cache()
             self.generation_store.set_fields(model, sorted(model.fields, key=field_policy.has_assignment))
+
+    @staticmethod
+    def __has_local_constructor_ordering_conflict(
+        model: DataModel,
+        field_policy: _ConstructorFieldPolicy,
+    ) -> bool:
+        """Return whether a local required field follows a positional default."""
+        if not model.SUPPORTS_KW_ONLY:
+            return False
+        saw_assignment = False
+        for field in model.fields:
+            if not field_policy.participates(field):
+                continue
+            kw_only = field.constructor_keyword_only
+            if kw_only is True or (kw_only is None and model.has_keyword_only_definition()):
+                continue
+            if field_policy.has_assignment(field):
+                saw_assignment = True
+            elif saw_assignment:
+                return True
+        return False
 
     @classmethod
     def __get_inherited_constructor_info(cls, model: DataModel) -> _InheritedConstructorInfo | None:
@@ -5664,6 +5736,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.__set_default_enum_member(models, can_retain_cache=can_retain_cache)
         self.__sort_models(models, imports, use_deferred_annotations=use_deferred_annotations)
         self.__change_field_name(models, can_retain_cache=can_retain_cache)
+        self.__restore_inherited_field_names_for_unique_aliases(models)
         self.__apply_discriminator_type(models, imports, can_retain_cache=can_retain_cache)
         self.__set_one_literal_on_default(models, can_retain_cache=can_retain_cache)
         self.__fix_constructor_field_ordering(models)

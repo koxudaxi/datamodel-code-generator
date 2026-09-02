@@ -4373,6 +4373,29 @@ def test_main_openapi_allof_required_inherited_options(
     )
 
 
+def test_main_openapi_allof_required_inherited_collision_msgspec(output_file: Path) -> None:
+    """Keep inherited wire aliases distinct after resolving colliding Python field names."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_required_inherited_collision.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_required_inherited_collision_msgspec.py",
+        extra_args=[
+            "--output-model-type",
+            DataModelType.MsgspecStruct.value,
+            "--target-python-version",
+            "3.11",
+            "--allof-class-hierarchy",
+            "always",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+        force_exec_validation=True,
+    )
+
+
 @pytest.mark.parametrize(
     ("read_write_mode", "expected_file"),
     [
@@ -6051,6 +6074,44 @@ def test_main_openapi_discriminator(input_: str, output: str, output_file: Path)
         input_file_type="openapi",
         assert_func=assert_file_content,
         expected_file=EXPECTED_OPENAPI_PATH / "discriminator" / output,
+    )
+
+
+@pytest.mark.parametrize(
+    ("output_model_type", "expected_file"),
+    [
+        pytest.param(
+            DataModelType.DataclassesDataclass.value,
+            "discriminator/dataclass_constructor_order.py",
+            id="dataclass",
+        ),
+        pytest.param(
+            DataModelType.MsgspecStruct.value,
+            "discriminator/msgspec_constructor_order.py",
+            id="msgspec",
+        ),
+    ],
+)
+def test_main_openapi_discriminator_constructor_order(
+    output_file: Path,
+    output_model_type: str,
+    expected_file: str,
+) -> None:
+    """Place injected required discriminator fields before optional constructor fields."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "discriminator.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=[
+            "--output-model-type",
+            output_model_type,
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+        force_exec_validation=True,
     )
 
 
