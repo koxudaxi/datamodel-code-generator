@@ -752,6 +752,7 @@ class ModelResolver:  # noqa: PLR0904
         self._base_path: Path = base_path or Path.cwd()
         self._current_base_path: Path | None = self._base_path
         self._resolved_local_file_parts: dict[tuple[Path, str], str] = {}
+        self._resolved_base_path_cache: Path | None = None
         self.remove_suffix_number: bool = remove_suffix_number
 
         # Handle naming strategy with backward compatibility for parent_scoped_naming
@@ -1054,6 +1055,14 @@ class ModelResolver:  # noqa: PLR0904
             resolved_ref += f"#{fragment}"
         return resolved_ref
 
+    def _relative_base_path(self) -> Path:
+        """Return the base path in the same resolution state as local references."""
+        if not self._base_path.is_absolute():
+            return self._base_path
+        if self._resolved_base_path_cache is None:
+            self._resolved_base_path_cache = self._base_path.resolve()
+        return self._resolved_base_path_cache
+
     def resolve_ref(self, path: Sequence[str] | str) -> str:  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
         """Resolve a reference path to its canonical form."""
         joined_path = path if isinstance(path, str) else self.join_path(tuple(path))
@@ -1073,7 +1082,7 @@ class ModelResolver:  # noqa: PLR0904
             if (resolved_file_part := self._resolved_local_file_parts.get(cache_key)) is None:
                 local_file_path = Path(current_base_path, file_path)
                 resolved_file_path = local_file_path.resolve()
-                resolved_file_part = get_relative_path(self._base_path, resolved_file_path).as_posix()
+                resolved_file_part = get_relative_path(self._relative_base_path(), resolved_file_path).as_posix()
                 if len(self._resolved_local_file_parts) < self._MAX_RESOLVED_LOCAL_FILE_PARTS and not _contains_symlink(
                     local_file_path
                 ):
@@ -1151,7 +1160,7 @@ class ModelResolver:  # noqa: PLR0904
                     / target_url_path.name
                 )
                 if target_path.exists():
-                    return f"{target_path.resolve().relative_to(self._base_path)}#{path_part}"
+                    return f"{target_path.resolve().relative_to(self._relative_base_path())}#{path_part}"
 
         return ref
 

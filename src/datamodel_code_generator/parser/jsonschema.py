@@ -9731,10 +9731,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if parsed.netloc:
                 path = f"//{parsed.netloc}{path}"
             file_path = self._resolve_local_ref_path(Path(path), ref)
-            return self.remote_object_cache.get_or_put(
-                str(file_path),
-                default_factory=lambda _: self._load_ref_data_from_path(file_path),
-            )
+            try:
+                return self.remote_object_cache.get_or_put(
+                    str(file_path),
+                    default_factory=lambda _: self._load_ref_data_from_path(file_path),
+                )
+            except IsADirectoryError:
+                msg = f"$ref path is a directory: {ref}"
+                raise Error(msg) from None
         if self.http_local_ref_path is not None and urlparse(ref).scheme in {"http", "https"}:
             return self._get_ref_body_from_local_http_path(ref)
         return self.remote_object_cache.get_or_put(
@@ -9753,6 +9757,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             )
         except FileNotFoundError:
             msg = f"$ref file not found: {full_path}"
+            raise Error(msg) from None
+        except IsADirectoryError:
+            msg = f"$ref path is a directory: {resolved_ref}"
             raise Error(msg) from None
 
     def resolve_ref(self, object_ref: str) -> Reference:
@@ -10575,7 +10582,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 elif not self.skip_root_model:
                     self.parse_obj(obj_name, root_obj, path_parts or ["#"])
                 for key, model, path in definition_entries:
-                    reference = self.model_resolver.get(path)
+                    reference = self.model_resolver.references.get(self.model_resolver.join_path(tuple(path)))
+                    if reference is None:
+                        reference = self.model_resolver.get(path)
                     if not reference or not reference.loaded:
                         self._parse_raw_or_validated_obj(
                             key,
