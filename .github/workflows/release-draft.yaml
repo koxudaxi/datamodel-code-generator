@@ -40,22 +40,22 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Keep trusted verifier inputs outside Claude's writable workspace.
+          # Keep trusted verifier inputs separate from Claude's isolated workspace.
           diff_dir="$RUNNER_TEMP/release-draft-pr"
-          claude_diff_dir="$(mktemp -d "${GITHUB_WORKSPACE:?}/.release-draft-pr.XXXXXX")"
+          claude_work_dir="$(mktemp -d "${RUNNER_TEMP:?}/release-draft-claude.XXXXXX")"
           mkdir -p "$diff_dir"
           chmod 700 "$diff_dir"
-          chmod 700 "$claude_diff_dir"
+          chmod 700 "$claude_work_dir"
 
           diff_path="$diff_dir/pr.diff"
           diffstat_path="$diff_dir/pr.diffstat"
           files_path="$diff_dir/pr.files"
           deleted_lines_path="$diff_dir/deleted-lines.txt"
           context_path="$diff_dir/analysis-context.md"
-          claude_diff_path="$claude_diff_dir/pr.diff"
-          claude_files_path="$claude_diff_dir/pr.files"
-          claude_deleted_lines_path="$claude_diff_dir/deleted-lines.txt"
-          claude_context_path="$claude_diff_dir/analysis-context.md"
+          claude_diff_path="$claude_work_dir/pr.diff"
+          claude_files_path="$claude_work_dir/pr.files"
+          claude_deleted_lines_path="$claude_work_dir/deleted-lines.txt"
+          claude_context_path="$claude_work_dir/analysis-context.md"
 
           write_pull_request_diff() {
             gh pr diff "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" > "$diff_path"
@@ -109,17 +109,19 @@ jobs:
             echo "diff_path=$claude_diff_path"
             echo "deleted_lines_path=$claude_deleted_lines_path"
             echo "analysis_context_path=$claude_context_path"
+            echo "claude_working_dir=$claude_work_dir"
             echo "trusted_deleted_lines_path=$deleted_lines_path"
           } >> "$GITHUB_OUTPUT"
 
       - name: Run Claude Code Analysis
         id: claude
         timeout-minutes: 10
-        uses: anthropics/claude-code-action@e5ad3c7725bc2459721893f88879fef9dbcf97b0 # v1.0.202
+        uses: anthropics/claude-code-action/base-action@e5ad3c7725bc2459721893f88879fef9dbcf97b0 # v1.0.202
+        env:
+          CLAUDE_WORKING_DIR: ${{ steps.pr-diff.outputs.claude_working_dir }}
         with:
           # OAuth authentication for Max plan subscribers
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          github_token: ${{ github.token }}
           prompt: |
             Analyze PR #${{ github.event.pull_request.number }} for breaking changes.
 
@@ -163,6 +165,8 @@ jobs:
           claude_args: |
             --model claude-opus-4-8
             --max-turns 50
+            --setting-sources user
+            --tools Read
             --allowedTools Read
             --json-schema '{"type":"object","properties":{"has_breaking_changes":{"type":"boolean","description":"Whether this PR contains breaking changes"},"breaking_changes_content":{"type":"string","description":"Formatted breaking changes section content (without ## Breaking Changes header), or empty string if none"},"reasoning":{"type":"string","description":"Brief explanation of why this is or is not a breaking change"}},"required":["has_breaking_changes","breaking_changes_content","reasoning"]}'
 
