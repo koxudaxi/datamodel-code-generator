@@ -10535,7 +10535,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 f"Unresolved local $ref {ref!r} in {source}: JSON pointer was not found. "
                 "Generated a fallback Any model; use --strict-refs to fail instead.",
                 DanglingRefWarning,
-                stacklevel=3,
+                stacklevel=4,
             )
         self._dangling_refs.clear()
 

@@ -6,6 +6,7 @@ import json
 import shutil
 import sys
 import warnings
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
@@ -33,7 +34,6 @@ from tests.main.conftest import DATA_PATH, InputFileTypeLiteral, run_main_and_as
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from pathlib import Path
 
 
 MALFORMED_DATA_PATH = DATA_PATH / "malformed"
@@ -577,7 +577,7 @@ def test_dangling_local_ref_warns_and_preserves_generated_output(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Default mode warns while retaining the legacy fallback model byte-for-byte."""
-    with pytest.warns(DanglingRefWarning, match=r"Unresolved local \$ref.+dangling_local_ref\.json"):
+    with pytest.warns(DanglingRefWarning, match=r"Unresolved local \$ref.+dangling_local_ref\.json") as warning_records:
         run_main_and_assert(
             input_path=MALFORMED_DATA_PATH / "dangling_local_ref.json",
             output_path=output_file,
@@ -589,6 +589,12 @@ def test_dangling_local_ref_warns_and_preserves_generated_output(
             assert_no_stderr=True,
             importable_module_name="generated_dangling_local_ref",
         )
+    dangling_warnings = [warning for warning in warning_records if warning.category is DanglingRefWarning]
+    assert_warnings_contain(dangling_warnings, "Unresolved local $ref")
+    assert_output(
+        "".join(f"{Path(warning.filename).name}\n" for warning in dangling_warnings),
+        EXPECTED_MALFORMED_PATH / "dangling_ref_warning_location.txt",
+    )
 
 
 def test_auto_detected_dangling_ref_keeps_source_context_and_generated_output(
