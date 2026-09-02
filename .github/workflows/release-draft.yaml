@@ -165,19 +165,26 @@ jobs:
             - Each category should be a ### heading (Code Generation Changes, Custom Template Update Required, etc.)
             - Each item starts with "* " followed by a brief title, then " - " and detailed explanation
             - Include PR number at the end as (#NUMBER)
-            - If code examples help, include them in markdown code blocks
+            - Put each item on one physical Markdown line; do not hard-wrap items
+            - Start each title with an ASCII letter
+            - Do not use square brackets, angle brackets, or # except for the required PR suffix
+            - If using inline code, use paired single backticks and do not put forbidden characters inside it
+            - Do not include fenced code blocks
+            - Do not include links, images, raw HTML, or @mentions
             - Only include categories that have actual breaking changes
             - Return empty string for breaking_changes_content if no breaking changes
+            - Keep reasoning as one non-empty plain-text paragraph without links, images, raw HTML, @mentions, or issue references
+            - If a Read is truncated, retry with explicit non-truncated line ranges covering every line; if one line cannot be read without truncation, set reasoning to "Unable to read the prepared diff because a line was truncated"
 
+          # The extra slash creates Claude's // filesystem-root path anchor.
           claude_args: |
             --model claude-opus-4-8
             --max-turns 50
             --setting-sources user
             --tools Read
-            # The extra slash creates Claude's // filesystem-root path anchor.
             --allowedTools "Read(/${{ steps.pr-diff.outputs.claude_working_dir }}/**)"
             --permission-mode dontAsk
-            --json-schema '{"type":"object","properties":{"has_breaking_changes":{"type":"boolean","description":"Whether this PR contains breaking changes"},"breaking_changes_content":{"type":"string","description":"Formatted breaking changes section content (without ## Breaking Changes header), or empty string if none"},"reasoning":{"type":"string","description":"Brief explanation of why this is or is not a breaking change"}},"required":["has_breaking_changes","breaking_changes_content","reasoning"]}'
+            --json-schema '{"type":"object","additionalProperties":false,"properties":{"has_breaking_changes":{"type":"boolean","description":"Whether this PR contains breaking changes"},"breaking_changes_content":{"type":"string","description":"Formatted breaking changes section content (without ## Breaking Changes header), or empty string if none"},"reasoning":{"type":"string","description":"Brief explanation of why this is or is not a breaking change"}},"required":["has_breaking_changes","breaking_changes_content","reasoning"]}'
 
       - name: Parse Claude output
         id: parse
@@ -187,13 +194,19 @@ jobs:
           DELETED_LINES_PATH: ${{ steps.pr-diff.outputs.trusted_deleted_lines_path }}
           MARKER_PATH: ${{ steps.pr-diff.outputs.marker_path }}
           EXECUTION_PATH: ${{ steps.claude.outputs.execution_file }}
+          ANALYSIS_CONTEXT_PATH: ${{ steps.pr-diff.outputs.analysis_context_path }}
+          DIFF_PATH: ${{ steps.pr-diff.outputs.diff_path }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
           python3 scripts/validate_release_draft_analysis.py \
             --analysis-path "$ANALYSIS_PATH" \
             --deleted-lines-path "$DELETED_LINES_PATH" \
             --marker-path "$MARKER_PATH" \
-            --execution-path "$EXECUTION_PATH"
+            --execution-path "$EXECUTION_PATH" \
+            --analysis-context-path "$ANALYSIS_CONTEXT_PATH" \
+            --diff-path "$DIFF_PATH" \
+            --pr-number "$PR_NUMBER"
 
       - name: Upload analysis artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -211,7 +224,6 @@ jobs:
     permissions:
       contents: write
       issues: write
-      pull-requests: write
     steps:
       - name: Download analysis artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -231,7 +243,7 @@ jobs:
 
           echo "has_breaking_changes=$HAS_BC" >> "$GITHUB_OUTPUT"
 
-          DELIMITER="EOF_$(date +%s%N)"
+          DELIMITER="EOF_$(openssl rand -hex 32)"
           {
             echo "breaking_changes_content<<$DELIMITER"
             printf '%s\n' "$BC_CONTENT"
@@ -348,15 +360,10 @@ jobs:
               echo "Upgrading from patch to minor release due to breaking changes"
               NEW_MINOR=$((MINOR + 1))
               NEXT_VERSION="${MAJOR}.${NEW_MINOR}.0"
-              OLD_DRAFT_TAG="$DRAFT_TAG_RAW"
-              DRAFT_TAG_RAW=""
-              DRAFT_TAG=""
             else
               NEXT_VERSION="$DRAFT_TAG"
-              OLD_DRAFT_TAG=""
             fi
           else
-            OLD_DRAFT_TAG=""
             BC_SOURCE_TAG_RAW=""
             # No draft exists, calculate new version
             if [ "$HAS_BC" = "true" ]; then
@@ -451,30 +458,26 @@ jobs:
             RELEASE_BODY="$GENERATED_NOTES"
           fi
 
-          # Create or update draft release
-          if [ -n "$DRAFT_TAG_RAW" ] && [ "$DRAFT_TAG" = "$NEXT_VERSION" ]; then
+          # Update an existing draft in place to preserve its assets and metadata.
+          if [ -n "$DRAFT_TAG_RAW" ]; then
+            RELEASE_TAG="$NEXT_VERSION"
+            if [ "$DRAFT_TAG" = "$NEXT_VERSION" ]; then
+              RELEASE_TAG="$DRAFT_TAG_RAW"
+            fi
+
             echo "Updating existing draft release: $DRAFT_TAG_RAW"
             echo "$RELEASE_BODY" | gh release edit "$DRAFT_TAG_RAW" \
               --repo "$GITHUB_REPOSITORY" \
+              --tag "$RELEASE_TAG" \
               --title "$NEXT_VERSION" \
               --notes-file -
           else
             echo "Creating new draft release: $NEXT_VERSION"
-            # Create new draft first, then delete old one (to prevent data loss)
-            if echo "$RELEASE_BODY" | gh release create "$NEXT_VERSION" \
+            echo "$RELEASE_BODY" | gh release create "$NEXT_VERSION" \
               --repo "$GITHUB_REPOSITORY" \
               --title "$NEXT_VERSION" \
               --notes-file - \
-              --draft; then
-              # Only delete old draft after successful creation
-              if [ -n "$OLD_DRAFT_TAG" ]; then
-                echo "Deleting old draft: $OLD_DRAFT_TAG"
-                gh release delete "$OLD_DRAFT_TAG" --repo "$GITHUB_REPOSITORY" --yes 2>/dev/null || true
-              fi
-            else
-              echo "Failed to create new draft release"
-              exit 1
-            fi
+              --draft
           fi
 
           echo "Draft release updated: $NEXT_VERSION"

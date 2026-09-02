@@ -7,10 +7,118 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 from scripts import validate_release_draft_analysis as validator
+from tests.conftest import assert_output
+
+EXPECTED_PATH = Path(__file__).parent / "data" / "validate_release_draft_analysis"
+
+
+def _file_read_output(path: Path, *, start_line: int = 1, num_lines: int = 1, total_lines: int = 1) -> dict[str, Any]:
+    """Build the pinned SDK FileReadOutput metadata for one successful Read."""
+    return {
+        "type": "text",
+        "file": {
+            "filePath": str(path),
+            "content": "line\n" * num_lines,
+            "numLines": num_lines,
+            "startLine": start_line,
+            "totalLines": total_lines,
+        },
+    }
+
+
+def _execution_record(marker_path: Path, analysis_context_path: Path, diff_path: Path) -> list[dict[str, Any]]:
+    """Build the pinned SDK message shape for one denied and two successful Reads."""
+    marker_tool_use_id = "toolu_read_boundary_marker"
+    context_tool_use_id = "toolu_read_analysis_context"
+    diff_tool_use_id = "toolu_read_diff"
+    return [
+        {
+            "type": "assistant",
+            "message": {
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "id": marker_tool_use_id,
+                        "name": "Read",
+                        "input": {"file_path": str(marker_path)},
+                    },
+                ],
+            },
+        },
+        {
+            "type": "user",
+            "message": {
+                "content": [
+                    {"type": "tool_result", "tool_use_id": marker_tool_use_id, "is_error": True},
+                ],
+            },
+        },
+        {
+            "type": "assistant",
+            "message": {
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "id": context_tool_use_id,
+                        "name": "Read",
+                        "input": {"file_path": str(analysis_context_path), "offset": 1, "limit": 20},
+                    },
+                ],
+            },
+        },
+        {
+            "type": "user",
+            "message": {
+                "content": [{"type": "tool_result", "tool_use_id": context_tool_use_id}],
+            },
+            "tool_use_result": _file_read_output(analysis_context_path),
+        },
+        {
+            "type": "assistant",
+            "message": {
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "id": diff_tool_use_id,
+                        "name": "Read",
+                        "input": {"file_path": str(diff_path), "offset": 1, "limit": 20},
+                    },
+                ],
+            },
+        },
+        {
+            "type": "user",
+            "message": {
+                "content": [{"type": "tool_result", "tool_use_id": diff_tool_use_id, "is_error": False}],
+            },
+            "tool_use_result": _file_read_output(diff_path),
+        },
+        {
+            "type": "result",
+            "subtype": "success",
+            "is_error": False,
+            "permission_denials": [
+                {
+                    "tool_name": "Read",
+                    "tool_use_id": marker_tool_use_id,
+                    "tool_input": {"file_path": str(marker_path)},
+                },
+            ],
+        },
+    ]
+
+
+def _valid_breaking_changes_content(pr_number: int = 42) -> str:
+    """Return the smallest valid release-note section for a synthetic PR."""
+    return (
+        "### Code Generation Changes\n"
+        f"* Generated annotations change compatibility - Update downstream type assumptions (#{pr_number})"
+    )
 
 
 def test_generated_output_change_without_removal_claim_passes(tmp_path: Path) -> None:
@@ -70,7 +178,7 @@ def test_explicit_removed_token_missing_fails(tmp_path: Path) -> None:
 def test_unreadable_prepared_diff_fails() -> None:
     """The workflow should fail instead of silently trusting an unread diff."""
     with pytest.raises(SystemExit):
-        validator._validate_diff_was_read("I was unable to read the prepared diff under the temp directory.")
+        validator._validate_diff_was_read("Unable to read the prepared diff because a line was truncated")
 
 
 def test_empty_claude_output_fails() -> None:
@@ -130,59 +238,436 @@ def test_read_boundary_marker_leak_fails(output: str) -> None:
         validator._validate_marker_not_leaked("read-boundary-marker", output)
 
 
-def test_read_boundary_marker_denial_passes(tmp_path: Path) -> None:
-    """The execution record authoritatively confirms the denied marker read."""
+def test_execution_evidence_passes_for_exact_trusted_reads(tmp_path: Path) -> None:
+    """The execution record pairs the marker denial with full range-unioned artifact Reads."""
     marker_path = tmp_path / "marker.txt"
+    analysis_context_path = tmp_path / "analysis-context.md"
+    diff_path = tmp_path / "pr.diff"
     marker_path.write_text("read-boundary-marker\n", encoding="utf-8")
+    analysis_context_path.write_text("context\n", encoding="utf-8")
+    diff_path.write_text("diff\n", encoding="utf-8")
 
-    validator._validate_marker_read_denial(
-        [
-            {
-                "type": "result",
-                "permission_denials": [
+    execution_record = _execution_record(marker_path, analysis_context_path, diff_path)
+    execution_record[3]["tool_use_result"] = _file_read_output(
+        analysis_context_path,
+        start_line=1,
+        num_lines=1,
+        total_lines=2,
+    )
+    execution_record[-1:-1] = [
+        {
+            "type": "assistant",
+            "message": {
+                "content": [
                     {
-                        "tool_name": "Read",
-                        "tool_use_id": "toolu_read_boundary_marker",
-                        "tool_input": {"file_path": str(marker_path)},
+                        "type": "tool_use",
+                        "id": "toolu_read_analysis_context_second_page",
+                        "name": "Read",
+                        "input": {"file_path": str(analysis_context_path), "offset": 2, "limit": 20},
                     },
                 ],
             },
-        ],
+        },
+        {
+            "type": "user",
+            "message": {
+                "content": [{"type": "tool_result", "tool_use_id": "toolu_read_analysis_context_second_page"}],
+            },
+            "tool_use_result": _file_read_output(
+                analysis_context_path,
+                start_line=2,
+                num_lines=1,
+                total_lines=2,
+            ),
+        },
+    ]
+
+    validator._validate_execution_evidence(
+        execution_record,
         marker_path,
+        analysis_context_path,
+        diff_path,
     )
 
 
-def test_read_boundary_marker_without_denial_fails(tmp_path: Path) -> None:
-    """A missing exact Read denial fails closed."""
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "wrong_tool",
+        "missing_read",
+        "mismatched_result",
+        "error_read",
+        "missing_metadata",
+        "partial_read",
+        "truncated_read",
+        "extra_denial",
+    ],
+)
+def test_execution_evidence_rejects_incomplete_or_unexpected_reads(mutation: str, tmp_path: Path) -> None:
+    """Read evidence fails closed for absent, mismatched, failed, or unrelated requests."""
     marker_path = tmp_path / "marker.txt"
+    analysis_context_path = tmp_path / "analysis-context.md"
+    diff_path = tmp_path / "pr.diff"
     marker_path.write_text("read-boundary-marker\n", encoding="utf-8")
+    execution_record = _execution_record(marker_path, analysis_context_path, diff_path)
+    match mutation:
+        case "wrong_tool":
+            execution_record[2]["message"]["content"][0]["name"] = "Glob"
+        case "missing_read":
+            execution_record.pop(4)
+            execution_record.pop(4)
+        case "mismatched_result":
+            execution_record[3]["message"]["content"][0]["tool_use_id"] = "toolu_other"
+        case "error_read":
+            execution_record[3]["message"]["content"][0]["is_error"] = True
+        case "missing_metadata":
+            execution_record[3].pop("tool_use_result")
+        case "partial_read":
+            execution_record[3]["tool_use_result"] = _file_read_output(
+                analysis_context_path,
+                start_line=1,
+                num_lines=1,
+                total_lines=2,
+            )
+        case "truncated_read":
+            execution_record[3]["tool_use_result"]["file"]["truncatedByTokenCap"] = True
+        case "extra_denial":
+            execution_record[-1]["permission_denials"].append({
+                "tool_name": "Read",
+                "tool_use_id": "toolu_other",
+                "tool_input": {"file_path": "/tmp/other"},
+            })
+        case _:  # pragma: no cover - parametrization is exhaustive.
+            pytest.fail(f"Unexpected mutation: {mutation}")
 
     with pytest.raises(SystemExit):
-        validator._validate_marker_read_denial([], marker_path)
+        validator._validate_execution_evidence(execution_record, marker_path, analysis_context_path, diff_path)
 
 
-@pytest.mark.allow_direct_assert
-def test_main_validates_read_boundary_marker(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """The in-process entrypoint enforces the marker denial before persisting output."""
+@pytest.mark.parametrize(
+    ("has_breaking_changes", "breaking_changes_content"),
+    [
+        (False, _valid_breaking_changes_content()),
+        (False, " "),
+        (True, ""),
+    ],
+)
+def test_breaking_change_content_must_match_boolean(
+    has_breaking_changes: bool, breaking_changes_content: str, tmp_path: Path
+) -> None:
+    """Cross-field output contradictions cannot become release-note content."""
+    with pytest.raises(SystemExit):
+        validator._validate_breaking_changes_content(
+            has_breaking_changes=has_breaking_changes,
+            breaking_changes_content=breaking_changes_content,
+            deleted_lines_path=tmp_path / "deleted-lines.txt",
+            pr_number=42,
+        )
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        "## Breaking Changes\n* Generated output changed - Detail (#42)",
+        "### Unknown Category\n* Generated output changed - Detail (#42)",
+        "    ### Code Generation Changes\n* Generated output changed - Detail (#42)",
+        "### Code Generation Changes\n    * Generated output changed - Detail (#42)",
+        "### Code Generation Changes\n### API/CLI Changes\n* Generated output changed - Detail (#42)",
+        (
+            "### Code Generation Changes\n* Generated output changed - Detail (#42)\n"
+            "### Code Generation Changes\n* Detail - More (#42)"
+        ),
+        "### Code Generation Changes\n* Generated output changed (#42)",
+        "### Code Generation Changes\n*  - Detail (#42)",
+        "### Code Generation Changes\n* Title -  (#42)",
+        "### Code Generation Changes\n* Title  - Detail (#42)",
+        "### Code Generation Changes\n* Title -  Detail (#42)",
+        "### Code Generation Changes\n* 1. Nested list - Detail (#42)",
+        "### Code Generation Changes\n* ## Injected heading - Detail (#42)",
+        "### Code Generation Changes\n* Title - Detail #999 (#42)",
+        "### Code Generation Changes\n* Title - Detail\t(#42)",
+        "### Code Generation Changes\n* Generated output changed - Detail (#41)",
+        "### Code Generation Changes\n* Generated `unbalanced - Detail (#42)",
+        "### Code Generation Changes\n* Generated ``double`` code - Detail (#42)",
+        "### Code Generation Changes\n* Generated output changed - <a href='https://example.com'>Detail</a> (#42)",
+        "### Code Generation Changes\n* Generated output changed - Notify @maintainer (#42)",
+        "### Code Generation Changes\n* Generated output changed - www.example.com (#42)",
+        "### Code Generation Changes\n* Generated output changed - //example.com (#42)",
+        "### Code Generation Changes\n* Generated output changed - maintainer@example.com (#42)",
+        "### Code Generation Changes\n* [foo - bar]: //evil.example(#42)\n* [click][foo - bar] - Details (#42)",
+        "### Code Generation Changes\n* Generated output changed - ![image](https://example.com/image) (#42)",
+        "### Code Generation Changes\n* Generated output changed - Detail (#42)\n``` python`\n## Injected\n![image](https://example.com/image)",
+        (
+            "### Code Generation Changes\n* Generated output changed - Detail (#42)\n```\nexample\n"
+            "    ```\n### API/CLI Changes\n* Generated output changed - Detail (#42)\n```\n"
+            "## Injected\n![image](https://example.com/image)"
+        ),
+        "### Code Generation Changes\n* Generated output changed - Detail (#42)\n```\nexample",
+    ],
+)
+def test_breaking_change_content_rejects_untrusted_markdown(content: str, tmp_path: Path) -> None:
+    """Only the documented, inert changelog subset is admitted to the release draft."""
+    with pytest.raises(SystemExit):
+        validator._validate_breaking_changes_content(
+            has_breaking_changes=True,
+            breaking_changes_content=content,
+            deleted_lines_path=tmp_path / "deleted-lines.txt",
+            pr_number=42,
+        )
+
+
+def test_breaking_change_content_allows_balanced_inline_code(tmp_path: Path) -> None:
+    """Balanced single-backtick inline code remains safe without active Markdown."""
+    content = "### API/CLI Changes\n\n* Return type changes from `OldType` to `NewType` - Update callers (#42)"
+
+    validator._validate_breaking_changes_content(
+        has_breaking_changes=True,
+        breaking_changes_content=content,
+        deleted_lines_path=tmp_path / "deleted-lines.txt",
+        pr_number=42,
+    )
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "Valid Unicode \U0001f680",
+        "Bad bidi\u202econtrol",
+        "Bad C0\x00control",
+        "Bad paragraph\u2028separator",
+        " Bad outer whitespace",
+        "Bad [reference]",
+        "Bad `unbalanced",
+    ],
+)
+def test_reasoning_rejects_invisible_controls(value: str) -> None:
+    """Unicode controls cannot alter the rendered analysis comment."""
+    if value == "Valid Unicode \U0001f680":
+        validator._validate_reasoning(value)
+        return
+    with pytest.raises(SystemExit):
+        validator._validate_reasoning(value)
+
+
+@pytest.mark.parametrize(
+    "output",
+    [
+        {"has_breaking_changes": False, "breaking_changes_content": "", "reasoning": "ok", "extra": True},
+        {"has_breaking_changes": "false", "breaking_changes_content": "", "reasoning": "ok"},
+        {"has_breaking_changes": False, "breaking_changes_content": "", "reasoning": "x" * 4_001},
+    ],
+)
+def test_structured_output_rejects_schema_or_type_violations(output: dict[str, Any]) -> None:
+    """The validator mirrors the action schema instead of coercing malformed values."""
+    with pytest.raises(SystemExit):
+        validator._validate_structured_output(output)
+
+
+@pytest.mark.parametrize("raw_output", ["", "{", "[]"])
+def test_claude_output_parser_rejects_missing_or_malformed_values(raw_output: str) -> None:
+    """Missing, malformed, and non-object structured results all fail closed."""
+    with pytest.raises(SystemExit):
+        validator._parse_claude_output(raw_output)
+
+
+def test_marker_and_execution_readers_accept_present_trusted_files(tmp_path: Path) -> None:
+    """Trusted runtime files load through their streaming parser paths."""
+    marker_path = tmp_path / "marker.txt"
+    execution_path = tmp_path / "execution.json"
+    marker_path.write_text("marker\n", encoding="utf-8")
+    execution_path.write_text("[]", encoding="utf-8")
+
+    validator._read_marker(marker_path)
+    validator._read_execution_messages(execution_path)
+
+
+def test_execution_message_helpers_ignore_unrelated_frames() -> None:
+    """Unrelated SDK frames cannot create synthetic Read or tool-result evidence."""
+    validator._message_content({})
+    validator._read_tool_uses([
+        None,
+        {"type": "user"},
+        {"type": "assistant", "message": {"content": []}},
+        {"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Read"}]}},
+    ])
+    validator._tool_results([
+        None,
+        {"type": "assistant"},
+        {"type": "user", "message": {"content": []}},
+        {"type": "user", "message": {"content": [{"type": "text"}, {"type": "tool_result"}]}},
+    ])
+
+
+def test_execution_message_helpers_reject_duplicate_ids() -> None:
+    """Repeated tool-use and tool-result IDs cannot be paired ambiguously."""
+    duplicate_read = {
+        "type": "assistant",
+        "message": {
+            "content": [
+                {"type": "tool_use", "id": "toolu_duplicate", "name": "Read", "input": {"file_path": "/tmp/a"}},
+                {"type": "tool_use", "id": "toolu_duplicate", "name": "Read", "input": {"file_path": "/tmp/b"}},
+            ],
+        },
+    }
+    duplicate_result = {
+        "type": "user",
+        "message": {
+            "content": [
+                {"type": "tool_result", "tool_use_id": "toolu_duplicate"},
+                {"type": "tool_result", "tool_use_id": "toolu_duplicate"},
+            ],
+        },
+    }
+
+    with pytest.raises(SystemExit):
+        validator._read_tool_uses([duplicate_read])
+    with pytest.raises(SystemExit):
+        validator._tool_results([duplicate_result])
+
+
+@pytest.mark.parametrize(
+    "tool_use_result",
+    [
+        None,
+        {"type": "image"},
+        {"type": "text", "file": {"filePath": "/tmp/other", "content": "line"}},
+        {
+            "type": "text",
+            "file": {"filePath": "/tmp/file", "content": "line", "startLine": "1", "numLines": 1, "totalLines": 1},
+        },
+        {
+            "type": "text",
+            "file": {"filePath": "/tmp/file", "content": "line", "startLine": 0, "numLines": 1, "totalLines": 1},
+        },
+        {
+            "type": "text",
+            "file": {
+                "filePath": "/tmp/file",
+                "content": "line",
+                "startLine": 1,
+                "numLines": 1,
+                "totalLines": 1,
+                "truncatedByTokenCap": True,
+            },
+        },
+        {
+            "type": "text",
+            "file": {"filePath": "/tmp/file", "content": "", "startLine": 2, "numLines": 0, "totalLines": 0},
+        },
+        {
+            "type": "text",
+            "file": {"filePath": "/tmp/file", "content": "", "startLine": 1, "numLines": 0, "totalLines": 2},
+        },
+        {
+            "type": "text",
+            "file": {"filePath": "/tmp/file", "content": "line", "startLine": 2, "numLines": 1, "totalLines": 1},
+        },
+        {
+            "type": "text",
+            "file": {"filePath": "/tmp/file", "content": "line", "startLine": 1, "numLines": 2, "totalLines": 1},
+        },
+    ],
+)
+def test_file_read_metadata_rejects_invalid_ranges(tool_use_result: object) -> None:
+    """Malformed FileReadOutput metadata never supplies trusted coverage."""
+    validator._read_range(tool_use_result, "/tmp/file")
+
+
+def test_empty_file_read_metadata_is_a_complete_empty_range() -> None:
+    """A verified empty artifact uses the SDK's canonical empty-file range."""
+    validator._read_range(
+        _file_read_output(Path("/tmp/file"), start_line=1, num_lines=0, total_lines=0),
+        "/tmp/file",
+    )
+
+
+def test_range_coverage_handles_empty_and_inconsistent_metadata() -> None:
+    """Coverage refuses gaps and incompatible total-line metadata."""
+    validator._covers_entire_file([])
+    validator._covers_entire_file([(1, 0, 0)])
+    validator._covers_entire_file([(1, 1, 1), (1, 1, 2)])
+    validator._covers_entire_file([(2, 2, 2)])
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    ["result_count", "result_failure", "denial_count", "invalid_denial", "wrong_marker", "marker_incomplete"],
+)
+def test_execution_evidence_rejects_invalid_result_envelope(mutation: str, tmp_path: Path) -> None:
+    """The result envelope, marker denial, and matching error result are mandatory."""
+    marker_path = tmp_path / "marker.txt"
+    analysis_context_path = tmp_path / "analysis-context.md"
+    diff_path = tmp_path / "pr.diff"
+    execution_record = _execution_record(marker_path, analysis_context_path, diff_path)
+    match mutation:
+        case "result_count":
+            execution_record.pop()
+        case "result_failure":
+            execution_record[-1]["subtype"] = "error_during_execution"
+        case "denial_count":
+            execution_record[-1]["permission_denials"] = []
+        case "invalid_denial":
+            execution_record[-1]["permission_denials"] = [None]
+        case "wrong_marker":
+            execution_record[-1]["permission_denials"][0]["tool_input"]["file_path"] = "/tmp/other"
+        case "marker_incomplete":
+            execution_record[1]["message"]["content"][0]["is_error"] = False
+        case _:  # pragma: no cover - parametrization is exhaustive.
+            pytest.fail(f"Unexpected mutation: {mutation}")
+
+    with pytest.raises(SystemExit):
+        validator._validate_execution_evidence(execution_record, marker_path, analysis_context_path, diff_path)
+
+
+def test_execution_evidence_rejects_relative_artifact_paths(tmp_path: Path) -> None:
+    """Trusted Read evidence only permits the workflow's absolute runner paths."""
+    marker_path = tmp_path / "marker.txt"
+    execution_record = _execution_record(marker_path, Path("analysis-context.md"), Path("pr.diff"))
+
+    with pytest.raises(SystemExit):
+        validator._validate_execution_evidence(
+            execution_record,
+            marker_path,
+            Path("analysis-context.md"),
+            Path("pr.diff"),
+        )
+
+
+def test_removal_and_diff_guards_cover_empty_and_fenced_input(tmp_path: Path) -> None:
+    """Removal claims need exact deleted evidence, while fenced unit input is ignored."""
+    deleted_lines = tmp_path / "deleted-lines.txt"
+
+    with pytest.raises(SystemExit):
+        validator._validate_removal_claims("* Removed `--old-option`.", deleted_lines)
+    validator._validate_removal_claims("```\n* Removed `--old-option`.\n```", deleted_lines)
+    validator._normalize_token("method()")
+    validator._token_present("", "anything")
+    validator._claimed_removed_tokens("* Removed `   `.")
+    validator._validate_diff_was_read("Prepared diff was read.")
+
+
+def test_breaking_change_validator_ignores_non_boolean_internal_value(tmp_path: Path) -> None:
+    """The runtime helper has no permissive default branch for invalid internal callers."""
+    validator._validate_breaking_changes_content(
+        has_breaking_changes="invalid",  # type: ignore[arg-type]
+        breaking_changes_content="",
+        deleted_lines_path=tmp_path / "deleted-lines.txt",
+        pr_number=42,
+    )
+
+
+def test_main_persists_in_process_validated_output(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """The entrypoint writes the same trusted artifact as the workflow subprocess."""
     analysis_path = tmp_path / "analysis.json"
     deleted_lines = tmp_path / "deleted-lines.txt"
     execution_path = tmp_path / "execution.json"
     marker_path = tmp_path / "marker.txt"
+    analysis_context_path = tmp_path / "analysis-context.md"
+    diff_path = tmp_path / "pr.diff"
     deleted_lines.write_text("", encoding="utf-8")
-    marker_path.write_text("read-boundary-marker\n", encoding="utf-8")
+    marker_path.write_text("marker\n", encoding="utf-8")
     execution_path.write_text(
-        json.dumps([
-            {
-                "type": "result",
-                "permission_denials": [
-                    {
-                        "tool_name": "Read",
-                        "tool_use_id": "toolu_read_boundary_marker",
-                        "tool_input": {"file_path": str(marker_path)},
-                    },
-                ],
-            },
-        ]),
+        json.dumps(_execution_record(marker_path, analysis_context_path, diff_path)),
         encoding="utf-8",
     )
     monkeypatch.setenv(
@@ -206,45 +691,80 @@ def test_main_validates_read_boundary_marker(monkeypatch: pytest.MonkeyPatch, tm
             str(execution_path),
             "--marker-path",
             str(marker_path),
+            "--analysis-context-path",
+            str(analysis_context_path),
+            "--diff-path",
+            str(diff_path),
+            "--pr-number",
+            "42",
         ],
     )
 
-    assert validator.main() == 0
+    validator.main()
+    assert_output(analysis_path.read_text(encoding="utf-8"), EXPECTED_PATH / "no_breaking_changes.txt")
 
 
-@pytest.mark.allow_direct_assert
+def test_main_rejects_nonpositive_pr_number(monkeypatch: pytest.MonkeyPatch) -> None:
+    """An invalid PR number cannot weaken suffix validation."""
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "validate_release_draft_analysis.py",
+            "--analysis-path",
+            "analysis.json",
+            "--deleted-lines-path",
+            "deleted-lines.txt",
+            "--execution-path",
+            "execution.json",
+            "--marker-path",
+            "marker.txt",
+            "--analysis-context-path",
+            "analysis-context.md",
+            "--diff-path",
+            "pr.diff",
+            "--pr-number",
+            "0",
+        ],
+    )
+
+    with pytest.raises(SystemExit):
+        validator.main()
+
+
 @pytest.mark.parametrize(
-    ("has_breaking_changes", "expected_has_breaking_changes"),
-    [("true", True), ("false", False)],
+    ("claude_output", "expected_file"),
+    [
+        (
+            {"has_breaking_changes": False, "breaking_changes_content": "", "reasoning": "Prepared diff was read."},
+            "no_breaking_changes.txt",
+        ),
+        (
+            {
+                "has_breaking_changes": True,
+                "breaking_changes_content": _valid_breaking_changes_content(),
+                "reasoning": "Prepared diff was read.",
+            },
+            "breaking_changes.txt",
+        ),
+    ],
 )
-def test_script_writes_normalized_analysis(
-    has_breaking_changes: str,
-    expected_has_breaking_changes: bool,
-    tmp_path: Path,
-) -> None:
-    """The script writes normalized JSON for downstream workflow steps."""
+def test_script_writes_validated_analysis(claude_output: dict[str, Any], expected_file: str, tmp_path: Path) -> None:
+    """The real CLI persists only output that passes every workflow boundary check."""
     analysis_path = tmp_path / "analysis.json"
     deleted_lines = tmp_path / "deleted-lines.txt"
     execution_path = tmp_path / "execution.json"
     marker_path = tmp_path / "marker.txt"
+    analysis_context_path = tmp_path / "analysis-context.md"
+    diff_path = tmp_path / "pr.diff"
     deleted_lines.write_text("", encoding="utf-8")
     marker_path.write_text("read-boundary-marker\n", encoding="utf-8")
+    analysis_context_path.write_text("context\n", encoding="utf-8")
+    diff_path.write_text("diff\n", encoding="utf-8")
     execution_path.write_text(
-        json.dumps([
-            {
-                "type": "result",
-                "permission_denials": [
-                    {
-                        "tool_name": "Read",
-                        "tool_use_id": "toolu_read_boundary_marker",
-                        "tool_input": {"file_path": str(marker_path)},
-                    },
-                ],
-            },
-        ]),
+        json.dumps(_execution_record(marker_path, analysis_context_path, diff_path)),
         encoding="utf-8",
     )
-    breaking_changes_content = "### Code Generation Changes\n* Output changed without removing `required`."
     result = subprocess.run(
         [
             sys.executable,
@@ -257,6 +777,65 @@ def test_script_writes_normalized_analysis(
             str(execution_path),
             "--marker-path",
             str(marker_path),
+            "--analysis-context-path",
+            str(analysis_context_path),
+            "--diff-path",
+            str(diff_path),
+            "--pr-number",
+            "42",
+        ],
+        capture_output=True,
+        check=False,
+        cwd=Path(__file__).parents[1],
+        env={
+            **os.environ,
+            "CLAUDE_OUTPUT": json.dumps(claude_output),
+        },
+        text=True,
+    )
+
+    if result.returncode:
+        pytest.fail(result.stderr)
+    assert_output(analysis_path.read_text(encoding="utf-8"), EXPECTED_PATH / expected_file)
+
+
+def test_script_rejects_partial_artifact_read(tmp_path: Path) -> None:
+    """The real CLI fails instead of accepting a partial trusted-diff Read."""
+    analysis_path = tmp_path / "analysis.json"
+    deleted_lines = tmp_path / "deleted-lines.txt"
+    execution_path = tmp_path / "execution.json"
+    marker_path = tmp_path / "marker.txt"
+    analysis_context_path = tmp_path / "analysis-context.md"
+    diff_path = tmp_path / "pr.diff"
+    deleted_lines.write_text("", encoding="utf-8")
+    marker_path.write_text("read-boundary-marker\n", encoding="utf-8")
+    execution_record = _execution_record(marker_path, analysis_context_path, diff_path)
+    execution_record[3]["tool_use_result"] = _file_read_output(
+        analysis_context_path,
+        start_line=1,
+        num_lines=1,
+        total_lines=2,
+    )
+    execution_path.write_text(json.dumps(execution_record), encoding="utf-8")
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/validate_release_draft_analysis.py",
+            "--analysis-path",
+            str(analysis_path),
+            "--deleted-lines-path",
+            str(deleted_lines),
+            "--execution-path",
+            str(execution_path),
+            "--marker-path",
+            str(marker_path),
+            "--analysis-context-path",
+            str(analysis_context_path),
+            "--diff-path",
+            str(diff_path),
+            "--pr-number",
+            "42",
         ],
         capture_output=True,
         check=False,
@@ -264,17 +843,15 @@ def test_script_writes_normalized_analysis(
         env={
             **os.environ,
             "CLAUDE_OUTPUT": json.dumps({
-                "has_breaking_changes": has_breaking_changes,
-                "breaking_changes_content": breaking_changes_content,
+                "has_breaking_changes": False,
+                "breaking_changes_content": "",
                 "reasoning": "Prepared diff was read.",
             }),
         },
         text=True,
     )
 
-    assert result.returncode == 0, result.stderr
-    assert json.loads(analysis_path.read_text(encoding="utf-8")) == {
-        "has_breaking_changes": expected_has_breaking_changes,
-        "breaking_changes_content": breaking_changes_content,
-        "reasoning": "Prepared diff was read.",
-    }
+    if result.returncode != 1:
+        pytest.fail(result.stderr)
+    if analysis_path.exists():
+        pytest.fail("Validator persisted an artifact after a partial trusted-diff Read.")
