@@ -13207,6 +13207,23 @@ def test_main_jsonschema_collapse_root_models_transitive_reference_cycle(output_
     )
 
 
+def test_main_jsonschema_collapse_root_models_nested_cycle_and_empty(output_file: Path) -> None:
+    """Collapse an acyclic wrapper without descending forever through nested models."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_nested_cycle_and_empty.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=[
+            "--collapse-root-models",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+        force_exec_validation=True,
+    )
+
+
 def test_main_jsonschema_collapse_root_models_shared_reference(output_file: Path) -> None:
     """Collapse acyclic root models that share referenced root models."""
     run_main_and_assert(

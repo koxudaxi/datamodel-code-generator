@@ -156,6 +156,36 @@ def test_collapse_root_models_retry_normalizes_sentinel_without_cause(mocker: Mo
     assert parse_with_disposal.call_count == 2
 
 
+@freeze_time("2019-07-26")
+def test_collapse_root_models_retry_preserves_circular_schema_output(mocker: MockerFixture) -> None:
+    """Retry a real circular-root schema without changing its generated output."""
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    original_parse = JsonSchemaParser.parse
+    fail_initial_parse = True
+    initial_error = RecursionError()
+
+    def parse_after_initial_recursion(parser: JsonSchemaParser, *args: Any, **kwargs: Any) -> Any:
+        nonlocal fail_initial_parse
+        if fail_initial_parse:
+            fail_initial_parse = False
+            raise datamodel_code_generator._CollapseRootModelsRecursionError from initial_error
+        return original_parse(parser, *args, **kwargs)
+
+    mocker.patch.object(JsonSchemaParser, "parse", autospec=True, side_effect=parse_after_initial_recursion)
+
+    result = generate(
+        JSON_SCHEMA_DATA_PATH / "collapse_root_models_self_reference.json",
+        input_file_type=InputFileType.JsonSchema,
+        collapse_root_models=True,
+    )
+
+    assert_output(
+        f"{cast('str', result)}\n",
+        EXPECTED_MAIN_PATH / "jsonschema" / "jsonschema_collapse_root_models_self_reference.py",
+    )
+
+
 def test_parser_collects_empty_model_metadata() -> None:
     """Collect an empty metadata payload when parsing emits no models."""
     from datamodel_code_generator.model_metadata import dump_model_metadata

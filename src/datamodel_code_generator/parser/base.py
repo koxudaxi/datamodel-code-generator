@@ -1654,7 +1654,7 @@ def _restore_inherited_field_names_for_unique_aliases(
 ) -> bool:
     """Keep a required inherited field's Python name when wire aliases must be unique."""
     for field in fields:
-        if not (original_name := field.original_name):
+        if not (original_name := field.original_name):  # pragma: no cover - msgspec fields come from named properties
             continue
         inherited_field = inherited_fields.get(original_name)
         if (
@@ -1667,7 +1667,9 @@ def _restore_inherited_field_names_for_unique_aliases(
         for colliding_field in fields:
             if colliding_field is field or colliding_field.name != inherited_name:
                 continue
-            if colliding_field.original_name == original_name or field.name is None:
+            if (  # pragma: no cover - each schema object owns one field per wire name
+                colliding_field.original_name == original_name or field.name is None
+            ):
                 continue
             colliding_field.name = field.name
             if colliding_field.alias is None:
@@ -3779,15 +3781,14 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 circular_paths.update(component_paths)
         self._circular_root_model_paths = frozenset(circular_paths)
 
-    @staticmethod
-    def __root_dict_key_reference_paths(model: DataModel) -> set[str]:
+    def __root_dict_key_reference_paths(self, model: DataModel) -> set[str]:  # noqa: PLR6301
         """Return model-reference paths reached through mapping-key annotations."""
         reference_paths: set[str] = set()
         data_types = [field.data_type for field in model.fields]
         seen_data_types: set[int] = set()
         while data_types:
             data_type = data_types.pop()
-            if id(data_type) in seen_data_types:
+            if id(data_type) in seen_data_types:  # pragma: no cover - parser-owned DataType graphs are trees
                 continue
             seen_data_types.add(id(data_type))
             if (dict_key := data_type.dict_key) is not None:
@@ -4220,8 +4221,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     model_field.nullable = False
                 _clear_model_imports_cache_if_retained(model, can_retain_cache=can_retain_cache)
 
-    @staticmethod
-    def __restore_inherited_field_names_for_unique_aliases(models: list[DataModel]) -> None:
+    def __restore_inherited_field_names_for_unique_aliases(self, models: list[DataModel]) -> None:  # noqa: PLR6301
         """Reserve inherited Python names for output models with unique wire aliases."""
         for model in models:
             if model.REQUIRES_UNIQUE_FIELD_ALIASES and _restore_inherited_field_names_for_unique_aliases(
@@ -4279,8 +4279,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             model.clear_imports_cache()
             self.generation_store.set_fields(model, sorted(model.fields, key=field_policy.has_assignment))
 
-    @staticmethod
-    def __has_local_constructor_ordering_conflict(
+    def __has_local_constructor_ordering_conflict(  # noqa: PLR6301
+        self,
         model: DataModel,
         field_policy: _ConstructorFieldPolicy,
     ) -> bool:
