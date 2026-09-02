@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "mapped": {
+      "$anchor": "mapped"
+    }
+  },
+  "allOf": [
+    {
+      "$anchor": "sequence"
+    }
+  ],
+  "not": {
+    "$anchor": "single"
+  },
+  "extends": {
+    "$anchor": "mixed-object"
+  },
+  "items": [
+    {
+      "$anchor": "mixed-list"
+    }
+  ],
+  "default": {
+    "$anchor": "instance-only"
+  },
+  "examples": [
+    {
+      "$anchor": "instance-only"
+    }
+  ]
+}

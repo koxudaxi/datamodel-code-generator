@@ -9,7 +9,7 @@ import pytest
 
 from datamodel_code_generator import Error
 from datamodel_code_generator.__main__ import Exit
-from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+from datamodel_code_generator.parser.jsonschema import JsonSchemaParser, _find_json_schema_anchor_pointer
 from datamodel_code_generator.reference import ModelResolver
 from tests.conftest import assert_output
 from tests.main.conftest import JSON_SCHEMA_DATA_PATH, run_main_and_assert
@@ -30,6 +30,19 @@ def test_main_jsonschema_external_anchor_with_legacy_shorthand(output_file: Path
         extra_args=["--disable-timestamp", "--target-python-version", "3.10"],
         force_exec_validation=True,
     )
+
+
+def test_jsonschema_anchor_search_visits_only_schema_keyword_locations() -> None:
+    """Traverse every schema container shape while ignoring instance data."""
+    source = JSON_SCHEMA_DATA_PATH / "external_anchor" / "keyword_locations.json"
+    document = json.loads(source.read_text(encoding="utf-8"))
+    output = "".join(
+        f"{anchor}: {_find_json_schema_anchor_pointer(document, anchor)}\n"
+        for anchor in ("mapped", "sequence", "single", "mixed-object", "mixed-list", "instance-only")
+    )
+    output += f"non-object root: {_find_json_schema_anchor_pointer(document['examples'], 'instance-only')}\n"
+
+    assert_output(output, EXPECTED_JSON_SCHEMA_PATH / "anchor_keyword_locations.txt")
 
 
 def test_main_jsonschema_external_id_resolved_to_local_ref(output_file: Path) -> None:
