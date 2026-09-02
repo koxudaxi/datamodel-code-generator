@@ -570,23 +570,23 @@ def test_execution_message_helpers_reject_duplicate_ids() -> None:
 )
 def test_file_read_metadata_rejects_invalid_ranges(tool_use_result: object) -> None:
     """Malformed FileReadOutput metadata never supplies trusted coverage."""
-    validator._read_range(tool_use_result, "/tmp/file")
+    assert validator._read_range(tool_use_result, "/tmp/file") is None
 
 
 def test_empty_file_read_metadata_is_a_complete_empty_range() -> None:
     """A verified empty artifact uses the SDK's canonical empty-file range."""
-    validator._read_range(
+    assert validator._read_range(
         _file_read_output(Path("/tmp/file"), start_line=1, num_lines=0, total_lines=0),
         "/tmp/file",
-    )
+    ) == (1, 0, 0)
 
 
 def test_range_coverage_handles_empty_and_inconsistent_metadata() -> None:
     """Coverage refuses gaps and incompatible total-line metadata."""
-    validator._covers_entire_file([])
-    validator._covers_entire_file([(1, 0, 0)])
-    validator._covers_entire_file([(1, 1, 1), (1, 1, 2)])
-    validator._covers_entire_file([(2, 2, 2)])
+    assert validator._covers_entire_file([]) is False
+    assert validator._covers_entire_file([(1, 0, 0)]) is True
+    assert validator._covers_entire_file([(1, 1, 1), (1, 1, 2)]) is False
+    assert validator._covers_entire_file([(2, 2, 2)]) is False
 
 
 @pytest.mark.parametrize(
@@ -646,13 +646,24 @@ def test_removal_and_diff_guards_cover_empty_and_fenced_input(tmp_path: Path) ->
     validator._validate_diff_was_read("Prepared diff was read.")
 
 
-def test_breaking_change_validator_ignores_non_boolean_internal_value(tmp_path: Path) -> None:
+def test_breaking_change_validator_ignores_non_boolean_internal_value(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     """The runtime helper has no permissive default branch for invalid internal callers."""
-    validator._validate_breaking_changes_content(
-        has_breaking_changes="invalid",  # type: ignore[arg-type]
-        breaking_changes_content="",
-        deleted_lines_path=tmp_path / "deleted-lines.txt",
-        pr_number=42,
+    monkeypatch.setattr(
+        validator,
+        "_validate_removal_claims",
+        lambda *_args: pytest.fail("Removal validation must not run for a non-boolean value."),
+    )
+
+    assert (
+        validator._validate_breaking_changes_content(
+            has_breaking_changes="invalid",  # type: ignore[arg-type]
+            breaking_changes_content="",
+            deleted_lines_path=tmp_path / "deleted-lines.txt",
+            pr_number=42,
+        )
+        is None
     )
 
 
