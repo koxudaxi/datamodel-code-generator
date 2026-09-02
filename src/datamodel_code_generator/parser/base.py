@@ -5689,10 +5689,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         if not has_structured_imports and not self._constrained_decimal_alias_model_ids:
             return
         if models := [
-            model
-            for ctx in contexts
-            for model in ctx.models
-            if id(model) in self._constrained_decimal_alias_model_ids
+            model for ctx in contexts for model in ctx.models if id(model) in self._constrained_decimal_alias_model_ids
         ]:
             has_structured_imports = self.__normalize_default_value_constraints(models) or has_structured_imports
         if not has_structured_imports:
