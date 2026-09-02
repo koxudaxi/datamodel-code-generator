@@ -3621,6 +3621,30 @@ def test_main_generate_pydantic_v2_dataclass_field(output_file: Path) -> None:
         expected_file="pydantic_v2_dataclass_field.py",
         output_model_type=DataModelType.PydanticV2Dataclass,
     )
+    module_name = "generated_pydantic_v2_dataclass_field"
+    spec = importlib.util.spec_from_file_location(module_name, output_file)
+    if spec is None or spec.loader is None:  # pragma: no cover
+        pytest.fail(f"Unable to load generated module from {output_file}", pytrace=False)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    try:
+        spec.loader.exec_module(module)
+        first = module.Product(id=1, name="first", price=1)
+        second = module.Product(id=2, name="second", price=2)
+        assert_mutable_copy_is_isolated(
+            original=second.tags,
+            copied=first.tags,
+            mutate_copied=lambda value: value.append("tag"),
+            label="pydantic dataclass list default",
+        )
+        assert_mutable_copy_is_isolated(
+            original=second.metadata,
+            copied=first.metadata,
+            mutate_copied=lambda value: value.update(key="value"),
+            label="pydantic dataclass dict default",
+        )
+    finally:
+        sys.modules.pop(module_name, None)
 
 
 def test_main_generate_pydantic_v2_dataclass_required_field_order(output_file: Path) -> None:
