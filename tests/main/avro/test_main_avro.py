@@ -89,6 +89,25 @@ def test_main_avro_constructs(output_file: Path) -> None:
     )
 
 
+def test_main_avro_fixed_reference_default(output_file: Path) -> None:
+    """Decode defaults for both inline and previously declared fixed schemas."""
+    run_main_and_assert(
+        input_path=AVRO_DATA_PATH / "fixed_reference_default.avsc",
+        output_path=output_file,
+        input_file_type="avro",
+        assert_func=assert_file_content,
+        expected_file="fixed_reference_default.py",
+        extra_args=[
+            "--target-python-version",
+            "3.10",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+        force_exec_validation=True,
+    )
+
+
 @pytest.mark.parametrize(("output_model_type", "expected_name"), BACKEND_GOLDEN_CASES)
 def test_main_avro_output_model_types(
     output_file: Path,
