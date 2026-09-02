@@ -998,6 +998,7 @@ class DataModelFieldBase(_BaseModel):  # noqa: PLR0904
             data_type.is_mapping,
             data_type.is_sequence,
             data_type.is_tuple,
+            data_type.tuple_item_count,
             data_type.use_standard_collections,
             data_type.use_generic_container,
             data_type.use_union_operator,
@@ -1665,16 +1666,18 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         return _ADDITIONAL_PROPERTIES_TYPE_TEMPLATE_DATA_KEY in extra_template_data
 
     @classmethod
-    def store_additional_properties_type(
+    def store_additional_properties_type(  # noqa: PLR0913
         cls,
         extra_template_data: dict[str, Any],
         type_hint: str,
         reference_classes: set[str] | None = None,
         *,
         root_model_type: type[DataModel] | None = None,
+        imports: tuple[Import, ...] = (),
         use_backport: bool = False,
     ) -> None:
         """Store typed additional-properties metadata and its dependencies."""
+        del imports
         expression = repr(str(type_hint)) if reference_classes else type_hint
         extra_template_data[_ADDITIONAL_PROPERTIES_TYPE_TEMPLATE_DATA_KEY] = _make_internal_type_expression(
             type_hint,

@@ -535,6 +535,38 @@ def test_typed_dict_template_type_expressions_are_non_executing() -> None:
         _InternalTypeExpression("dict[str, int]", object())
 
 
+def test_typed_dict_extra_item_imports_do_not_leak_to_other_outputs() -> None:
+    """Only TypedDict consumes imports attached to PEP 728 extra_items metadata."""
+    extra_item_import = Import.from_full_path("datetime.datetime")
+    typed_dict_metadata: dict[str, Any] = {}
+    pydantic_metadata: dict[str, Any] = {}
+
+    TypedDictModel.store_additional_properties_type(
+        typed_dict_metadata,
+        "datetime",
+        imports=(extra_item_import,),
+    )
+    BaseModel.store_additional_properties_type(
+        pydantic_metadata,
+        "datetime",
+        imports=(extra_item_import,),
+    )
+
+    typed_dict = TypedDictModel(
+        fields=[],
+        reference=Reference(path="Typed", original_name="Typed", name="Typed"),
+        extra_template_data=defaultdict(dict, {"Typed": typed_dict_metadata}),
+    )
+    pydantic_model = BaseModel(
+        fields=[],
+        reference=Reference(path="Pydantic", original_name="Pydantic", name="Pydantic"),
+        extra_template_data=defaultdict(dict, {"Pydantic": pydantic_metadata}),
+    )
+
+    assert extra_item_import in typed_dict.imports
+    assert extra_item_import not in pydantic_model.imports
+
+
 def test_typed_dict_include_only_custom_dir_keeps_builtin_context_safe(tmp_path: Path) -> None:
     """A custom include directory cannot make a built-in TypedDict consume raw kwargs."""
     model = TypedDictModel(
@@ -3101,6 +3133,27 @@ def test_field_import_cache_normalizes_union_on_cache_hit(monkeypatch: pytest.Mo
         assert cached_field.imports == (IMPORT_OPTIONAL,)
         assert cached_field.data_type.is_optional is True
         uncached.assert_not_called()
+    finally:
+        DataModelFieldBase._field_imports_cache.clear()
+
+
+def test_field_import_cache_distinguishes_fixed_tuple_item_count() -> None:
+    """Fixed-length empty and Any tuples need distinct cached imports."""
+    DataModelFieldBase._field_imports_cache.clear()
+    try:
+        empty_tuple = DataModelFieldBase(
+            name="empty",
+            data_type=DataType(is_tuple=True, tuple_item_count=0),
+            required=True,
+        )
+        any_tuple = DataModelFieldBase(
+            name="values",
+            data_type=DataType(is_tuple=True, tuple_item_count=2),
+            required=True,
+        )
+
+        assert empty_tuple.imports == (Import.from_full_path("typing.Tuple"),)
+        assert any_tuple.imports == (IMPORT_ANY, Import.from_full_path("typing.Tuple"))
     finally:
         DataModelFieldBase._field_imports_cache.clear()
 

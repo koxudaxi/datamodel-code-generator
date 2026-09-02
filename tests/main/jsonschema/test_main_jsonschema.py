@@ -9170,6 +9170,30 @@ def test_main_typed_dict_extra_items(output_file: Path) -> None:
     )
 
 
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "22",
+    reason="Installed black doesn't support Python version 3.10",
+)
+def test_main_typed_dict_extra_items_imports(output_file: Path) -> None:
+    """TypedDict extra_items carries imports required by its value type."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "typed_dict_extra_items_datetime.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="typed_dict_extra_items_datetime.py",
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--target-python-version",
+            "3.10",
+            "--output-datetime-class",
+            "datetime",
+        ],
+        force_exec_validation=True,
+    )
+
+
 @pytest.mark.parametrize(("output_model_type", "expected_name"), BACKEND_GOLDEN_CASES)
 def test_main_additional_properties_output_context(
     output_file: Path,
