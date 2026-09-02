@@ -3,6 +3,9 @@
   "$defs": {
     "mapped": {
       "$anchor": "mapped"
+    },
+    "boolean-schema": {
+      "items": false
     }
   },
   "allOf": [
