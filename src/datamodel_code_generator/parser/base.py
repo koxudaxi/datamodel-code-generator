@@ -1956,7 +1956,10 @@ def _get_single_discriminator_default(
     return member
 
 
-def _get_model_module_name(model: DataModel, model_path_to_module_name: Mapping[str, str]) -> str:
+def _get_model_module_name(model: DataModel, model_path_to_module_name: Mapping[str, str] | None) -> str:
+    """Return a generated module name when scope planning supplied one."""
+    if model_path_to_module_name is None:
+        return model.module_name
     return model_path_to_module_name.get(model.path, model.module_name)
 
 
