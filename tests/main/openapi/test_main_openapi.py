@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import importlib
 import inspect
 import json
 import pickle
@@ -867,6 +868,27 @@ def test_main_modular_no_file(tmp_path: Path) -> None:
         input_file_type=None,
         expected_exit=Exit.ERROR,
     )
+
+
+def test_main_modular_treat_dot_as_module_keeps_subpackage_initializer(output_dir: Path) -> None:
+    """Do not replace a generated subpackage initializer with the root module result."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "modular.yaml",
+        output_path=output_dir,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        output_to_expected=[("foo/__init__.py", "modular_treat_dot_as_module/foo_init.py")],
+        extra_args=["--treat-dot-as-module", "--disable-timestamp", "--formatters", "builtin"],
+    )
+    sys.path.insert(0, str(output_dir.parent))
+    try:
+        module = importlib.import_module(f"{output_dir.name}.foo")
+        assert module.__all__ == ["Cocoa", "Tea"]
+    finally:
+        sys.path.remove(str(output_dir.parent))
+        for loaded_module in tuple(sys.modules):
+            if loaded_module == output_dir.name or loaded_module.startswith(f"{output_dir.name}."):
+                del sys.modules[loaded_module]
 
 
 def test_main_modular_filename(output_file: Path) -> None:

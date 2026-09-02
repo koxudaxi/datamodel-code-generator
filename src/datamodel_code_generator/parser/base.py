@@ -3569,7 +3569,13 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                         continue
 
                     # set copied data_type
-                    copied_data_type = root_type_field.data_type.model_copy()
+                    source_module_name = _get_model_module_name(root_type_model, model_path_to_module_name)
+                    target_module_name = _get_model_module_name(model, model_path_to_module_name)
+                    copied_data_type = (
+                        _copy_data_type(root_type_field.data_type)
+                        if source_module_name != target_module_name
+                        else root_type_field.data_type.model_copy()
+                    )
                     if (
                         has_remaining_root_references := generation_store._root_collapse_has_data_type_references(  # noqa: SLF001
                             root_type_model.reference,
@@ -4449,7 +4455,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             for i in range(len(folder)):
                 subfolder = folder[: i + 1]
                 init_file = (*subfolder, "__init__.py")
-                results.update({init_file: init_result})
+                results.setdefault(init_file, init_result)
         return results
 
     def __change_imported_model_name(
@@ -5551,6 +5557,12 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         """Process a single module and return its context."""
         imports = Imports(self.use_exact_imports)
         module, is_init = _resolve_module_file(module_, results)
+        module_name = _module_name_from_module_path(module_)
+        # Tree-scope reuse creates synthetic models without a file_path. Keep
+        # their ownership in this module for relative import planning without
+        # changing the file path used by generated filename headers.
+        for model in models:
+            model_path_to_module_name.setdefault(model.path, module_name)
         can_retain_cache = _can_retain_model_imports_cache(
             models,
             configured_types_are_builtin=self._configured_generation_types_are_builtin,

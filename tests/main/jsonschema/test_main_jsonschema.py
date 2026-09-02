@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 import importlib.util
 import itertools
 import json
@@ -2102,6 +2103,64 @@ def test_main_external_files_in_directory(output_file: Path) -> None:
         input_file_type="jsonschema",
         assert_func=assert_file_content,
     )
+
+
+def test_main_external_files_in_directory_collapse_keeps_import_aliases(output_dir: Path) -> None:
+    """Deep-copy cross-module root types before assigning an import alias."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "external_files_in_directory",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        output_to_expected=[
+            ("definitions/friends.py", "external_files_in_directory_collapse/friends.py"),
+        ],
+        extra_args=["--collapse-root-models", "--disable-timestamp", "--formatters", "builtin"],
+    )
+    module_name = f"{output_dir.name}.definitions.friends"
+    sys.path.insert(0, str(output_dir.parent))
+    try:
+        module = importlib.import_module(module_name)
+        assert module.Friends.model_fields["root"].annotation is not None
+    finally:
+        sys.path.remove(str(output_dir.parent))
+        for loaded_module in tuple(sys.modules):
+            if loaded_module == output_dir.name or loaded_module.startswith(f"{output_dir.name}."):
+                del sys.modules[loaded_module]
+
+
+def test_main_jsonschema_reuse_scope_tree_relative_imports(output_dir: Path) -> None:
+    """Resolve tree-reuse imports from the generated module without changing its header path."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "naming_strategy",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        output_to_expected=[
+            ("primary_first_multi_file/external1.py", "reuse_scope_tree_relative_import/external1.py"),
+        ],
+        extra_args=[
+            "--reuse-model",
+            "--reuse-scope",
+            "tree",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+    )
+    sys.path.insert(0, str(output_dir.parent))
+    try:
+        for module_suffix in (
+            "primary_first_multi_file.external1",
+            "primary_first_multi_file.external2",
+            "primary_first_multi_file.main",
+        ):
+            importlib.import_module(f"{output_dir.name}.{module_suffix}")
+    finally:
+        sys.path.remove(str(output_dir.parent))
+        for loaded_module in tuple(sys.modules):
+            if loaded_module == output_dir.name or loaded_module.startswith(f"{output_dir.name}."):
+                del sys.modules[loaded_module]
 
 
 def test_main_jsonschema_local_reference_file_cache(output_file: Path) -> None:
