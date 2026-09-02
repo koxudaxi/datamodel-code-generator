@@ -1432,6 +1432,17 @@ def _emit_stdout_results(
     return generated
 
 
+_SINGLE_MODULE_OUTPUT_DIRECTORY_ERROR = "Single-module output requires a file path, not a directory"
+_MODEL_METADATA_OUTPUT_DIRECTORY_ERROR = "Model metadata output requires a file path, not a directory"
+
+
+def _ensure_file_output_path(path: Path, error_message: str) -> None:
+    """Reject an existing directory where a generated file is required."""
+    if not path.is_dir():
+        return
+    raise Error(error_message)
+
+
 def _write_results_to_output(  # noqa: PLR0913
     results: _ParserResults,
     output: Path,
@@ -1444,6 +1455,7 @@ def _write_results_to_output(  # noqa: PLR0913
 ) -> None:
     """Write one file or a sorted collection of generated modules to disk."""
     if isinstance(results, str):
+        _ensure_file_output_path(output, _SINGLE_MODULE_OUTPUT_DIRECTORY_ERROR)
         modules: dict[Path, tuple[str, str, str | None]] = {output: (results, "", input_filename)}
     else:
         if output.suffix:
@@ -1548,7 +1560,11 @@ def _emit_results(  # noqa: PLR0913
         raise Error(msg)
 
     if custom_file_header is None and (custom_file_header_path := config.custom_file_header_path):
-        custom_file_header = custom_file_header_path.read_text(encoding=config.encoding)
+        try:
+            custom_file_header = custom_file_header_path.read_text(encoding=config.encoding)
+        except (OSError, UnicodeDecodeError) as e:
+            msg = f"Unable to read custom file header {custom_file_header_path}: {e}"
+            raise Error(msg) from e
 
     has_custom_file_header = bool(custom_file_header)
     header_prefix, header_suffix = _build_file_header_parts(custom_file_header, config)
@@ -1581,6 +1597,7 @@ def _emit_results(  # noqa: PLR0913
 def _write_model_metadata(metadata_path: Path, metadata: ModelMetadata | None, encoding: str) -> None:
     from datamodel_code_generator.model_metadata import dump_model_metadata  # noqa: PLC0415
 
+    _ensure_file_output_path(metadata_path, _MODEL_METADATA_OUTPUT_DIRECTORY_ERROR)
     metadata_path.parent.mkdir(parents=True, exist_ok=True)
     metadata_path.write_text(f"{dump_model_metadata(metadata)}\n", encoding=encoding)
 
@@ -1630,6 +1647,9 @@ def generate(
         config = _GenerateConfig.model_validate(options)
     config = _apply_generate_config_preset(config)
     config = _apply_missing_sentinel_config(config)
+
+    if (metadata_path := config.emit_model_metadata) is not None:
+        _ensure_file_output_path(metadata_path, _MODEL_METADATA_OUTPUT_DIRECTORY_ERROR)
 
     atomic_remote_update = (
         config.update_lock

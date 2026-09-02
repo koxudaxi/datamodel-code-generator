@@ -133,6 +133,7 @@ from datamodel_code_generator import (
     NamingStrategy,
     OpenAPIScope,
     ReuseScope,
+    _SINGLE_MODULE_OUTPUT_DIRECTORY_ERROR,
     _validate_alias_generator,
     _validate_generation_path_conflicts,
     _validate_output_datetime_class,
@@ -2891,6 +2892,13 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
         except Error as e:
             print(str(e), file=sys.stderr)  # noqa: T201
             return Exit.ERROR
+        except Exception as e:  # noqa: BLE001
+            from pydantic import ValidationError  # noqa: PLC0415
+
+            if not isinstance(e, ValidationError):
+                raise
+            print(f"Invalid configuration: {e}", file=sys.stderr)  # noqa: T201
+            return Exit.ERROR
 
     watch_dependencies = dependencies
     if config.watch:
@@ -3286,6 +3294,9 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
     except InvalidClassNameError as e:
         print(f"{e} You have to set `--class-name` option", file=sys.stderr)  # noqa: T201
         return cleanup_and_return(Exit.ERROR)
+    except UnicodeDecodeError as e:
+        print(f"Unable to decode input using encoding {config.encoding!r}: {e}", file=sys.stderr)  # noqa: T201
+        return cleanup_and_return(Exit.ERROR)
     except Error as e:
         print(str(e), file=sys.stderr)  # noqa: T201
         return cleanup_and_return(Exit.ERROR)
@@ -3298,6 +3309,15 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
         import traceback  # noqa: PLC0415
 
         print(traceback.format_exc(), file=sys.stderr)  # noqa: T201
+        return cleanup_and_return(Exit.ERROR)
+
+    if (
+        config.output is not None
+        and config.output.is_dir()
+        and generate_output is not None
+        and generate_output.is_file()
+    ):
+        print(_SINGLE_MODULE_OUTPUT_DIRECTORY_ERROR, file=sys.stderr)  # noqa: T201
         return cleanup_and_return(Exit.ERROR)
 
     if writes_json_output_file and generate_output is not None and config.output is not None:

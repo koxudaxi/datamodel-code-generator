@@ -681,12 +681,18 @@ class CodeFormatter:
 
     def _load_custom_formatter(self, custom_formatter_import: str) -> CustomCodeFormatter:
         """Load and instantiate a custom formatter from a module path."""
-        if (watch_dependencies := sys.modules.get("datamodel_code_generator.watch_dependencies")) is not None and (
-            watch_dependencies.collector_is_active()
-        ):
-            import_ = _load_watch_formatter_module(custom_formatter_import, watch_dependencies)
-        else:
-            import_ = import_module(custom_formatter_import)
+        try:
+            if (watch_dependencies := sys.modules.get("datamodel_code_generator.watch_dependencies")) is not None and (
+                watch_dependencies.collector_is_active()
+            ):
+                import_ = _load_watch_formatter_module(custom_formatter_import, watch_dependencies)
+            else:
+                import_ = import_module(custom_formatter_import)
+        except ImportError as e:
+            from datamodel_code_generator import Error  # noqa: PLC0415
+
+            msg = f"Unable to import custom formatter {custom_formatter_import!r}: {e}"
+            raise Error(msg) from e
 
         if not hasattr(import_, "CodeFormatter"):
             msg = f"Custom formatter module `{import_.__name__}` must contains object with name CodeFormatter"
