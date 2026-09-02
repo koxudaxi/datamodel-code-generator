@@ -741,17 +741,6 @@ def test_execution_message_helpers_reject_duplicate_ids() -> None:
         },
         {
             "type": "text",
-            "file": {
-                "filePath": "/tmp/file",
-                "content": "line",
-                "startLine": 2,
-                "numLines": 1,
-                "totalLines": 2,
-                "truncatedByTokenCap": True,
-            },
-        },
-        {
-            "type": "text",
             "file": {"filePath": "/tmp/file", "content": "", "startLine": 2, "numLines": 0, "totalLines": 0},
         },
         {
@@ -772,6 +761,27 @@ def test_execution_message_helpers_reject_duplicate_ids() -> None:
 def test_file_read_metadata_rejects_invalid_ranges(tool_use_result: object) -> None:
     """Malformed FileReadOutput metadata never supplies trusted coverage."""
     assert validator._read_range(tool_use_result, "/tmp/file") is None
+
+
+@pytest.mark.allow_direct_assert
+def test_file_read_metadata_rejects_token_capped_continuation(tmp_path: Path) -> None:
+    """A real artifact cannot make a token-capped continuation eligible for coverage."""
+    file_path = tmp_path / "file"
+    file_path.write_text("line\nline", encoding="utf-8", newline="\n")
+
+    assert (
+        validator._read_range(
+            _file_read_output(
+                file_path,
+                start_line=2,
+                num_lines=1,
+                total_lines=2,
+                truncated_by_token_cap=True,
+            ),
+            str(file_path),
+        )
+        is None
+    )
 
 
 @pytest.mark.allow_direct_assert
