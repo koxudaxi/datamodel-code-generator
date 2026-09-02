@@ -209,6 +209,11 @@ def test_model_resolver_pickles_are_compatible_across_the_resolver_state_rename(
     restored_tuple_reduce_resolver = pickle.loads(pickle.dumps(TupleReduceModelResolver(), protocol=4))
     private_state_resolver = ModelResolver.__new__(ModelResolver)
     private_state_resolver.__setstate__(ModelResolver().__dict__.copy())
+    legacy_base_path_state = ModelResolver(base_path=tmp_path).__dict__.copy()
+    del legacy_base_path_state["_resolved_base_path_cache"]
+    legacy_base_path_resolver = ModelResolver.__new__(ModelResolver)
+    legacy_base_path_resolver.__setstate__(legacy_base_path_state)
+    legacy_base_path_ref = legacy_base_path_resolver.resolve_ref("schema.json#/value")
 
     outputs = [
         (
@@ -234,6 +239,7 @@ def test_model_resolver_pickles_are_compatible_across_the_resolver_state_rename(
             f"tuple reduce type: {type(restored_tuple_reduce_resolver).__name__}\n"
             "private state accepted: "
             f"{private_state_resolver.get_valid_field_name('3name', model_type=ModelType.CLASS)}\n"
+            f"legacy base cache ref: {legacy_base_path_ref}\n"
         )
     ]
     for direction, pickle_path in (

@@ -616,19 +616,65 @@ def _split_json_pointer(schema: dict[str, YamlValue] | list[YamlValue], pointer:
     return parts, reference_parts
 
 
+_JSON_SCHEMA_MAP_KEYWORDS = frozenset({
+    "$defs",
+    "definitions",
+    "dependencies",
+    "dependentSchemas",
+    "properties",
+    "patternProperties",
+})
+_JSON_SCHEMA_SEQUENCE_KEYWORDS = frozenset({"allOf", "anyOf", "oneOf", "prefixItems"})
+_JSON_SCHEMA_SINGLE_KEYWORDS = frozenset({
+    "additionalItems",
+    "additionalProperties",
+    "contains",
+    "contentSchema",
+    "else",
+    "if",
+    "not",
+    "propertyNames",
+    "then",
+    "unevaluatedItems",
+    "unevaluatedProperties",
+})
+_JSON_SCHEMA_SINGLE_OR_SEQUENCE_KEYWORDS = frozenset({"extends", "items"})
+
+
 def _find_json_schema_anchor_pointer(schema: YamlValue, anchor: str) -> str | None:
     """Return the JSON pointer for an anchor within one schema document."""
     pending: list[tuple[YamlValue, tuple[str, ...]]] = [(schema, ())]
     while pending:
         value, path = pending.pop()
-        if isinstance(value, dict):
-            if value.get("$anchor") == anchor:
-                return "/" + "/".join(part.replace("~", "~0").replace("/", "~1") for part in path)
-            pending.extend((child, (*path, str(key))) for key, child in value.items() if isinstance(child, dict | list))
-        elif isinstance(value, list):
-            pending.extend(
-                (child, (*path, str(index))) for index, child in enumerate(value) if isinstance(child, dict | list)
-            )
+        if not isinstance(value, dict):
+            continue
+        if value.get("$anchor") == anchor:
+            return "/" + "/".join(part.replace("~", "~0").replace("/", "~1") for part in path)
+        for keyword, child in value.items():
+            match keyword:
+                case _ if keyword in _JSON_SCHEMA_MAP_KEYWORDS and isinstance(child, dict):
+                    pending.extend(
+                        (subschema, (*path, keyword, str(name)))
+                        for name, subschema in child.items()
+                        if isinstance(subschema, dict)
+                    )
+                case _ if keyword in _JSON_SCHEMA_SEQUENCE_KEYWORDS and isinstance(child, list):
+                    pending.extend(
+                        (subschema, (*path, keyword, str(index)))
+                        for index, subschema in enumerate(child)
+                        if isinstance(subschema, dict)
+                    )
+                case _ if keyword in _JSON_SCHEMA_SINGLE_KEYWORDS and isinstance(child, dict):
+                    pending.append((child, (*path, keyword)))
+                case _ if keyword in _JSON_SCHEMA_SINGLE_OR_SEQUENCE_KEYWORDS:
+                    if isinstance(child, dict):
+                        pending.append((child, (*path, keyword)))
+                    elif isinstance(child, list):
+                        pending.extend(
+                            (subschema, (*path, keyword, str(index)))
+                            for index, subschema in enumerate(child)
+                            if isinstance(subschema, dict)
+                        )
     return None
 
 

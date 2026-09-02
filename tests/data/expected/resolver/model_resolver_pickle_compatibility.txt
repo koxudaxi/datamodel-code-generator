@@ -15,6 +15,7 @@ custom dict state: custom-dict-state
 global reduce identity: True
 tuple reduce type: TupleReduceModelResolver
 private state accepted: field_3name
+legacy base cache ref: schema.json#/value
 main -> current
 state layout: private
 mapping: ENUM PYDANTIC CLASS MSGSPEC

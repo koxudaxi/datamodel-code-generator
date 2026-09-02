@@ -837,6 +837,7 @@ class ModelResolver:  # noqa: PLR0904
         if "field_name_resolvers" in instance_state:
             instance_state["_field_name_resolvers"] = instance_state.pop("field_name_resolvers")
         self.__dict__.update(instance_state)
+        self.__dict__.setdefault("_resolved_base_path_cache", None)
         for name, value in slot_state.items():
             setattr(self, name, value)
 
