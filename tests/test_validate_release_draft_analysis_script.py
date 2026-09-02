@@ -575,11 +575,13 @@ def test_file_read_metadata_rejects_invalid_ranges(tool_use_result: object) -> N
 
 
 @pytest.mark.allow_direct_assert
-def test_empty_file_read_metadata_is_a_complete_empty_range() -> None:
+def test_empty_file_read_metadata_is_a_complete_empty_range(tmp_path: Path) -> None:
     """A verified empty artifact uses the SDK's canonical empty-file range."""
+    file_path = tmp_path / "file"
+
     assert validator._read_range(
-        _file_read_output(Path("/tmp/file"), start_line=1, num_lines=0, total_lines=0),
-        "/tmp/file",
+        _file_read_output(file_path, start_line=1, num_lines=0, total_lines=0),
+        str(file_path),
     ) == (1, 0, 0)
 
 
