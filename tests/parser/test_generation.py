@@ -1232,6 +1232,35 @@ def test_generation_store_atomic_replace_invalidates_shared_base_owner_cache() -
     })
 
 
+def test_generation_store_atomic_replace_invalidates_scope_on_body_error() -> None:
+    """An abnormal replacement-body error disables incremental reference tracking."""
+
+    class ReplacementBodyError(Exception):
+        pass
+
+    old_reference = Reference(path="Old", original_name="Old", name="Old")
+    old_data_type = DataType(reference=old_reference)
+    field = DataModelField(data_type=old_data_type)
+    model = _base_model("Model", fields=[field])
+    store = GenerationStore()
+    store.register_model(model)
+
+    with store._collapse_root_reference_scope():
+        scope = store._active_root_collapse_reference_scope
+        assert scope is not None
+        with (
+            pytest.raises(ReplacementBodyError),
+            store._replace_data_type_and_detach_data_type_ref(
+                old_data_type,
+                DataType(type="int"),
+                owner=field,
+                replacement_kind="field",
+            ),
+        ):
+            raise ReplacementBodyError
+        assert scope.enabled is False
+
+
 def test_generation_store_atomic_replace_custom_field_override_falls_back_to_fresh_facts() -> None:  # noqa: PLR0914
     """Custom field replacement side effects must use the legacy fresh-index path."""
 

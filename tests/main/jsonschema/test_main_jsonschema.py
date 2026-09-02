@@ -13063,6 +13063,25 @@ def test_main_jsonschema_collapse_root_models_container_constraints(output_file:
     )
 
 
+def test_main_jsonschema_collapse_root_models_container_field_constraints(output_file: Path) -> None:
+    """Keep constrained mapping roots named while moving supported list constraints to fields."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_container_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="collapse_root_models_container_field_constraints.py",
+        extra_args=[
+            "--collapse-root-models",
+            "--field-constraints",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+        force_exec_validation=True,
+    )
+
+
 def test_main_jsonschema_collapse_root_models_property_names_reference(output_file: Path) -> None:
     """Replace collapsed property-name references stored as mapping keys."""
     run_main_and_assert(
