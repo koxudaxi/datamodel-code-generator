@@ -232,6 +232,15 @@ def test_msgspec_custom_template_data_keeps_raw_options() -> None:
     )
     assert empty_model._custom_template_data()["base_class_kwargs"] == "invalid"
 
+    keyword_only_model = MsgspecStruct(
+        fields=[],
+        reference=Reference(path="KeywordOnly", original_name="KeywordOnly", name="KeywordOnly"),
+        extra_template_data=defaultdict(dict, {"KeywordOnly": {"base_class_kwargs": "invalid"}}),
+        keyword_only=True,
+    )
+    assert keyword_only_model.has_keyword_only_definition() is True
+    assert "class KeywordOnly(Struct, kw_only=True):" in keyword_only_model.render()
+
 
 def test_builtin_pydantic_config_literals_are_safe() -> None:
     """Built-in ConfigDict output only uses serialized extension data."""
@@ -2234,6 +2243,9 @@ def test_msgspec_unset_type_hint_handles_empty_and_simple_types() -> None:
     none_field = _msgspec_field(DataType(is_optional=True))
     assert none_field.type_hint == "Union[None, UnsetType]"
     assert none_field.imports == (IMPORT_MSGSPEC_UNSETTYPE, IMPORT_UNION, IMPORT_MSGSPEC_UNSET)
+    raw_none_field = _msgspec_field(DataType(type=NONE))
+    assert raw_none_field.type_hint == "Union[None, UnsetType]"
+    assert raw_none_field.imports == (IMPORT_MSGSPEC_UNSETTYPE, IMPORT_UNION, IMPORT_MSGSPEC_UNSET)
 
 
 @pytest.mark.parametrize(

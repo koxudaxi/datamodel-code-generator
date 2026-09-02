@@ -1991,7 +1991,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return self.data_type(literals=[const])
         return self._get_data_type_from_json_value(const)
 
-    def _partition_enum_values(  # noqa: PLR6301
+    def _partition_enum_values(
         self, enum_values: list[Any]
     ) -> tuple[list[JsonSchemaLiteral], list[object], bool]:
         """Split enum values into literal and non-literal values."""
@@ -2001,6 +2001,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         for enum_value in enum_values:
             if enum_value is None:
                 has_null = True
+                non_literal_values.append(enum_value)
+            elif isinstance(enum_value, bool) and not self._output_model_context.supports_boolean_literals:
                 non_literal_values.append(enum_value)
             elif isinstance(enum_value, (bool, int, str)):
                 literal_values.append(enum_value)

@@ -10379,6 +10379,66 @@ def test_main_msgspec_null_field(output_file: Path) -> None:
             "--target-python-version",
             "3.10",
         ],
+        force_exec_validation=True,
+    )
+    import msgspec
+
+    with _generated_model(output_file, "msgspec_null_field", "Model") as model:
+        explicit_null = msgspec.json.decode(b'{"required_null":null,"optional_null":null}', type=model)
+        missing_null = msgspec.json.decode(b'{"required_null":null}', type=model)
+        if explicit_null.optional_null is not None:  # pragma: no cover
+            pytest.fail(f"Expected explicit null, got {explicit_null.optional_null!r}")
+        if missing_null.optional_null is not msgspec.UNSET:  # pragma: no cover
+            pytest.fail(f"Expected omitted null to stay UNSET, got {missing_null.optional_null!r}")
+
+
+@MSGSPEC_LEGACY_BLACK_SKIP
+def test_main_msgspec_boolean_enum_literal(output_file: Path) -> None:
+    """Msgspec enum literals lower boolean values to bool rather than Literal."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "msgspec_boolean_enum_literal.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="msgspec_boolean_enum_literal.py",
+        extra_args=[
+            "--output-model-type",
+            "msgspec.Struct",
+            "--enum-field-as-literal",
+            "all",
+            "--use-union-operator",
+            "--target-python-version",
+            "3.10",
+            "--formatters",
+            "builtin",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+    )
+
+
+@MSGSPEC_LEGACY_BLACK_SKIP
+def test_main_msgspec_non_dict_base_class_kwargs(output_file: Path) -> None:
+    """Malformed public msgspec kwargs do not block generator-owned kw_only output."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "simple_string.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="msgspec_non_dict_base_class_kwargs.py",
+        extra_args=[
+            "--output-model-type",
+            "msgspec.Struct",
+            "--keyword-only",
+            "--extra-template-data",
+            str(JSON_SCHEMA_DATA_PATH / "extra_data_msgspec_non_dict.json"),
+            "--target-python-version",
+            "3.10",
+            "--formatters",
+            "builtin",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
     )
 
 
