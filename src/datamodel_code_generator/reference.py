@@ -1096,6 +1096,15 @@ class ModelResolver:  # noqa: PLR0904
             joined_path = resolved_file_part
             if fragment:
                 joined_path += f"#{fragment}"
+        if "#" in joined_path:
+            file_part, fragment = joined_path.split("#", 1)
+            if (
+                file_part
+                and fragment
+                and not fragment.startswith("/")
+                and (anchor_ref := self.ids.get(file_part, {}).get(f"#{fragment}"))
+            ):
+                return anchor_ref
         if ID_PATTERN.match(joined_path) and SPECIAL_PATH_MARKER not in joined_path:
             id_scope = "/".join(self.current_root)
             scoped_ids = self.ids[id_scope]

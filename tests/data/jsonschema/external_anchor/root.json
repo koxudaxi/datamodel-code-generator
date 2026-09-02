@@ -1,0 +1,8 @@
+{
+  "title": "ExternalAnchor",
+  "type": "object",
+  "properties": {
+    "anchored": {"$ref": "child.json#anchored-child"},
+    "legacy": {"$ref": "child.json#$defs/LegacyChild"}
+  }
+}

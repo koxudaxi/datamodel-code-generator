@@ -1,0 +1,17 @@
+{
+  "$defs": {
+    "AnchoredChild": {
+      "$anchor": "anchored-child",
+      "type": "object",
+      "properties": {
+        "name": {"type": "string"}
+      }
+    },
+    "LegacyChild": {
+      "type": "object",
+      "properties": {
+        "count": {"type": "integer"}
+      }
+    }
+  }
+}

@@ -616,6 +616,22 @@ def _split_json_pointer(schema: dict[str, YamlValue] | list[YamlValue], pointer:
     return parts, reference_parts
 
 
+def _find_json_schema_anchor_pointer(schema: YamlValue, anchor: str) -> str | None:
+    """Return the JSON pointer for an anchor within one schema document."""
+    pending: list[tuple[YamlValue, tuple[str, ...]]] = [(schema, ())]
+    while pending:
+        value, path = pending.pop()
+        if isinstance(value, dict):
+            if value.get("$anchor") == anchor:
+                return "/" + "/".join(part.replace("~", "~0").replace("/", "~1") for part in path)
+            pending.extend((child, (*path, str(key))) for key, child in value.items() if isinstance(child, dict | list))
+        elif isinstance(value, list):
+            pending.extend(
+                (child, (*path, str(index))) for index, child in enumerate(value) if isinstance(child, dict | list)
+            )
+    return None
+
+
 json_schema_data_formats: dict[str, dict[str, Types]] = get_data_formats(is_openapi=True)
 
 
@@ -768,7 +784,6 @@ class JsonSchemaObject(BaseModel):
                 return value[:-1]
             if "#/" in value or value[0] == "#" or value[-1] == "#":
                 return value
-            return value.replace("#", "#/")
         return value
 
     @field_validator("required", mode="before")
@@ -3049,6 +3064,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if mapped is not None:
             return mapped
 
+        ref = self._normalize_external_ref(ref)
         resolved_ref = self.model_resolver.resolve_ref(ref)
         if (facts := self._ref_data_type_facts.get(resolved_ref)) is None:
             ref_schema = self._load_ref_schema_object(ref)
@@ -9622,6 +9638,24 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return self._get_ref_body_from_url(resolved_ref)
         return self._get_ref_body_from_remote(resolved_ref)
 
+    def _normalize_external_ref(self, ref: str) -> str:
+        """Resolve an external anchor before falling back to legacy shorthand pointers."""
+        resolved_ref = self.model_resolver.resolve_ref(ref)
+        if get_ref_type(resolved_ref) == JSONReference.LOCAL:
+            return ref
+
+        relative_path, separator, object_path = resolved_ref.partition("#")
+        if not separator or not object_path or object_path.startswith("/"):
+            return ref
+        if "#" in object_path:
+            msg = f"Invalid external $ref: {ref}"
+            raise Error(msg)
+
+        ref_body = self._get_ref_body(relative_path)
+        if (anchor_pointer := _find_json_schema_anchor_pointer(ref_body, object_path)) is not None:
+            return f"{relative_path}#{'' if anchor_pointer == '/' else anchor_pointer}"
+        return f"{relative_path}#/{object_path}"
+
     def _resolve_local_ref_path(self, path: Path, ref: str) -> Path:
         if cached_path := self._local_ref_path_cache.get(path):
             return cached_path
@@ -9764,36 +9798,42 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     def resolve_ref(self, object_ref: str) -> Reference:
         """Resolve a reference by loading and parsing the referenced schema."""
+        if object_ref.count("#") > 1:
+            msg = f"Invalid external $ref: {object_ref}"
+            raise Error(msg)
+
         # If the ref is mapped to an external package, mark as loaded and skip parsing
         if self._resolve_external_ref_mapping(object_ref) is not None:
             reference = self.model_resolver.add_ref(object_ref)
             reference.loaded = True
             return reference
 
-        reference = self.model_resolver.add_ref(object_ref)
-        if reference.loaded:
-            return reference
-
         # https://swagger.io/docs/specification/using-ref/
+        object_ref = self._normalize_external_ref(object_ref)
         ref = self.model_resolver.resolve_ref(object_ref)
         if get_ref_type(object_ref) == JSONReference.LOCAL or get_ref_type(ref) == JSONReference.LOCAL:
+            reference = self.model_resolver.add_ref(ref, resolved=True)
             self.reserved_refs[tuple(self.model_resolver.current_root)].add(ref)
-            return reference
-        if self.model_resolver.is_after_load(ref):
-            self.reserved_refs[tuple(ref.split("#")[0].split("/"))].add(ref)
             return reference
 
         if is_url(ref):
-            relative_path, object_path = ref.split("#")
+            relative_path, object_path = ref.split("#", 1)
             relative_paths = [relative_path]
             base_path = None
         else:
             if self.model_resolver.is_external_root_ref(ref):
                 relative_path, object_path = ref[:-1], ""
             else:
-                relative_path, object_path = ref.split("#")
+                relative_path, object_path = ref.split("#", 1)
             relative_paths = relative_path.split("/")
             base_path = Path(*relative_paths).parent
+        reference = self.model_resolver.add_ref(ref, resolved=True)
+        if reference.loaded:
+            return reference
+        if self.model_resolver.is_after_load(ref):
+            self.reserved_refs[tuple(ref.split("#")[0].split("/"))].add(ref)
+            return reference
+
         with (
             self.model_resolver.current_base_path_context(base_path),
             self.model_resolver.base_url_context(relative_path),

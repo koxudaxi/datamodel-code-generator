@@ -1,0 +1,5 @@
+{
+  "$defs": {
+    "Child": {"type": "string"}
+  }
+}
