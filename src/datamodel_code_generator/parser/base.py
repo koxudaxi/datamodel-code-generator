@@ -1375,6 +1375,33 @@ def _copy_data_types(data_types: list[DataType], *, register_references: bool = 
     return [_copy_data_type(data_type, register_references=register_references) for data_type in data_types]
 
 
+def _has_preservable_root_constraints(model: DataModel, *, seen_models: set[int] | None = None) -> bool:
+    """Return whether flattening a root wrapper would discard field-owned constraints."""
+    if not model.fields:
+        return False
+    if seen_models is None:
+        seen_models = set()
+    if id(model) in seen_models:
+        return False
+    seen_models.add(id(model))
+
+    root_field = model.fields[0]
+    constraints = root_field.constraints
+    if isinstance(constraints, ConstraintsBase) and any(
+        value is not None for name, value in constraints.model_dump().items() if name != "unique_items"
+    ):
+        return True
+
+    for data_type in root_field.data_type.all_data_types:
+        if (
+            data_type.reference
+            and isinstance(source_model := data_type.reference.source, DataModel)
+            and _has_preservable_root_constraints(source_model, seen_models=seen_models)
+        ):
+            return True
+    return False
+
+
 def _copy_data_model_field(
     field: DataModelFieldBase,
     *,
@@ -3539,6 +3566,10 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                         continue
 
                     root_constraints = root_type_field.constraints
+                    if not self.field_constraints and _has_preservable_root_constraints(root_type_model):
+                        # Constraints can live on a nested array/union type alias.
+                        # Flattening this wrapper would silently discard them.
+                        continue
                     if isinstance(root_constraints, ConstraintsBase) and root_constraints.has_constraints:
                         if root_type_field.data_type.is_dict or root_type_field.data_type.is_mapping:
                             continue
@@ -3712,8 +3743,13 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     if not has_remaining_root_references:
                         unused_models.append(root_type_model)
 
-    def __set_circular_root_model_paths(self, module_models: ModuleModels) -> None:
-        """Cache live root-model paths in a circular component for the retry path."""
+    def __set_circular_root_model_paths(
+        self,
+        module_models: ModuleModels,
+        *,
+        require_dict_key_edge: bool = False,
+    ) -> None:
+        """Cache root-model paths in circular components before collapsing them."""
         root_models = {
             model.path: model
             for _, models in module_models
@@ -3728,9 +3764,38 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             }
             for path, model in root_models.items()
         }
-        self._circular_root_model_paths = frozenset(
-            path for component in find_circular_sccs(graph) for (path,) in component
-        )
+        circular_components = find_circular_sccs(graph)
+        if not require_dict_key_edge:
+            self._circular_root_model_paths = frozenset(
+                path for component in circular_components for (path,) in component
+            )
+            return
+
+        dict_key_edges = {path: self.__root_dict_key_reference_paths(model) for path, model in root_models.items()}
+        circular_paths = {path for path in root_models if (path,) in graph[path,]}
+        for component in circular_components:
+            component_paths = {path for (path,) in component}
+            if any(dict_key_edges[path] & component_paths for path in component_paths):
+                circular_paths.update(component_paths)
+        self._circular_root_model_paths = frozenset(circular_paths)
+
+    @staticmethod
+    def __root_dict_key_reference_paths(model: DataModel) -> set[str]:
+        """Return model-reference paths reached through mapping-key annotations."""
+        reference_paths: set[str] = set()
+        data_types = [field.data_type for field in model.fields]
+        seen_data_types: set[int] = set()
+        while data_types:
+            data_type = data_types.pop()
+            if id(data_type) in seen_data_types:
+                continue
+            seen_data_types.add(id(data_type))
+            if (dict_key := data_type.dict_key) is not None:
+                if dict_key.reference:
+                    reference_paths.add(dict_key.reference.path)
+                data_types.append(dict_key)
+            data_types.extend(data_type.data_types)
+        return reference_paths
 
     def __set_default_enum_member(
         self,
@@ -6288,8 +6353,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         module_to_import: dict[ModulePath, Imports] = {}
         contexts: list[ModuleContext] = []
 
-        if self.collapse_root_models and self.run_context.preserve_circular_root_models:
-            self.__set_circular_root_model_paths(module_models)
+        if self.collapse_root_models:
+            self.__set_circular_root_model_paths(
+                module_models,
+                require_dict_key_edge=not self.run_context.preserve_circular_root_models,
+            )
 
         for module_, models in module_models:
             ctx = self._process_single_module(

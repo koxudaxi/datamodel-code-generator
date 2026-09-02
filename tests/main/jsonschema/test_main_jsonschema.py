@@ -5825,6 +5825,7 @@ def test_jsonschema_array_type_union_self_ref(output_file: Path) -> None:
             "3.10",
             "--use-standard-collections",
             "--use-union-operator",
+            "--collapse-root-models",
             "--disable-timestamp",
         ],
         force_exec_validation=True,
@@ -13040,6 +13041,98 @@ def test_main_jsonschema_collapse_root_models_self_reference(output_file: Path) 
     )
 
 
+def test_main_jsonschema_collapse_root_models_container_constraints(output_file: Path) -> None:
+    """Keep constrained array and mapping roots named when field constraints are disabled."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_container_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="collapse_root_models_container_constraints.py",
+        extra_args=[
+            "--collapse-root-models",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+        force_exec_validation=True,
+    )
+
+
+def test_main_jsonschema_collapse_root_models_property_names_reference(output_file: Path) -> None:
+    """Replace collapsed property-name references stored as mapping keys."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_property_names_reference.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="collapse_root_models_property_names_reference.py",
+        extra_args=[
+            "--output-model-type",
+            DataModelType.PydanticV2BaseModel.value,
+            "--target-python-version",
+            "3.10",
+            "--collapse-root-models",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+        force_exec_validation=True,
+    )
+
+
+def test_main_jsonschema_rename_preserves_source_alias(output_file: Path) -> None:
+    """Do not replace an explicit source alias while avoiding a class-name collision."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "rename_preserve_source_alias.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="rename_preserve_source_alias.py",
+        extra_args=[
+            "--output-model-type",
+            DataModelType.PydanticV2BaseModel.value,
+            "--aliases",
+            str(ALIASES_DATA_PATH / "rename_preserve_source_alias.json"),
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="rename_preserve_source_alias",
+        model_name="Payload",
+        valid_json='{"x":{"value":"ok"}}',
+        invalid_json='{"Foo":{"value":"ok"}}',
+        expected_error_type="missing",
+    )
+
+
+def test_main_jsonschema_nullable_root_reuse_keeps_class_base(output_file: Path) -> None:
+    """Reuse nullable root models as classes, not as Optional base expressions."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "nullable_reuse.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="nullable_reuse.py",
+        extra_args=[
+            "--output-model-type",
+            DataModelType.PydanticV2BaseModel.value,
+            "--target-python-version",
+            "3.10",
+            "--use-union-operator",
+            "--reuse-model",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+        force_exec_validation=True,
+    )
+
+
 def test_main_jsonschema_collapse_root_models_dict_key_self_reference_retries_once(output_file: Path) -> None:
     """Keep fallback-only circular root models named, including property-name references."""
     with warnings.catch_warnings(record=True) as warning_records:
@@ -13091,7 +13184,7 @@ def test_main_jsonschema_collapse_root_models_parse_warning_emitted_once(output_
 def test_main_jsonschema_collapse_root_models_dict_key_self_reference_preserves_legacy_output(
     output_file: Path,
 ) -> None:
-    """Leave dict-key-only root references collapsed when the recursion retry is not needed."""
+    """Keep dict-key-only circular roots named before they can produce invalid annotations."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_dict_key_self_reference_legacy.json",
         output_path=output_file,
@@ -13099,7 +13192,7 @@ def test_main_jsonschema_collapse_root_models_dict_key_self_reference_preserves_
         assert_func=assert_file_content,
         expected_file="collapse_root_models_dict_key_self_reference_legacy.py",
         extra_args=["--collapse-root-models", "--disable-timestamp", "--formatters", "builtin"],
-        skip_code_validation=True,
+        force_exec_validation=True,
     )
 
 
