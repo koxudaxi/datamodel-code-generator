@@ -222,9 +222,10 @@ class _PydanticDataclassField(DataModelFieldV2):
             return data, default_factory
         match self.default:
             case list() | dict() | set() as default:
-                return data, f"lambda: {represent_python_value(default)}" if default else type(default).__name__
+                default_factory = f"lambda: {represent_python_value(default)}" if default else type(default).__name__
             case _:
-                return data, default_factory
+                pass
+        return data, default_factory
 
     def _get_constructor_default_info(self) -> tuple[bool, bool]:
         """Return constructor-default semantics from structured field state."""
