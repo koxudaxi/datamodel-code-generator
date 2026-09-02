@@ -26,4 +26,4 @@ class Person(Struct):
         | UnsetType
     ) = UNSET
     friends: list[Any] | UnsetType = UNSET
-    comment: UnsetType = UNSET
+    comment: None | UnsetType = UNSET
