@@ -811,8 +811,7 @@ def test_script_writes_validated_analysis(claude_output: dict[str, Any], expecte
         text=True,
     )
 
-    if result.returncode:
-        pytest.fail(result.stderr)
+    result.check_returncode()
     assert_output(analysis_path.read_text(encoding="utf-8"), EXPECTED_PATH / expected_file)
 
 
@@ -868,7 +867,15 @@ def test_script_rejects_partial_artifact_read(tmp_path: Path) -> None:
         text=True,
     )
 
-    if result.returncode != 1:
-        pytest.fail(result.stderr)
-    if analysis_path.exists():
-        pytest.fail("Validator persisted an artifact after a partial trusted-diff Read.")
+    assert_output(
+        json.dumps(
+            {
+                "analysis_exists": analysis_path.exists(),
+                "returncode": result.returncode,
+                "stderr": result.stderr,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        EXPECTED_PATH / "partial_artifact_read.txt",
+    )
