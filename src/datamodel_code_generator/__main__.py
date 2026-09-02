@@ -123,6 +123,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, NamedTuple, Optional, 
 from urllib.parse import ParseResult, urlparse
 
 from datamodel_code_generator import (
+    _SINGLE_MODULE_OUTPUT_DIRECTORY_ERROR,
     AllExportsScope,
     ClassNameAffixScope,
     DataModelType,
@@ -133,7 +134,6 @@ from datamodel_code_generator import (
     NamingStrategy,
     OpenAPIScope,
     ReuseScope,
-    _SINGLE_MODULE_OUTPUT_DIRECTORY_ERROR,
     _validate_alias_generator,
     _validate_generation_path_conflicts,
     _validate_output_datetime_class,
@@ -2892,7 +2892,7 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
         except Error as e:
             print(str(e), file=sys.stderr)  # noqa: T201
             return Exit.ERROR
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             from pydantic import ValidationError  # noqa: PLC0415
 
             if not isinstance(e, ValidationError):
