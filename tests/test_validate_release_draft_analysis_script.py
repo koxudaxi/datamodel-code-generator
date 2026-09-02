@@ -297,7 +297,11 @@ def test_execution_evidence_accepts_token_capped_initial_page_with_continuation(
     analysis_context_path = tmp_path / "analysis-context.md"
     diff_path = tmp_path / "pr.diff"
     marker_path.write_text("read-boundary-marker\n", encoding="utf-8")
-    analysis_context_path.write_text("\n".join("line" for _ in range(1507)), encoding="utf-8")
+    analysis_context_path.write_text(
+        "\n".join("line" for _ in range(1507)),
+        encoding="utf-8",
+        newline="\n",
+    )
     diff_path.write_text("diff\n", encoding="utf-8")
 
     execution_record = _paginated_execution_record(marker_path, analysis_context_path, diff_path)
@@ -317,7 +321,11 @@ def test_execution_evidence_rejects_token_capped_character_slice(tmp_path: Path)
     diff_path = tmp_path / "pr.diff"
     marker_path.write_text("read-boundary-marker\n", encoding="utf-8")
     character_slice = "x" * (64 * 1024)
-    analysis_context_path.write_text(f"{character_slice} remainder of first line\nnext line", encoding="utf-8")
+    analysis_context_path.write_text(
+        f"{character_slice} remainder of first line\nnext line",
+        encoding="utf-8",
+        newline="\n",
+    )
     diff_path.write_text("diff\n", encoding="utf-8")
 
     execution_record = _execution_record(marker_path, analysis_context_path, diff_path)
@@ -383,7 +391,7 @@ def test_execution_evidence_rejects_unverifiable_token_capped_content(
     marker_path.write_text("read-boundary-marker\n", encoding="utf-8")
     diff_path.write_text("diff\n", encoding="utf-8")
     if artifact_content is not None:
-        analysis_context_path.write_text(artifact_content, encoding="utf-8")
+        analysis_context_path.write_text(artifact_content, encoding="utf-8", newline="\n")
 
     execution_record = _execution_record(marker_path, analysis_context_path, diff_path)
     execution_record[3]["tool_use_result"] = _file_read_output(
@@ -418,7 +426,7 @@ def test_execution_evidence_rejects_incomplete_token_capped_pagination(
     analysis_context_path = tmp_path / "analysis-context.md"
     diff_path = tmp_path / "pr.diff"
     marker_path.write_text("read-boundary-marker\n", encoding="utf-8")
-    analysis_context_path.write_text("line\nline\nline", encoding="utf-8")
+    analysis_context_path.write_text("line\nline\nline", encoding="utf-8", newline="\n")
     diff_path.write_text("diff\n", encoding="utf-8")
 
     execution_record = _execution_record(marker_path, analysis_context_path, diff_path)
@@ -983,6 +991,7 @@ def test_script_writes_validated_analysis(
     analysis_context_path.write_text(
         "\n".join("line" for _ in range(1507)) if token_capped_initial_page else "context\n",
         encoding="utf-8",
+        newline="\n",
     )
     diff_path.write_text("diff\n", encoding="utf-8")
     execution_path.write_text(
