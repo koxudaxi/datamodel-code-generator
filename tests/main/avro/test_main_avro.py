@@ -11,7 +11,7 @@ from datamodel_code_generator import DataModelType, load_data
 from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.format import PythonVersion, is_supported_in_black
 from datamodel_code_generator.parser.avro import convert_avro_schema_data
-from tests.conftest import assert_mutable_copy_is_isolated
+from tests.conftest import assert_mutable_copy_is_isolated, assert_output
 from tests.main.avro.conftest import assert_file_content
 from tests.main.conftest import (
     AVRO_DATA_PATH,
@@ -173,6 +173,40 @@ def test_main_avro_spec_matrix(output_file: Path) -> None:
         extra_args=get_current_version_args("--use-field-description"),
         force_exec_validation=True,
     )
+    required_values = {
+        "ascendingOrder": "ascending",
+        "descendingOrder": "descending",
+        "sameKindNamedUnion": {"a": "record"},
+        "arrayOfRecords": [],
+        "mapOfEnums": {},
+        "emptyNamespace": b"ok",
+        "fullnameIgnoresNamespace": {"understanding": "YES", "understandingRef": "NO"},
+        "fullnameReference": {"understanding": "NO", "understandingRef": "YES"},
+        "complexTypeNameReuse": {"value": "array"},
+        "unknownLogicalType": 1,
+        "precisionOnlyDecimal": "1.25",
+    }
+    with _generated_model(output_file, "generated_avro_defaults", "SpecMatrix") as model:
+        first = model(**required_values)
+        second = model(**required_values)
+        first.arrayDefault.append(2)
+        first.mapDefault["b"] = 2
+        rendered = "\n".join(
+            f"{name}: {type(value).__name__} = {value!r}"
+            for name in (
+                "nullDefault",
+                "booleanDefault",
+                "bytesDefault",
+                "recordDefault",
+                "enumDefault",
+                "arrayDefault",
+                "mapDefault",
+                "fixedDefault",
+                "nullableAfterValue",
+            )
+            if (value := getattr(second, name)) is not ...
+        )
+    assert_output(f"{rendered}\n", AVRO_DATA_PATH.parent / "expected/main/avro/default_values.txt")
 
 
 @pytest.mark.parametrize(
@@ -258,6 +292,10 @@ def test_main_avro_schema_version_not_supported(output_file: Path, capsys: pytes
         ("invalid_schema_bad_named_type_name.avsc", "Invalid Avro record name"),
         ("invalid_schema_bad_namespace.avsc", "Invalid Avro namespace"),
         ("invalid_schema_bad_field_name.avsc", "Invalid Avro record field name"),
+        (
+            "invalid_schema_bytes_default_unicode.avsc",
+            "Avro bytes and fixed defaults must contain only code points from 0 through 255",
+        ),
         ("invalid_schema_primitive_name_reuse.avsc", "Avro primitive type names may not be redefined"),
         ("invalid_schema_union_bad_value.avsc", "Unsupported Avro union value"),
         ("invalid_schema_union_nested.avsc", "Avro unions may not immediately contain other unions"),
