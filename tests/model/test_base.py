@@ -1033,6 +1033,19 @@ def test_clear_custom_template_caches_does_not_import_pydantic_adapter() -> None
         sys.modules[module_name] = module
 
 
+def test_clear_custom_template_caches_tolerates_partially_initialized_pydantic_adapter(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Cache clearing remains safe while the lazy Pydantic adapter is initializing."""
+    module_name = "datamodel_code_generator.model.pydantic_v2.base_model"
+    module = sys.modules[module_name]
+    monkeypatch.delattr(module, "_uses_legacy_pydantic_extra_template")
+
+    _clear_custom_template_caches()
+
+    assert sys.modules[module_name] is module
+
+
 def test_data_model_create_typed_extra_field_unsupported() -> None:
     """Test the default typed extra field factory for unsupported models."""
     assert (
