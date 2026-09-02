@@ -2121,7 +2121,11 @@ def test_main_external_files_in_directory_collapse_keeps_import_aliases(output_d
     sys.path.insert(0, str(output_dir.parent))
     try:
         module = importlib.import_module(module_name)
-        assert module.Friends.model_fields["root"].annotation is not None
+        annotation = module.Friends.model_fields["root"].annotation
+        assert_output(
+            f"{'present' if annotation is not None else 'missing'}\n",
+            EXPECTED_JSON_SCHEMA_PATH / "external_files_in_directory_collapse/friends_runtime.txt",
+        )
     finally:
         sys.path.remove(str(output_dir.parent))
         for loaded_module in tuple(sys.modules):

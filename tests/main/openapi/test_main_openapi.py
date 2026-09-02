@@ -883,7 +883,10 @@ def test_main_modular_treat_dot_as_module_keeps_subpackage_initializer(output_di
     sys.path.insert(0, str(output_dir.parent))
     try:
         module = importlib.import_module(f"{output_dir.name}.foo")
-        assert module.__all__ == ["Cocoa", "Tea"]
+        assert_output(
+            f"{json.dumps(module.__all__)}\n",
+            EXPECTED_OPENAPI_PATH / "modular_treat_dot_as_module/foo_exports.txt",
+        )
     finally:
         sys.path.remove(str(output_dir.parent))
         for loaded_module in tuple(sys.modules):
