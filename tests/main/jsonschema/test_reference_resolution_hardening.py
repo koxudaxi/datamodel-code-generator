@@ -44,6 +44,22 @@ def test_main_jsonschema_directory_external_ref_is_wrapped(
     assert_output(capsys.readouterr().err, EXPECTED_JSON_SCHEMA_PATH / "directory_external_ref.txt")
 
 
+def test_main_jsonschema_missing_external_ref_is_wrapped(
+    capsys: pytest.CaptureFixture[str],
+    output_file: Path,
+) -> None:
+    """Report a missing external reference as a generator error."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "external_ref_errors" / "not_found.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+    )
+    missing_ref = JSON_SCHEMA_DATA_PATH / "external_ref_errors" / "missing.json"
+    output = capsys.readouterr().err.replace(str(missing_ref), "<missing-ref>")
+    assert_output(output, EXPECTED_JSON_SCHEMA_PATH / "not_found_external_ref.txt")
+
+
 def test_generate_jsonschema_nested_external_ref_with_relative_base_path(output_file: Path) -> None:
     """Keep the relative-base fast path working for nested external references."""
     run_generate_file_and_assert(
@@ -69,3 +85,18 @@ def test_jsonschema_file_uri_directory_external_ref_is_wrapped() -> None:
 
     output = f"{str(exception_info.value).replace(file_uri, '{file_uri}')}\n"
     assert_output(output, EXPECTED_JSON_SCHEMA_PATH / "file_uri_directory_external_ref.txt")
+
+
+def test_jsonschema_external_ref_mapping_returns_loaded_reference() -> None:
+    """Keep configured external mappings as already-loaded graph leaves."""
+    source = JSON_SCHEMA_DATA_PATH / "external_anchor" / "child.json"
+    parser = JsonSchemaParser(
+        source,
+        base_path=source.parent,
+        external_ref_mapping={str(source): "external.models"},
+    )
+
+    reference = parser.resolve_ref(f"{source}#/$defs/AnchoredChild")
+
+    output = "loaded\n" if reference.loaded else "not loaded\n"
+    assert_output(output, EXPECTED_JSON_SCHEMA_PATH / "mapped_external_ref.txt")

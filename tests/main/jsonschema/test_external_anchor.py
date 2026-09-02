@@ -32,6 +32,19 @@ def test_main_jsonschema_external_anchor_with_legacy_shorthand(output_file: Path
     )
 
 
+def test_main_jsonschema_external_id_resolved_to_local_ref(output_file: Path) -> None:
+    """Do not reinterpret an external $id that resolves to a local reference."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "local_id_ref.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="local_id_ref.py",
+        extra_args=["--disable-timestamp", "--target-python-version", "3.10"],
+        force_exec_validation=True,
+    )
+
+
 def test_main_jsonschema_malformed_external_ref_is_wrapped(
     capsys: pytest.CaptureFixture[str], output_file: Path
 ) -> None:
@@ -71,3 +84,17 @@ def test_model_resolver_uses_cached_external_anchor_from_schema_fixture() -> Non
     local_result = resolver.resolve_ref(f"#{anchor}")
 
     assert_output(f"{cached_result}\n{local_result}\n", EXPECTED_JSON_SCHEMA_PATH / "cached_external_anchor_ref.txt")
+
+
+def test_jsonschema_external_id_resolved_to_local_ref_skips_anchor_normalization() -> None:
+    """Do not load an external document when its $id maps into the local schema."""
+    source = JSON_SCHEMA_DATA_PATH / "local_id_ref.json"
+    document = json.loads(source.read_text(encoding="utf-8"))
+    definition_name, definition = next(iter(document["$defs"].items()))
+    external_id = definition["$id"]
+    parser = JsonSchemaParser(source, base_path=source.parent)
+    parser.model_resolver.add_id(external_id, ["#", "$defs", definition_name])
+
+    result = parser._normalize_external_ref(f"{external_id}#")
+
+    assert_output(f"{result}\n", EXPECTED_JSON_SCHEMA_PATH / "normalized_external_id_ref.txt")

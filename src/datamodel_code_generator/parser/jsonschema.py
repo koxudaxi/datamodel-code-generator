@@ -9640,6 +9640,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     def _normalize_external_ref(self, ref: str) -> str:
         """Resolve an external anchor before falling back to legacy shorthand pointers."""
+        if get_ref_type(ref) == JSONReference.LOCAL:
+            return ref
+
         resolved_ref = self.model_resolver.resolve_ref(ref)
         if get_ref_type(resolved_ref) == JSONReference.LOCAL:
             return ref
