@@ -568,11 +568,13 @@ def test_execution_message_helpers_reject_duplicate_ids() -> None:
         },
     ],
 )
+@pytest.mark.allow_direct_assert
 def test_file_read_metadata_rejects_invalid_ranges(tool_use_result: object) -> None:
     """Malformed FileReadOutput metadata never supplies trusted coverage."""
     assert validator._read_range(tool_use_result, "/tmp/file") is None
 
 
+@pytest.mark.allow_direct_assert
 def test_empty_file_read_metadata_is_a_complete_empty_range() -> None:
     """A verified empty artifact uses the SDK's canonical empty-file range."""
     assert validator._read_range(
@@ -581,6 +583,7 @@ def test_empty_file_read_metadata_is_a_complete_empty_range() -> None:
     ) == (1, 0, 0)
 
 
+@pytest.mark.allow_direct_assert
 def test_range_coverage_handles_empty_and_inconsistent_metadata() -> None:
     """Coverage refuses gaps and incompatible total-line metadata."""
     assert validator._covers_entire_file([]) is False
@@ -646,6 +649,7 @@ def test_removal_and_diff_guards_cover_empty_and_fenced_input(tmp_path: Path) ->
     validator._validate_diff_was_read("Prepared diff was read.")
 
 
+@pytest.mark.allow_direct_assert
 def test_breaking_change_validator_ignores_non_boolean_internal_value(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
