@@ -673,9 +673,7 @@ class OpenAPIParser(JsonSchemaParser):
             return None  # pragma: no cover - OpenAPI validation rejects malformed parameters
         if isinstance(ref := parameter.get("$ref"), str):
             parameter = self.get_ref_model(ref)
-        if not isinstance(name := parameter.get("name"), str) or not isinstance(
-            location := parameter.get("in"), str
-        ):
+        if not isinstance(name := parameter.get("name"), str) or not isinstance(location := parameter.get("in"), str):
             return None  # pragma: no cover - OpenAPI validation rejects malformed parameters
         return name, location
 
