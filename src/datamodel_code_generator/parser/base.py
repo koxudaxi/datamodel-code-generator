@@ -1956,7 +1956,10 @@ def _get_single_discriminator_default(
     return member
 
 
-def _get_model_module_name(model: DataModel, model_path_to_module_name: Mapping[str, str]) -> str:
+def _get_model_module_name(model: DataModel, model_path_to_module_name: Mapping[str, str] | None) -> str:
+    """Return a generated module name when scope planning supplied one."""
+    if model_path_to_module_name is None:
+        return model.module_name
     return model_path_to_module_name.get(model.path, model.module_name)
 
 
@@ -3508,7 +3511,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         unused_models: list[DataModel],
         imports: Imports,
         scoped_model_resolver: ModelResolver,
-        model_path_to_module_name: dict[str, str],
+        model_path_to_module_name: dict[str, str] | None = None,
     ) -> None:
         if not self.collapse_root_models:
             return
@@ -3528,7 +3531,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         unused_models: list[DataModel],
         imports: Imports,
         scoped_model_resolver: ModelResolver,
-        model_path_to_module_name: dict[str, str],
+        model_path_to_module_name: dict[str, str] | None = None,
     ) -> None:
         generation_store = self.generation_store
         generation_index = generation_store.index
