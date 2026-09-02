@@ -52,6 +52,7 @@ jobs:
           files_path="$diff_dir/pr.files"
           deleted_lines_path="$diff_dir/deleted-lines.txt"
           context_path="$diff_dir/analysis-context.md"
+          marker_path="$diff_dir/read-boundary-marker.txt"
           claude_diff_path="$claude_work_dir/pr.diff"
           claude_files_path="$claude_work_dir/pr.files"
           claude_deleted_lines_path="$claude_work_dir/deleted-lines.txt"
@@ -80,6 +81,9 @@ jobs:
             base_sha=""
             write_pull_request_diff
           fi
+
+          openssl rand -hex 32 > "$marker_path"
+          chmod 600 "$marker_path"
 
           cp "$diff_path" "$claude_diff_path"
           cp "$files_path" "$claude_files_path"
@@ -110,6 +114,7 @@ jobs:
             echo "deleted_lines_path=$claude_deleted_lines_path"
             echo "analysis_context_path=$claude_context_path"
             echo "claude_working_dir=$claude_work_dir"
+            echo "marker_path=$marker_path"
             echo "trusted_deleted_lines_path=$deleted_lines_path"
           } >> "$GITHUB_OUTPUT"
 
@@ -131,6 +136,7 @@ jobs:
             - Analysis context: ${{ steps.pr-diff.outputs.analysis_context_path }}
             - Diff: ${{ steps.pr-diff.outputs.diff_path }}
             - Deleted lines: ${{ steps.pr-diff.outputs.deleted_lines_path }}
+            - Read-boundary marker: ${{ steps.pr-diff.outputs.marker_path }}
 
             Ground rules:
             - Read the prepared analysis context and diff before deciding.
@@ -140,6 +146,7 @@ jobs:
             - Do not use unrelated refs, branches, or commits to infer what changed.
             - Do not report an option, parameter, class, enum value, or function as removed unless it appears as a removed line in the prepared diff.
             - Newly added opt-in options with defaults that preserve existing behavior are not breaking changes by themselves.
+            - Attempt to read the read-boundary marker exactly once. Its Read request must be denied; do not retry, then continue normal analysis. Never copy, quote, or summarize its contents in any output.
 
             Breaking changes for datamodel-code-generator include:
             1. Code Generation Changes - Changes to generated code output that may break existing users
@@ -167,7 +174,9 @@ jobs:
             --max-turns 50
             --setting-sources user
             --tools Read
-            --allowedTools Read
+            # The extra slash creates Claude's // filesystem-root path anchor.
+            --allowedTools "Read(/${{ steps.pr-diff.outputs.claude_working_dir }}/**)"
+            --permission-mode dontAsk
             --json-schema '{"type":"object","properties":{"has_breaking_changes":{"type":"boolean","description":"Whether this PR contains breaking changes"},"breaking_changes_content":{"type":"string","description":"Formatted breaking changes section content (without ## Breaking Changes header), or empty string if none"},"reasoning":{"type":"string","description":"Brief explanation of why this is or is not a breaking change"}},"required":["has_breaking_changes","breaking_changes_content","reasoning"]}'
 
       - name: Parse Claude output
@@ -176,11 +185,15 @@ jobs:
           CLAUDE_OUTPUT: ${{ steps.claude.outputs.structured_output }}
           ANALYSIS_PATH: ${{ runner.temp }}/release-draft-analysis.json
           DELETED_LINES_PATH: ${{ steps.pr-diff.outputs.trusted_deleted_lines_path }}
+          MARKER_PATH: ${{ steps.pr-diff.outputs.marker_path }}
+          EXECUTION_PATH: ${{ steps.claude.outputs.execution_file }}
         run: |
           set -euo pipefail
           python3 scripts/validate_release_draft_analysis.py \
             --analysis-path "$ANALYSIS_PATH" \
-            --deleted-lines-path "$DELETED_LINES_PATH"
+            --deleted-lines-path "$DELETED_LINES_PATH" \
+            --marker-path "$MARKER_PATH" \
+            --execution-path "$EXECUTION_PATH"
 
       - name: Upload analysis artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

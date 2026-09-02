@@ -37,6 +37,8 @@ def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--analysis-path", required=True, type=Path)
     parser.add_argument("--deleted-lines-path", required=True, type=Path)
+    parser.add_argument("--execution-path", required=True, type=Path)
+    parser.add_argument("--marker-path", required=True, type=Path)
     return parser.parse_args()
 
 
@@ -54,6 +56,60 @@ def _parse_claude_output(raw_output: str) -> dict[str, Any]:
         return parsed
     message = "Claude structured output must be a JSON object"
     raise SystemExit(message)
+
+
+def _read_marker(marker_path: Path) -> str:
+    """Return the non-empty read-boundary marker or fail closed."""
+    try:
+        marker = marker_path.read_text(encoding="utf-8").strip()
+    except OSError:
+        print("Read-boundary marker is unavailable; refusing to update the draft.", file=sys.stderr)
+        raise SystemExit(1) from None
+    if marker:
+        return marker
+    print("Read-boundary marker is empty; refusing to update the draft.", file=sys.stderr)
+    raise SystemExit(1)
+
+
+def _read_execution_messages(execution_path: Path) -> list[Any]:
+    """Load Claude's execution record or fail closed."""
+    try:
+        messages = json.loads(execution_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        print("Claude execution record is unavailable; refusing to update the draft.", file=sys.stderr)
+        raise SystemExit(1) from None
+    if isinstance(messages, list):
+        return messages
+    print("Claude execution record is invalid; refusing to update the draft.", file=sys.stderr)
+    raise SystemExit(1)
+
+
+def _validate_marker_not_leaked(marker: str, *outputs: str) -> None:
+    """Fail closed if the canary marker appears in Claude output."""
+    if not any(marker in output for output in outputs):
+        return
+    print("Read-boundary marker appeared in Claude output; refusing to update the draft.", file=sys.stderr)
+    raise SystemExit(1)
+
+
+def _validate_marker_read_denial(messages: list[Any], marker_path: Path) -> None:
+    """Require the authoritative SDK result to record a denied marker read."""
+    marker_file_path = str(marker_path)
+    marker_read_was_denied = any(
+        denial.get("tool_name") == "Read"
+        and isinstance(tool_input := denial.get("tool_input"), dict)
+        and tool_input.get("file_path") == marker_file_path
+        for message in messages
+        if isinstance(message, dict)
+        and message.get("type") == "result"
+        and isinstance(denials := message.get("permission_denials"), list)
+        for denial in denials
+        if isinstance(denial, dict)
+    )
+    if marker_read_was_denied:
+        return
+    print("Read-boundary marker was not denied; refusing to update the draft.", file=sys.stderr)
+    raise SystemExit(1)
 
 
 def _as_bool(value: Any) -> bool:
@@ -163,11 +219,17 @@ def _validate_diff_was_read(reasoning: str) -> None:
 def main() -> int:
     """Validate Claude output and persist the normalized analysis JSON artifact."""
     args = _parse_args()
-    claude_output = _parse_claude_output(os.environ.get("CLAUDE_OUTPUT", ""))
+    marker = _read_marker(args.marker_path)
+    execution_messages = _read_execution_messages(args.execution_path)
+    raw_output = os.environ.get("CLAUDE_OUTPUT", "")
+    _validate_marker_not_leaked(marker, raw_output)
+    claude_output = _parse_claude_output(raw_output)
     has_breaking_changes = _as_bool(claude_output.get("has_breaking_changes", False))
     breaking_changes_content = _as_string(claude_output.get("breaking_changes_content", ""))
     reasoning = _as_string(claude_output.get("reasoning", ""))
 
+    _validate_marker_not_leaked(marker, breaking_changes_content, reasoning)
+    _validate_marker_read_denial(execution_messages, args.marker_path)
     _validate_diff_was_read(reasoning)
     if has_breaking_changes:
         _validate_removal_claims(breaking_changes_content, args.deleted_lines_path)
