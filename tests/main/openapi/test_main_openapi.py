@@ -669,6 +669,62 @@ def test_main_openapi_discriminator_short_mapping_names(output_file: Path) -> No
     )
 
 
+def test_main_openapi_discriminator_oneof_short_mapping(output_file: Path) -> None:
+    """Use short mapping keys as discriminator literals for oneOf schemas."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "discriminator_oneof_short_mapping.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="discriminator_oneof_short_mapping.py",
+        extra_args=["--disable-timestamp"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="generated_discriminator_oneof_short_mapping",
+        model_name="Pet",
+        valid_json='{"petType":"cat","meow":"yes"}',
+        invalid_json='{"petType":"Cat"}',
+        expected_error_type="union_tag_invalid",
+    )
+
+
+def test_main_openapi_discriminator_state_isolated_per_document(output_dir: Path) -> None:
+    """Do not apply one input document's discriminator metadata to another."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "discriminator_state_isolation",
+        output_path=output_dir,
+        input_file_type="openapi",
+        expected_directory=EXPECTED_OPENAPI_PATH / "discriminator_state_isolation",
+        extra_args=["--disable-timestamp"],
+        runtime_validation_module="b",
+        runtime_validation_model_name="Holder",
+        runtime_validation_data={"pet": {"name": "Milo"}},
+    )
+
+
+def test_main_openapi_path_parameter_operation_override(output_file: Path) -> None:
+    """Operation parameters override matching path-item parameters."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "path_parameter_override.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="path_parameter_override.py",
+        extra_args=["--openapi-scopes", "paths", "parameters", "--disable-timestamp"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="generated_path_parameter_override",
+        model_name="PetsGetParametersQuery",
+        valid_json='{"limit":100}',
+        invalid_json='{"limit":101}',
+        expected_error_type="less_than_equal",
+    )
+
+
 def test_main_openapi_discriminator_external_mapping(output_file: Path) -> None:
     """Mapping-only discriminator subtypes can be external refs."""
     run_main_and_assert(
