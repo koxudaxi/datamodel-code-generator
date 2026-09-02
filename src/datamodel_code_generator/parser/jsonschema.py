@@ -678,6 +678,11 @@ def _find_json_schema_anchor_pointer(schema: YamlValue, anchor: str) -> str | No
     return None
 
 
+def _is_directory_read_error(exc: OSError, path: Path) -> bool:
+    """Recognize the platform-specific errors raised when reading a directory."""
+    return isinstance(exc, IsADirectoryError) or (isinstance(exc, PermissionError) and path.is_dir())
+
+
 json_schema_data_formats: dict[str, dict[str, Types]] = get_data_formats(is_openapi=True)
 
 
@@ -9802,10 +9807,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         msg = f"$ref local file not found for {ref}: tried {', '.join(str(path) for path in file_paths)}"
         raise Error(msg)
 
-    def _is_directory_read_error(self, exc: OSError, path: Path) -> bool:  # noqa: PLR6301
-        """Recognize the platform-specific errors raised when reading a directory."""
-        return isinstance(exc, IsADirectoryError) or (isinstance(exc, PermissionError) and path.is_dir())
-
     def _get_ref_body_from_url(self, ref: str) -> dict[str, YamlValue]:
         """Get reference body from a URL (HTTP, HTTPS, or file scheme)."""
         if ref.startswith("file://"):
@@ -9824,7 +9825,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     default_factory=lambda _: self._load_ref_data_from_path(file_path),
                 )
             except (IsADirectoryError, PermissionError) as exc:
-                if not self._is_directory_read_error(exc, file_path):
+                if not _is_directory_read_error(exc, file_path):
                     raise
                 msg = f"$ref path is a directory: {ref}"
                 raise Error(msg) from None
@@ -9848,7 +9849,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             msg = f"$ref file not found: {full_path}"
             raise Error(msg) from None
         except (IsADirectoryError, PermissionError) as exc:
-            if not self._is_directory_read_error(exc, full_path):
+            if not _is_directory_read_error(exc, full_path):
                 raise
             msg = f"$ref path is a directory: {resolved_ref}"
             raise Error(msg) from None
