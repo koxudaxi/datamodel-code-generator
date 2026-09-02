@@ -311,6 +311,12 @@ class FieldNameResolver:
         self.special_field_name_prefix: str | None = (
             "field" if special_field_name_prefix is None else special_field_name_prefix
         )
+        if self.special_field_name_prefix and not f"{self.special_field_name_prefix}_x".isidentifier():
+            msg = (
+                f"--special-field-name-prefix '{self.special_field_name_prefix}' "
+                "is not a valid Python identifier prefix"
+            )
+            raise Error(msg)
         self.remove_special_field_name_prefix: bool = remove_special_field_name_prefix
         self.capitalise_enum_members: bool = capitalise_enum_members
         self.no_alias = no_alias
@@ -345,7 +351,7 @@ class FieldNameResolver:
         if name[0] == "#":
             name = name[1:] or self.empty_field_name
 
-        if self.snake_case_field and not ignore_snake_case_field and self.original_delimiter is not None:
+        if self.snake_case_field and not ignore_snake_case_field and self.original_delimiter:
             name = snake_to_upper_camel(name, delimiter=self.original_delimiter)
 
         name = _NON_IDENTIFIER_PATTERN.sub("_", name)
