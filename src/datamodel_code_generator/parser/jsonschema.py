@@ -728,14 +728,18 @@ class JsonSchemaObject(BaseModel):
         values = dict(values)
         match exclusive_maximum:
             case True:
-                values["exclusiveMaximum"] = values["maximum"]
-                del values["maximum"]
+                if "maximum" in values:
+                    values["exclusiveMaximum"] = values.pop("maximum")
+                else:
+                    del values["exclusiveMaximum"]
             case False:
                 del values["exclusiveMaximum"]
         match exclusive_minimum:
             case True:
-                values["exclusiveMinimum"] = values["minimum"]
-                del values["minimum"]
+                if "minimum" in values:
+                    values["exclusiveMinimum"] = values.pop("minimum")
+                else:
+                    del values["exclusiveMinimum"]
             case False:
                 del values["exclusiveMinimum"]
         return values
@@ -845,9 +849,9 @@ class JsonSchemaObject(BaseModel):
     dynamicRef: Optional[str] = Field(default=None, alias="$dynamicRef")  # noqa: N815, UP045
     dynamicAnchor: Optional[str] = Field(default=None, alias="$dynamicAnchor")  # noqa: N815, UP045
     nullable: Optional[bool] = None  # noqa: UP045
-    x_enum_varnames: list[str] = Field(default_factory=list, alias="x-enum-varnames")
+    x_enum_varnames: list[str | None] = Field(default_factory=list, alias="x-enum-varnames")
     x_enum_descriptions: list[str | None] = Field(default_factory=list, alias="x-enum-descriptions")
-    x_enum_names: list[str] = Field(default_factory=list, alias="x-enumNames")
+    x_enum_names: list[str | None] = Field(default_factory=list, alias="x-enumNames")
     x_enum_field_as_literal: Optional[bool] = Field(default=None, alias="x-enum-field-as-literal")  # noqa: UP045
     description: Optional[str] = None  # noqa: UP045
     title: Optional[str] = None  # noqa: UP045
@@ -6131,11 +6135,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                         schema = self._load_ref_schema_object(schema.ref)
                 case _:
                     return None
+            has_non_object_type = schema.type is not None and schema.type != "object"
             if (
                 schema.properties
                 or schema.patternProperties
                 or schema.propertyNames is not None
-                or schema.type not in {None, "object"}
+                or has_non_object_type
                 or not isinstance(schema.additionalProperties, JsonSchemaObject)
             ):
                 return None
@@ -6261,7 +6266,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return False
         if any(key not in item.__metadata_only_fields__ and not key.startswith("x-") for key in item.extras):
             return False
-        return item.type in {None, "object"}
+        return item.type is None or item.type == "object"
 
     def _get_required_groups(self, items: Sequence[JsonSchemaObject | bool]) -> tuple[tuple[str, ...], ...]:
         if not items:

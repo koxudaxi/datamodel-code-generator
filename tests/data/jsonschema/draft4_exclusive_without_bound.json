@@ -1,0 +1,9 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Draft4ExclusiveWithoutBound",
+  "type": "object",
+  "properties": {
+    "upper": {"type": "number", "exclusiveMaximum": true},
+    "lower": {"type": "number", "exclusiveMinimum": true}
+  }
+}
