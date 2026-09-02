@@ -87,6 +87,26 @@ def test_jsonschema_file_uri_directory_external_ref_is_wrapped() -> None:
     assert_output(output, EXPECTED_JSON_SCHEMA_PATH / "file_uri_directory_external_ref.txt")
 
 
+def test_jsonschema_non_directory_permission_error_is_preserved(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Do not misclassify unrelated permission failures as directory reads."""
+    source = tmp_path / "blocked.json"
+    source.write_text("{}", encoding="utf-8")
+    parser = JsonSchemaParser("", base_path=tmp_path)
+    permission_error = PermissionError("blocked file")
+
+    def raise_permission_error(*_args: object, **_kwargs: object) -> None:
+        raise permission_error
+
+    monkeypatch.setattr(parser.remote_object_cache, "get_or_put", raise_permission_error)
+    with pytest.raises(PermissionError) as exception_info:
+        parser._get_ref_body_from_remote(source.name)
+
+    assert_output(f"{exception_info.value}\n", EXPECTED_JSON_SCHEMA_PATH / "permission_external_ref.txt")
+
+
 def test_jsonschema_external_ref_mapping_returns_loaded_reference() -> None:
     """Keep configured external mappings as already-loaded graph leaves."""
     source = JSON_SCHEMA_DATA_PATH / "external_anchor" / "child.json"
