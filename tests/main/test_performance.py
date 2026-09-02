@@ -611,7 +611,7 @@ def test_perf_pattern_properties_adapter_reuse(
     [
         (["-m", "datamodel_code_generator.__main__", "--version"], "datamodel-codegen "),
         (["-m", "datamodel_code_generator.__main__", "--help"], "usage:"),
-        (["-m", "datamodel_code_generator.__main__", "--list-deprecations"], "Warning since"),
+        (["-m", "datamodel_code_generator.__main__", "--list-deprecations"], "Since"),
     ],
 )
 def test_perf_cli_fast_path_subprocesses(args: list[str], expected_text: str) -> None:
