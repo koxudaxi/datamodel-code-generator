@@ -592,7 +592,9 @@ def test_dangling_local_ref_warns_and_preserves_generated_output(
     dangling_warnings = [warning for warning in warning_records if warning.category is DanglingRefWarning]
     assert_warnings_contain(dangling_warnings, "Unresolved local $ref")
     assert_output(
-        "".join(f"{Path(warning.filename).name}\n" for warning in dangling_warnings),
+        "".join(
+            f"{filename}\n" for filename in dict.fromkeys(Path(warning.filename).name for warning in dangling_warnings)
+        ),
         EXPECTED_MALFORMED_PATH / "dangling_ref_warning_location.txt",
     )
 
