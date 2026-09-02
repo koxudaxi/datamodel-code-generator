@@ -356,12 +356,10 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
         nullable = False if has_schema_default and not final_data_type.is_optional else None
 
         default = self._get_default(field, final_data_type, required=required)
-        has_default = has_schema_default
-
         effective_default, effective_has_default, use_default_with_required = self._effective_default_state(
             original_field_name,
             default,
-            has_default=has_default,
+            has_default=has_schema_default,
             required=required,
             class_name=class_name,
         )
