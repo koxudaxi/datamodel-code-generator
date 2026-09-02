@@ -1905,6 +1905,34 @@ def test_collapse_root_models_preserves_root_model_used_by_other_modules() -> No
     assert unused_models == []
 
 
+def test_collapse_root_models_uses_model_module_names_without_scope_map() -> None:
+    """Direct parser callers can collapse scalar roots without tree-scope planning."""
+    parser = C(
+        data_model_type=BaseModel,
+        data_model_root_type=RootModel,
+        data_model_field_type=DataModelField,
+        base_class="Base",
+        source="",
+    )
+    parser.collapse_root_models = True
+    root_reference = Reference(path="Root", original_name="Root", name="Root")
+    root_model = RootModel(
+        fields=[DataModelField(data_type=DataType(type="str"))],
+        reference=root_reference,
+    )
+    local_type = DataType(reference=root_reference)
+    local_model = BaseModel(
+        fields=[DataModelField(data_type=local_type)],
+        reference=Reference(path="Local", original_name="Local", name="Local"),
+    )
+    for model in (root_model, local_model):
+        parser.generation_store.register_model(model)
+
+    parser._Parser__collapse_root_models([local_model], [], Imports(), parser.model_resolver)
+
+    assert local_model.fields[0].data_type.type == "str"
+
+
 def test_finalize_modules_plans_schema_helpers_after_root_collapse() -> None:
     """Attach shared helper imports to a surviving runtime model after a root model is removed."""
     parser = C(
