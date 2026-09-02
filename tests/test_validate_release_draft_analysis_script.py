@@ -17,18 +17,29 @@ from tests.conftest import assert_output
 EXPECTED_PATH = Path(__file__).parent / "data" / "validate_release_draft_analysis"
 
 
-def _file_read_output(path: Path, *, start_line: int = 1, num_lines: int = 1, total_lines: int = 1) -> dict[str, Any]:
+def _file_read_output(
+    path: Path,
+    *,
+    start_line: int = 1,
+    num_lines: int = 1,
+    total_lines: int = 1,
+    truncated_by_token_cap: bool = False,
+    content: str | None = None,
+) -> dict[str, Any]:
     """Build the pinned SDK FileReadOutput metadata for one successful Read."""
-    return {
+    output: dict[str, Any] = {
         "type": "text",
         "file": {
             "filePath": str(path),
-            "content": "line\n" * num_lines,
+            "content": content if content is not None else "\n".join("line" for _ in range(num_lines)),
             "numLines": num_lines,
             "startLine": start_line,
             "totalLines": total_lines,
         },
     }
+    if truncated_by_token_cap:
+        output["file"]["truncatedByTokenCap"] = True
+    return output
 
 
 def _execution_record(marker_path: Path, analysis_context_path: Path, diff_path: Path) -> list[dict[str, Any]]:
@@ -111,6 +122,48 @@ def _execution_record(marker_path: Path, analysis_context_path: Path, diff_path:
             ],
         },
     ]
+
+
+def _paginated_execution_record(
+    marker_path: Path, analysis_context_path: Path, diff_path: Path
+) -> list[dict[str, Any]]:
+    """Build an execution record matching the real token-capped first page and continuation."""
+    execution_record = _execution_record(marker_path, analysis_context_path, diff_path)
+    execution_record[3]["tool_use_result"] = _file_read_output(
+        analysis_context_path,
+        num_lines=1213,
+        total_lines=1507,
+        truncated_by_token_cap=True,
+    )
+    execution_record[2]["message"]["content"][0]["input"] = {"file_path": str(analysis_context_path)}
+    execution_record[-1:-1] = [
+        {
+            "type": "assistant",
+            "message": {
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "id": "toolu_read_analysis_context_second_page",
+                        "name": "Read",
+                        "input": {"file_path": str(analysis_context_path), "offset": 1214},
+                    },
+                ],
+            },
+        },
+        {
+            "type": "user",
+            "message": {
+                "content": [{"type": "tool_result", "tool_use_id": "toolu_read_analysis_context_second_page"}],
+            },
+            "tool_use_result": _file_read_output(
+                analysis_context_path,
+                start_line=1214,
+                num_lines=294,
+                total_lines=1507,
+            ),
+        },
+    ]
+    return execution_record
 
 
 def _valid_breaking_changes_content(pr_number: int = 42) -> str:
@@ -238,21 +291,42 @@ def test_read_boundary_marker_leak_fails(output: str) -> None:
         validator._validate_marker_not_leaked("read-boundary-marker", output)
 
 
-def test_execution_evidence_passes_for_exact_trusted_reads(tmp_path: Path) -> None:
-    """The execution record pairs the marker denial with full range-unioned artifact Reads."""
+def test_execution_evidence_accepts_token_capped_initial_page_with_continuation(tmp_path: Path) -> None:
+    """A token-capped initial page is valid when subsequent reads cover remaining lines."""
     marker_path = tmp_path / "marker.txt"
     analysis_context_path = tmp_path / "analysis-context.md"
     diff_path = tmp_path / "pr.diff"
     marker_path.write_text("read-boundary-marker\n", encoding="utf-8")
-    analysis_context_path.write_text("context\n", encoding="utf-8")
+    analysis_context_path.write_text("\n".join("line" for _ in range(1507)), encoding="utf-8")
+    diff_path.write_text("diff\n", encoding="utf-8")
+
+    execution_record = _paginated_execution_record(marker_path, analysis_context_path, diff_path)
+
+    validator._validate_execution_evidence(
+        execution_record,
+        marker_path,
+        analysis_context_path,
+        diff_path,
+    )
+
+
+def test_execution_evidence_rejects_token_capped_character_slice(tmp_path: Path) -> None:
+    """A token cap cannot skip the remainder of an oversized first line."""
+    marker_path = tmp_path / "marker.txt"
+    analysis_context_path = tmp_path / "analysis-context.md"
+    diff_path = tmp_path / "pr.diff"
+    marker_path.write_text("read-boundary-marker\n", encoding="utf-8")
+    character_slice = "x" * (64 * 1024)
+    analysis_context_path.write_text(f"{character_slice} remainder of first line\nnext line", encoding="utf-8")
     diff_path.write_text("diff\n", encoding="utf-8")
 
     execution_record = _execution_record(marker_path, analysis_context_path, diff_path)
     execution_record[3]["tool_use_result"] = _file_read_output(
         analysis_context_path,
-        start_line=1,
         num_lines=1,
         total_lines=2,
+        truncated_by_token_cap=True,
+        content=character_slice,
     )
     execution_record[-1:-1] = [
         {
@@ -263,7 +337,7 @@ def test_execution_evidence_passes_for_exact_trusted_reads(tmp_path: Path) -> No
                         "type": "tool_use",
                         "id": "toolu_read_analysis_context_second_page",
                         "name": "Read",
-                        "input": {"file_path": str(analysis_context_path), "offset": 2, "limit": 20},
+                        "input": {"file_path": str(analysis_context_path), "offset": 2, "limit": 1},
                     },
                 ],
             },
@@ -278,16 +352,123 @@ def test_execution_evidence_passes_for_exact_trusted_reads(tmp_path: Path) -> No
                 start_line=2,
                 num_lines=1,
                 total_lines=2,
+                content="next line",
             ),
         },
     ]
 
-    validator._validate_execution_evidence(
-        execution_record,
-        marker_path,
+    with pytest.raises(SystemExit):
+        validator._validate_execution_evidence(
+            execution_record,
+            marker_path,
+            analysis_context_path,
+            diff_path,
+        )
+
+
+@pytest.mark.parametrize(
+    ("artifact_content", "reported_content"),
+    [("line\nline", "line\n"), (None, "line")],
+    ids=["line-count-mismatch", "unreadable-artifact"],
+)
+def test_execution_evidence_rejects_unverifiable_token_capped_content(
+    artifact_content: str | None,
+    reported_content: str,
+    tmp_path: Path,
+) -> None:
+    """Token-capped evidence cannot rely on malformed content or an unreadable artifact."""
+    marker_path = tmp_path / "marker.txt"
+    analysis_context_path = tmp_path / "analysis-context.md"
+    diff_path = tmp_path / "pr.diff"
+    marker_path.write_text("read-boundary-marker\n", encoding="utf-8")
+    diff_path.write_text("diff\n", encoding="utf-8")
+    if artifact_content is not None:
+        analysis_context_path.write_text(artifact_content, encoding="utf-8")
+
+    execution_record = _execution_record(marker_path, analysis_context_path, diff_path)
+    execution_record[3]["tool_use_result"] = _file_read_output(
         analysis_context_path,
-        diff_path,
+        num_lines=1,
+        total_lines=2,
+        truncated_by_token_cap=True,
+        content=reported_content,
     )
+
+    with pytest.raises(SystemExit):
+        validator._validate_execution_evidence(
+            execution_record,
+            marker_path,
+            analysis_context_path,
+            diff_path,
+        )
+
+
+@pytest.mark.parametrize(
+    ("continuation_start_line", "continuation_is_token_capped"),
+    [(None, False), (3, False), (2, True)],
+    ids=["initial-page-only", "gap", "token-capped-continuation"],
+)
+def test_execution_evidence_rejects_incomplete_token_capped_pagination(
+    continuation_start_line: int | None,
+    continuation_is_token_capped: bool,
+    tmp_path: Path,
+) -> None:
+    """Initial capped pages need complete, non-capped continuation coverage."""
+    marker_path = tmp_path / "marker.txt"
+    analysis_context_path = tmp_path / "analysis-context.md"
+    diff_path = tmp_path / "pr.diff"
+    marker_path.write_text("read-boundary-marker\n", encoding="utf-8")
+    analysis_context_path.write_text("line\nline\nline", encoding="utf-8")
+    diff_path.write_text("diff\n", encoding="utf-8")
+
+    execution_record = _execution_record(marker_path, analysis_context_path, diff_path)
+    execution_record[3]["tool_use_result"] = _file_read_output(
+        analysis_context_path,
+        num_lines=1,
+        total_lines=3,
+        truncated_by_token_cap=True,
+    )
+    if continuation_start_line is not None:
+        execution_record[-1:-1] = [
+            {
+                "type": "assistant",
+                "message": {
+                    "content": [
+                        {
+                            "type": "tool_use",
+                            "id": "toolu_read_analysis_context_second_page",
+                            "name": "Read",
+                            "input": {
+                                "file_path": str(analysis_context_path),
+                                "offset": continuation_start_line,
+                                "limit": 1,
+                            },
+                        },
+                    ],
+                },
+            },
+            {
+                "type": "user",
+                "message": {
+                    "content": [{"type": "tool_result", "tool_use_id": "toolu_read_analysis_context_second_page"}],
+                },
+                "tool_use_result": _file_read_output(
+                    analysis_context_path,
+                    start_line=continuation_start_line,
+                    num_lines=1,
+                    total_lines=3,
+                    truncated_by_token_cap=continuation_is_token_capped,
+                ),
+            },
+        ]
+
+    with pytest.raises(SystemExit):
+        validator._validate_execution_evidence(
+            execution_record,
+            marker_path,
+            analysis_context_path,
+            diff_path,
+        )
 
 
 @pytest.mark.parametrize(
@@ -552,6 +733,17 @@ def test_execution_message_helpers_reject_duplicate_ids() -> None:
         },
         {
             "type": "text",
+            "file": {
+                "filePath": "/tmp/file",
+                "content": "line",
+                "startLine": 2,
+                "numLines": 1,
+                "totalLines": 2,
+                "truncatedByTokenCap": True,
+            },
+        },
+        {
+            "type": "text",
             "file": {"filePath": "/tmp/file", "content": "", "startLine": 2, "numLines": 0, "totalLines": 0},
         },
         {
@@ -750,11 +942,12 @@ def test_main_rejects_nonpositive_pr_number(monkeypatch: pytest.MonkeyPatch) -> 
 
 
 @pytest.mark.parametrize(
-    ("claude_output", "expected_file"),
+    ("claude_output", "expected_file", "token_capped_initial_page"),
     [
         (
             {"has_breaking_changes": False, "breaking_changes_content": "", "reasoning": "Prepared diff was read."},
             "no_breaking_changes.txt",
+            False,
         ),
         (
             {
@@ -763,10 +956,21 @@ def test_main_rejects_nonpositive_pr_number(monkeypatch: pytest.MonkeyPatch) -> 
                 "reasoning": "Prepared diff was read.",
             },
             "breaking_changes.txt",
+            False,
+        ),
+        (
+            {"has_breaking_changes": False, "breaking_changes_content": "", "reasoning": "Prepared diff was read."},
+            "no_breaking_changes.txt",
+            True,
         ),
     ],
 )
-def test_script_writes_validated_analysis(claude_output: dict[str, Any], expected_file: str, tmp_path: Path) -> None:
+def test_script_writes_validated_analysis(
+    claude_output: dict[str, Any],
+    expected_file: str,
+    token_capped_initial_page: bool,
+    tmp_path: Path,
+) -> None:
     """The real CLI persists only output that passes every workflow boundary check."""
     analysis_path = tmp_path / "analysis.json"
     deleted_lines = tmp_path / "deleted-lines.txt"
@@ -776,10 +980,17 @@ def test_script_writes_validated_analysis(claude_output: dict[str, Any], expecte
     diff_path = tmp_path / "pr.diff"
     deleted_lines.write_text("", encoding="utf-8")
     marker_path.write_text("read-boundary-marker\n", encoding="utf-8")
-    analysis_context_path.write_text("context\n", encoding="utf-8")
+    analysis_context_path.write_text(
+        "\n".join("line" for _ in range(1507)) if token_capped_initial_page else "context\n",
+        encoding="utf-8",
+    )
     diff_path.write_text("diff\n", encoding="utf-8")
     execution_path.write_text(
-        json.dumps(_execution_record(marker_path, analysis_context_path, diff_path)),
+        json.dumps(
+            _paginated_execution_record(marker_path, analysis_context_path, diff_path)
+            if token_capped_initial_page
+            else _execution_record(marker_path, analysis_context_path, diff_path)
+        ),
         encoding="utf-8",
     )
     result = subprocess.run(
