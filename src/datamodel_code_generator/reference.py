@@ -361,11 +361,11 @@ class FieldNameResolver:
         # We should avoid having a field begin with an underscore, as it
         # causes pydantic to consider it as private
         while name.startswith("_"):
-            if self.remove_special_field_name_prefix:
-                name = name[1:]
-            else:
-                name = f"{self.special_field_name_prefix}{name}"
-                break
+            if self.remove_special_field_name_prefix and (stripped_name := name.lstrip("_")):
+                name = stripped_name
+                continue
+            name = f"{self.special_field_name_prefix}{name}"
+            break
         if self.capitalise_enum_members or (self.snake_case_field and not ignore_snake_case_field):
             name = camel_to_snake(name)
         count = 1
