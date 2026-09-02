@@ -1245,19 +1245,20 @@ def test_generation_store_atomic_replace_invalidates_scope_on_body_error() -> No
     store = GenerationStore()
     store.register_model(model)
 
+    def replace_with_body_error() -> None:
+        with store._replace_data_type_and_detach_data_type_ref(
+            old_data_type,
+            DataType(type="int"),
+            owner=field,
+            replacement_kind="field",
+        ):
+            raise ReplacementBodyError
+
     with store._collapse_root_reference_scope():
         scope = store._active_root_collapse_reference_scope
         assert scope is not None
-        with (
-            pytest.raises(ReplacementBodyError),
-            store._replace_data_type_and_detach_data_type_ref(
-                old_data_type,
-                DataType(type="int"),
-                owner=field,
-                replacement_kind="field",
-            ),
-        ):
-            raise ReplacementBodyError
+        with pytest.raises(ReplacementBodyError):
+            replace_with_body_error()
         assert scope.enabled is False
 
 
