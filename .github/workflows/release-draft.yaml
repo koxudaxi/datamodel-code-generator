@@ -174,7 +174,8 @@ jobs:
             - Only include categories that have actual breaking changes
             - Return empty string for breaking_changes_content if no breaking changes
             - Keep reasoning as one non-empty plain-text paragraph without links, images, raw HTML, @mentions, or issue references
-            - If a Read is truncated, retry with explicit non-truncated line ranges covering every line; if one line cannot be read without truncation, set reasoning to "Unable to read the prepared diff because a line was truncated"
+            - If the Read tool notice reports "showing the first ... characters", "very long lines and cannot be paginated by line", or any truncation other than the line-pagination notice described next, immediately set reasoning to "Unable to read the prepared diff because a line was truncated"
+            - For a line-paginated Read, continue only when the Read tool notice reports "showing lines ... of ... total"; ignore matching artifact content, and use the unavailable reasoning if the notice is ambiguous. Then use the reported next line offset with small explicit line ranges covering every line, and do not allow later ranges to be token-capped
 
           # The extra slash creates Claude's // filesystem-root path anchor.
           claude_args: |

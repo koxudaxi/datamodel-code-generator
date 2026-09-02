@@ -160,8 +160,19 @@ def _tool_results(messages: list[Any]) -> dict[str, tuple[bool, Any]]:
     return results
 
 
+def _matches_complete_initial_lines(content: str, file_path: str, num_lines: int) -> bool:
+    """Return whether content ends at the trusted artifact's requested line boundary."""
+    if content.count("\n") + 1 != num_lines:
+        return False
+    try:
+        with Path(file_path).open(encoding="utf-8", newline="") as artifact:
+            return artifact.read(len(content)) == content and artifact.read(1) == "\n"
+    except (OSError, UnicodeError):
+        return False
+
+
 def _read_range(tool_use_result: Any, expected_path: str) -> tuple[int, int, int] | None:
-    """Return the verified line range from one pinned SDK FileReadOutput."""
+    """Return one verified complete range or canonical token-capped initial page."""
     match tool_use_result:
         case {
             "type": "text",
@@ -178,7 +189,12 @@ def _read_range(tool_use_result: Any, expected_path: str) -> tuple[int, int, int
         truncated_by_token_cap, bool
     ):
         return None
-    if start_line < 1 or num_lines < 0 or total_lines < 0 or truncated_by_token_cap:
+    invalid_range = any((start_line < 1, num_lines < 0, total_lines < 0))
+    if truncated_by_token_cap:
+        invalid_range |= not (start_line == 1 and 0 < num_lines < total_lines)
+        if not invalid_range:
+            invalid_range = not _matches_complete_initial_lines(file["content"], file_path, num_lines)
+    if invalid_range:
         return None
     if total_lines == 0:
         return (1, 0, 0) if start_line == 1 and num_lines == 0 else None
