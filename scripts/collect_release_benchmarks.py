@@ -354,13 +354,15 @@ def _result_payload(result: BenchmarkResult | dict[str, object]) -> dict[str, ob
 
 
 def _result_version(result: BenchmarkResult | dict[str, object]) -> str:
+    version = ""
     match result:
-        case BenchmarkResult(version=version):
-            return version
+        case BenchmarkResult(version=result_version):
+            version = result_version
         case dict():
-            return str(result.get("version", ""))
+            version = str(result.get("version", ""))
         case _:
-            return ""
+            pass
+    return version
 
 
 def _payload(
