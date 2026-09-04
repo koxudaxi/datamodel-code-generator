@@ -35,10 +35,12 @@ mapping: ENUM PYDANTIC CLASS MSGSPEC
 resolver types: EnumFieldNameResolver PydanticFieldNameResolver FieldNameResolver MsgspecFieldNameResolver
 class field: current_3name
 pydantic field: schema_
+cache mutation: True
 current slotted -> main
 state layout: public
 mapping: ENUM PYDANTIC CLASS MSGSPEC
 resolver types: EnumFieldNameResolver PydanticFieldNameResolver FieldNameResolver MsgspecFieldNameResolver
 class field: field_3name
 pydantic field: schema_
+cache mutation: True
 slot marker: current-slot

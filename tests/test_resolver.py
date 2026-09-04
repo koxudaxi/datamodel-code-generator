@@ -7,6 +7,7 @@ import os
 import pickle
 import subprocess
 import sys
+from collections import Counter
 from pathlib import Path
 from typing import cast
 
@@ -258,6 +259,70 @@ def test_model_resolver_pickles_are_compatible_across_the_resolver_state_rename(
         outputs.append(result.stdout)
 
     assert_output("".join(outputs), EXPECTED_RESOLVER_PATH / "model_resolver_pickle_compatibility.txt")
+
+
+def test_model_resolver_reference_name_cache_preserves_multiplicity() -> None:
+    """Keep a name reserved until every non-unique reference releases it."""
+    delete_resolver = ModelResolver()
+    delete_resolver.add(["first"], "User", class_name=True, unique=False)
+    delete_resolver.add(["second"], "User", class_name=True, unique=False)
+    delete_resolver.add(["third"], "User", class_name=True, unique=False)
+    delete_duplicate_count = str(delete_resolver._reference_names_cache)
+    delete_resolver.delete(["first"])
+    delete_resolver.delete(["second"])
+    delete_allocated = delete_resolver.add(["fourth"], "User", class_name=True)
+
+    rename_resolver = ModelResolver()
+    rename_resolver.add(["first"], "User", class_name=True, unique=False)
+    rename_resolver.add(["second"], "User", class_name=True, unique=False)
+    rename_resolver.add(["first"], "Admin", class_name=True, unique=False)
+    rename_allocated = rename_resolver.add(["third"], "User", class_name=True)
+
+    refresh_resolver = ModelResolver()
+    refresh_resolver.add(["first"], "User", class_name=True, unique=False)
+    refresh_resolver.add(["second"], "User", class_name=True, unique=False)
+    refresh_resolver.refresh_reference_names()
+    refresh_resolver.delete(["first"])
+
+    same_name_resolver = ModelResolver()
+    same_name_resolver.add(["entry"], "user-name", class_name=True)
+    same_name_resolver.add(["entry"], "user_name", class_name=True)
+    same_name_resolver.refresh_reference_names()
+    same_name_resolver.delete(["entry"])
+    same_name_allocated = same_name_resolver.add(["next"], "user_name", class_name=True)
+
+    legacy_cache_resolver = ModelResolver()
+    legacy_cache_resolver.add(["first"], "User", class_name=True, unique=False)
+    legacy_cache_resolver.add(["second"], "User", class_name=True, unique=False)
+    legacy_state = legacy_cache_resolver.__dict__.copy()
+    legacy_state["_reference_names_cache"] = {"User"}
+    restored_resolver = ModelResolver.__new__(ModelResolver)
+    restored_resolver.__setstate__(legacy_state)
+    restored_resolver.delete(["first"])
+    legacy_allocated = restored_resolver.add(["third"], "User", class_name=True)
+
+    counter_state = legacy_cache_resolver.__dict__.copy()
+    counter_state["_reference_names_cache"] = Counter(User=2)
+    counter_restored_resolver = ModelResolver.__new__(ModelResolver)
+    counter_restored_resolver.__setstate__(counter_state)
+    counter_restored_resolver.delete(["first"])
+    counter_allocated = counter_restored_resolver.add(["third"], "User", class_name=True)
+
+    assert_output(
+        "".join((
+            f"delete retained: {delete_resolver.references['third#'].name}\n",
+            f"delete allocated: {delete_allocated.name}\n",
+            f"duplicate count: {delete_duplicate_count}\n",
+            f"single count: {delete_resolver._reference_names_cache}\n",
+            f"rename retained: {rename_resolver.references['second#'].name}\n",
+            f"rename allocated: {rename_allocated.name}\n",
+            f"refresh allocated: {refresh_resolver.add(['third'], 'User', class_name=True).name}\n",
+            f"same-name reallocated: {same_name_allocated.name}\n",
+            f"legacy cache allocated: {legacy_allocated.name}\n",
+            f"counter cache allocated: {counter_allocated.name}\n",
+        )),
+        EXPECTED_RESOLVER_PATH / "reference_name_multiplicity.txt",
+    )
 
 
 @pytest.mark.parametrize(

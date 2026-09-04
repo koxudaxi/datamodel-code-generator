@@ -40,7 +40,7 @@ from datamodel_code_generator.enums import ClassNameAffixScope, HTTPBackend
 from datamodel_code_generator.util import camel_to_snake
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator, Iterator, Mapping, Sequence
+    from collections.abc import Callable, Collection, Generator, Iterator, Mapping, Sequence
     from collections.abc import Set as AbstractSet
 
     import inflect
@@ -361,11 +361,11 @@ class FieldNameResolver:
         # We should avoid having a field begin with an underscore, as it
         # causes pydantic to consider it as private
         while name.startswith("_"):
-            if self.remove_special_field_name_prefix:
-                name = name[1:]
-            else:
-                name = f"{self.special_field_name_prefix}{name}"
-                break
+            if self.remove_special_field_name_prefix and (stripped_name := name.lstrip("_")):
+                name = stripped_name
+                continue
+            name = f"{self.special_field_name_prefix}{name}"
+            break
         if self.capitalise_enum_members or (self.snake_case_field and not ignore_snake_case_field):
             name = camel_to_snake(name)
         count = 1
@@ -785,8 +785,8 @@ class ModelResolver:  # noqa: PLR0904
         self.skip_affix_for_root: bool = skip_affix_for_root
         self.model_name_map: Mapping[str, str] = {} if model_name_map is None else {**model_name_map}
 
-        # Incrementally maintained set of reference names for O(1) uniqueness checking
-        self._reference_names_cache: set[str] = set()
+        # Incrementally maintained counts of reference names for O(1) uniqueness checking.
+        self._reference_names_cache: dict[str, int] = {}
         self._unique_name_start_hints: dict[tuple[str, str, str], int] = {}
 
         # Default value overrides from external JSON file
@@ -822,6 +822,7 @@ class ModelResolver:  # noqa: PLR0904
         instance_state = instance_state.copy()
         instance_state["field_name_resolvers"] = resolvers
         del instance_state["_field_name_resolvers"]
+        instance_state["_reference_names_cache"] = set(self._reference_names_cache)
         state = instance_state if slot_state is None else (instance_state, slot_state.copy())
         return (*reduced[:2], state, *reduced[3:])
 
@@ -836,6 +837,11 @@ class ModelResolver:  # noqa: PLR0904
             instance_state, slot_state = state, {}
         if "field_name_resolvers" in instance_state:
             instance_state["_field_name_resolvers"] = instance_state.pop("field_name_resolvers")
+        if type(instance_state.get("_reference_names_cache")) is not dict:
+            reference_names: dict[str, int] = {}
+            for reference in instance_state.get("references", {}).values():
+                reference_names[reference.name] = reference_names.get(reference.name, 0) + 1
+            instance_state["_reference_names_cache"] = reference_names
         self.__dict__.update(instance_state)
         self.__dict__.setdefault("_resolved_base_path_cache", None)
         for name, value in slot_state.items():
@@ -922,25 +928,35 @@ class ModelResolver:  # noqa: PLR0904
         self._reference_names_cache.clear()
         self._unique_name_start_hints.clear()
 
-    def _get_reference_names(self) -> set[str]:
-        """Get the set of all reference names for uniqueness checking."""
+    def _get_reference_names(self) -> dict[str, int]:
+        """Get the counts of all reference names for uniqueness checking."""
         return self._reference_names_cache
 
-    def _update_reference_name(self, old_name: str | None, new_name: str) -> None:
+    def _update_reference_name(self, old_name: str | None, new_name: str, *, unique: bool = True) -> None:
         """Update the reference names cache when a reference name changes."""
-        if old_name and old_name != new_name:
-            self._reference_names_cache.discard(old_name)
-            self._invalidate_unique_name_hints(old_name)
-        self._reference_names_cache.add(new_name)
+        if old_name == new_name:
+            return
+        if old_name:
+            self._remove_reference_name(old_name)
+        if unique:
+            self._reference_names_cache[new_name] = 1
+            return
+        self._reference_names_cache[new_name] = self._reference_names_cache.get(new_name, 0) + 1
 
     def _remove_reference_name(self, name: str) -> None:
         """Remove a name from the reference names cache."""
-        self._reference_names_cache.discard(name)
+        if (count := self._reference_names_cache.get(name, 0)) > 1:
+            self._reference_names_cache[name] = count - 1
+            return
+        self._reference_names_cache.pop(name, None)
         self._invalidate_unique_name_hints(name)
 
     def refresh_reference_names(self) -> None:
         """Refresh cached names after a batch reference rename."""
-        self._reference_names_cache = {reference.name for reference in self.references.values()}
+        reference_names: dict[str, int] = {}
+        for reference in self.references.values():
+            reference_names[reference.name] = reference_names.get(reference.name, 0) + 1
+        self._reference_names_cache = reference_names
         self._unique_name_start_hints.clear()
 
     @property
@@ -1240,7 +1256,7 @@ class ModelResolver:  # noqa: PLR0904
         )
 
         self.references[path] = reference
-        self._update_reference_name(None, reference.name)
+        self._update_reference_name(None, reference.name, unique=use_unique)
         return reference
 
     def _find_parent_reference(self, path: Sequence[str]) -> Reference | None:
@@ -1393,7 +1409,7 @@ class ModelResolver:  # noqa: PLR0904
             reference.name = name
             reference.loaded = loaded
             reference.duplicate_name = duplicate_name
-            self._update_reference_name(old_ref_name, name)
+            self._update_reference_name(old_ref_name, name, unique=unique)
         else:
             reference = Reference(
                 path=joined_path,
@@ -1403,7 +1419,7 @@ class ModelResolver:  # noqa: PLR0904
                 duplicate_name=duplicate_name,
             )
             self.references[joined_path] = reference
-            self._update_reference_name(None, name)
+            self._update_reference_name(None, name, unique=unique)
         return reference
 
     def get(self, path: Sequence[str] | str) -> Reference | None:
@@ -1572,7 +1588,7 @@ class ModelResolver:  # noqa: PLR0904
         return delimiter.join((name, str(count)))
 
     @staticmethod
-    def _is_unique_name_available(candidate: str, reference_names: set[str], exclude_names: set[str]) -> bool:
+    def _is_unique_name_available(candidate: str, reference_names: Collection[str], exclude_names: set[str]) -> bool:
         """Return whether a duplicate-name candidate is currently free."""
         return candidate not in reference_names and candidate not in exclude_names
 

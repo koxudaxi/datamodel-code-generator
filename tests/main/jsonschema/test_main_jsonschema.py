@@ -4260,6 +4260,27 @@ def test_main_jsonschema_special_model_remove_special_field_name_prefix(output_f
     )
 
 
+def test_main_jsonschema_remove_special_prefix_preserves_underscore_alias(output_file: Path) -> None:
+    """Keep an all-underscore property public and addressable by its source alias."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "underscore_property.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="underscore_property.py",
+        extra_args=["--remove-special-field-name-prefix"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="underscore_property_validation",
+        model_name="UnderscoreProperty",
+        valid_json='{"_": "value", "__name": "name"}',
+        invalid_json='{"__name": "name"}',
+        expected_error_type="missing",
+    )
+
+
 def test_main_jsonschema_subclass_enum(output_file: Path) -> None:
     """Test enum subclassing."""
     run_main_and_assert(
