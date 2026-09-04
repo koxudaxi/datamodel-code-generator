@@ -8,12 +8,14 @@ from datetime import timedelta
 from decimal import Decimal
 from typing import Literal, TypeAlias, TypedDict
 
+from typing_extensions import NotRequired
+
 Status: TypeAlias = Literal['ACTIVE', 'INACTIVE']
 
 
 class Address(TypedDict):
     street: str
-    zip: str | None
+    zip: NotRequired[str | None]
 
 
 MD5: TypeAlias = bytes
@@ -33,17 +35,17 @@ class User(TypedDict):
     """
     Stable identifier
     """
-    active: bool
-    age: int
+    active: NotRequired[bool]
+    age: NotRequired[int]
     visits: int
     score: float
     rating: float
     payload: bytes
-    status: Status
-    tags: list[str]
-    attributes: dict[str, str]
+    status: NotRequired[Status]
+    tags: NotRequired[list[str]]
+    attributes: NotRequired[dict[str, str]]
     address: Address
-    previous: User | None
+    previous: NotRequired[User | None]
     hash: MD5
     traceId: TraceId
     price: Decimal
@@ -59,5 +61,5 @@ class User(TypedDict):
     localUpdatedAt: str
     localProcessedAt: str
     duration: Duration
-    choice: str | int | None
+    choice: NotRequired[str | int | None]
     rawDecimalText: str

@@ -9,7 +9,7 @@ from decimal import Decimal
 from enum import Enum
 from typing import Annotated, TypeAlias
 
-from msgspec import Meta, Struct
+from msgspec import UNSET, Meta, Struct, UnsetType, field
 
 
 class Status(Enum):
@@ -19,7 +19,7 @@ class Status(Enum):
 
 class Address(Struct):
     street: str
-    zip: str | None
+    zip: str | None | UnsetType = UNSET
 
 
 MD5: TypeAlias = Annotated[bytes, Meta(max_length=16, min_length=16, title='MD5')]
@@ -39,17 +39,11 @@ class User(Struct):
     """
     Stable identifier
     """
-    active: bool
-    age: int
     visits: int
     score: float
     rating: float
     payload: bytes
-    status: Status
-    tags: list[str]
-    attributes: dict[str, str]
     address: Address
-    previous: User | None
     hash: MD5
     traceId: TraceId
     price: Decimal
@@ -65,5 +59,11 @@ class User(Struct):
     localUpdatedAt: str
     localProcessedAt: str
     duration: Duration
-    choice: str | int | None
     rawDecimalText: str
+    active: bool | UnsetType = True
+    age: int | UnsetType = 0
+    status: Status | UnsetType = 'ACTIVE'
+    tags: list[str] | UnsetType = field(default_factory=list)
+    attributes: dict[str, str] | UnsetType = field(default_factory=dict)
+    previous: User | None | UnsetType = UNSET
+    choice: str | int | None | UnsetType = UNSET
