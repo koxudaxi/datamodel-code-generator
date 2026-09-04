@@ -134,6 +134,102 @@ def _construct_yaml_bool_with_warning(loader: Any, node: Any) -> bool:
     return value in {"true", "True", "TRUE"}
 
 
+def _fast_construct_document(loader: Any, root: Any) -> Any:  # noqa: PLR0914, PLR0915
+    """Construct a composed node tree in PyYAML's breadth-first order without per-node dispatch.
+
+    Behaviourally identical to ``BaseConstructor.construct_document`` for SafeLoader-family
+    loaders: PyYAML's ``constructed_objects`` memo and ``state_generators`` queue are shared,
+    so aliases, recursive structures, merge keys, explicit tags and error cases take the
+    standard path in the same order. Only plain map / seq / str handling is inlined.
+    """
+    from collections import deque  # noqa: PLC0415
+    from collections.abc import Hashable  # noqa: PLC0415
+    from types import GeneratorType  # noqa: PLC0415
+
+    from yaml.constructor import ConstructorError, SafeConstructor  # noqa: PLC0415
+    from yaml.nodes import MappingNode, ScalarNode, SequenceNode  # noqa: PLC0415
+
+    map_tag = "tag:yaml.org,2002:map"
+    seq_tag = "tag:yaml.org,2002:seq"
+    str_tag = "tag:yaml.org,2002:str"
+    generator_marker = object()
+
+    constructors = loader.yaml_constructors
+    plain_str = constructors.get(str_tag) is SafeConstructor.construct_yaml_str
+    flatten_mapping = loader.flatten_mapping
+    construct_object = loader.construct_object
+    memo = loader.constructed_objects
+    state_generators = loader.state_generators
+    queue: deque[tuple[Any, Any]] = deque()
+
+    def delegate(node: Any) -> Any:
+        """Use standard PyYAML construction and retain its breadth-first deferred work."""
+        value = construct_object(node)
+        while state_generators:
+            queue.append((generator_marker, state_generators.pop(0)))
+        return value
+
+    def container_for(node: Any) -> Any:
+        if (existing := memo.get(node)) is not None:
+            return existing
+
+        node_class = node.__class__
+        match node_class:
+            case _ if node_class is MappingNode and node.tag == map_tag:
+                value: Any = {}
+            case _ if node_class is SequenceNode and node.tag == seq_tag:
+                value = []
+            case _:
+                return delegate(node)
+
+        memo[node] = value
+        queue.append((node, value))
+        return value
+
+    def scalar(node: Any) -> Any:
+        tag = node.tag
+        if tag == str_tag and plain_str:
+            return node.value
+        constructor = constructors.get(tag)
+        if constructor is None:
+            return delegate(node)
+        value = constructor(loader, node)
+        if value.__class__ is GeneratorType:
+            value.close()
+            return delegate(node)
+        return value
+
+    result = scalar(root) if root.__class__ is ScalarNode else container_for(root)
+    while queue:
+        node, container = queue.popleft()
+        if node is generator_marker:
+            for _ in container:
+                pass
+            while state_generators:
+                queue.append((generator_marker, state_generators.pop(0)))
+            continue
+        if node.__class__ is MappingNode:
+            flatten_mapping(node)
+            for key_node, value_node in node.value:
+                if key_node.__class__ is ScalarNode and key_node.tag == str_tag and plain_str:
+                    key = key_node.value
+                else:
+                    key = scalar(key_node) if key_node.__class__ is ScalarNode else delegate(key_node)
+                    if not isinstance(key, Hashable):
+                        raise ConstructorError(  # noqa: TRY003
+                            "while constructing a mapping",  # noqa: EM101
+                            node.start_mark,
+                            "found unhashable key",
+                            key_node.start_mark,
+                        )
+                container[key] = scalar(value_node) if value_node.__class__ is ScalarNode else container_for(value_node)
+        else:
+            append = container.append
+            for item in node.value:
+                append(scalar(item) if item.__class__ is ScalarNode else container_for(item))
+    return result
+
+
 @lru_cache(maxsize=1)
 def get_safe_loader() -> type:
     """Get customized SafeLoader lazily."""
@@ -154,6 +250,21 @@ def get_safe_loader() -> type:
             )
             if v
         }
+
+        def construct_document(self, node: Any) -> Any:
+            if not hasattr(self, "state_generators"):  # pragma: no cover  # PyYAML internals changed
+                return super().construct_document(node)
+            data = _fast_construct_document(self, node)
+            while self.state_generators:  # pragma: no cover  # normally empty; mirrors BaseConstructor
+                generators = self.state_generators
+                self.state_generators = []
+                for generator in generators:
+                    for _ in generator:
+                        pass
+            self.constructed_objects = {}
+            self.recursive_objects = {}
+            self.deep_construct = False
+            return data
 
     CustomSafeLoader.yaml_constructors["tag:yaml.org,2002:timestamp"] = CustomSafeLoader.yaml_constructors[
         "tag:yaml.org,2002:str"
