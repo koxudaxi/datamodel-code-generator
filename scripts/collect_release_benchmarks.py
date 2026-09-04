@@ -359,6 +359,8 @@ def _result_version(result: BenchmarkResult | dict[str, object]) -> str:
             return version
         case dict():
             return str(result.get("version", ""))
+        case _:
+            return ""
 
 
 def _payload(
