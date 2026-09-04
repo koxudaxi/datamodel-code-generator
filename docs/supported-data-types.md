@@ -2,7 +2,7 @@
 
 This code generator supports the following input formats:
 
-- OpenAPI 3.0/3.1/3.2 (YAML/JSON, [OpenAPI Data Types](https://spec.openapis.org/oas/v3.2.0.html#data-types)); OpenAPI 2.0 (Swagger) has limited support.
+- OpenAPI 3.0/3.1/3.2 (YAML/JSON, [OpenAPI Data Types](https://spec.openapis.org/oas/v3.2.0.html#data-types)); Swagger 2.0 is unsupported, so convert specifications to OpenAPI 3.x.
 - [AsyncAPI](asyncapi.md) 2.x/3.x (YAML/JSON).
 - JSON Schema ([JSON Schema Core](https://json-schema.org/draft/2020-12/json-schema-core.html) / [JSON Schema Validation](https://json-schema.org/draft/2020-12/json-schema-validation.html)).
 - Apache Avro schema (`.avsc`, [Apache Avro](avro.md)).

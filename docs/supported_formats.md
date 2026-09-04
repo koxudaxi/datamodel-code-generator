@@ -234,7 +234,7 @@ datamodel-code-generator automatically detects the JSON Schema version:
 | 3.1.x | [spec.openapis.org/oas/v3.1.0](https://spec.openapis.org/oas/v3.1.0) | 2020-12 (full) |
 | 3.2.x | [spec.openapis.org/oas/v3.2.0](https://spec.openapis.org/oas/v3.2.0) | 2020-12 (full) |
 
-> **Note**: OpenAPI 2.0 (Swagger) support is limited. We recommend converting to OpenAPI 3.0+.
+> **Note**: Swagger 2.0 is unsupported. Convert specifications to OpenAPI 3.x.
 
 ### Feature Compatibility Matrix
 
@@ -529,15 +529,15 @@ The schema type, format, and default Pydantic v2 type columns below are generate
 
 | Feature | Introduced | Status | Notes |
 |---------|------------|--------|-------|
-| OpenAPI 2.0 (Swagger) | OAS 2.0 | ⚠️ Limited | Recommend converting to 3.0+ |
+| Swagger 2.0 | OAS 2.0 | ❌ Not supported | Convert to OpenAPI 3.x |
 | `$ref` sibling keywords | OAS 3.0 | ❌ Not supported | 3.0 spec limitation (fixed in 3.1) |
 | `links` | OAS 3.0 | ❌ Not supported | Runtime linking not applicable |
 | `callbacks` | OAS 3.0 | ❌ Not supported | Webhook callbacks ignored |
 | `webhooks` | OAS 3.1 | ✅ Supported | Generated when included in `--openapi-scopes` |
-| `security` definitions | OAS 2.0+ | ❌ Not supported | Security schemes not generated |
+| Security schemes | OAS 3.0 | ❌ Not supported | Security schemes not generated |
 | `servers` | OAS 3.0 | ❌ Not supported | Server configuration ignored |
-| `externalDocs` | OAS 2.0+ | ⚠️ Partial | Preserved as schema metadata |
-| `xml` | OAS 2.0+ | ⚠️ Partial | Preserved as schema metadata |
+| `externalDocs` | OAS 3.0 | ⚠️ Partial | Preserved as schema metadata |
+| `xml` | OAS 3.0 | ⚠️ Partial | Preserved as schema metadata |
 | Request body `required` | OAS 3.0 | ⚠️ Partial | Affects field optionality |
 | Header/Cookie parameters | OAS 3.0 | ⚠️ Partial | Generated but not validated |
 
