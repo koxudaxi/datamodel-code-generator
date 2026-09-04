@@ -57,9 +57,16 @@ def _split_remote_url(url: str, *, persisted: bool = False) -> tuple[SplitResult
         port = parsed.port
     except ValueError as exc:
         raise RemoteLockError(message) from exc
-    if parsed.scheme.lower() not in {"http", "https"} or not parsed.hostname:
+    scheme = parsed.scheme.lower()
+    if scheme not in {"http", "https"} or not parsed.hostname:
         raise RemoteLockError(message)
-    return parsed, port
+    if port is None:
+        return parsed, None
+    match scheme, port:
+        case ("http", 80) | ("https", 443):
+            return parsed, None
+        case _:
+            return parsed, port
 
 
 def _display_url(url: str) -> str:

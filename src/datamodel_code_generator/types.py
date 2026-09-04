@@ -402,11 +402,22 @@ def _remove_none_from_union(type_: str, *, use_union_operator: bool) -> str:  # 
     # this counter for each non-escaped opening round bracket and decrement it for each
     # non-escaped closing round bracket.
     in_constr = 0
+    quote = escaped = ""
 
     # Parse union parts carefully to handle nested structures
     for char in inner_text:
         current_part += char
-        if char == "[" and in_constr == 0:
+        if quote:
+            if escaped:
+                escaped = ""
+            elif char == "\\":
+                escaped = "\\"
+            elif char == quote:
+                quote = ""
+            continue
+        if char in {"'", '"'}:
+            quote = char
+        elif char == "[" and in_constr == 0:
             inner_count += 1
         elif char == "]" and in_constr == 0:
             inner_count -= 1

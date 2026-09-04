@@ -2179,7 +2179,7 @@ def test_apply_builtin_formatter_matches_black_isort_for_normalized_expected_fil
 
 def test_format_code_un_exist_custom_formatter() -> None:
     """Test error when custom formatter module doesn't exist."""
-    with pytest.raises(ModuleNotFoundError):
+    with pytest.raises(datamodel_code_generator.Error, match="Unable to import custom formatter"):
         _ = CodeFormatter(
             PythonVersionMin,
             custom_formatters=[UN_EXIST_FORMATTER],

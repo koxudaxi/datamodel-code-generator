@@ -52,6 +52,12 @@ EXPECTED_STARTUP_MEASUREMENT_CASES = {
 
 
 @pytest.fixture(scope="module")
+def openapi_large_yaml_text() -> str:
+    """Read the YAML constructor benchmark input outside the measured call."""
+    return (PERFORMANCE_DATA_PATH / "openapi_large.yaml").read_text(encoding="utf-8")
+
+
+@pytest.fixture(scope="module")
 def simple_pydantic_v2_data_types() -> list[DataType]:
     """Prepare normalized types outside the field-construction benchmark."""
     return [DataType(type="str") for _ in range(5000)]
@@ -611,7 +617,7 @@ def test_perf_pattern_properties_adapter_reuse(
     [
         (["-m", "datamodel_code_generator.__main__", "--version"], "datamodel-codegen "),
         (["-m", "datamodel_code_generator.__main__", "--help"], "usage:"),
-        (["-m", "datamodel_code_generator.__main__", "--list-deprecations"], "Warning since"),
+        (["-m", "datamodel_code_generator.__main__", "--list-deprecations"], "Since"),
     ],
 )
 def test_perf_cli_fast_path_subprocesses(args: list[str], expected_text: str) -> None:
@@ -1015,6 +1021,15 @@ def test_perf_multiple_files_to_multiple_outputs(tmp_path: Path) -> None:
     assert output_dir.exists()
     py_files = list(output_dir.glob("**/*.py"))
     assert len(py_files) >= 1
+
+
+@pytest.mark.perf
+@pytest.mark.benchmark
+def test_perf_load_yaml_openapi_large(openapi_large_yaml_text: str) -> None:
+    """Benchmark production YAML loading without including fixture I/O."""
+    from datamodel_code_generator._source import load_yaml
+
+    load_yaml(openapi_large_yaml_text)
 
 
 @pytest.mark.perf

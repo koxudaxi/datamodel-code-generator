@@ -3,8 +3,12 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
+
+
+class KeyMap(RootModel[dict["KeyMap", str]]):
+    root: dict["KeyMap", str]
 
 
 class Model(BaseModel):
-    keys: dict[, str | dict[, str]] | None = None
+    keys: KeyMap | None = None

@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import datamodel_code_generator.reference as reference
-from datamodel_code_generator.reference import ModelType
+from datamodel_code_generator.reference import ModelType, Reference
 
 
 class LegacyModelResolver:
@@ -28,6 +28,16 @@ class LegacyModelResolver:
         """Resolve field names through the earlier public mapping."""
         return self.field_name_resolvers[model_type].get_valid_name(name, excludes)
 
+    def add_reference(self, path: str, name: str) -> None:
+        """Simulate the earlier resolver's set-backed reference cache update."""
+        self.references[path] = Reference(path=path, original_name=name, name=name)
+        self._reference_names_cache.add(name)
+
+    def delete_reference(self, path: str) -> None:
+        """Simulate the earlier resolver's set-backed reference cache removal."""
+        reference = self.references.pop(path)
+        self._reference_names_cache.discard(reference.name)
+
 
 class LegacySlottedModelResolver(LegacyModelResolver):
     """Earlier public state layout with a slot collected by the default pickler."""
@@ -44,6 +54,10 @@ def _report(direction: str, resolver: Any) -> None:
     print(f"resolver types: {' '.join(type(item).__name__ for item in mapping.values())}")
     print(f"class field: {resolver.get_valid_field_name('3name', model_type=ModelType.CLASS)}")
     print(f"pydantic field: {resolver.get_valid_field_name('schema')}")
+    if isinstance(resolver, LegacyModelResolver):
+        resolver.add_reference("pickle-compat#", "PickleCompat")
+        resolver.delete_reference("pickle-compat#")
+        print(f"cache mutation: {'PickleCompat' not in resolver._reference_names_cache}")
 
 
 def main() -> None:

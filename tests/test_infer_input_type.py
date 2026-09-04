@@ -112,6 +112,7 @@ def test_infer_input_type() -> None:  # noqa: PLR0912
             "extra_data_builtin_template_reserved.json",
             "extra_data_builtin_template_typed_dict.json",
             "extra_data_msgspec.json",
+            "extra_data_msgspec_non_dict.json",
             "field_validators_config.json",
             "field_validators_multi_fields_config.json",
             "list_only.json",

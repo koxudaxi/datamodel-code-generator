@@ -998,6 +998,7 @@ class DataModelFieldBase(_BaseModel):  # noqa: PLR0904
             data_type.is_mapping,
             data_type.is_sequence,
             data_type.is_tuple,
+            data_type.tuple_item_count,
             data_type.use_standard_collections,
             data_type.use_generic_container,
             data_type.use_union_operator,
@@ -1352,6 +1353,12 @@ def _clear_custom_template_caches() -> None:
         _get_template_with_custom_dir.cache_clear()
         _get_environment_with_absolute_path.cache_clear()
         _get_template_with_absolute_path.cache_clear()
+        if (
+            pydantic_v2_base_model := sys.modules.get("datamodel_code_generator.model.pydantic_v2.base_model")
+        ) is not None:
+            legacy_template_cache = getattr(pydantic_v2_base_model, "_uses_legacy_pydantic_extra_template", None)
+            if (cache_clear := getattr(legacy_template_cache, "cache_clear", None)) is not None:
+                cache_clear()
         _missing_custom_template_state.paths.clear()
         _missing_custom_template_state.count = 0
         _missing_custom_template_state.overflow = False
@@ -1498,6 +1505,9 @@ class TemplateBase(ABC):
 class BaseClassDataType(DataType):
     """DataType subclass for base class references."""
 
+    def _apply_nullable_from_reference(self) -> None:
+        """Keep nullable model references out of class inheritance clauses."""
+
 
 UNDEFINED: Any = object()
 
@@ -1560,6 +1570,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     SUPPORTS_BOOLEAN_LITERAL: ClassVar[bool] = True
     REQUIRES_FIELD_DEPENDENCY_ORDERING: ClassVar[bool] = False
     REQUIRES_TAGGED_UNION_DISCRIMINATOR: ClassVar[bool] = False
+    REQUIRES_UNIQUE_FIELD_ALIASES: ClassVar[bool] = False
     REQUIRES_ADDITIONAL_PROPERTIES_REFERENCE_CLASSES: ClassVar[bool] = False
     SUPPORTS_TYPED_DICT_TOTAL_FALSE: ClassVar[bool] = False
     SUPPORTS_DESERIALIZED_DEFAULT_VALUES: ClassVar[bool] = True
@@ -1665,16 +1676,18 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         return _ADDITIONAL_PROPERTIES_TYPE_TEMPLATE_DATA_KEY in extra_template_data
 
     @classmethod
-    def store_additional_properties_type(
+    def store_additional_properties_type(  # noqa: PLR0913
         cls,
         extra_template_data: dict[str, Any],
         type_hint: str,
         reference_classes: set[str] | None = None,
         *,
         root_model_type: type[DataModel] | None = None,
+        imports: tuple[Import, ...] = (),
         use_backport: bool = False,
     ) -> None:
         """Store typed additional-properties metadata and its dependencies."""
+        del imports
         expression = repr(str(type_hint)) if reference_classes else type_hint
         extra_template_data[_ADDITIONAL_PROPERTIES_TYPE_TEMPLATE_DATA_KEY] = _make_internal_type_expression(
             type_hint,

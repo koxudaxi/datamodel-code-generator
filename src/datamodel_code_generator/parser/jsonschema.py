@@ -616,6 +616,94 @@ def _split_json_pointer(schema: dict[str, YamlValue] | list[YamlValue], pointer:
     return parts, reference_parts
 
 
+_JSON_SCHEMA_MAP_KEYWORDS = frozenset({
+    "$defs",
+    "definitions",
+    "dependencies",
+    "dependentSchemas",
+    "properties",
+    "patternProperties",
+})
+_JSON_SCHEMA_SEQUENCE_KEYWORDS = frozenset({"allOf", "anyOf", "oneOf", "prefixItems"})
+_JSON_SCHEMA_SINGLE_KEYWORDS = frozenset({
+    "additionalItems",
+    "additionalProperties",
+    "contains",
+    "contentSchema",
+    "else",
+    "if",
+    "not",
+    "propertyNames",
+    "then",
+    "unevaluatedItems",
+    "unevaluatedProperties",
+})
+_JSON_SCHEMA_SINGLE_OR_SEQUENCE_KEYWORDS = frozenset({"extends", "items"})
+
+
+def _is_object_only_type(type_: str | list[str] | None) -> bool:
+    """Return whether a schema type permits only object values."""
+    match type_:
+        case None | "object" | ["object"]:
+            return True
+    return False
+
+
+def _find_json_schema_anchor_pointer(schema: YamlValue, anchor: str) -> str | None:
+    """Return the JSON pointer for an anchor within one schema document."""
+    pending: list[tuple[YamlValue, tuple[str, ...]]] = [(schema, ())]
+    while pending:
+        value, path = pending.pop()
+        if not isinstance(value, dict):
+            continue
+        # An embedded $id starts a distinct schema resource. This search is scoped
+        # to the resource supplied as ``schema``, so its anchors must not leak into
+        # the parent resource's anchor namespace.
+        if path and "$id" in value:
+            continue
+        if value.get("$anchor") == anchor:
+            return "/" + "/".join(part.replace("~", "~0").replace("/", "~1") for part in path)
+        for keyword, child in value.items():
+            match keyword:
+                case _ if keyword in _JSON_SCHEMA_MAP_KEYWORDS and isinstance(child, dict):
+                    pending.extend(
+                        (subschema, (*path, keyword, str(name)))
+                        for name, subschema in child.items()
+                        if isinstance(subschema, dict)
+                    )
+                case _ if keyword in _JSON_SCHEMA_SEQUENCE_KEYWORDS and isinstance(child, list):
+                    pending.extend(
+                        (subschema, (*path, keyword, str(index)))
+                        for index, subschema in enumerate(child)
+                        if isinstance(subschema, dict)
+                    )
+                case _ if keyword in _JSON_SCHEMA_SINGLE_KEYWORDS and isinstance(child, dict):
+                    pending.append((child, (*path, keyword)))
+                case _ if keyword in _JSON_SCHEMA_SINGLE_OR_SEQUENCE_KEYWORDS:
+                    if isinstance(child, dict):
+                        pending.append((child, (*path, keyword)))
+                    elif isinstance(child, list):
+                        pending.extend(
+                            (subschema, (*path, keyword, str(index)))
+                            for index, subschema in enumerate(child)
+                            if isinstance(subschema, dict)
+                        )
+    return None
+
+
+def _is_directory_read_error(exc: OSError, path: Path) -> bool:
+    """Recognize the platform-specific errors raised when reading a directory."""
+    return isinstance(exc, IsADirectoryError) or (isinstance(exc, PermissionError) and path.is_dir())
+
+
+def _validate_external_ref(ref: str) -> None:
+    """Reject references with more than one fragment delimiter."""
+    if ref.count("#") <= 1:
+        return
+    msg = f"Invalid external $ref: {ref}"
+    raise Error(msg)
+
+
 json_schema_data_formats: dict[str, dict[str, Types]] = get_data_formats(is_openapi=True)
 
 
@@ -728,14 +816,18 @@ class JsonSchemaObject(BaseModel):
         values = dict(values)
         match exclusive_maximum:
             case True:
-                values["exclusiveMaximum"] = values["maximum"]
-                del values["maximum"]
+                if "maximum" in values:
+                    values["exclusiveMaximum"] = values.pop("maximum")
+                else:
+                    del values["exclusiveMaximum"]
             case False:
                 del values["exclusiveMaximum"]
         match exclusive_minimum:
             case True:
-                values["exclusiveMinimum"] = values["minimum"]
-                del values["minimum"]
+                if "minimum" in values:
+                    values["exclusiveMinimum"] = values.pop("minimum")
+                else:
+                    del values["exclusiveMinimum"]
             case False:
                 del values["exclusiveMinimum"]
         return values
@@ -764,7 +856,6 @@ class JsonSchemaObject(BaseModel):
                 return value[:-1]
             if "#/" in value or value[0] == "#" or value[-1] == "#":
                 return value
-            return value.replace("#", "#/")
         return value
 
     @field_validator("required", mode="before")
@@ -845,9 +936,9 @@ class JsonSchemaObject(BaseModel):
     dynamicRef: Optional[str] = Field(default=None, alias="$dynamicRef")  # noqa: N815, UP045
     dynamicAnchor: Optional[str] = Field(default=None, alias="$dynamicAnchor")  # noqa: N815, UP045
     nullable: Optional[bool] = None  # noqa: UP045
-    x_enum_varnames: list[str] = Field(default_factory=list, alias="x-enum-varnames")
+    x_enum_varnames: list[str | None] = Field(default_factory=list, alias="x-enum-varnames")
     x_enum_descriptions: list[str | None] = Field(default_factory=list, alias="x-enum-descriptions")
-    x_enum_names: list[str] = Field(default_factory=list, alias="x-enumNames")
+    x_enum_names: list[str | None] = Field(default_factory=list, alias="x-enumNames")
     x_enum_field_as_literal: Optional[bool] = Field(default=None, alias="x-enum-field-as-literal")  # noqa: UP045
     description: Optional[str] = None  # noqa: UP045
     title: Optional[str] = None  # noqa: UP045
@@ -1900,9 +1991,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return self.data_type(literals=[const])
         return self._get_data_type_from_json_value(const)
 
-    def _partition_enum_values(  # noqa: PLR6301
-        self, enum_values: list[Any]
-    ) -> tuple[list[JsonSchemaLiteral], list[object], bool]:
+    def _partition_enum_values(self, enum_values: list[Any]) -> tuple[list[JsonSchemaLiteral], list[object], bool]:
         """Split enum values into literal and non-literal values."""
         literal_values: list[JsonSchemaLiteral] = []
         non_literal_values: list[object] = []
@@ -1910,6 +1999,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         for enum_value in enum_values:
             if enum_value is None:
                 has_null = True
+                non_literal_values.append(enum_value)
+            elif isinstance(enum_value, bool) and not self._output_model_context.supports_boolean_literals:
                 non_literal_values.append(enum_value)
             elif isinstance(enum_value, (bool, int, str)):
                 literal_values.append(enum_value)
@@ -2579,6 +2670,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             metadata,
             additional_type.type_hint,
             reference_classes,
+            imports=tuple(additional_type.all_imports),
         )
         for data_type in additional_type.all_data_types:
             data_type.unregister_reference()
@@ -3040,11 +3132,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         null/nullable flags here, so those facts are cached per resolved ref to
         avoid re-validating the same schema for every occurrence of the ref.
         """
+        _validate_external_ref(ref)
+
         # Check external ref mapping before loading the schema
         mapped = self._check_external_ref_mapping(ref)
         if mapped is not None:
             return mapped
 
+        ref = self._normalize_external_ref(ref)
         resolved_ref = self.model_resolver.resolve_ref(ref)
         if (facts := self._ref_data_type_facts.get(resolved_ref)) is None:
             ref_schema = self._load_ref_schema_object(ref)
@@ -3111,6 +3206,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     self.extra_template_data[path],
                     additional_props_type.type_hint,
                     reference_classes,
+                    imports=tuple(additional_props_type.all_imports),
                     use_backport=not self.target_python_version.has_typed_dict_closed,
                 )
 
@@ -6135,7 +6231,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 schema.properties
                 or schema.patternProperties
                 or schema.propertyNames is not None
-                or schema.type not in {None, "object"}
+                or not _is_object_only_type(schema.type)
                 or not isinstance(schema.additionalProperties, JsonSchemaObject)
             ):
                 return None
@@ -6154,7 +6250,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             merged,
             obj.model_dump(exclude={"allOf"}, exclude_unset=True, by_alias=True),
         )
-        merged.setdefault("type", "object")
+        if merged.get("type") == ["object"]:
+            merged["type"] = "object"
+        else:
+            merged.setdefault("type", "object")
         return self.SCHEMA_OBJECT_TYPE.model_validate(merged)
 
     def parse_combined_schema(  # noqa: PLR0912
@@ -6261,7 +6360,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return False
         if any(key not in item.__metadata_only_fields__ and not key.startswith("x-") for key in item.extras):
             return False
-        return item.type in {None, "object"}
+        return _is_object_only_type(item.type)
 
     def _get_required_groups(self, items: Sequence[JsonSchemaObject | bool]) -> tuple[tuple[str, ...], ...]:
         if not items:
@@ -9617,6 +9716,24 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return self._get_ref_body_from_url(resolved_ref)
         return self._get_ref_body_from_remote(resolved_ref)
 
+    def _normalize_external_ref(self, ref: str) -> str:
+        """Resolve an external anchor before falling back to legacy shorthand pointers."""
+        if get_ref_type(ref) == JSONReference.LOCAL:
+            return ref
+
+        resolved_ref = self.model_resolver.resolve_ref(ref)
+        if get_ref_type(resolved_ref) == JSONReference.LOCAL:
+            return ref
+
+        relative_path, separator, object_path = resolved_ref.partition("#")
+        if not separator or not object_path or object_path.startswith("/"):
+            return ref
+
+        ref_body = self._get_ref_body(relative_path)
+        if (anchor_pointer := _find_json_schema_anchor_pointer(ref_body, object_path)) is not None:
+            return f"{relative_path}#{'' if anchor_pointer == '/' else anchor_pointer}"
+        return f"{relative_path}#/{object_path}"
+
     def _resolve_local_ref_path(self, path: Path, ref: str) -> Path:
         if cached_path := self._local_ref_path_cache.get(path):
             return cached_path
@@ -9726,10 +9843,16 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if parsed.netloc:
                 path = f"//{parsed.netloc}{path}"
             file_path = self._resolve_local_ref_path(Path(path), ref)
-            return self.remote_object_cache.get_or_put(
-                str(file_path),
-                default_factory=lambda _: self._load_ref_data_from_path(file_path),
-            )
+            try:
+                return self.remote_object_cache.get_or_put(
+                    str(file_path),
+                    default_factory=lambda _: self._load_ref_data_from_path(file_path),
+                )
+            except (IsADirectoryError, PermissionError) as exc:
+                if not _is_directory_read_error(exc, file_path):
+                    raise
+                msg = f"$ref path is a directory: {ref}"
+                raise Error(msg) from None
         if self.http_local_ref_path is not None and urlparse(ref).scheme in {"http", "https"}:
             return self._get_ref_body_from_local_http_path(ref)
         return self.remote_object_cache.get_or_put(
@@ -9749,39 +9872,48 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         except FileNotFoundError:
             msg = f"$ref file not found: {full_path}"
             raise Error(msg) from None
+        except (IsADirectoryError, PermissionError) as exc:
+            if not _is_directory_read_error(exc, full_path):
+                raise
+            msg = f"$ref path is a directory: {resolved_ref}"
+            raise Error(msg) from None
 
     def resolve_ref(self, object_ref: str) -> Reference:
         """Resolve a reference by loading and parsing the referenced schema."""
+        _validate_external_ref(object_ref)
+
         # If the ref is mapped to an external package, mark as loaded and skip parsing
         if self._resolve_external_ref_mapping(object_ref) is not None:
             reference = self.model_resolver.add_ref(object_ref)
             reference.loaded = True
             return reference
 
-        reference = self.model_resolver.add_ref(object_ref)
-        if reference.loaded:
-            return reference
-
         # https://swagger.io/docs/specification/using-ref/
+        object_ref = self._normalize_external_ref(object_ref)
         ref = self.model_resolver.resolve_ref(object_ref)
         if get_ref_type(object_ref) == JSONReference.LOCAL or get_ref_type(ref) == JSONReference.LOCAL:
+            reference = self.model_resolver.add_ref(ref, resolved=True)
             self.reserved_refs[tuple(self.model_resolver.current_root)].add(ref)
-            return reference
-        if self.model_resolver.is_after_load(ref):
-            self.reserved_refs[tuple(ref.split("#")[0].split("/"))].add(ref)
             return reference
 
         if is_url(ref):
-            relative_path, object_path = ref.split("#")
+            relative_path, object_path = ref.split("#", 1)
             relative_paths = [relative_path]
             base_path = None
         else:
             if self.model_resolver.is_external_root_ref(ref):
                 relative_path, object_path = ref[:-1], ""
             else:
-                relative_path, object_path = ref.split("#")
+                relative_path, object_path = ref.split("#", 1)
             relative_paths = relative_path.split("/")
             base_path = Path(*relative_paths).parent
+        reference = self.model_resolver.add_ref(ref, resolved=True)
+        if reference.loaded:
+            return reference
+        if self.model_resolver.is_after_load(ref):
+            self.reserved_refs[tuple(ref.split("#")[0].split("/"))].add(ref)
+            return reference
+
         with (
             self.model_resolver.current_base_path_context(base_path),
             self.model_resolver.base_url_context(relative_path),
@@ -10403,7 +10535,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 f"Unresolved local $ref {ref!r} in {source}: JSON pointer was not found. "
                 "Generated a fallback Any model; use --strict-refs to fail instead.",
                 DanglingRefWarning,
-                stacklevel=3,
+                stacklevel=4,
             )
         self._dangling_refs.clear()
 
@@ -10570,7 +10702,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 elif not self.skip_root_model:
                     self.parse_obj(obj_name, root_obj, path_parts or ["#"])
                 for key, model, path in definition_entries:
-                    reference = self.model_resolver.get(path)
+                    reference = self.model_resolver.references.get(self.model_resolver.join_path(tuple(path)))
+                    if reference is None:
+                        reference = self.model_resolver.get(path)
                     if not reference or not reference.loaded:
                         self._parse_raw_or_validated_obj(
                             key,

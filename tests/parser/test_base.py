@@ -12,7 +12,7 @@ import pytest
 from pydantic import BaseModel as PydanticBaseModel
 
 import datamodel_code_generator._internal_utils as internal_utils
-from datamodel_code_generator import AllOfMergeMode
+from datamodel_code_generator import AllOfMergeMode, _CollapseRootModelsRecursionError
 from datamodel_code_generator.enums import CollapseRootModelsNameStrategy
 from datamodel_code_generator.imports import Import, Imports
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
@@ -63,6 +63,7 @@ from datamodel_code_generator.parser.base import (
     _merge_data_type_modifiers,
     _needs_validate_default,
     _remap_imports,
+    _restore_inherited_field_names_for_unique_aliases,
     _unwrap_type_alias,
     add_model_path_to_list,
     escape_characters,
@@ -1903,6 +1904,120 @@ def test_collapse_root_models_preserves_root_model_used_by_other_modules() -> No
     assert local_type.reference is inner_reference
     assert external_type.reference is root_reference
     assert unused_models == []
+
+
+def test_collapse_root_models_uses_model_module_names_without_scope_map() -> None:
+    """Direct parser callers can collapse scalar roots without tree-scope planning."""
+    parser = C(
+        data_model_type=BaseModel,
+        data_model_root_type=RootModel,
+        data_model_field_type=DataModelField,
+        base_class="Base",
+        source="",
+    )
+    parser.collapse_root_models = True
+    root_reference = Reference(path="Root", original_name="Root", name="Root")
+    root_model = RootModel(
+        fields=[DataModelField(data_type=DataType(type="str"))],
+        reference=root_reference,
+    )
+    local_type = DataType(reference=root_reference)
+    local_model = BaseModel(
+        fields=[DataModelField(data_type=local_type)],
+        reference=Reference(path="Local", original_name="Local", name="Local"),
+    )
+    for model in (root_model, local_model):
+        parser.generation_store.register_model(model)
+
+    parser._Parser__collapse_root_models([local_model], [], Imports(), parser.model_resolver)
+
+    assert local_model.fields[0].data_type.type == "str"
+
+
+def test_restore_inherited_field_names_handles_noncollisions_and_existing_aliases() -> None:
+    """Field restoration handles both exhausted searches and pre-aliased collisions."""
+    inherited = MsgspecField(
+        name="inherited_name",
+        original_name="wire_name",
+        data_type=DataType(type="str"),
+    )
+    unmatched = MsgspecField(
+        name="generated_name",
+        original_name="wire_name",
+        data_type=DataType(type="str"),
+    )
+    unrelated = MsgspecField(
+        name="other_name",
+        original_name="other_wire_name",
+        data_type=DataType(type="str"),
+    )
+
+    assert not _restore_inherited_field_names_for_unique_aliases(
+        [unmatched, unrelated],
+        {"wire_name": inherited},
+    )
+
+    colliding = MsgspecField(
+        name="inherited_name",
+        original_name="collision_wire_name",
+        alias="existing_alias",
+        data_type=DataType(type="str"),
+    )
+    assert _restore_inherited_field_names_for_unique_aliases(
+        [unmatched, colliding],
+        {"wire_name": inherited},
+    )
+    assert (unmatched.name, colliding.name, colliding.alias) == (
+        "inherited_name",
+        "generated_name",
+        "existing_alias",
+    )
+
+
+def test_root_dict_key_reference_paths_ignores_primitive_keys(parser_fixture: C) -> None:
+    """Primitive mapping keys do not create circular model-reference edges."""
+    model = BaseModel(
+        fields=[
+            DataModelField(
+                name="values",
+                data_type=DataType(
+                    is_dict=True,
+                    data_types=[DataType(type="int")],
+                    dict_key=DataType(type="str"),
+                ),
+            )
+        ],
+        reference=_reference("Model"),
+    )
+
+    assert not parser_fixture._Parser__root_dict_key_reference_paths(model)
+
+
+def test_process_module_models_wraps_root_collapse_recursion(
+    parser_fixture: C,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An abnormal root-collapse recursion crosses the parser boundary as the retry sentinel."""
+    recursion_error = RecursionError("root collapse recursion")
+
+    def raise_recursion(*_: Any, **__: Any) -> None:
+        raise recursion_error
+
+    monkeypatch.setattr(Parser, "_Parser__collapse_root_models", raise_recursion)
+
+    with pytest.raises(_CollapseRootModelsRecursionError) as exc_info:
+        parser_fixture._Parser__process_module_models(
+            [],
+            unused_models=[],
+            imports=Imports(),
+            scoped_model_resolver=parser_fixture.model_resolver,
+            model_path_to_module_name={},
+            require_update_action_models=[],
+            use_deferred_annotations=False,
+            can_retain_cache=False,
+        )
+
+    assert isinstance(exc_info.value.__cause__, RecursionError)
 
 
 def test_finalize_modules_plans_schema_helpers_after_root_collapse() -> None:

@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Any
 
+    from datamodel_code_generator.imports import Import
     from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
     from datamodel_code_generator.types import DataTypeManager
 
@@ -109,6 +110,7 @@ class OutputModelContext:
         type_hint: str,
         reference_classes: set[str] | None = None,
         *,
+        imports: tuple[Import, ...] = (),
         use_backport: bool = False,
     ) -> None:
         """Store typed additional-properties metadata through the output model."""
@@ -117,6 +119,7 @@ class OutputModelContext:
             type_hint,
             reference_classes,
             root_model_type=self._data_model_root_type,
+            imports=imports,
             use_backport=use_backport,
         )
 

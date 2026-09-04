@@ -70,6 +70,17 @@ def test_remote_lock_request_identity_uses_only_safe_request_structure(tmp_path:
     query = [("access_token", "first-token"), ("region", "tokyo")]
     identity = remote_lock._request_sha256(url, headers, query)
 
+    assert remote_lock._request_sha256(
+        "https://schemas.example:443/v1/schema.json?token=first-token&view=full",
+        headers,
+        query,
+    ) == remote_lock._request_sha256(
+        "https://schemas.example/v1/schema.json?token=first-token&view=full",
+        headers,
+        query,
+    )
+    assert remote_lock._display_url("http://schemas.example:80/schema.json") == "http://schemas.example"
+
     assert identity == remote_lock._request_sha256(
         "https://bob:second-password@schemas.example:8443/v1/schema.json?token=first-token&view=full#second",
         headers,

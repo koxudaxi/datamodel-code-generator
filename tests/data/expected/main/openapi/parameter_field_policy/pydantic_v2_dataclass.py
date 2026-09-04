@@ -15,7 +15,9 @@ class Nested:
 
 @dataclass
 class Defaulted:
-    nested: Nested | None = Field({'value': 'preset'}, validate_default=True)
+    nested: Nested | None = Field(
+        default_factory=lambda: {'value': 'preset'}, validate_default=True
+    )
 
 
 @dataclass

@@ -1375,6 +1375,33 @@ def _copy_data_types(data_types: list[DataType], *, register_references: bool = 
     return [_copy_data_type(data_type, register_references=register_references) for data_type in data_types]
 
 
+def _has_preservable_root_constraints(model: DataModel, *, seen_models: set[int] | None = None) -> bool:
+    """Return whether flattening a root wrapper would discard field-owned constraints."""
+    if not model.fields:
+        return False
+    if seen_models is None:
+        seen_models = set()
+    if id(model) in seen_models:
+        return False
+    seen_models.add(id(model))
+
+    root_field = model.fields[0]
+    constraints = root_field.constraints
+    if isinstance(constraints, ConstraintsBase) and any(
+        value is not None for name, value in constraints.model_dump().items() if name != "unique_items"
+    ):
+        return True
+
+    for data_type in root_field.data_type.all_data_types:
+        if (
+            data_type.reference
+            and isinstance(source_model := data_type.reference.source, DataModel)
+            and _has_preservable_root_constraints(source_model, seen_models=seen_models)
+        ):
+            return True
+    return False
+
+
 def _copy_data_model_field(
     field: DataModelFieldBase,
     *,
@@ -1621,6 +1648,44 @@ def _copy_resolved_inherited_field(  # noqa: PLR0913, PLR0915
     return copied_field
 
 
+def _restore_inherited_field_names_for_unique_aliases(
+    fields: list[DataModelFieldBase],
+    inherited_fields: Mapping[str, DataModelFieldBase],
+) -> bool:
+    """Keep a required inherited field's Python name when wire aliases must be unique."""
+    for field in fields:
+        if not (original_name := field.original_name):  # pragma: no cover - msgspec fields come from named properties
+            continue
+        inherited_field = inherited_fields.get(original_name)
+        if (
+            inherited_field is None
+            or inherited_field.original_name != original_name
+            or not (inherited_name := inherited_field.name)
+            or field.name == inherited_name
+        ):
+            continue
+        for colliding_field in fields:
+            if colliding_field is field or colliding_field.name != inherited_name:
+                continue
+            if (  # pragma: no cover - each schema object owns one field per wire name
+                colliding_field.original_name == original_name or field.name is None
+            ):
+                continue
+            colliding_field.name = field.name
+            if colliding_field.alias is None:
+                colliding_field.alias = colliding_field.original_name
+            field.name = inherited_name
+            return True
+    return False
+
+
+def _rename_field_preserving_alias(field: DataModelFieldBase, new_name: str) -> None:
+    """Rename a Python field without losing an existing source-name alias."""
+    if field.alias is None:
+        field.alias = field.name
+    field.name = new_name
+
+
 class Result(BaseModel):
     """Generated code result with optional source file reference."""
 
@@ -1698,6 +1763,10 @@ def _check_discriminator_mapping_paths(
     discriminator_values: list[DiscriminatorValue],
 ) -> None:
     for name, path in mapping.items():
+        if "/" not in path and "#" not in path:
+            if model.path.rsplit("/", 1)[-1] == path:
+                discriminator_values.append(name)
+            continue
         if (model.path.split("#/")[-1] != path.split("#/")[-1]) and (
             path.startswith("#/") or model.path[:-1] != path.split("/")[-1]
         ):
@@ -1891,7 +1960,10 @@ def _get_single_discriminator_default(
     return member
 
 
-def _get_model_module_name(model: DataModel, model_path_to_module_name: Mapping[str, str]) -> str:
+def _get_model_module_name(model: DataModel, model_path_to_module_name: Mapping[str, str] | None) -> str:
+    """Return a generated module name when scope planning supplied one."""
+    if model_path_to_module_name is None:
+        return model.module_name
     return model_path_to_module_name.get(model.path, model.module_name)
 
 
@@ -2174,6 +2246,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self._source_context = getattr(config, "_source_context", None) or _source_context_from_config(config)
         self._has_bound_python_types = False
         self._has_runtime_expressions = False
+        self._constrained_decimal_alias_model_ids: set[int] = set()
 
         self.keyword_only = config.keyword_only
         self.target_pydantic_version = config.target_pydantic_version
@@ -3502,6 +3575,10 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                         continue
 
                     root_constraints = root_type_field.constraints
+                    if not self.field_constraints and _has_preservable_root_constraints(root_type_model):
+                        # Constraints can live on a nested array/union type alias.
+                        # Flattening this wrapper would silently discard them.
+                        continue
                     if isinstance(root_constraints, ConstraintsBase) and root_constraints.has_constraints:
                         if root_type_field.data_type.is_dict or root_type_field.data_type.is_mapping:
                             continue
@@ -3568,7 +3645,13 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                         continue
 
                     # set copied data_type
-                    copied_data_type = root_type_field.data_type.model_copy()
+                    source_module_name = _get_model_module_name(root_type_model, model_path_to_module_name)
+                    target_module_name = _get_model_module_name(model, model_path_to_module_name)
+                    copied_data_type = (
+                        _copy_data_type(root_type_field.data_type)
+                        if source_module_name != target_module_name
+                        else root_type_field.data_type.model_copy()
+                    )
                     if (
                         has_remaining_root_references := generation_store._root_collapse_has_data_type_references(  # noqa: SLF001
                             root_type_model.reference,
@@ -3669,8 +3752,13 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     if not has_remaining_root_references:
                         unused_models.append(root_type_model)
 
-    def __set_circular_root_model_paths(self, module_models: ModuleModels) -> None:
-        """Cache live root-model paths in a circular component for the retry path."""
+    def __set_circular_root_model_paths(
+        self,
+        module_models: ModuleModels,
+        *,
+        require_dict_key_edge: bool = False,
+    ) -> None:
+        """Cache root-model paths in circular components before collapsing them."""
         root_models = {
             model.path: model
             for _, models in module_models
@@ -3685,9 +3773,37 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             }
             for path, model in root_models.items()
         }
-        self._circular_root_model_paths = frozenset(
-            path for component in find_circular_sccs(graph) for (path,) in component
-        )
+        circular_components = find_circular_sccs(graph)
+        if not require_dict_key_edge:
+            self._circular_root_model_paths = frozenset(
+                path for component in circular_components for (path,) in component
+            )
+            return
+
+        dict_key_edges = {path: self.__root_dict_key_reference_paths(model) for path, model in root_models.items()}
+        circular_paths = {path for path in root_models if (path,) in graph[path,]}
+        for component in circular_components:
+            component_paths = {path for (path,) in component}
+            if any(dict_key_edges[path] & component_paths for path in component_paths):
+                circular_paths.update(component_paths)
+        self._circular_root_model_paths = frozenset(circular_paths)
+
+    def __root_dict_key_reference_paths(self, model: DataModel) -> set[str]:  # noqa: PLR6301
+        """Return model-reference paths reached through mapping-key annotations."""
+        reference_paths: set[str] = set()
+        data_types = [field.data_type for field in model.fields]
+        seen_data_types: set[int] = set()
+        while data_types:
+            data_type = data_types.pop()
+            if id(data_type) in seen_data_types:  # pragma: no cover - parser-owned DataType graphs are trees
+                continue
+            seen_data_types.add(id(data_type))
+            if (dict_key := data_type.dict_key) is not None:
+                if dict_key.reference:
+                    reference_paths.add(dict_key.reference.path)
+                data_types.append(dict_key)
+            data_types.extend(data_type.data_types)
+        return reference_paths
 
     def __set_default_enum_member(
         self,
@@ -3752,10 +3868,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         if deserialized_default:
             self.__normalize_default_value_constraints(models)
 
-    def __normalize_default_value_constraints(self, models: list[DataModel]) -> None:
+    def __normalize_default_value_constraints(self, models: list[DataModel]) -> bool:
         """Keep backend-declared runtime constraint values structured until alias resolution."""
         from decimal import Decimal  # noqa: PLC0415
 
+        normalized = False
         for model, _, data_type in iter_models_field_data_types(models):
             if (
                 not model.SUPPORTS_DESERIALIZED_DEFAULT_VALUES
@@ -3787,6 +3904,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             runtime_imports = data_type.runtime_expression_imports
             data_type._set_runtime_expression_imports((*runtime_imports, descriptor.constructor_import))  # noqa: SLF001
             self._register_runtime_expression()
+            normalized = True
+        return normalized
 
     def __resolve_default_value_descriptor(self, data_type: DataType) -> tuple[Import, DefaultValueDescriptor] | None:
         """Return a backend-declared scalar descriptor and its emitted annotation import."""
@@ -4018,6 +4137,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     copied_original_field.use_default_with_required = True
                 resolved_fields.append(copied_original_field)
                 changed = True
+            if model.REQUIRES_UNIQUE_FIELD_ALIASES:
+                _restore_inherited_field_names_for_unique_aliases(resolved_fields, inherited_fields)
             self.generation_store.set_fields(model, resolved_fields)
         if changed and not can_retain_cache:
             _clear_model_imports_cache(models)
@@ -4083,8 +4204,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     resolver._reset_for_reuse(reference_type_names)  # noqa: SLF001
                     new_filed_name = resolver._get_unique_field_name(cast("str", filed_name))  # noqa: SLF001
                     if filed_name != new_filed_name:
-                        field.alias = filed_name
-                        field.name = new_filed_name
+                        _rename_field_preserving_alias(field, new_filed_name)
                         _clear_model_imports_cache_if_retained(model, can_retain_cache=can_retain_cache)
 
                 if (current_name := field.name) in self.builtin_names and any(
@@ -4108,6 +4228,15 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     model_field.nullable = False
                 _clear_model_imports_cache_if_retained(model, can_retain_cache=can_retain_cache)
 
+    def __restore_inherited_field_names_for_unique_aliases(self, models: list[DataModel]) -> None:  # noqa: PLR6301
+        """Reserve inherited Python names for output models with unique wire aliases."""
+        for model in models:
+            if model.REQUIRES_UNIQUE_FIELD_ALIASES and _restore_inherited_field_names_for_unique_aliases(
+                model.fields,
+                get_inherited_fields(_find_base_classes(model)),
+            ):
+                model.clear_imports_cache()
+
     def __fix_constructor_field_ordering(self, models: list[DataModel]) -> None:
         """Fix constructor field ordering after inherited defaults are resolved."""
         for model in models:
@@ -4118,7 +4247,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 )
 
             if (inherited := self.__get_inherited_constructor_info(model)) is None:
-                if restored_inherited_state:  # pragma: no cover - marker requires a generated base
+                field_policy = Parser._get_constructor_field_policy(model)
+                if self.__has_local_constructor_ordering_conflict(model, field_policy):
+                    model.clear_imports_cache()
+                    self.generation_store.set_fields(model, sorted(model.fields, key=field_policy.has_assignment))
+                elif restored_inherited_state:  # pragma: no cover - marker requires a generated base
                     model.clear_imports_cache()
                 continue
             field_policy = Parser._get_constructor_field_policy(model)
@@ -4152,6 +4285,27 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             )
             model.clear_imports_cache()
             self.generation_store.set_fields(model, sorted(model.fields, key=field_policy.has_assignment))
+
+    def __has_local_constructor_ordering_conflict(  # noqa: PLR6301
+        self,
+        model: DataModel,
+        field_policy: _ConstructorFieldPolicy,
+    ) -> bool:
+        """Return whether a local required field follows a positional default."""
+        if not model.SUPPORTS_KW_ONLY:
+            return False
+        saw_assignment = False
+        for field in model.fields:
+            if not field_policy.participates(field):
+                continue
+            kw_only = field.constructor_keyword_only
+            if kw_only is True or (kw_only is None and model.has_keyword_only_definition()):
+                continue
+            if field_policy.has_assignment(field):
+                saw_assignment = True
+            elif saw_assignment:
+                return True
+        return False
 
     @classmethod
     def __get_inherited_constructor_info(cls, model: DataModel) -> _InheritedConstructorInfo | None:
@@ -4445,7 +4599,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             for i in range(len(folder)):
                 subfolder = folder[: i + 1]
                 init_file = (*subfolder, "__init__.py")
-                results.update({init_file: init_result})
+                results.setdefault(init_file, init_result)
         return results
 
     def __change_imported_model_name(
@@ -5547,6 +5701,12 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         """Process a single module and return its context."""
         imports = Imports(self.use_exact_imports)
         module, is_init = _resolve_module_file(module_, results)
+        module_name = _module_name_from_module_path(module_)
+        # Tree-scope reuse creates synthetic models without a file_path. Keep
+        # their ownership in this module for relative import planning without
+        # changing the file path used by generated filename headers.
+        for model in models:
+            model_path_to_module_name.setdefault(model.path, module_name)
         can_retain_cache = _can_retain_model_imports_cache(
             models,
             configured_types_are_builtin=self._configured_generation_types_are_builtin,
@@ -5601,6 +5761,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         can_retain_cache: bool,
     ) -> bool:
         """Prepare aliases, imports, and inherited enums before default processing."""
+        if "Decimal" in all_module_fields:
+            self._constrained_decimal_alias_model_ids.update(map(id, models))
         self.__alias_shadowed_imports(models, all_module_fields, can_retain_cache=can_retain_cache)
         self.__override_required_field(models, can_retain_cache=can_retain_cache)
         self.__replace_unique_list_to_set(models, can_retain_cache=can_retain_cache)
@@ -5646,6 +5808,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.__set_default_enum_member(models, can_retain_cache=can_retain_cache)
         self.__sort_models(models, imports, use_deferred_annotations=use_deferred_annotations)
         self.__change_field_name(models, can_retain_cache=can_retain_cache)
+        self.__restore_inherited_field_names_for_unique_aliases(models)
         self.__apply_discriminator_type(models, imports, can_retain_cache=can_retain_cache)
         self.__set_one_literal_on_default(models, can_retain_cache=can_retain_cache)
         self.__fix_constructor_field_ordering(models)
@@ -5679,7 +5842,14 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
     def _finalize_structured_imports(self, contexts: list[ModuleContext]) -> None:
         """Resolve aliases introduced after generic base classes are applied."""
-        if not (self._has_bound_python_types or self._has_runtime_expressions):
+        has_structured_imports = self._has_bound_python_types or self._has_runtime_expressions
+        if not has_structured_imports and not self._constrained_decimal_alias_model_ids:
+            return
+        if models := [
+            model for ctx in contexts for model in ctx.models if id(model) in self._constrained_decimal_alias_model_ids
+        ]:
+            has_structured_imports = self.__normalize_default_value_constraints(models) or has_structured_imports
+        if not has_structured_imports:
             return
         for ctx in contexts:
             all_module_fields = {field.name for model in ctx.models for field in model.fields if field.name is not None}
@@ -6190,8 +6360,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         module_to_import: dict[ModulePath, Imports] = {}
         contexts: list[ModuleContext] = []
 
-        if self.collapse_root_models and self.run_context.preserve_circular_root_models:
-            self.__set_circular_root_model_paths(module_models)
+        if self.collapse_root_models:
+            self.__set_circular_root_model_paths(
+                module_models,
+                require_dict_key_edge=not self.run_context.preserve_circular_root_models,
+            )
 
         for module_, models in module_models:
             ctx = self._process_single_module(

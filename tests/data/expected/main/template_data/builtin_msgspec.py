@@ -26,4 +26,4 @@ class Person(Struct, omit_defaults=True, tag='"; builtin_template_data_marker = 
         | UnsetType
     ) = UNSET
     friends: list[Any] | UnsetType = UNSET
-    comment: UnsetType = UNSET
+    comment: None | UnsetType = UNSET

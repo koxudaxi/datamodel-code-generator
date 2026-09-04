@@ -260,6 +260,8 @@ class AsyncAPIParser(OpenAPIParser):
 
     def _collect_discriminator_schemas(self) -> None:
         """Collect discriminator metadata from component schemas."""
+        self._discriminator_schemas.clear()
+        self._discriminator_subtypes.clear()
         schemas = self.raw_obj.get("components", {}).get("schemas", {})
         if not isinstance(schemas, dict):
             return
