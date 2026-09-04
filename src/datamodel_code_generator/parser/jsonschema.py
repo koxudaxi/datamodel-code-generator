@@ -683,6 +683,14 @@ def _is_directory_read_error(exc: OSError, path: Path) -> bool:
     return isinstance(exc, IsADirectoryError) or (isinstance(exc, PermissionError) and path.is_dir())
 
 
+def _validate_external_ref(ref: str) -> None:
+    """Reject references with more than one fragment delimiter."""
+    if ref.count("#") <= 1:
+        return
+    msg = f"Invalid external $ref: {ref}"
+    raise Error(msg)
+
+
 json_schema_data_formats: dict[str, dict[str, Types]] = get_data_formats(is_openapi=True)
 
 
@@ -3110,6 +3118,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         null/nullable flags here, so those facts are cached per resolved ref to
         avoid re-validating the same schema for every occurrence of the ref.
         """
+        _validate_external_ref(ref)
+
         # Check external ref mapping before loading the schema
         mapped = self._check_external_ref_mapping(ref)
         if mapped is not None:
@@ -6333,7 +6343,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return False
         if any(key not in item.__metadata_only_fields__ and not key.startswith("x-") for key in item.extras):
             return False
-        return item.type is None or item.type == "object"
+        match item.type:
+            case None | "object" | ["object"]:
+                return True
+            case _:
+                return False
 
     def _get_required_groups(self, items: Sequence[JsonSchemaObject | bool]) -> tuple[tuple[str, ...], ...]:
         if not items:
@@ -9856,9 +9870,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     def resolve_ref(self, object_ref: str) -> Reference:
         """Resolve a reference by loading and parsing the referenced schema."""
-        if object_ref.count("#") > 1:
-            msg = f"Invalid external $ref: {object_ref}"
-            raise Error(msg)
+        _validate_external_ref(object_ref)
 
         # If the ref is mapped to an external package, mark as loaded and skip parsing
         if self._resolve_external_ref_mapping(object_ref) is not None:

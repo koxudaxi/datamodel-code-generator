@@ -104,6 +104,7 @@ def test_jsonschema_non_directory_permission_error_is_preserved(
     with pytest.raises(PermissionError) as exception_info:
         parser._get_ref_body_from_remote(source.name)
 
+    assert exception_info.value is permission_error
     assert_output(f"{exception_info.value}\n", EXPECTED_JSON_SCHEMA_PATH / "permission_external_ref.txt")
 
 
@@ -120,3 +121,22 @@ def test_jsonschema_external_ref_mapping_returns_loaded_reference() -> None:
 
     output = "loaded\n" if reference.loaded else "not loaded\n"
     assert_output(output, EXPECTED_JSON_SCHEMA_PATH / "mapped_external_ref.txt")
+
+
+def test_jsonschema_malformed_external_ref_is_rejected_before_external_mapping() -> None:
+    """Reject malformed refs before either external-mapping fast path runs."""
+    source = JSON_SCHEMA_DATA_PATH / "external_ref_errors" / "child.json"
+    ref = f"{source.name}#/$defs/Child#extra"
+    parser = JsonSchemaParser(
+        source,
+        base_path=source.parent,
+        external_ref_mapping={str(source): "external.models"},
+    )
+
+    output = ""
+    for resolve in (parser.get_ref_data_type, parser.resolve_ref):
+        with pytest.raises(Error) as exception_info:
+            resolve(ref)
+        output += f"{exception_info.value}\n"
+
+    assert_output(output, EXPECTED_JSON_SCHEMA_PATH / "malformed_mapped_external_ref.txt")

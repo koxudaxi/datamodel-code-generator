@@ -307,6 +307,7 @@ def test_schema_validator_required_only_schema_filters() -> None:
 
     assert parser._is_required_only_schema(required_only_schema)
     assert parser._get_required_groups([required_only_schema]) == (("a",),)
+    assert parser._is_required_only_schema(JsonSchemaObject.model_validate({"required": ["a"], "type": ["object"]}))
     assert not parser._is_required_only_schema(True)
     assert not parser._is_required_only_schema(JsonSchemaObject.model_validate({}))
     assert not parser._is_required_only_schema(JsonSchemaObject.model_validate({"required": []}))
@@ -333,6 +334,7 @@ def test_schema_validator_required_only_schema_filters() -> None:
     )
     assert not parser._is_required_only_schema(JsonSchemaObject.model_validate({"required": ["a"], "contains": {}}))
     assert not parser._is_required_only_schema(JsonSchemaObject.model_validate({"required": ["a"], "not": {}}))
+    assert not parser._is_required_only_schema(JsonSchemaObject.model_validate({"required": ["a"], "type": ["null"]}))
     assert (
         parser._get_required_groups([JsonSchemaObject.model_validate({"properties": {"a": {"type": "string"}}})]) == ()
     )
