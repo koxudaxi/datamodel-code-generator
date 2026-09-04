@@ -10458,7 +10458,7 @@ def test_main_msgspec_null_field(output_file: Path) -> None:
 
 @MSGSPEC_LEGACY_BLACK_SKIP
 def test_main_msgspec_boolean_enum_literal(output_file: Path) -> None:
-    """Msgspec enum literals lower boolean values to bool rather than Literal."""
+    """Msgspec lowers complete boolean domains without literal output options."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "msgspec_boolean_enum_literal.json",
         output_path=output_file,
@@ -10468,8 +10468,6 @@ def test_main_msgspec_boolean_enum_literal(output_file: Path) -> None:
         extra_args=[
             "--output-model-type",
             "msgspec.Struct",
-            "--enum-field-as-literal",
-            "all",
             "--use-union-operator",
             "--target-python-version",
             "3.10",
@@ -10479,6 +10477,28 @@ def test_main_msgspec_boolean_enum_literal(output_file: Path) -> None:
         ],
         force_exec_validation=True,
     )
+    import msgspec
+
+    with _generated_model(output_file, "msgspec_boolean_enum_literal", "MsgspecBooleanEnumLiteral") as model:
+        for payload, expected_enabled, expected_nullable_enabled in (
+            ({}, msgspec.UNSET, msgspec.UNSET),
+            ({"enabled": True}, True, msgspec.UNSET),
+            ({"enabled": False}, False, msgspec.UNSET),
+            ({"nullable_enabled": True}, msgspec.UNSET, True),
+            ({"nullable_enabled": False}, msgspec.UNSET, False),
+            ({"nullable_enabled": None}, msgspec.UNSET, None),
+        ):
+            validated = msgspec.convert(payload, type=model)
+            actual_enabled = validated.enabled
+            actual_nullable_enabled = validated.nullable_enabled
+            if (
+                actual_enabled is not expected_enabled or actual_nullable_enabled is not expected_nullable_enabled
+            ):  # pragma: no cover
+                pytest.fail(
+                    "Expected "
+                    f"({expected_enabled!r}, {expected_nullable_enabled!r}), got "
+                    f"({actual_enabled!r}, {actual_nullable_enabled!r})"
+                )
 
 
 @MSGSPEC_LEGACY_BLACK_SKIP

@@ -6,6 +6,10 @@
     "enabled": {
       "type": "boolean",
       "enum": [true, false]
+    },
+    "nullable_enabled": {
+      "type": ["boolean", "null"],
+      "enum": [null, false, true]
     }
   }
 }

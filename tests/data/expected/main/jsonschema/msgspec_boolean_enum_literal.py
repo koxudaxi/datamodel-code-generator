@@ -8,3 +8,4 @@ from msgspec import UNSET, Struct, UnsetType
 
 class MsgspecBooleanEnumLiteral(Struct):
     enabled: bool | UnsetType = UNSET
+    nullable_enabled: bool | None | UnsetType = UNSET

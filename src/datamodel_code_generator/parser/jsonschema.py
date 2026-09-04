@@ -1459,14 +1459,18 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         """Determine if an enum should be parsed as a literal type.
 
         Priority (highest to lowest):
-        1. x-enum-field-as-literal on the property schema
-        2. enum_field_as_literal_map matching Model.field or field
-        3. Global enum_field_as_literal setting
+        1. Lossless output-backend compatibility lowering
+        2. x-enum-field-as-literal on the property schema
+        3. enum_field_as_literal_map matching Model.field or field
+        4. Global enum_field_as_literal setting
         """
+        if self._requires_boolean_enum_lowering(obj):
+            return True
+
         # Check x-enum-field-as-literal on property or obj
         target_obj = property_obj if property_obj is not None else obj
-        if target_obj.x_enum_field_as_literal is not None:
-            return target_obj.x_enum_field_as_literal
+        if (literal_override := target_obj.x_enum_field_as_literal) is not None:
+            return literal_override
 
         # Check enum_field_as_literal_map for matching keys
         if property_name and self.enum_field_as_literal_map and property_name in self.enum_field_as_literal_map:
@@ -1478,6 +1482,32 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if self.enum_field_as_literal == LiteralType.One:
             return len(obj.enum) == 1
         return False
+
+    def _requires_boolean_enum_lowering(self, obj: JsonSchemaObject) -> bool:
+        """Return whether a backend must lower a complete boolean enum to ``bool``.
+
+        A schema constrained to both boolean values, optionally with ``null``, is
+        equivalent to ``bool`` or ``bool | None``. Some backends cannot consume a
+        generated bool-valued Enum in a union, so bypass Enum generation only for
+        that complete domain.
+        """
+        if self._output_model_context.supports_boolean_literals:
+            return False
+
+        has_true = False
+        has_false = False
+        for enum_value in obj.enum:
+            match enum_value:
+                case bool() as value:
+                    if value:
+                        has_true = True
+                    else:
+                        has_false = True
+                case None:
+                    continue
+                case _:
+                    return False
+        return has_true and has_false
 
     @classmethod
     def _extract_const_enum_from_combined(  # noqa: PLR0912
