@@ -10,6 +10,9 @@ updates:
   allow:
   - dependency-type: direct
   - dependency-type: indirect
+  ignore:
+  - dependency-name: black
+  - dependency-name: isort
 - package-ecosystem: github-actions
   directory: "/"
   schedule:
