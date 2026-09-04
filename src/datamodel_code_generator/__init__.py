@@ -152,7 +152,7 @@ YamlValue = TypeAliasType("YamlValue", "dict[str, YamlValue] | list[YamlValue] |
 _GC_YOUNG_THRESHOLD: int = 100_000
 _gc_tuning_lock = threading.Lock()
 _gc_tuning_depth: int = 0
-_gc_saved_threshold: tuple[int, int, int] | None = None
+_gc_saved_threshold: tuple[int, int, int]
 
 
 @contextlib.contextmanager
@@ -165,19 +165,26 @@ def _tuned_gc() -> Iterator[None]:
     global _gc_tuning_depth, _gc_saved_threshold  # noqa: PLW0603
 
     with _gc_tuning_lock:
-        _gc_tuning_depth += 1
         match _gc_tuning_depth:
-            case 1 if gc.isenabled():
+            case 0 if gc.isenabled():
                 _gc_saved_threshold = gc.get_threshold()
                 gc.set_threshold(_GC_YOUNG_THRESHOLD, *_gc_saved_threshold[1:])
+                _gc_tuning_depth = 1
+            case 0:
+                # Negative depth records scopes entered while the host disabled GC.
+                _gc_tuning_depth = -1
+            case depth:
+                _gc_tuning_depth = depth + (1 if depth > 0 else -1)
     try:
         yield
     finally:
         with _gc_tuning_lock:
-            _gc_tuning_depth -= 1
-            if _gc_tuning_depth == 0 and (saved_threshold := _gc_saved_threshold) is not None:
-                gc.set_threshold(*saved_threshold)
-                _gc_saved_threshold = None
+            match _gc_tuning_depth:
+                case 1:
+                    _gc_tuning_depth = 0
+                    gc.set_threshold(*_gc_saved_threshold)
+                case depth:
+                    _gc_tuning_depth = depth - (1 if depth > 0 else -1)
 
 
 for _public_source_export in (

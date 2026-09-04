@@ -184,6 +184,11 @@ def test_tuned_gc_leaves_disabled_host_unchanged(gc_state: tuple[int, int, int])
                 f"threshold_unchanged_inside={gc.get_threshold() == gc_state}",
                 f"disabled_inside={not gc.isenabled()}",
             ))
+            with _tuned_gc():
+                observations.extend((
+                    f"threshold_unchanged_nested={gc.get_threshold() == gc_state}",
+                    f"disabled_nested={not gc.isenabled()}",
+                ))
         observations.extend((
             f"threshold_unchanged_after={gc.get_threshold() == gc_state}",
             f"disabled_after={not gc.isenabled()}",
