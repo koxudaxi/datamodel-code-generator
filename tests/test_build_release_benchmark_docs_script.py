@@ -547,6 +547,49 @@ def test_merge_release_benchmarks_carries_main_snapshot_metadata(tmp_path: Path)
     )
 
 
+def test_merge_release_benchmarks_does_not_pin_an_explicitly_unpinned_snapshot(tmp_path: Path) -> None:
+    """An explicit empty snapshot SHA must not fall back to the fragment collector SHA."""
+    output_path = tmp_path / "release-benchmarks.json"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "merge_release_benchmarks.py"),
+            str(FIXTURE_DIR / "main_snapshot_unpinned_fragment.json"),
+            "--selection",
+            str(FIXTURE_DIR / "main_snapshot_selection.json"),
+            "--generated-at",
+            "2026-06-23T00:01:00Z",
+            "--output",
+            str(output_path),
+        ],
+        cwd=ROOT,
+        env={
+            **os.environ,
+            "BENCHMARK_PYTHON_VERSION": "3.14.2",
+            "GITHUB_RUN_ID": "merge-run",
+            "GITHUB_SHA": "merge-job-sha",
+            "GITHUB_WORKFLOW": "Release Benchmarks",
+            "OS": "ubuntu-24.04",
+        },
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    _raise_for_failed_process(result)
+    merged = json.loads(output_path.read_text(encoding="utf-8"))
+    metadata = merged["metadata"]
+    output = _completed_process_output_with_tmp(result, tmp_path) + "\n".join((
+        f"main snapshot sha present: {'main_snapshot_collector_sha' in metadata}",
+        f"merged collector sha: {metadata['collector_sha']}",
+        "",
+    ))
+    assert_output(
+        output,
+        EXPECTED_RELEASE_BENCHMARK_DOCS_PATH / "merge_release_benchmarks_unpinned_main_cli_outputs.txt",
+    )
+
+
 def test_merge_release_benchmarks_cli_writes_expected_payload(tmp_path: Path) -> None:
     """The merge CLI combines selection metadata and per-version fragments."""
     selection_path = tmp_path / "release-benchmark-selection.json"

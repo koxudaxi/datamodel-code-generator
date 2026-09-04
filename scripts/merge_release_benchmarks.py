@@ -52,7 +52,7 @@ def _main_snapshot_metadata(entries: list[dict[str, object]], metadata: dict[str
     return {
         key: value
         for key in MAIN_SNAPSHOT_METADATA_KEYS
-        if (value := metadata.get(key) or metadata.get(MAIN_SNAPSHOT_FALLBACK_KEYS[key]))
+        if (value := metadata.get(key, metadata.get(MAIN_SNAPSHOT_FALLBACK_KEYS[key])))
     }
 
 
