@@ -131,6 +131,7 @@ console.log(JSON.stringify({
         ],
         cwd=ROOT,
         capture_output=True,
+        encoding="utf-8",
         text=True,
         check=False,
     )
