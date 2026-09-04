@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import re
 import stat
-from collections import Counter, defaultdict
+from collections import defaultdict
 from contextlib import contextmanager
 from enum import Enum, auto
 from functools import cached_property, lru_cache
@@ -785,8 +785,8 @@ class ModelResolver:  # noqa: PLR0904
         self.skip_affix_for_root: bool = skip_affix_for_root
         self.model_name_map: Mapping[str, str] = {} if model_name_map is None else {**model_name_map}
 
-        # Incrementally maintained multiset of reference names for O(1) uniqueness checking
-        self._reference_names_cache: Counter[str] = Counter()
+        # Incrementally maintained counts of reference names for O(1) uniqueness checking.
+        self._reference_names_cache: dict[str, int] = {}
         self._unique_name_start_hints: dict[tuple[str, str, str], int] = {}
 
         # Default value overrides from external JSON file
@@ -822,6 +822,7 @@ class ModelResolver:  # noqa: PLR0904
         instance_state = instance_state.copy()
         instance_state["field_name_resolvers"] = resolvers
         del instance_state["_field_name_resolvers"]
+        instance_state["_reference_names_cache"] = set(self._reference_names_cache)
         state = instance_state if slot_state is None else (instance_state, slot_state.copy())
         return (*reduced[:2], state, *reduced[3:])
 
@@ -836,10 +837,11 @@ class ModelResolver:  # noqa: PLR0904
             instance_state, slot_state = state, {}
         if "field_name_resolvers" in instance_state:
             instance_state["_field_name_resolvers"] = instance_state.pop("field_name_resolvers")
-        if not isinstance(instance_state.get("_reference_names_cache"), Counter):
-            instance_state["_reference_names_cache"] = Counter(
-                reference.name for reference in instance_state.get("references", {}).values()
-            )
+        if type(instance_state.get("_reference_names_cache")) is not dict:
+            reference_names: dict[str, int] = {}
+            for reference in instance_state.get("references", {}).values():
+                reference_names[reference.name] = reference_names.get(reference.name, 0) + 1
+            instance_state["_reference_names_cache"] = reference_names
         self.__dict__.update(instance_state)
         self.__dict__.setdefault("_resolved_base_path_cache", None)
         for name, value in slot_state.items():
@@ -926,17 +928,20 @@ class ModelResolver:  # noqa: PLR0904
         self._reference_names_cache.clear()
         self._unique_name_start_hints.clear()
 
-    def _get_reference_names(self) -> Counter[str]:
-        """Get the multiset of all reference names for uniqueness checking."""
+    def _get_reference_names(self) -> dict[str, int]:
+        """Get the counts of all reference names for uniqueness checking."""
         return self._reference_names_cache
 
-    def _update_reference_name(self, old_name: str | None, new_name: str) -> None:
+    def _update_reference_name(self, old_name: str | None, new_name: str, *, unique: bool = True) -> None:
         """Update the reference names cache when a reference name changes."""
         if old_name == new_name:
             return
         if old_name:
             self._remove_reference_name(old_name)
-        self._reference_names_cache[new_name] += 1
+        if unique:
+            self._reference_names_cache[new_name] = 1
+            return
+        self._reference_names_cache[new_name] = self._reference_names_cache.get(new_name, 0) + 1
 
     def _remove_reference_name(self, name: str) -> None:
         """Remove a name from the reference names cache."""
@@ -948,7 +953,10 @@ class ModelResolver:  # noqa: PLR0904
 
     def refresh_reference_names(self) -> None:
         """Refresh cached names after a batch reference rename."""
-        self._reference_names_cache = Counter(reference.name for reference in self.references.values())
+        reference_names: dict[str, int] = {}
+        for reference in self.references.values():
+            reference_names[reference.name] = reference_names.get(reference.name, 0) + 1
+        self._reference_names_cache = reference_names
         self._unique_name_start_hints.clear()
 
     @property
@@ -1248,7 +1256,7 @@ class ModelResolver:  # noqa: PLR0904
         )
 
         self.references[path] = reference
-        self._update_reference_name(None, reference.name)
+        self._update_reference_name(None, reference.name, unique=use_unique)
         return reference
 
     def _find_parent_reference(self, path: Sequence[str]) -> Reference | None:
@@ -1401,7 +1409,7 @@ class ModelResolver:  # noqa: PLR0904
             reference.name = name
             reference.loaded = loaded
             reference.duplicate_name = duplicate_name
-            self._update_reference_name(old_ref_name, name)
+            self._update_reference_name(old_ref_name, name, unique=unique)
         else:
             reference = Reference(
                 path=joined_path,
@@ -1411,7 +1419,7 @@ class ModelResolver:  # noqa: PLR0904
                 duplicate_name=duplicate_name,
             )
             self.references[joined_path] = reference
-            self._update_reference_name(None, name)
+            self._update_reference_name(None, name, unique=unique)
         return reference
 
     def get(self, path: Sequence[str] | str) -> Reference | None:
