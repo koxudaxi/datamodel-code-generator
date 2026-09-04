@@ -353,7 +353,10 @@ def render_release_benchmark_markdown(data: BenchmarkData) -> str:
         ),
         "- The Python version is the workflow input, defaulting to the latest configured CI Python.",
         "- Release packages are installed from PyPI in isolated virtual environments.",
-        "- The `main` snapshot is installed from the GitHub repository when it is explicitly selected.",
+        (
+            "- Every benchmark update measures `main` from an exact commit resolved at workflow start and replaces "
+            "the previous `main` snapshot."
+        ),
         "- Input coverage currently focuses on OpenAPI and JSON Schema.",
         "- Historical updates commit `docs/data/release-benchmarks.json`; the page renders that JSON client-side.",
         "",

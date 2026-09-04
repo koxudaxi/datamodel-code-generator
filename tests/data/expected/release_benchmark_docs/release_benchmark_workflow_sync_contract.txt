@@ -1,0 +1,11 @@
+queue max: True
+push coalescing: True
+independent non-push runs: True
+serialized data writer: True
+fixed sync branch: True
+trusted checkout: True
+pending diff guard: True
+pending data extraction: True
+current sha guard: True
+existing PR body preserved: True
+new PR body empty: True

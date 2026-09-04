@@ -20,6 +20,11 @@ try:
 except ModuleNotFoundError:  # pragma: no cover - direct script execution
     from release_benchmark_errors import compact_benchmark_error
 
+try:
+    from scripts.release_benchmark_safety import MAIN_SNAPSHOT_FALLBACK_KEYS, MAIN_SNAPSHOT_METADATA_KEYS, MAIN_VERSION
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    from release_benchmark_safety import MAIN_SNAPSHOT_FALLBACK_KEYS, MAIN_SNAPSHOT_METADATA_KEYS, MAIN_VERSION
+
 DEFAULT_OUTPUT = Path(".benchmarks") / "release-benchmarks.json"
 DEFAULT_SELECTION = Path(".benchmarks") / "release-benchmark-selection.json"
 
@@ -39,6 +44,16 @@ def _entries(payload: object, *, path: Path) -> list[dict[str, object]]:
         msg = f"Benchmark fragment {path} must contain an entries list"
         raise TypeError(msg)
     return [_entry_payload(entry) for entry in entries if isinstance(entry, dict)]
+
+
+def _main_snapshot_metadata(entries: list[dict[str, object]], metadata: dict[str, Any]) -> dict[str, object]:
+    if not any(entry.get("version") == MAIN_VERSION for entry in entries):
+        return {}
+    return {
+        key: value
+        for key in MAIN_SNAPSHOT_METADATA_KEYS
+        if (value := metadata.get(key) or metadata.get(MAIN_SNAPSHOT_FALLBACK_KEYS[key]))
+    }
 
 
 def _entry_payload(entry: dict[str, object]) -> dict[str, object]:
@@ -127,10 +142,14 @@ def merge_benchmark_payloads(
     """Merge benchmark result fragments and selection metadata."""
     entries: list[dict[str, object]] = []
     fragment_metadata: list[dict[str, Any]] = []
+    main_snapshot_metadata: dict[str, object] = {}
     for path in fragment_paths:
         payload = _load_json(path)
-        entries.extend(_entries(payload, path=path))
-        fragment_metadata.append(_metadata(payload))
+        fragment_entries = _entries(payload, path=path)
+        metadata = _metadata(payload)
+        entries.extend(fragment_entries)
+        fragment_metadata.append(metadata)
+        main_snapshot_metadata.update(_main_snapshot_metadata(fragment_entries, metadata))
 
     selection = _load_json(selection_path) if selection_path.exists() else {}
     runs = next((metadata.get("runs_per_case") for metadata in fragment_metadata if metadata.get("runs_per_case")), "0")
@@ -142,6 +161,7 @@ def merge_benchmark_payloads(
     payload_metadata = payload["metadata"]
     if isinstance(payload_metadata, dict):
         payload_metadata.update(_selection_metadata(selection))
+        payload_metadata.update(main_snapshot_metadata)
         if generated_at:
             payload_metadata["generated_at"] = generated_at
         payload_metadata["workflow"] = os.environ.get("GITHUB_WORKFLOW", payload_metadata.get("workflow", "local"))

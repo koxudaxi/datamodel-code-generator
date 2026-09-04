@@ -7,6 +7,14 @@
   const WHOLE_MS_THRESHOLD = 100;
   const TENTH_MS_THRESHOLD = 10;
   const SAME_SPEED_TOLERANCE = 0.005;
+  const DEFAULT_RELEASE_RANGE = "10";
+  const ALL_RELEASES_RANGE = "all";
+  const RELEASE_RANGE_OPTIONS = [
+    { value: "10", label: "Latest 10" },
+    { value: "25", label: "Latest 25" },
+    { value: ALL_RELEASES_RANGE, label: "All releases" },
+  ];
+  const MAIN_VERSION = "main";
   const CASE_ORDER = ["small", "large"];
   const FORMATTERS = [
     { key: "default", label: "black/isort(Default)", color: "#f59e0b" },
@@ -14,10 +22,22 @@
     { key: "ruff", label: "Ruff", color: "#16a34a" },
   ];
 
+  if (typeof document === "undefined") {
+    if (typeof module !== "undefined" && module.exports) {
+      module.exports = Object.freeze({
+        chartSelection,
+        mainSnapshotStatus,
+        mainPanelBounds,
+        DEFAULT_RELEASE_RANGE,
+        RELEASE_RANGE_OPTIONS,
+      });
+    }
+    return;
+  }
+
   const scriptUrl = document.currentScript && document.currentScript.src ? document.currentScript.src : document.baseURI;
   const dataUrl = new URL("../../data/release-benchmarks.json", scriptUrl);
   const notesUrl = new URL("../../data/release-benchmark-notes.json", scriptUrl);
-  const MAIN_VERSION = "main";
   const initializedCharts = new WeakSet();
   const initializedApps = new WeakSet();
   const observedCharts = new WeakSet();
@@ -333,6 +353,116 @@
     return versions.length === 0 ? "" : versions[versions.length - 1];
   }
 
+  function releaseVersions(entries) {
+    const versions = new Set();
+    entries.forEach((entry) => {
+      const version = stringValue(entry.version);
+      if (version && version !== MAIN_VERSION) {
+        versions.add(version);
+      }
+    });
+    return Array.from(versions).sort(compareVersions);
+  }
+
+  function visibleReleaseVersions(versions, range) {
+    const count = Number(range);
+    if (!Number.isInteger(count) || count <= 0 || count >= versions.length) {
+      return versions;
+    }
+    return versions.slice(-count);
+  }
+
+  function chartSelection(entries, range) {
+    const allReleaseVersions = releaseVersions(entries);
+    const versions = visibleReleaseVersions(allReleaseVersions, range);
+    const selectedVersions = versions === allReleaseVersions ? null : new Set(versions);
+    const visibleEntries = selectedVersions
+      ? entries.filter((entry) => entry.version === MAIN_VERSION || selectedVersions.has(entry.version))
+      : entries;
+    const mainEntries = entries.filter((entry) => entry.version === MAIN_VERSION);
+    let timingEntryCount = 0;
+    let maxMs = 0;
+    let hasMain = false;
+    visibleEntries.forEach((entry) => {
+      if (entry.status !== STATUS_OK || typeof entry.median_ms !== "number") {
+        return;
+      }
+      timingEntryCount += 1;
+      maxMs = Math.max(maxMs, entry.median_ms);
+      hasMain ||= entry.version === MAIN_VERSION;
+    });
+    return {
+      allReleaseVersions,
+      versions,
+      visibleEntries,
+      mainEntries,
+      hasMain,
+      timingEntryCount,
+      yMax: maxMs > 0 ? maxMs * 1.15 : 1,
+    };
+  }
+
+  function mainPanelBounds(width, horizontalLabelPadding, hasMain) {
+    if (!hasMain) {
+      return null;
+    }
+    const left = width - Math.min(92, Math.max(72, Math.floor(width * 0.23)));
+    return { left, right: width - 8, plotRight: left - horizontalLabelPadding };
+  }
+
+  function chartRange(container) {
+    const range = container.dataset.releaseBenchmarkSelectedRange;
+    return RELEASE_RANGE_OPTIONS.some((option) => option.value === range) ? range : DEFAULT_RELEASE_RANGE;
+  }
+
+  function rangeLabel(range) {
+    const option = RELEASE_RANGE_OPTIONS.find((candidate) => candidate.value === range);
+    return option ? option.label : RELEASE_RANGE_OPTIONS[0].label;
+  }
+
+  function timestampLabel(value) {
+    const timestamp = stringValue(value);
+    if (!timestamp) {
+      return EMPTY_CELL;
+    }
+    const parsed = new Date(timestamp);
+    if (Number.isNaN(parsed.getTime())) {
+      return timestamp;
+    }
+    const iso = parsed.toISOString();
+    return `${iso.slice(0, 10)} ${iso.slice(11, 16)} UTC`;
+  }
+
+  function mainSnapshotLabel(data) {
+    const metadata = benchmarkMetadata(data);
+    const measuredAt = timestampLabel(metadata.main_snapshot_generated_at);
+    const sha = stringValue(metadata.main_snapshot_collector_sha);
+    const shaLabel = sha ? ` · ${sha.slice(0, 12)}` : "";
+    return measuredAt === EMPTY_CELL ? "Main snapshot time unavailable" : `Main measured ${measuredAt}${shaLabel}`;
+  }
+
+  function mainSnapshotStatus(data, hasMainSnapshot, hasMainTiming) {
+    if (!hasMainSnapshot) {
+      return "No main snapshot in this scenario";
+    }
+    const label = mainSnapshotLabel(data);
+    return hasMainTiming ? label : `${label} · no successful timing`;
+  }
+
+  function versionRangeLabel(data, versions) {
+    if (versions.length === 0) {
+      return "No release versions";
+    }
+    const firstVersion = versions[0];
+    const lastVersion = versions[versions.length - 1];
+    const firstDate = releaseDate(data, firstVersion);
+    const lastDate = releaseDate(data, lastVersion);
+    if (firstDate === EMPTY_CELL || lastDate === EMPTY_CELL) {
+      return firstVersion === lastVersion ? firstVersion : `${firstVersion}–${lastVersion}`;
+    }
+    return `${firstVersion} (${firstDate})–${lastVersion} (${lastDate})`;
+  }
+
   function releaseDate(data, version) {
     const releaseDates = benchmarkMetadata(data).release_dates;
     if (!releaseDates || typeof releaseDates !== "object" || Array.isArray(releaseDates)) {
@@ -342,12 +472,7 @@
     if (!uploadedAt) {
       return EMPTY_CELL;
     }
-    const parsed = new Date(uploadedAt);
-    if (Number.isNaN(parsed.getTime())) {
-      return uploadedAt;
-    }
-    const iso = parsed.toISOString();
-    return `${iso.slice(0, 10)} ${iso.slice(11, 16)} UTC`;
+    return timestampLabel(uploadedAt);
   }
 
   function ratioLabel(ratio) {
@@ -450,12 +575,28 @@
   }
 
   function chartElement(inputType, caseName) {
-    const container = createElement("span", "release-benchmark-chart");
+    const container = createElement("div", "release-benchmark-chart");
     container.setAttribute("data-release-benchmark-chart", "");
     container.dataset.inputType = inputType;
     container.dataset.case = caseName;
+    container.dataset.releaseBenchmarkSelectedRange = DEFAULT_RELEASE_RANGE;
     container.setAttribute("aria-label", `${caseName} / ${inputLabel(inputType)} release benchmark trend`);
 
+    const controls = createElement("div", "release-benchmark-chart__controls");
+    controls.setAttribute("role", "group");
+    controls.setAttribute("aria-label", "Release range");
+    appendText(controls, "span", "Show:", "release-benchmark-chart__controls-label");
+    RELEASE_RANGE_OPTIONS.forEach((option) => {
+      const button = createElement("button", "release-benchmark-chart__range-button");
+      button.type = "button";
+      button.dataset.releaseBenchmarkRangeOption = option.value;
+      button.setAttribute("aria-pressed", String(option.value === DEFAULT_RELEASE_RANGE));
+      button.textContent = option.label;
+      controls.append(button);
+    });
+    const rangeInfo = createElement("span", "release-benchmark-chart__range-info");
+    rangeInfo.setAttribute("aria-live", "polite");
+    const mainSnapshot = createElement("span", "release-benchmark-chart__main-snapshot");
     const canvas = document.createElement("canvas");
     canvas.setAttribute("role", "img");
     canvas.setAttribute("aria-label", "Median generation time by release version");
@@ -467,7 +608,7 @@
     const tooltip = createElement("span", "release-benchmark-chart__tooltip");
     tooltip.setAttribute("role", "status");
     tooltip.hidden = true;
-    container.append(canvas, legend, status, tooltip);
+    container.append(controls, rangeInfo, mainSnapshot, canvas, legend, status, tooltip);
     return container;
   }
 
@@ -733,12 +874,68 @@
     status.hidden = message === "";
   }
 
+  function updateChartControls(
+    container,
+    data,
+    range,
+    versions,
+    allReleaseVersions,
+    yMax,
+    hasMainSnapshot,
+    hasMainTiming,
+  ) {
+    const rangeInfo = container.querySelector(".release-benchmark-chart__range-info");
+    if (rangeInfo) {
+      rangeInfo.textContent =
+        `Showing ${rangeLabel(range)} (${versionRangeLabel(data, versions)}) ` +
+        `of ${allReleaseVersions.length} release versions · scale 0–${formatMs(yMax)}`;
+    }
+    const mainSnapshot = container.querySelector(".release-benchmark-chart__main-snapshot");
+    if (mainSnapshot) {
+      mainSnapshot.textContent = mainSnapshotStatus(data, hasMainSnapshot, hasMainTiming);
+    }
+    container.querySelectorAll("[data-release-benchmark-range-option]").forEach((button) => {
+      button.setAttribute("aria-pressed", String(button.dataset.releaseBenchmarkRangeOption === range));
+    });
+  }
+
+  function setChartRange(container, range) {
+    if (!RELEASE_RANGE_OPTIONS.some((option) => option.value === range)) {
+      return;
+    }
+    if (chartRange(container) === range) {
+      return;
+    }
+    container.dataset.releaseBenchmarkSelectedRange = range;
+    hideTooltip(container);
+    if (benchmarkPayload) {
+      drawChart(container, benchmarkPayload.data, benchmarkPayload.notes);
+    }
+  }
+
   function chartSize(canvas) {
     const rect = canvas.getBoundingClientRect();
     const style = getComputedStyle(canvas);
     const width = Math.max(320, Math.floor(rect.width));
     const height = Math.max(260, Number.parseFloat(style.height) || 420);
     return { width, height };
+  }
+
+  function clearCanvas(canvas) {
+    const { width, height } = chartSize(canvas);
+    const devicePixelRatio = window.devicePixelRatio || 1;
+    canvas.width = Math.floor(width * devicePixelRatio);
+    canvas.height = Math.floor(height * devicePixelRatio);
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+
+    const context = canvas.getContext("2d");
+    if (!context) {
+      return null;
+    }
+    context.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+    context.clearRect(0, 0, width, height);
+    return { context, width, height };
   }
 
   function isVisible(element) {
@@ -758,28 +955,33 @@
     const caseName = container.dataset.case || "";
     const entries = scenarioEntries(data, inputType, caseName);
     const notesByVersion = scenarioNotesByVersion(notes, inputType, caseName);
-    const versions = Array.from(new Set(entries.map((entry) => entry.version))).sort(compareVersions);
-    const okEntries = entries.filter((entry) => entry.status === STATUS_OK && typeof entry.median_ms === "number");
+    const range = chartRange(container);
+    const { allReleaseVersions, versions, visibleEntries, mainEntries, hasMain, timingEntryCount, yMax } =
+      chartSelection(entries, range);
+    const hasMainSnapshot = mainEntries.length > 0;
+    const chart = clearCanvas(canvas);
+    if (!chart) {
+      return;
+    }
+    const { context, width, height } = chart;
 
-    if (versions.length === 0 || okEntries.length === 0) {
+    if (timingEntryCount === 0) {
+      updateChartControls(
+        container,
+        data,
+        range,
+        versions,
+        allReleaseVersions,
+        1,
+        hasMainSnapshot,
+        hasMain,
+      );
       setStatus(container, "No benchmark data is available for this chart.");
+      container.releaseBenchmarkPoints = [];
+      container.releaseBenchmarkNotes = [];
       return;
     }
     setStatus(container, "");
-
-    const { width, height } = chartSize(canvas);
-    const devicePixelRatio = window.devicePixelRatio || 1;
-    canvas.width = Math.floor(width * devicePixelRatio);
-    canvas.height = Math.floor(height * devicePixelRatio);
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
-
-    const context = canvas.getContext("2d");
-    if (!context) {
-      return;
-    }
-    context.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
-    context.clearRect(0, 0, width, height);
 
     const foreground = cssColor(container, "--md-default-fg-color", "#111827");
     const muted = cssColor(container, "--md-default-fg-color--light", "#6b7280");
@@ -787,18 +989,46 @@
     const noteColor = cssColor(container, "--md-accent-fg-color", "#dc2626");
     context.font = "12px system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif";
     const horizontalLabelPadding = Math.ceil(maxVersionLabelWidth(context, versions) / 2) + 8;
+    const mainPanel = mainPanelBounds(width, horizontalLabelPadding, hasMain);
     const plot = {
       left: Math.max(58, horizontalLabelPadding),
       top: 38,
-      right: width - Math.max(18, horizontalLabelPadding),
+      right: mainPanel ? mainPanel.plotRight : width - Math.max(18, horizontalLabelPadding),
       bottom: height - 58,
     };
-    const maxMs = Math.max(...okEntries.map((entry) => entry.median_ms || 0));
-    const yMax = maxMs > 0 ? maxMs * 1.15 : 1;
     const points = [];
+    updateChartControls(
+      container,
+      data,
+      range,
+      versions,
+      allReleaseVersions,
+      yMax,
+      hasMainSnapshot,
+      hasMain,
+    );
 
     context.fillStyle = foreground;
     context.fillText(`${caseName[0].toUpperCase()}${caseName.slice(1)} / ${inputLabel(inputType)}`, plot.left, 20);
+
+    if (mainPanel) {
+      context.save();
+      context.fillStyle = grid;
+      context.globalAlpha = 0.25;
+      context.fillRect(mainPanel.left, plot.top, mainPanel.right - mainPanel.left, plot.bottom - plot.top);
+      context.globalAlpha = 1;
+      context.strokeStyle = muted;
+      context.setLineDash([4, 4]);
+      context.beginPath();
+      context.moveTo(mainPanel.left - 5, plot.top);
+      context.lineTo(mainPanel.left - 5, plot.bottom);
+      context.stroke();
+      context.setLineDash([]);
+      context.fillStyle = muted;
+      context.textAlign = "center";
+      context.fillText("main snapshot", (mainPanel.left + mainPanel.right) / 2, plot.top - 10);
+      context.restore();
+    }
 
     context.strokeStyle = grid;
     context.fillStyle = muted;
@@ -826,6 +1056,10 @@
       context.fillStyle = muted;
       context.fillText(version, x, plot.bottom + 24);
     });
+    if (mainPanel) {
+      context.fillStyle = muted;
+      context.fillText("main", (mainPanel.left + mainPanel.right) / 2, plot.bottom + 24);
+    }
 
     context.strokeStyle = foreground;
     context.beginPath();
@@ -856,38 +1090,51 @@
     context.restore();
 
     FORMATTERS.forEach((formatter) => {
-      const formatterPoints = [];
+      const releasePoints = [];
       versions.forEach((version, index) => {
-        const entry = findEntry(entries, version, formatter.key);
+        const entry = findEntry(visibleEntries, version, formatter.key);
         if (!entry) {
           return;
         }
         const x = scale(index, 0, Math.max(versions.length - 1, 1), plot.left, plot.right);
         const y = scale(entry.median_ms, 0, yMax, plot.bottom, plot.top);
-        formatterPoints.push({ x, y, entry, formatter });
+        releasePoints.push({ x, y, entry, formatter });
         points.push({ x, y, entry, formatter });
       });
-      if (formatterPoints.length === 0) {
+      if (releasePoints.length > 0) {
+        context.strokeStyle = formatter.color;
+        context.lineWidth = 2.4;
+        context.beginPath();
+        releasePoints.forEach((point, index) => {
+          if (index === 0) {
+            context.moveTo(point.x, point.y);
+            return;
+          }
+          context.lineTo(point.x, point.y);
+        });
+        context.stroke();
+
+        context.fillStyle = formatter.color;
+        releasePoints.forEach((point) => {
+          context.beginPath();
+          context.arc(point.x, point.y, 3, 0, Math.PI * 2);
+          context.fill();
+        });
+      }
+      const mainEntry = findEntry(mainEntries, MAIN_VERSION, formatter.key);
+      if (!mainEntry || !mainPanel) {
         return;
       }
-      context.strokeStyle = formatter.color;
-      context.lineWidth = 2.4;
-      context.beginPath();
-      formatterPoints.forEach((point, index) => {
-        if (index === 0) {
-          context.moveTo(point.x, point.y);
-          return;
-        }
-        context.lineTo(point.x, point.y);
-      });
-      context.stroke();
-
+      const x = (mainPanel.left + mainPanel.right) / 2;
+      const y = scale(mainEntry.median_ms, 0, yMax, plot.bottom, plot.top);
+      const point = { x, y, entry: mainEntry, formatter, mainSnapshot: true, snapshotLabel: mainSnapshotLabel(data) };
+      points.push(point);
+      context.save();
       context.fillStyle = formatter.color;
-      formatterPoints.forEach((point) => {
-        context.beginPath();
-        context.arc(point.x, point.y, 3, 0, Math.PI * 2);
-        context.fill();
-      });
+      context.translate(x, y);
+      context.rotate(Math.PI / 4);
+      context.fillRect(-3.5, -3.5, 7, 7);
+      context.restore();
     });
 
     container.releaseBenchmarkPoints = points;
@@ -935,7 +1182,9 @@
       tooltip.hidden = true;
       return;
     }
-    tooltip.textContent = `${nearest.entry.version} · ${nearest.formatter.label}: ${formatMs(nearest.entry.median_ms)}`;
+    const snapshot = nearest.mainSnapshot ? ` · ${nearest.snapshotLabel}` : "";
+    tooltip.textContent =
+      `${nearest.entry.version} · ${nearest.formatter.label}: ` + `${formatMs(nearest.entry.median_ms)}${snapshot}`;
     tooltip.style.left = `${canvas.offsetLeft + nearest.x}px`;
     tooltip.style.top = `${canvas.offsetTop + nearest.y}px`;
     tooltip.hidden = false;
@@ -1040,7 +1289,12 @@
     }
     globalEventsAttached = true;
     window.addEventListener("resize", scheduleInitializedChartsRender);
-    document.addEventListener("click", () => window.setTimeout(scheduleInitializedChartsRender, 50));
+    document.addEventListener("click", (event) => {
+      if (event.target instanceof Element && event.target.closest("[data-release-benchmark-range-option]")) {
+        return;
+      }
+      window.setTimeout(scheduleInitializedChartsRender, 50);
+    });
     document.addEventListener("change", () => window.setTimeout(scheduleInitializedChartsRender, 50));
     document.addEventListener("visibilitychange", scheduleInitializedChartsRender);
   }
@@ -1081,6 +1335,15 @@
     initializedCharts.add(container);
     renderLegend(container);
     setStatus(container, "Loading benchmark chart...");
+    container.addEventListener("click", (event) => {
+      const button = event.target instanceof Element
+        ? event.target.closest("[data-release-benchmark-range-option]")
+        : null;
+      if (!(button instanceof HTMLButtonElement)) {
+        return;
+      }
+      setChartRange(container, button.dataset.releaseBenchmarkRangeOption || "");
+    });
     container.addEventListener("mousemove", (event) => showTooltip(container, event));
     container.addEventListener("mouseleave", () => hideTooltip(container));
     observeChart(container);

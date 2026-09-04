@@ -10,8 +10,18 @@ from contextlib import redirect_stderr
 from io import StringIO
 from pathlib import Path
 
-from scripts import build_release_benchmark_docs, select_release_benchmark_versions, update_release_benchmark_history
-from scripts.collect_release_benchmarks import _failure_status, _install_spec, _run_subprocess
+from scripts import (
+    build_release_benchmark_docs,
+    select_release_benchmark_versions,
+    update_release_benchmark_history,
+)
+from scripts.collect_release_benchmarks import (
+    BenchmarkResult,
+    _failure_status,
+    _install_spec,
+    _payload,
+    _run_subprocess,
+)
 from scripts.release_benchmark_errors import sanitize_benchmark_error, summarize_benchmark_error
 from tests.conftest import assert_output
 
@@ -20,6 +30,8 @@ SCRIPT = ROOT / "scripts" / "build_release_benchmark_docs.py"
 FIXTURE_DATA = ROOT / "tests" / "data" / "release_benchmarks" / "sample.json"
 FIXTURE_DIR = ROOT / "tests" / "data" / "release_benchmarks"
 FIXTURE_NOTES = FIXTURE_DIR / "notes.json"
+CHART_RANGES_FIXTURE = FIXTURE_DIR / "chart_ranges.json"
+CHART_RANGE_EDGE_CASES_FIXTURE = FIXTURE_DIR / "chart_range_edge_cases.json"
 EXPECTED_RELEASE_BENCHMARK_DOCS_PATH = ROOT / "tests" / "data" / "expected" / "release_benchmark_docs"
 
 
@@ -66,6 +78,114 @@ def test_release_benchmark_renderers_use_fixture_data() -> None:
         "\n--- markdown ---\n" + build_release_benchmark_docs.render_release_benchmark_markdown(data),
         EXPECTED_RELEASE_BENCHMARK_DOCS_PATH / "release_benchmark_rendered.txt",
     )
+
+
+def test_release_benchmark_chart_range_e2e_uses_fixture_data() -> None:
+    """The chart model executes focused ranges, scaling, and a detached main snapshot."""
+    payload = json.loads(CHART_RANGES_FIXTURE.read_text(encoding="utf-8"))
+    data = build_release_benchmark_docs.load_benchmark_data(CHART_RANGES_FIXTURE, notes_path=None)
+    script_path = ROOT / "docs" / "assets" / "benchmarks" / "release-benchmarks.js"
+    script = script_path.read_text(encoding="utf-8")
+    stylesheet = (ROOT / "docs" / "assets" / "benchmarks" / "release-benchmarks.css").read_text(encoding="utf-8")
+    node_e2e = subprocess.run(
+        [
+            "node",
+            "-e",
+            """
+const chart = require(process.argv[1]);
+const payload = require(process.argv[2]);
+const edgeCases = require(process.argv[3]);
+const summarize = (entries, range) => {
+  const selection = chart.chartSelection(entries, range);
+  return {
+    firstRelease: selection.versions[0],
+    lastRelease: selection.versions.at(-1),
+    timingEntries: selection.timingEntryCount,
+    detachedMainEntries: selection.mainEntries.length,
+    hasMainTiming: selection.hasMain,
+    yMax: Number(selection.yMax.toFixed(1)),
+  };
+};
+console.log(JSON.stringify({
+  defaultRange: chart.DEFAULT_RELEASE_RANGE,
+  rangeOptions: chart.RELEASE_RANGE_OPTIONS.map((option) => option.value),
+  latest10: summarize(payload.entries, '10'),
+  latest25: summarize(payload.entries, '25'),
+  all: summarize(payload.entries, 'all'),
+  smallWidth: chart.mainPanelBounds(320, 60, true),
+  noMainPanel: chart.mainPanelBounds(320, 60, false),
+  failedMain: {
+    cappedRange: summarize(edgeCases.failed_main.entries, '25'),
+    invalidRange: summarize(edgeCases.failed_main.entries, 'invalid'),
+    status: chart.mainSnapshotStatus(edgeCases.failed_main, true, false),
+  },
+  emptyTimings: {
+    selection: summarize(edgeCases.empty_timings.entries, '10'),
+    noSnapshotStatus: chart.mainSnapshotStatus(edgeCases.empty_timings, false, false),
+  },
+}, null, 2));
+""",
+            str(script_path),
+            str(CHART_RANGES_FIXTURE),
+            str(CHART_RANGE_EDGE_CASES_FIXTURE),
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    _raise_for_failed_process(node_e2e)
+    rendered_markdown = build_release_benchmark_docs.render_release_benchmark_markdown(data)
+    clears_before_empty_status = script.index("const chart = clearCanvas(canvas);") < script.index(
+        "if (timingEntryCount === 0)",
+    )
+    range_fast_path = 'event.target.closest("[data-release-benchmark-range-option]")' in script
+    output = "\n".join((
+        f"main snapshot input: {payload['metadata']['main_snapshot_generated_at']}",
+        f"generated chart host: {'data-release-benchmark-app' in rendered_markdown}",
+        "node chart model:",
+        node_e2e.stdout.rstrip(),
+        f"main timestamp: {'main_snapshot_generated_at' in script}",
+        f"canvas clears before empty status: {clears_before_empty_status}",
+        f"main split: {'const mainEntry = findEntry(mainEntries, MAIN_VERSION, formatter.key);' in script}",
+        f"range fast path: {range_fast_path}",
+        f"range controls style: {'release-benchmark-chart__range-button' in stylesheet}",
+        "",
+    ))
+
+    assert_output(output, EXPECTED_RELEASE_BENCHMARK_DOCS_PATH / "release_benchmark_chart_range_contract.txt")
+
+
+def test_release_benchmark_workflow_keeps_one_safe_sync_branch() -> None:
+    """The production workflow queues runs and reads pending data without checking out its code."""
+    workflow = (ROOT / ".github" / "workflows" / "release-benchmarks.yaml").read_text(encoding="utf-8")
+    sync_branch = 'sync_branch="docs/release-benchmark-data"'
+    trusted_checkout = 'git checkout -B "$sync_branch" origin/main'
+    pending_diff = 'git diff --name-only "origin/main...refs/remotes/release-benchmark/$sync_branch"'
+    pending_data = 'git show "refs/remotes/release-benchmark/$sync_branch:docs/data/release-benchmarks.json"'
+    current_sha = '--current-main-sha "$current_main_sha"'
+    push_coalescing = "cancel-in-progress: ${{ github.event_name == 'push' }}"
+    independent_runs = "github.run_id"
+    data_writer = "group: release-benchmark-data"
+    new_pr = workflow[workflow.index("gh pr create") :]
+    new_pr_body_empty = '--body ""' in new_pr
+    output = "\n".join((
+        f"queue max: {'queue: max' in workflow}",
+        f"push coalescing: {push_coalescing in workflow}",
+        f"independent non-push runs: {independent_runs in workflow}",
+        f"serialized data writer: {data_writer in workflow}",
+        f"fixed sync branch: {sync_branch in workflow}",
+        f"trusted checkout: {trusted_checkout in workflow}",
+        f"pending diff guard: {pending_diff in workflow}",
+        f"pending data extraction: {pending_data in workflow}",
+        f"current sha guard: {current_sha in workflow}",
+        f"existing PR body preserved: {'gh pr edit' not in workflow}",
+        f"new PR body empty: {new_pr_body_empty}",
+        "",
+    ))
+
+    assert_output(output, EXPECTED_RELEASE_BENCHMARK_DOCS_PATH / "release_benchmark_workflow_sync_contract.txt")
 
 
 def test_release_benchmark_docs_cli_writes_expected_outputs(tmp_path: Path) -> None:
@@ -207,14 +327,48 @@ def test_collect_release_benchmark_failure_helpers() -> None:
 
 
 def test_collect_release_benchmark_install_specs() -> None:
-    """Release versions use PyPI pins and main uses the GitHub branch ref."""
+    """Release versions use PyPI pins and main can use an exact GitHub revision."""
     output = "\n".join((
         f"release: {_install_spec('v0.65.0')}",
         f"main: {_install_spec('main')}",
+        f"pinned-main: {_install_spec('main', main_ref='a' * 40)}",
         "",
     ))
 
     assert_output(output, EXPECTED_RELEASE_BENCHMARK_DOCS_PATH / "collect_release_benchmark_install_specs.txt")
+
+
+def test_collect_release_benchmark_main_snapshot_metadata_uses_pinned_ref() -> None:
+    """The collector records the resolved main SHA for both result input forms."""
+    fixture_result = json.loads((FIXTURE_DIR / "collector_main_result.json").read_text(encoding="utf-8"))
+    result = BenchmarkResult(
+        version="main",
+        python_version="3.14.2",
+        os="ubuntu-24.04",
+        input_type="jsonschema",
+        case="small",
+        formatter="default",
+        runs=1,
+        median_ms=1.0,
+        min_ms=1.0,
+        max_ms=1.0,
+        stdev_ms=0.0,
+        status="ok",
+        command="python -m datamodel_code_generator",
+        error="",
+    )
+    payload = _payload([result, fixture_result], runs=1, warmups=0, main_ref="a" * 40)
+    metadata = payload["metadata"]
+    snapshot_run_matches_collector = metadata["main_snapshot_workflow_run_id"] == os.environ.get("GITHUB_RUN_ID", "")
+
+    output = "\n".join((
+        f"entries: {len(payload['entries'])}",
+        f"main snapshot sha: {metadata['main_snapshot_collector_sha']}",
+        f"main snapshot timestamp: {bool(metadata['main_snapshot_generated_at'])}",
+        f"main snapshot run id matches collector: {snapshot_run_matches_collector}",
+        "",
+    ))
+    assert_output(output, EXPECTED_RELEASE_BENCHMARK_DOCS_PATH / "collect_release_benchmark_main_snapshot_metadata.txt")
 
 
 def test_release_benchmark_error_helpers_redact_public_output() -> None:
@@ -278,6 +432,117 @@ def test_select_release_benchmark_versions_cli_writes_usage_based_selection(tmp_
     assert_output(
         _completed_process_output(result) + "selection:\n" + output_path.read_text(encoding="utf-8"),
         EXPECTED_RELEASE_BENCHMARK_DOCS_PATH / "select_release_benchmark_versions_cli_outputs.txt",
+    )
+
+
+def test_select_release_benchmark_versions_can_always_include_main(tmp_path: Path) -> None:
+    """The selector appends main without consuming the release-version limit."""
+    output_path = tmp_path / "release-benchmark-selection.json"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "select_release_benchmark_versions.py"),
+            "--versions",
+            "0.64.1",
+            "--include-main",
+            "--pypi-json",
+            str(FIXTURE_DIR / "pypi_project.json"),
+            "--clickpy-json",
+            str(FIXTURE_DIR / "clickpy_versions.json"),
+            "--pypistats-recent-json",
+            str(FIXTURE_DIR / "pypistats_recent.json"),
+            "--pypistats-overall-json",
+            str(FIXTURE_DIR / "pypistats_overall.json"),
+            "--limit",
+            "1",
+            "--now",
+            "2026-06-22T00:00:00Z",
+            "--output",
+            str(output_path),
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    _raise_for_failed_process(result)
+    assert_output(
+        _completed_process_output(result) + "selection:\n" + output_path.read_text(encoding="utf-8"),
+        EXPECTED_RELEASE_BENCHMARK_DOCS_PATH / "select_release_benchmark_versions_main_cli_outputs.txt",
+    )
+
+
+def test_select_release_benchmark_versions_main_only_skips_external_sources(tmp_path: Path) -> None:
+    """The main-only CI path succeeds without reading release or download sources."""
+    output_path = tmp_path / "release-benchmark-selection.json"
+    unavailable_source = FIXTURE_DIR / "main_only_unavailable_source.json"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "select_release_benchmark_versions.py"),
+            "--versions",
+            "main",
+            "--include-main",
+            "--pypi-json",
+            str(unavailable_source),
+            "--clickpy-json",
+            str(unavailable_source),
+            "--pypistats-recent-json",
+            str(unavailable_source),
+            "--pypistats-overall-json",
+            str(unavailable_source),
+            "--now",
+            "2026-06-22T00:00:00Z",
+            "--output",
+            str(output_path),
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    _raise_for_failed_process(result)
+    assert_output(
+        _completed_process_output(result) + "selection:\n" + output_path.read_text(encoding="utf-8"),
+        EXPECTED_RELEASE_BENCHMARK_DOCS_PATH / "select_release_benchmark_versions_main_fast_path_cli_outputs.txt",
+    )
+
+
+def test_merge_release_benchmarks_carries_main_snapshot_metadata(tmp_path: Path) -> None:
+    """The merged workflow artifact identifies the exact main commit that was measured."""
+    output_path = tmp_path / "release-benchmarks.json"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "merge_release_benchmarks.py"),
+            str(FIXTURE_DIR / "main_snapshot_fragment.json"),
+            "--selection",
+            str(FIXTURE_DIR / "main_snapshot_selection.json"),
+            "--generated-at",
+            "2026-06-23T00:01:00Z",
+            "--output",
+            str(output_path),
+        ],
+        cwd=ROOT,
+        env={
+            **os.environ,
+            "BENCHMARK_PYTHON_VERSION": "3.14.2",
+            "GITHUB_RUN_ID": "merge-run",
+            "GITHUB_SHA": "merge-job-sha",
+            "GITHUB_WORKFLOW": "Release Benchmarks",
+            "OS": "ubuntu-24.04",
+        },
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    _raise_for_failed_process(result)
+    assert_output(
+        _completed_process_output_with_tmp(result, tmp_path) + "merged:\n" + output_path.read_text(encoding="utf-8"),
+        EXPECTED_RELEASE_BENCHMARK_DOCS_PATH / "merge_release_benchmarks_main_snapshot_cli_outputs.txt",
     )
 
 
@@ -384,8 +649,10 @@ def test_update_release_benchmark_history_empty_base_uses_incoming_metadata(tmp_
         base_data_path=tmp_path / "missing-base.json",
         incoming_data_path=FIXTURE_DIR / "incoming_history_0641.json",
         output_path=output_path,
-        selection_path=FIXTURE_DIR / "pypi_project.json",
-        generated_at="2026-06-23T01:00:00Z",
+        options=update_release_benchmark_history.HistoryMergeOptions(
+            selection_path=FIXTURE_DIR / "pypi_project.json",
+            generated_at="2026-06-23T01:00:00Z",
+        ),
     )
 
     assert_output(
@@ -394,17 +661,115 @@ def test_update_release_benchmark_history_empty_base_uses_incoming_metadata(tmp_
     )
 
 
+def test_update_release_benchmark_history_replaces_the_complete_main_snapshot(tmp_path: Path) -> None:
+    """Fresh main results cannot retain rows or metadata from an older main snapshot."""
+    output_path = tmp_path / "release-benchmarks.json"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "update_release_benchmark_history.py"),
+            "--base-data",
+            str(FIXTURE_DIR / "history_with_old_main_snapshot.json"),
+            "--incoming-data",
+            str(FIXTURE_DIR / "incoming_main_snapshot.json"),
+            "--generated-at",
+            "2026-06-23T00:01:00Z",
+            "--output",
+            str(output_path),
+        ],
+        cwd=ROOT,
+        env={**os.environ, "OS": "ubuntu-24.04"},
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    _raise_for_failed_process(result)
+    assert_output(
+        _completed_process_output_with_tmp(result, tmp_path) + "merged:\n" + output_path.read_text(encoding="utf-8"),
+        EXPECTED_RELEASE_BENCHMARK_DOCS_PATH / "update_release_benchmark_history_main_snapshot_cli_outputs.txt",
+    )
+
+
+def test_update_release_benchmark_history_discards_stale_main_snapshots(tmp_path: Path) -> None:
+    """An out-of-date artifact cannot retain or restore a stale main snapshot."""
+    output_path = tmp_path / "release-benchmarks.json"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "update_release_benchmark_history.py"),
+            "--base-data",
+            str(FIXTURE_DIR / "history_with_old_main_snapshot.json"),
+            "--incoming-data",
+            str(FIXTURE_DIR / "incoming_main_snapshot.json"),
+            "--generated-at",
+            "2026-06-23T00:01:00Z",
+            "--current-main-sha",
+            "c" * 40,
+            "--output",
+            str(output_path),
+        ],
+        cwd=ROOT,
+        env={**os.environ, "OS": "ubuntu-24.04"},
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    _raise_for_failed_process(result)
+    assert_output(
+        _completed_process_output_with_tmp(result, tmp_path) + "merged:\n" + output_path.read_text(encoding="utf-8"),
+        EXPECTED_RELEASE_BENCHMARK_DOCS_PATH / "update_release_benchmark_history_stale_main_cli_outputs.txt",
+    )
+
+
+def test_update_release_benchmark_history_keeps_the_current_main_snapshot(tmp_path: Path) -> None:
+    """A stale artifact cannot replace a base snapshot that matches current main."""
+    output_path = tmp_path / "release-benchmarks.json"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "update_release_benchmark_history.py"),
+            "--base-data",
+            str(FIXTURE_DIR / "history_with_current_main_snapshot.json"),
+            "--incoming-data",
+            str(FIXTURE_DIR / "incoming_main_snapshot.json"),
+            "--generated-at",
+            "2026-06-23T00:01:00Z",
+            "--current-main-sha",
+            "c" * 40,
+            "--output",
+            str(output_path),
+        ],
+        cwd=ROOT,
+        env={**os.environ, "OS": "ubuntu-24.04"},
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    _raise_for_failed_process(result)
+    assert_output(
+        _completed_process_output_with_tmp(result, tmp_path) + "merged:\n" + output_path.read_text(encoding="utf-8"),
+        EXPECTED_RELEASE_BENCHMARK_DOCS_PATH / "update_release_benchmark_history_current_main_cli_outputs.txt",
+    )
+
+
 def _release_benchmark_history_error(
     path: Path,
     output_path: Path,
     *,
     incoming_data_path: Path = FIXTURE_DIR / "incoming_history_0641.json",
+    options: update_release_benchmark_history.HistoryMergeOptions = (
+        update_release_benchmark_history.DEFAULT_HISTORY_MERGE_OPTIONS
+    ),
 ) -> str:
     try:
         update_release_benchmark_history.merge_release_benchmark_history(
             base_data_path=path,
             incoming_data_path=incoming_data_path,
             output_path=output_path,
+            options=options,
         )
     except (FileNotFoundError, TypeError, ValueError) as exc:
         return f"{path.name}: {type(exc).__name__}: {exc}"
@@ -567,6 +932,12 @@ def test_update_release_benchmark_history_helper_edges(tmp_path: Path) -> None:
             FIXTURE_DATA,
             tmp_path / "unused.json",
             incoming_data_path=tmp_path / "missing-incoming.json",
+        ),
+        "invalid-current-main-sha: "
+        + _release_benchmark_history_error(
+            FIXTURE_DATA,
+            tmp_path / "unused.json",
+            options=update_release_benchmark_history.HistoryMergeOptions(current_main_sha="not-a-sha"),
         ),
         "blank-metadata: "
         + str(update_release_benchmark_history.safe_incoming_metadata({"workflow": "   "}, path=unsafe_metadata)),
