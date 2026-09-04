@@ -138,7 +138,7 @@ jobs:
         id: claude
         if: steps.analysis-route.outputs.requires_claude == 'true'
         timeout-minutes: 10
-        uses: anthropics/claude-code-action/base-action@833fb0f8c9f6686b33d963a8bae0a94f4936ab2a # v1.0.211
+        uses: anthropics/claude-code-action/base-action@8251c103ac8c1d761882c86aba1412c7f583c844 # v1.0.213
         env:
           CLAUDE_WORKING_DIR: ${{ steps.pr-diff.outputs.claude_working_dir }}
         with:
