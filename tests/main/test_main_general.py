@@ -6,6 +6,7 @@ import ast
 import inspect
 import json
 import platform
+import shutil
 import sys
 import tokenize
 import warnings
@@ -47,7 +48,6 @@ from datamodel_code_generator.__main__ import (
     Config,
     Exit,
     _create_config,
-    _prepare_cli_config_args,
     run_generate_from_config,
 )
 from datamodel_code_generator.arguments import _dataclass_arguments, arg_parser
@@ -1199,19 +1199,6 @@ def test_cli_pyproject_ignores_generate_only_options(output_file: Path, tmp_path
 
 
 @pytest.mark.allow_direct_assert
-def test_prepare_cli_config_args_applies_derived_flags() -> None:
-    """CLI-only implied flags are applied before the single validation path."""
-    prepared_args = _prepare_cli_config_args({"output_model_type": DataModelType.MsgspecStruct.value})
-    alias_args = _prepare_cli_config_args({"use_type_alias_type": True})
-
-    assert prepared_args["use_annotated"] is True
-    assert prepared_args["field_constraints"] is True
-    assert alias_args == {"use_type_alias_type": True, "use_type_alias": True}
-    assert GenerateConfig(use_type_alias_type=True).use_type_alias is True
-    assert _prepare_cli_config_args({}) == {}
-
-
-@pytest.mark.allow_direct_assert
 def test_create_config_empty_pyproject_uses_single_validated_cli_config() -> None:
     """An empty pyproject config can validate the final CLI config directly."""
     config = _create_config(
@@ -1246,6 +1233,108 @@ def test_create_config_pyproject_branch_keeps_input_source_override() -> None:
     assert config.url is not None
     assert config.url.geturl() == "https://example.com/schema.json"
     assert config.validation is True
+
+
+@pytest.mark.parametrize(
+    ("config_name", "args"),
+    [
+        pytest.param("pyproject_msgspec_implicit.toml", (), id="single"),
+        pytest.param("pyproject_msgspec_implicit_job.toml", ("--all-jobs",), id="batch"),
+    ],
+)
+def test_pyproject_msgspec_derives_constraints_from_final_config(
+    config_name: str,
+    args: tuple[str, ...],
+    tmp_path: Path,
+) -> None:
+    """Pyproject and batch msgspec settings preserve constraints from a nested working directory."""
+    project_path = tmp_path / "project"
+    nested_path = project_path / "nested"
+    nested_path.mkdir(parents=True)
+    shutil.copyfile(
+        JSON_SCHEMA_DATA_PATH / "msgspec_array_length_constraints.json",
+        project_path / "msgspec_array_length_constraints.json",
+    )
+    shutil.copyfile(DATA_PATH / "config" / config_name, project_path / "pyproject.toml")
+
+    with chdir(nested_path):
+        run_main_with_args(args)
+
+    assert_file_content(project_path / "model.py", "jsonschema/msgspec_array_length_constraints_use_annotated.py")
+
+
+def test_cli_output_model_override_does_not_keep_pyproject_msgspec_defaults(tmp_path: Path) -> None:
+    """A CLI backend override does not retain implicit msgspec Annotated output."""
+    project_path = tmp_path / "project"
+    nested_path = project_path / "nested"
+    nested_path.mkdir(parents=True)
+    shutil.copyfile(
+        JSON_SCHEMA_DATA_PATH / "msgspec_array_length_constraints.json",
+        project_path / "msgspec_array_length_constraints.json",
+    )
+    shutil.copyfile(DATA_PATH / "config" / "pyproject_msgspec_implicit.toml", project_path / "pyproject.toml")
+
+    with chdir(nested_path):
+        run_main_with_args(["--output-model-type", "pydantic_v2.BaseModel"])
+
+    assert_file_content(project_path / "model.py", "pyproject_msgspec_cli_pydantic.py")
+
+
+@pytest.mark.parametrize(
+    "config_name",
+    [
+        "pyproject_msgspec_use_annotated.toml",
+        "pyproject_msgspec_use_annotated_field_constraints.toml",
+    ],
+)
+def test_cli_no_use_annotated_clears_only_implicit_field_constraints(config_name: str, tmp_path: Path) -> None:
+    """An explicit CLI opt-out preserves only explicitly configured constraints."""
+    project_path = tmp_path / "project"
+    nested_path = project_path / "nested"
+    nested_path.mkdir(parents=True)
+    shutil.copyfile(
+        JSON_SCHEMA_DATA_PATH / "msgspec_array_length_constraints.json",
+        project_path / "msgspec_array_length_constraints.json",
+    )
+    shutil.copyfile(DATA_PATH / "config" / config_name, project_path / "pyproject.toml")
+
+    with chdir(nested_path):
+        run_main_with_args(["--no-use-annotated"])
+
+    assert_file_content(project_path / "model.py", "pyproject_msgspec_no_annotated.py")
+
+
+def test_cli_relative_output_remains_relative_to_the_invocation_directory(tmp_path: Path) -> None:
+    """Only pyproject-origin paths use the pyproject directory as their base."""
+    project_path = tmp_path / "project"
+    nested_path = project_path / "nested"
+    nested_path.mkdir(parents=True)
+    shutil.copyfile(
+        JSON_SCHEMA_DATA_PATH / "msgspec_array_length_constraints.json",
+        project_path / "msgspec_array_length_constraints.json",
+    )
+    shutil.copyfile(DATA_PATH / "config" / "pyproject_msgspec_implicit.toml", project_path / "pyproject.toml")
+
+    with chdir(nested_path):
+        run_main_with_args(["--output", "cli-model.py"])
+
+    assert_file_content(nested_path / "cli-model.py", "jsonschema/msgspec_array_length_constraints_use_annotated.py")
+
+
+def test_cli_without_pyproject_keeps_absolute_input_and_output_paths(
+    monkeypatch: pytest.MonkeyPatch, output_file: Path
+) -> None:
+    """A CLI invocation outside a pyproject continues to use its supplied paths."""
+    monkeypatch.chdir(output_file.parent)
+
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--disable-timestamp"],
+        assert_func=assert_file_content,
+        expected_file="person.py",
+    )
 
 
 @pytest.mark.allow_direct_assert

@@ -30,7 +30,7 @@ from datamodel_code_generator.parser.graphql import GraphQLParser
 from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
 from datamodel_code_generator.parser.openapi import OpenAPIParser
 from tests.conftest import assert_output, assert_warnings_contain, create_assert_file_content
-from tests.main.conftest import DATA_PATH, InputFileTypeLiteral, run_main_and_assert
+from tests.main.conftest import DATA_PATH, InputFileTypeLiteral, run_main_and_assert, run_main_with_args
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -225,6 +225,130 @@ def test_output_path_can_write_inside_input_directory(
     assert_output(
         (output_path / "person.py").read_text(encoding="utf-8"),
         DATA_PATH / "expected" / "main" / "person.py",
+    )
+
+
+def test_invalid_pyproject_configuration_is_a_clean_cli_error(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Invalid pyproject values report a usage error instead of a traceback."""
+    shutil.copyfile(DATA_PATH / "config" / "pyproject_invalid_target.toml", tmp_path / "pyproject.toml")
+    monkeypatch.chdir(tmp_path)
+
+    run_main_with_args(
+        [],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="Invalid configuration: 1 validation error for Config",
+    )
+
+
+@pytest.mark.parametrize(
+    ("directory_name", "extra_args"),
+    [
+        pytest.param("output", (), id="plain"),
+        pytest.param("output.py.d", (), id="dotted"),
+        pytest.param("output.py.d", ("--check",), id="dotted-check"),
+    ],
+)
+def test_single_module_output_directory_is_a_clean_cli_error(
+    directory_name: str,
+    extra_args: tuple[str, ...],
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Single-module output rejects existing plain and dotted directories."""
+    output_path = tmp_path / directory_name
+    output_path.mkdir()
+
+    run_main_and_assert(
+        input_path=DATA_PATH / "jsonschema" / "person.json",
+        output_path=output_path,
+        input_file_type="jsonschema",
+        extra_args=extra_args,
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="Single-module output requires a file path, not a directory",
+    )
+
+
+def test_model_metadata_directory_is_a_clean_cli_error(
+    output_file: Path,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Model metadata rejects a directory destination before generation writes output."""
+    metadata_path = tmp_path / "metadata.json"
+    metadata_path.mkdir()
+
+    run_main_and_assert(
+        input_path=DATA_PATH / "jsonschema" / "person.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--emit-model-metadata", str(metadata_path)],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="Model metadata output requires a file path, not a directory",
+        output_should_not_exist=True,
+    )
+
+
+@pytest.mark.parametrize(
+    ("input_path", "extra_args", "expected_stderr_contains"),
+    [
+        pytest.param(
+            DATA_PATH / "jsonschema" / "person.json",
+            ("--custom-formatters", "missing_custom_formatter"),
+            "Unable to import custom formatter 'missing_custom_formatter'",
+            id="custom-formatter-import",
+        ),
+        pytest.param(
+            DATA_PATH / "jsonschema" / "encoding_test.json",
+            ("--encoding", "shift_jis"),
+            "Unable to decode input using encoding 'shift_jis'",
+            id="input-encoding",
+        ),
+    ],
+)
+def test_cli_input_errors_are_clean(
+    input_path: Path,
+    extra_args: tuple[str, ...],
+    expected_stderr_contains: str,
+    output_file: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Custom formatter imports and input decoding report CLI errors without tracebacks."""
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=extra_args,
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains=expected_stderr_contains,
+        output_should_not_exist=True,
+    )
+
+
+def test_missing_custom_file_header_is_a_clean_cli_error(
+    output_file: Path,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Custom header I/O failures report a CLI error without a traceback."""
+    header_path = tmp_path / "missing-header.txt"
+
+    run_main_and_assert(
+        input_path=DATA_PATH / "jsonschema" / "person.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--custom-file-header-path", str(header_path)],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="Unable to read custom file header",
+        output_should_not_exist=True,
     )
 
 
