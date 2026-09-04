@@ -484,7 +484,7 @@ class GenerationIndex:
             if (reference := (fact := facts.data_type_facts[data_type_id]).reference) is not None
             if include_dict_key_references or fact.role != "dict_key"
         )
-        if len(additional_properties_references := model._additional_properties_reference_classes):  # noqa: SLF001
+        if len(additional_properties_references := model.additional_properties_reference_classes):
             reference_classes = reference_classes.union(additional_properties_references)
         self._reference_classes_cache[model_id] = reference_classes
         return reference_classes
@@ -506,7 +506,7 @@ class GenerationIndex:
                 for data_type_id in facts.data_types_by_model.get(model_id, ())
                 if (reference := facts.data_type_facts[data_type_id].reference) is not None
             )
-        if len(additional_properties_references := model._additional_properties_reference_classes):  # noqa: SLF001
+        if len(additional_properties_references := model.additional_properties_reference_classes):
             return reference_classes.union(additional_properties_references)
         return reference_classes
 
@@ -590,6 +590,21 @@ class GenerationIndex:
         return direct_refs
 
 
+@dataclass(slots=True)
+class _RootCollapseReferenceScope:
+    """Lazy reference counts for one root-collapse mutation scope."""
+
+    reference_counts: dict[int, int] = field(default_factory=dict)
+    enabled: bool = True
+    initialized: bool = False
+    mutated: bool = False
+
+    def invalidate(self) -> None:
+        """Disable incremental updates after an unsupported mutation."""
+        self.enabled = False
+        self.reference_counts.clear()
+
+
 class GenerationStore:  # noqa: PLR0904
     """Parse-to-output generation facts for a Parser instance."""
 
@@ -603,6 +618,8 @@ class GenerationStore:  # noqa: PLR0904
         self._facts_version = 0
         self._dirty = True
         self._defer_refresh_depth = 0
+        self._active_root_collapse_reference_scope: _RootCollapseReferenceScope | None = None
+        self._root_collapse_internal_mutation_depth = 0
 
     @classmethod
     def create_with_results(cls) -> tuple[GenerationStore, list[DataModel]]:
@@ -648,6 +665,148 @@ class GenerationStore:  # noqa: PLR0904
         """Return current facts after rebuilding stale data."""
         self.refresh()
         return self._facts
+
+    @contextmanager
+    def _collapse_root_reference_scope(self) -> Generator[None, None, None]:
+        """Track root-reference counts while one collapse pass mutates the store."""
+        if self._active_root_collapse_reference_scope is not None:
+            msg = "Root-collapse reference scopes cannot be nested."
+            raise RuntimeError(msg)
+
+        scope = _RootCollapseReferenceScope()
+        self._active_root_collapse_reference_scope = scope
+        completed = False
+        try:
+            yield
+            completed = True
+        finally:
+            try:
+                if completed and scope.mutated:
+                    self.refresh_now()
+            finally:
+                scope.invalidate()
+                self._active_root_collapse_reference_scope = None
+
+    def _root_collapse_scope_if_ready(self) -> _RootCollapseReferenceScope | None:
+        """Return an initialized tracker, or disable it when facts cannot be trusted."""
+        scope = self._active_root_collapse_reference_scope
+        if scope is None or not scope.enabled:
+            return None
+        if scope.initialized:
+            return scope
+
+        self.current_facts()
+        scope = self._active_root_collapse_reference_scope
+        if scope is None or not scope.enabled:
+            return None
+        if not scope.initialized:
+            if self._dirty:
+                scope.invalidate()
+                return None
+            scope.initialized = True
+            scope.enabled = len(self._facts.data_type_fact_by_object) == len(self._facts.data_type_facts)
+        return scope if scope.enabled else None
+
+    def _root_collapse_has_data_type_references(
+        self,
+        reference: Reference,
+        *,
+        excluded_data_type: DataType | None = None,
+    ) -> bool | None:
+        """Return a scoped reference count, or ``None`` when incremental facts are unavailable."""
+        scope = self._root_collapse_scope_if_ready()
+        if scope is None:
+            return None
+
+        reference_id = id(reference)
+        if (count := scope.reference_counts.get(reference_id)) is None:
+            count = len(self._facts.reverse_edges.get(reference_id, ()))
+            scope.reference_counts[reference_id] = count
+        if excluded_data_type is not None:
+            excluded_fact = self._facts.data_type_fact_by_object.get(id(excluded_data_type))
+            if excluded_fact is None or excluded_fact.data_type is not excluded_data_type:
+                scope.invalidate()
+                return None
+            count -= excluded_fact.reference is reference
+        return count > 0
+
+    def _root_collapse_prepare_data_type_replacement(
+        self,
+        data_type: DataType,
+        new_data_type: DataType,
+    ) -> dict[int, int] | None:
+        """Prepare one replacement's reference deltas, or return ``None`` for fallback."""
+        scope = self._root_collapse_scope_if_ready()
+        if scope is None:
+            return None
+
+        data_type_fact = self._facts.data_type_fact_by_object.get(id(data_type))
+        if data_type_fact is None or data_type_fact.data_type is not data_type:
+            scope.invalidate()
+            return None
+
+        deltas: dict[int, int] = {}
+        seen_data_type_ids: set[int] = set()
+        for nested_data_type in new_data_type.all_data_types:
+            nested_data_type_id = id(nested_data_type)
+            if nested_data_type_id in seen_data_type_ids or nested_data_type_id in self._facts.data_type_fact_by_object:
+                scope.invalidate()
+                return None
+            seen_data_type_ids.add(nested_data_type_id)
+            if nested_data_type.reference:
+                reference_id = id(nested_data_type.reference)
+                deltas[reference_id] = deltas.get(reference_id, 0) + 1
+        for nested_data_type in data_type.all_data_types:
+            if nested_data_type.reference:
+                reference_id = id(nested_data_type.reference)
+                deltas[reference_id] = deltas.get(reference_id, 0) - 1
+        return deltas
+
+    def _root_collapse_apply_reference_deltas(self, deltas: dict[int, int]) -> bool:
+        """Apply reference-count deltas when every affected reference is tracked."""
+        scope = self._active_root_collapse_reference_scope
+        if scope is None or not scope.enabled:
+            return False
+
+        for reference_id, delta in deltas.items():
+            if delta and (
+                reference_id not in self._facts.model_by_ref_id and reference_id not in self._facts.reverse_edges
+            ):
+                scope.invalidate()
+                return False
+
+        for reference_id, delta in deltas.items():
+            if (count := scope.reference_counts.get(reference_id)) is None:
+                count = len(self._facts.reverse_edges.get(reference_id, ()))
+            count += delta
+            if count < 0:
+                scope.invalidate()
+                return False
+            scope.reference_counts[reference_id] = count
+        return True
+
+    def _root_collapse_record_reference_change(
+        self,
+        data_type: DataType,
+        old_reference: Reference | None,
+        new_reference: Reference | None,
+    ) -> bool:
+        """Update counts for one in-place reference replacement."""
+        if old_reference is new_reference:
+            return True
+        scope = self._root_collapse_scope_if_ready()
+        if scope is None:
+            return False
+        deltas: dict[int, int] = {}
+        if old_reference is not None:
+            deltas[id(old_reference)] = -1
+        if new_reference is not None:
+            new_reference_id = id(new_reference)
+            deltas[new_reference_id] = deltas.get(new_reference_id, 0) + 1
+        if (fact := self._facts.data_type_fact_by_object.get(id(data_type))) is None or fact.data_type is not data_type:
+            scope.invalidate()
+            return False
+        return self._root_collapse_apply_reference_deltas(deltas)
 
     @property
     def model_facts(self) -> dict[ModelId, ModelFact]:
@@ -702,6 +861,10 @@ class GenerationStore:  # noqa: PLR0904
     def _invalidate(self) -> None:
         """Invalidate derived facts after a store-managed mutation."""
         self._dirty = True
+        if scope := self._active_root_collapse_reference_scope:
+            scope.mutated = True
+            if not self._root_collapse_internal_mutation_depth:
+                scope.invalidate()
 
     def refresh(self) -> None:
         """Rebuild facts from the live model list."""
@@ -725,6 +888,12 @@ class GenerationStore:  # noqa: PLR0904
         self._next_model_id = result.next_model_id
         self._facts_version += 1
         self._dirty = False
+        if scope := self._active_root_collapse_reference_scope:
+            if scope.initialized:
+                scope.invalidate()
+            elif scope.enabled:
+                scope.initialized = True
+                scope.enabled = len(self._facts.data_type_fact_by_object) == len(self._facts.data_type_facts)
 
     def discard_derived_facts(self) -> None:
         """Release cached dependency facts while preserving stable model identities."""
@@ -733,10 +902,19 @@ class GenerationStore:  # noqa: PLR0904
             raise RuntimeError(msg)
         self._facts = GenerationFacts()
         self._dirty = True
+        if scope := self._active_root_collapse_reference_scope:
+            scope.mutated = True
+            scope.invalidate()
 
     def replace_data_type_ref(self, data_type: DataType, new_reference: Reference | None) -> None:
         """Set ``data_type.reference`` while preserving reverse reference links."""
         cache_owners = self._cache_owners_for_data_type(data_type)
+        scope = self._active_root_collapse_reference_scope
+        if self._root_collapse_internal_mutation_depth:
+            if scope is not None and scope.enabled:
+                self._root_collapse_record_reference_change(data_type, data_type.reference, new_reference)
+        elif scope is not None:
+            scope.invalidate()
         self._replace_data_type_reference(data_type, new_reference)
         self._invalidate_owner_caches(*cache_owners)
         self._invalidate_after_mutation()
@@ -795,11 +973,105 @@ class GenerationStore:  # noqa: PLR0904
         new_data_type: DataType,
     ) -> None:
         """Replace a nested data type with append-position compatibility."""
+        if parent_data_type.dict_key is old_data_type:
+            cache_owners = self._cache_owners_for_data_type(parent_data_type)
+            old_data_type.parent = None
+            parent_data_type.dict_key = new_data_type
+            new_data_type.parent = parent_data_type
+            self._invalidate_owner_caches(*cache_owners)
+            self._invalidate_after_mutation()
+            return
+
         old_id = id(old_data_type)
         self.set_nested_data_types(
             parent_data_type,
             (data_type for data_type in (*parent_data_type.data_types, new_data_type) if id(data_type) != old_id),
         )
+
+    @staticmethod
+    def _root_collapse_supports_incremental_replacement(
+        data_type: DataType,
+        new_data_type: DataType,
+        *,
+        owner: Any,
+        replacement_kind: Literal["field", "nested"],
+    ) -> bool:
+        """Return whether a replacement uses only built-in mutation/traversal hooks."""
+        if replacement_kind == "field":
+            from datamodel_code_generator.model.base import (  # noqa: PLC0415
+                DataModelFieldBase as RuntimeDataModelFieldBase,
+            )
+
+            if type(owner).replace_data_type is not RuntimeDataModelFieldBase.replace_data_type:
+                return False
+
+        from datamodel_code_generator.types import DataType as RuntimeDataType  # noqa: PLC0415
+
+        return (
+            type(data_type).all_data_types.fget is RuntimeDataType.all_data_types.fget
+            and type(new_data_type).all_data_types.fget is RuntimeDataType.all_data_types.fget
+        )
+
+    @contextmanager
+    def _replace_data_type_and_detach_data_type_ref(  # noqa: PLR0912
+        self,
+        data_type: DataType,
+        new_data_type: DataType,
+        *,
+        owner: Any,
+        replacement_kind: Literal["field", "nested"],
+    ) -> Generator[None, None, None]:
+        """Replace a data type, then detach its old reference after surrounding work."""
+        scope = self._active_root_collapse_reference_scope
+        if (
+            scope is not None
+            and scope.enabled
+            and not self._root_collapse_supports_incremental_replacement(
+                data_type,
+                new_data_type,
+                owner=owner,
+                replacement_kind=replacement_kind,
+            )
+        ):
+            scope.invalidate()
+        replacement_deltas = self._root_collapse_prepare_data_type_replacement(data_type, new_data_type)
+        if scope is not None and scope.enabled:
+            has_base_owner_alias = False
+        else:
+            facts = self._facts if not self._dirty else self.current_facts()
+            has_base_owner_alias = id(data_type) in facts.base_owner_model_ids_by_object
+        self._root_collapse_internal_mutation_depth += 1
+        try:
+            match replacement_kind:
+                case "field":
+                    self.replace_field_type(owner, new_data_type)
+                case "nested":  # pragma: no branch
+                    self.replace_nested_data_type(owner, data_type, new_data_type)
+        finally:
+            self._root_collapse_internal_mutation_depth -= 1
+        try:
+            yield
+        except BaseException:
+            if scope is not None:
+                scope.invalidate()
+            raise
+        if data_type.parent is not None or has_base_owner_alias:
+            if scope is not None:
+                scope.invalidate()
+            self._root_collapse_internal_mutation_depth += 1
+            try:
+                self.detach_data_type_ref(data_type)
+            finally:
+                self._root_collapse_internal_mutation_depth -= 1
+            return
+        if replacement_deltas is not None:
+            self._root_collapse_apply_reference_deltas(replacement_deltas)
+        self._root_collapse_internal_mutation_depth += 1
+        try:
+            self._replace_data_type_reference(data_type, None)
+            self._invalidate_after_mutation()
+        finally:
+            self._root_collapse_internal_mutation_depth -= 1
 
     def set_nested_data_types(self, data_type: DataType, nested_data_types: Iterable[DataType]) -> None:
         """Replace nested data types and invalidate derived facts."""
@@ -899,10 +1171,14 @@ class GenerationStore:  # noqa: PLR0904
 
     def collapse_root_data_type(self, data_type: DataType, inner_reference: Reference) -> None:
         """Replace a root-model data type with its inner reference."""
-        with self.defer_refresh():
-            if data_type.reference:
-                self._prune_reference_children(data_type.reference, excluded_child=data_type, require_parent=True)
-            self.replace_data_type_ref(data_type, inner_reference)
+        self._root_collapse_internal_mutation_depth += 1
+        try:
+            with self.defer_refresh():
+                if data_type.reference:
+                    self._prune_reference_children(data_type.reference, excluded_child=data_type, require_parent=True)
+                self.replace_data_type_ref(data_type, inner_reference)
+        finally:
+            self._root_collapse_internal_mutation_depth -= 1
 
     def detach_model_data_type_refs(self, model: DataModel) -> None:
         """Detach every referenced data type currently owned by ``model``."""
@@ -921,7 +1197,11 @@ class GenerationStore:  # noqa: PLR0904
             completed = True
         finally:
             try:
-                if completed and self._defer_refresh_depth == 1:
+                if (
+                    completed
+                    and self._defer_refresh_depth == 1
+                    and not ((scope := self._active_root_collapse_reference_scope) is not None and scope.enabled)
+                ):
                     self.refresh_now()
             finally:
                 self._defer_refresh_depth -= 1

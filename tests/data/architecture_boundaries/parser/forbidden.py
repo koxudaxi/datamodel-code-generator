@@ -1,5 +1,7 @@
 import importlib
 
+import datamodel_code_generator as dcg
+from datamodel_code_generator import _source
 import datamodel_code_generator.model.typed_dict
 from datamodel_code_generator.model import msgspec
 from ..model.pydantic_v2 import RootModel
@@ -10,6 +12,10 @@ BACKEND_MODULE = "datamodel_code_generator.model.dataclass"
 def load_backends():
     importlib.import_module(BACKEND_MODULE)
     return __import__("datamodel_code_generator.model.pydantic_base")
+
+
+def load_private_facade_helper():
+    return dcg._source
 
 
 def inspect_backend(value):

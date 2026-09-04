@@ -14,6 +14,7 @@ from datamodel_code_generator.imports import IMPORT_OPTIONAL, IMPORT_UNION, Impo
 from datamodel_code_generator.model import DataModel, DataModelFieldBase, _rebuild_model_with_datamodel_namespace
 from datamodel_code_generator.model._constraints import PatternConstraints as _Constraints
 from datamodel_code_generator.model.base import UNDEFINED, BaseClassDataType, _nested_model_default_factory
+from datamodel_code_generator.model.field_name import MsgspecFieldNameResolver
 from datamodel_code_generator.model.imports import (
     IMPORT_MSGSPEC_CONVERT,
     IMPORT_MSGSPEC_FIELD,
@@ -29,7 +30,7 @@ from datamodel_code_generator.python_literal import (
     represent_python_value,
     represent_untrusted_python_value,
 )
-from datamodel_code_generator.reference import ModelType
+from datamodel_code_generator.reference import FieldNameResolver, ModelType
 from datamodel_code_generator.types import (
     NONE,
     DataType,
@@ -48,6 +49,8 @@ class _UNSET:
 
 
 UNSET = _UNSET()
+
+
 _ANNOTATED_CONSTRAINTS_CONTEXT: object = object()
 
 
@@ -119,12 +122,14 @@ class Struct(DataModel):
     FIELD_ASSIGNMENT_CHECKER = staticmethod(has_field_assignment)
     FIELD_DEFAULT_CLASSIFIER = staticmethod(get_field_default_info)
     FIELD_NAME_MODEL_TYPE: ClassVar[ModelType] = ModelType.MSGSPEC
+    FIELD_NAME_RESOLVER_CLASS: ClassVar[type[FieldNameResolver]] = MsgspecFieldNameResolver
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = True
     SUPPORTS_INHERITED_DISCRIMINATOR_ENUM: ClassVar[bool] = True
     SUPPORTS_KW_ONLY: ClassVar[bool] = True
     REQUIRES_MODEL_LEVEL_KW_ONLY: ClassVar[bool] = True
     SUPPORTS_BOOLEAN_LITERAL: ClassVar[bool] = False
     REQUIRES_TAGGED_UNION_DISCRIMINATOR: ClassVar[bool] = True
+    REQUIRES_UNIQUE_FIELD_ALIASES: ClassVar[bool] = True
     SUPPORTS_ANNOTATED_CONSTRAINTS: ClassVar[bool] = True
     ANNOTATED_CONSTRAINTS_CONTEXT: ClassVar[object | None] = _ANNOTATED_CONSTRAINTS_CONTEXT
     REQUIRES_EXPLICIT_DEFERRED_ANNOTATIONS_FOR_FORWARD_REFS: ClassVar[bool] = True
@@ -180,7 +185,8 @@ class Struct(DataModel):
 
     def add_base_class_kwarg(self, name: str, value: str) -> None:
         """Add keyword argument to base class constructor."""
-        self.extra_template_data["base_class_kwargs"][name] = value
+        if isinstance((base_class_kwargs := self.extra_template_data.get("base_class_kwargs")), dict):
+            base_class_kwargs[name] = value
         self._internal_template_data["base_class_kwargs"][name] = value
 
     def _builtin_template_data(self) -> dict[str, Any]:
@@ -219,7 +225,10 @@ class Struct(DataModel):
 
     def has_keyword_only_definition(self) -> bool:
         """Return whether msgspec's class declaration already enables keyword-only fields."""
-        return self.extra_template_data["base_class_kwargs"].get("kw_only") in {True, "True"}
+        if self._internal_template_data["base_class_kwargs"].get("kw_only") == "True":
+            return True
+        base_class_kwargs = self.extra_template_data.get("base_class_kwargs")
+        return isinstance(base_class_kwargs, dict) and base_class_kwargs.get("kw_only") in {True, "True"}
 
     def enable_model_keyword_only(self) -> None:
         """Enable msgspec's class-level keyword-only option."""
@@ -374,7 +383,7 @@ class DataModelField(DataModelFieldBase):
     def _unset_union_data_type(self) -> DataType:
         unset_type = self._unset_type_data_type()
         if self._data_type_renders_none(self.data_type):
-            return unset_type
+            return self._ordered_union_data_type([self.data_type.__class__(type=NONE), unset_type])
 
         data_types = []
         has_none = self._field_has_top_level_none()

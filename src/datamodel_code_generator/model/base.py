@@ -31,7 +31,11 @@ from datamodel_code_generator.imports import (
     IMPORT_UNION,
     Import,
 )
-from datamodel_code_generator.python_literal import _normalize_string, represent_python_value
+from datamodel_code_generator.python_literal import (
+    _make_internal_type_expression,
+    _normalize_string,
+    represent_python_value,
+)
 from datamodel_code_generator.reference import Reference, _BaseModel
 from datamodel_code_generator.types import (
     ANY,
@@ -57,6 +61,9 @@ _TYPING_IMPORT_NAMES: frozenset[str] = frozenset({
     IMPORT_UNION.import_,
 })
 _ADDITIONAL_PROPERTIES_REFERENCE_CLASSES_TEMPLATE_DATA_KEY = "additionalPropertiesReferenceClasses"
+_ADDITIONAL_PROPERTIES_TEMPLATE_DATA_KEY = "additionalProperties"
+_ADDITIONAL_PROPERTIES_TYPE_TEMPLATE_DATA_KEY = "additionalPropertiesType"
+_USE_TYPED_DICT_BACKPORT_TEMPLATE_DATA_KEY = "use_typeddict_backport"
 _MODULE_NAME_INVALID_CHAR_PATTERN = re.compile(r"[^0-9a-zA-Z_]")
 _MODULE_NAME_INVALID_CHAR_WITH_DOTS_PATTERN = re.compile(r"[^0-9a-zA-Z_.]")
 _MAX_MISSING_CUSTOM_TEMPLATE_SUBDIRS = 128
@@ -991,6 +998,7 @@ class DataModelFieldBase(_BaseModel):  # noqa: PLR0904
             data_type.is_mapping,
             data_type.is_sequence,
             data_type.is_tuple,
+            data_type.tuple_item_count,
             data_type.use_standard_collections,
             data_type.use_generic_container,
             data_type.use_union_operator,
@@ -1345,6 +1353,12 @@ def _clear_custom_template_caches() -> None:
         _get_template_with_custom_dir.cache_clear()
         _get_environment_with_absolute_path.cache_clear()
         _get_template_with_absolute_path.cache_clear()
+        if (
+            pydantic_v2_base_model := sys.modules.get("datamodel_code_generator.model.pydantic_v2.base_model")
+        ) is not None:
+            legacy_template_cache = getattr(pydantic_v2_base_model, "_uses_legacy_pydantic_extra_template", None)
+            if (cache_clear := getattr(legacy_template_cache, "cache_clear", None)) is not None:
+                cache_clear()
         _missing_custom_template_state.paths.clear()
         _missing_custom_template_state.count = 0
         _missing_custom_template_state.overflow = False
@@ -1491,6 +1505,9 @@ class TemplateBase(ABC):
 class BaseClassDataType(DataType):
     """DataType subclass for base class references."""
 
+    def _apply_nullable_from_reference(self) -> None:
+        """Keep nullable model references out of class inheritance clauses."""
+
 
 UNDEFINED: Any = object()
 
@@ -1540,6 +1557,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     SUPPORTS_TREE_SCOPE_REUSE_MODEL_INHERITANCE: ClassVar[bool] = False
     # Kept opaque so this generic layer does not import reference-layer policy.
     FIELD_NAME_MODEL_TYPE: ClassVar[Any] = None
+    FIELD_NAME_RESOLVER_CLASS: ClassVar[Any] = None
     USES_DATACLASS_ARGUMENTS: ClassVar[bool] = False
     SUPPORTS_REQUIRED_INHERITED_FIELD_ASSIGNMENT: ClassVar[bool] = False
     REQUIRES_EXPLICIT_INHERITED_FACTORY_OVERRIDE: ClassVar[bool] = False
@@ -1552,6 +1570,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     SUPPORTS_BOOLEAN_LITERAL: ClassVar[bool] = True
     REQUIRES_FIELD_DEPENDENCY_ORDERING: ClassVar[bool] = False
     REQUIRES_TAGGED_UNION_DISCRIMINATOR: ClassVar[bool] = False
+    REQUIRES_UNIQUE_FIELD_ALIASES: ClassVar[bool] = False
     REQUIRES_ADDITIONAL_PROPERTIES_REFERENCE_CLASSES: ClassVar[bool] = False
     SUPPORTS_TYPED_DICT_TOTAL_FALSE: ClassVar[bool] = False
     SUPPORTS_DESERIALIZED_DEFAULT_VALUES: ClassVar[bool] = True
@@ -1562,6 +1581,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     REQUIRES_RUNTIME_IMPORTS_WITH_RUFF_CHECK: ClassVar[bool] = False
     REQUIRES_EXPLICIT_DEFERRED_ANNOTATIONS_FOR_FORWARD_REFS: ClassVar[bool] = False
     SUPPORTS_SCHEMA_RUNTIME_VALIDATION: ClassVar[bool] = False
+    SCHEMA_RUNTIME_VALIDATION_ROOT_MODEL: ClassVar[Callable[[], type[DataModel]] | None] = None
     DOCSTRING_INDENT: ClassVar[int] = 4
     FIELD_DOCSTRING_INDENT: ClassVar[int] = 4
     FORMAT_DESCRIPTION_AS_DOCSTRING: ClassVar[bool] = True
@@ -1639,6 +1659,69 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         return configured_root_model_type
 
     @staticmethod
+    def store_additional_properties_value(
+        extra_template_data: dict[str, Any],
+        *,
+        value: bool,
+        use_backport: bool = False,
+    ) -> None:
+        """Store an additional-properties constraint in model-owned metadata."""
+        extra_template_data[_ADDITIONAL_PROPERTIES_TEMPLATE_DATA_KEY] = value
+        if use_backport:
+            extra_template_data[_USE_TYPED_DICT_BACKPORT_TEMPLATE_DATA_KEY] = True
+
+    @staticmethod
+    def has_additional_properties_type(extra_template_data: dict[str, Any]) -> bool:
+        """Return whether model metadata contains a typed additional-properties entry."""
+        return _ADDITIONAL_PROPERTIES_TYPE_TEMPLATE_DATA_KEY in extra_template_data
+
+    @classmethod
+    def store_additional_properties_type(  # noqa: PLR0913
+        cls,
+        extra_template_data: dict[str, Any],
+        type_hint: str,
+        reference_classes: set[str] | None = None,
+        *,
+        root_model_type: type[DataModel] | None = None,
+        imports: tuple[Import, ...] = (),
+        use_backport: bool = False,
+    ) -> None:
+        """Store typed additional-properties metadata and its dependencies."""
+        del imports
+        expression = repr(str(type_hint)) if reference_classes else type_hint
+        extra_template_data[_ADDITIONAL_PROPERTIES_TYPE_TEMPLATE_DATA_KEY] = _make_internal_type_expression(
+            type_hint,
+            expression,
+        )
+        if use_backport:
+            extra_template_data[_USE_TYPED_DICT_BACKPORT_TEMPLATE_DATA_KEY] = True
+        if reference_classes is not None:
+            cls.store_additional_properties_reference_classes(
+                extra_template_data,
+                reference_classes,
+                root_model_type=root_model_type,
+            )
+
+    @classmethod
+    def store_additional_properties_reference_classes(
+        cls,
+        extra_template_data: dict[str, Any],
+        reference_classes: set[str],
+        *,
+        root_model_type: type[DataModel] | None = None,
+    ) -> None:
+        """Store dependency metadata for every configured output model shape."""
+        store_data_model_metadata = cls._store_additional_properties_reference_classes
+        store_data_model_metadata(extra_template_data, reference_classes)
+        if root_model_type is None or root_model_type is cls:
+            return
+        # Keep legacy custom output hooks working without exposing them to parsers.
+        store_root_model_metadata = root_model_type._store_additional_properties_reference_classes  # noqa: SLF001
+        if store_root_model_metadata is store_data_model_metadata:
+            return
+        store_root_model_metadata(extra_template_data, reference_classes)
+
+    @staticmethod
     def _store_additional_properties_reference_classes(
         extra_template_data: dict[str, Any],
         reference_classes: set[str],
@@ -1650,6 +1733,11 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     def _additional_properties_reference_classes(self) -> Collection[str]:
         """Return model-owned dependencies contributed by additional properties."""
         return self.extra_template_data.get(_ADDITIONAL_PROPERTIES_REFERENCE_CLASSES_TEMPLATE_DATA_KEY, ())
+
+    @property
+    def additional_properties_reference_classes(self) -> Collection[str]:
+        """Return dependencies contributed by model-owned additional properties."""
+        return self._additional_properties_reference_classes
 
     def __init__(  # noqa: PLR0913
         self,

@@ -123,11 +123,12 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
         self.use_union_operator = self.config.use_union_operator
 
     def _resolve_types(self, paths: list[str], schema: graphql.GraphQLSchema) -> None:
+        root_types = {schema.query_type, schema.mutation_type, schema.subscription_type}
         for type_name, type_ in schema.type_map.items():
             if type_name.startswith("__"):
                 continue
 
-            if type_name in {"Query", "Mutation"}:
+            if type_ in root_types:
                 continue
 
             resolved_type = graphql_resolver_kind(type_, None)
@@ -340,9 +341,11 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
         obj = graphql.assert_named_type(obj)
         if obj.name in self.references:
             self.generation_store.replace_data_type_ref(data_type, self.references[obj.name])
-        else:  # pragma: no cover
-            # Only happens for Query and Mutation root types
-            data_type.type = obj.name
+        else:
+            # Operation roots are intentionally not emitted as models.
+            any_data_type = self.data_type_manager.get_data_type(Types.any)
+            data_type.type = any_data_type.type
+            data_type.import_ = any_data_type.import_
 
         has_schema_default = self._has_schema_default(field)
         required = (
@@ -353,12 +356,10 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
         nullable = False if has_schema_default and not final_data_type.is_optional else None
 
         default = self._get_default(field, final_data_type, required=required)
-        has_default = has_schema_default
-
         effective_default, effective_has_default, use_default_with_required = self._effective_default_state(
             original_field_name,
             default,
-            has_default=has_default,
+            has_default=has_schema_default,
             required=required,
             class_name=class_name,
         )

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 import importlib.util
 import itertools
 import json
@@ -1440,6 +1441,21 @@ def test_main_jsonschema_reserved_field_names(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_reserved_field_names_are_output_owned(output_file: Path) -> None:
+    """Keep Pydantic reserved names unchanged for neutral dataclass output."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reserved_property.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="reserved_property_dataclass.py",
+        extra_args=["--output-model-type", "dataclasses.dataclass"],
+        force_exec_validation=True,
+        importable_module_name="generated_reserved_property_dataclass",
+        importable_module_attribute="ReservedNames",
+    )
+
+
 def test_main_jsonschema_pydantic_v2_valid_field_names_fast_path(output_file: Path) -> None:
     """Generate ordinary Pydantic v2 field names with the built-in formatter."""
     run_main_and_assert(
@@ -2087,6 +2103,68 @@ def test_main_external_files_in_directory(output_file: Path) -> None:
         input_file_type="jsonschema",
         assert_func=assert_file_content,
     )
+
+
+def test_main_external_files_in_directory_collapse_keeps_import_aliases(output_dir: Path) -> None:
+    """Deep-copy cross-module root types before assigning an import alias."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "external_files_in_directory",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        output_to_expected=[
+            ("definitions/friends.py", "external_files_in_directory_collapse/friends.py"),
+        ],
+        extra_args=["--collapse-root-models", "--disable-timestamp", "--formatters", "builtin"],
+    )
+    module_name = f"{output_dir.name}.definitions.friends"
+    sys.path.insert(0, str(output_dir.parent))
+    try:
+        module = importlib.import_module(module_name)
+        annotation = module.Friends.model_fields["root"].annotation
+        assert_output(
+            f"{'present' if annotation is not None else 'missing'}\n",
+            EXPECTED_JSON_SCHEMA_PATH / "external_files_in_directory_collapse/friends_runtime.txt",
+        )
+    finally:
+        sys.path.remove(str(output_dir.parent))
+        for loaded_module in tuple(sys.modules):
+            if loaded_module == output_dir.name or loaded_module.startswith(f"{output_dir.name}."):
+                del sys.modules[loaded_module]
+
+
+def test_main_jsonschema_reuse_scope_tree_relative_imports(output_dir: Path) -> None:
+    """Resolve tree-reuse imports from the generated module without changing its header path."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "naming_strategy",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        output_to_expected=[
+            ("primary_first_multi_file/external1.py", "reuse_scope_tree_relative_import/external1.py"),
+        ],
+        extra_args=[
+            "--reuse-model",
+            "--reuse-scope",
+            "tree",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+    )
+    sys.path.insert(0, str(output_dir.parent))
+    try:
+        for module_suffix in (
+            "primary_first_multi_file.external1",
+            "primary_first_multi_file.external2",
+            "primary_first_multi_file.main",
+        ):
+            importlib.import_module(f"{output_dir.name}.{module_suffix}")
+    finally:
+        sys.path.remove(str(output_dir.parent))
+        for loaded_module in tuple(sys.modules):
+            if loaded_module == output_dir.name or loaded_module.startswith(f"{output_dir.name}."):
+                del sys.modules[loaded_module]
 
 
 def test_main_jsonschema_local_reference_file_cache(output_file: Path) -> None:
@@ -3606,6 +3684,30 @@ def test_main_generate_pydantic_v2_dataclass_field(output_file: Path) -> None:
         expected_file="pydantic_v2_dataclass_field.py",
         output_model_type=DataModelType.PydanticV2Dataclass,
     )
+    module_name = "generated_pydantic_v2_dataclass_field"
+    spec = importlib.util.spec_from_file_location(module_name, output_file)
+    if spec is None or spec.loader is None:  # pragma: no cover
+        pytest.fail(f"Unable to load generated module from {output_file}", pytrace=False)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    try:
+        spec.loader.exec_module(module)
+        first = module.Product(id=1, name="first", price=1)
+        second = module.Product(id=2, name="second", price=2)
+        assert_mutable_copy_is_isolated(
+            original=second.tags,
+            copied=first.tags,
+            mutate_copied=lambda value: value.append("tag"),
+            label="pydantic dataclass list default",
+        )
+        assert_mutable_copy_is_isolated(
+            original=second.metadata,
+            copied=first.metadata,
+            mutate_copied=lambda value: value.update(key="value"),
+            label="pydantic dataclass dict default",
+        )
+    finally:
+        sys.modules.pop(module_name, None)
 
 
 def test_main_generate_pydantic_v2_dataclass_required_field_order(output_file: Path) -> None:
@@ -4242,6 +4344,27 @@ def test_main_jsonschema_special_model_remove_special_field_name_prefix(output_f
         assert_func=assert_file_content,
         expected_file="special_model_remove_special_field_name_prefix.py",
         extra_args=["--remove-special-field-name-prefix"],
+    )
+
+
+def test_main_jsonschema_remove_special_prefix_preserves_underscore_alias(output_file: Path) -> None:
+    """Keep an all-underscore property public and addressable by its source alias."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "underscore_property.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="underscore_property.py",
+        extra_args=["--remove-special-field-name-prefix"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="underscore_property_validation",
+        model_name="UnderscoreProperty",
+        valid_json='{"_": "value", "__name": "name"}',
+        invalid_json='{"__name": "name"}',
+        expected_error_type="missing",
     )
 
 
@@ -5706,6 +5829,7 @@ def test_jsonschema_array_type_union_self_ref(output_file: Path) -> None:
             "3.10",
             "--use-standard-collections",
             "--use-union-operator",
+            "--collapse-root-models",
             "--disable-timestamp",
         ],
         force_exec_validation=True,
@@ -7914,6 +8038,29 @@ def test_main_jsonschema_additional_properties_schema_with_allof_ref(output_file
     )
 
 
+def test_main_jsonschema_allof_mapping_object_type_list(output_file: Path) -> None:
+    """Merge object-only type lists with inline typed additional properties."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_mapping_object_type_list.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="allof_mapping_object_type_list.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_mapping_object_type_list",
+        model_name="AllOfObjectTypeListExtra",
+        valid_json='{"size":1}',
+        invalid_json='{"size":[]}',
+        expected_error_type="int_type",
+        expected_attribute_path=("root", "size"),
+        expected_attribute_value=1,
+    )
+
+
 def test_main_jsonschema_additional_properties_enum_schema_with_properties(output_file: Path) -> None:
     """Test additionalProperties enum schema validates typed extra values."""
     run_main_and_assert(
@@ -9115,6 +9262,55 @@ def test_main_typed_dict_extra_items(output_file: Path) -> None:
     black.__version__.split(".")[0] == "22",
     reason="Installed black doesn't support Python version 3.10",
 )
+def test_main_typed_dict_extra_items_imports(output_file: Path) -> None:
+    """TypedDict extra_items carries imports required by its value type."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "typed_dict_extra_items_datetime.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="typed_dict_extra_items_datetime.py",
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--target-python-version",
+            "3.10",
+            "--output-datetime-class",
+            "datetime",
+        ],
+        force_exec_validation=True,
+    )
+
+
+@pytest.mark.parametrize(("output_model_type", "expected_name"), BACKEND_GOLDEN_CASES)
+def test_main_additional_properties_output_context(
+    output_file: Path,
+    output_model_type: str,
+    expected_name: str,
+) -> None:
+    """Preserve typed additional-properties output across every backend."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "typed_dict_extra_items.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=f"output_context/typed_extra_{expected_name}.py",
+        extra_args=[
+            *BACKEND_GOLDEN_TARGET_ARGS,
+            "--formatters",
+            "builtin",
+            "--output-model-type",
+            output_model_type,
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+    )
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "22",
+    reason="Installed black doesn't support Python version 3.10",
+)
 def test_main_typed_dict_allof_extra_items(output_file: Path) -> None:
     """Test TypedDict extra_items can infer an allOf reference type."""
     run_main_and_assert(
@@ -10247,6 +10443,66 @@ def test_main_msgspec_null_field(output_file: Path) -> None:
             "--target-python-version",
             "3.10",
         ],
+        force_exec_validation=True,
+    )
+    import msgspec
+
+    with _generated_model(output_file, "msgspec_null_field", "Model") as model:
+        explicit_null = msgspec.json.decode(b'{"required_null":null,"optional_null":null}', type=model)
+        missing_null = msgspec.json.decode(b'{"required_null":null}', type=model)
+        if explicit_null.optional_null is not None:  # pragma: no cover
+            pytest.fail(f"Expected explicit null, got {explicit_null.optional_null!r}")
+        if missing_null.optional_null is not msgspec.UNSET:  # pragma: no cover
+            pytest.fail(f"Expected omitted null to stay UNSET, got {missing_null.optional_null!r}")
+
+
+@MSGSPEC_LEGACY_BLACK_SKIP
+def test_main_msgspec_boolean_enum_literal(output_file: Path) -> None:
+    """Msgspec enum literals lower boolean values to bool rather than Literal."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "msgspec_boolean_enum_literal.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="msgspec_boolean_enum_literal.py",
+        extra_args=[
+            "--output-model-type",
+            "msgspec.Struct",
+            "--enum-field-as-literal",
+            "all",
+            "--use-union-operator",
+            "--target-python-version",
+            "3.10",
+            "--formatters",
+            "builtin",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+    )
+
+
+@MSGSPEC_LEGACY_BLACK_SKIP
+def test_main_msgspec_non_dict_base_class_kwargs(output_file: Path) -> None:
+    """Malformed public msgspec kwargs do not block generator-owned kw_only output."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "simple_string.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="msgspec_non_dict_base_class_kwargs.py",
+        extra_args=[
+            "--output-model-type",
+            "msgspec.Struct",
+            "--keyword-only",
+            "--extra-template-data",
+            str(JSON_SCHEMA_DATA_PATH / "extra_data_msgspec_non_dict.json"),
+            "--target-python-version",
+            "3.10",
+            "--formatters",
+            "builtin",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
     )
 
 
@@ -12755,6 +13011,28 @@ def test_main_jsonschema_collapse_root_models_nested_reference(output_file: Path
     )
 
 
+def test_main_jsonschema_collapse_root_models_atomic_replace(output_file: Path) -> None:
+    """Keep field and nested root replacements byte-for-byte stable."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_atomic_replace.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=["--collapse-root-models", "--disable-timestamp", "--formatters", "builtin"],
+    )
+
+
+def test_main_jsonschema_collapse_root_models_scalar_atomic_replace(output_file: Path) -> None:
+    """Track unshared scalar root replacements without changing generated output."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_scalar_atomic_replace.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=["--collapse-root-models", "--disable-timestamp", "--formatters", "builtin"],
+    )
+
+
 def test_main_jsonschema_collapse_root_models_self_reference(output_file: Path) -> None:
     """Keep self-referential root models named instead of collapsing them infinitely."""
     run_main_and_assert(
@@ -12763,6 +13041,117 @@ def test_main_jsonschema_collapse_root_models_self_reference(output_file: Path) 
         input_file_type="jsonschema",
         assert_func=assert_file_content,
         extra_args=["--collapse-root-models", "--formatters", "builtin"],
+        force_exec_validation=True,
+    )
+
+
+def test_main_jsonschema_collapse_root_models_container_constraints(output_file: Path) -> None:
+    """Keep constrained array and mapping roots named when field constraints are disabled."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_container_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="collapse_root_models_container_constraints.py",
+        extra_args=[
+            "--collapse-root-models",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+        force_exec_validation=True,
+    )
+
+
+def test_main_jsonschema_collapse_root_models_container_field_constraints(output_file: Path) -> None:
+    """Keep constrained mapping roots named while moving supported list constraints to fields."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_container_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="collapse_root_models_container_field_constraints.py",
+        extra_args=[
+            "--collapse-root-models",
+            "--field-constraints",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+        force_exec_validation=True,
+    )
+
+
+def test_main_jsonschema_collapse_root_models_property_names_reference(output_file: Path) -> None:
+    """Replace collapsed property-name references stored as mapping keys."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_property_names_reference.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="collapse_root_models_property_names_reference.py",
+        extra_args=[
+            "--output-model-type",
+            DataModelType.PydanticV2BaseModel.value,
+            "--target-python-version",
+            "3.10",
+            "--collapse-root-models",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+        force_exec_validation=True,
+    )
+
+
+def test_main_jsonschema_rename_preserves_source_alias(output_file: Path) -> None:
+    """Do not replace an explicit source alias while avoiding a class-name collision."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "rename_preserve_source_alias.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="rename_preserve_source_alias.py",
+        extra_args=[
+            "--output-model-type",
+            DataModelType.PydanticV2BaseModel.value,
+            "--aliases",
+            str(ALIASES_DATA_PATH / "rename_preserve_source_alias.json"),
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="rename_preserve_source_alias",
+        model_name="Payload",
+        valid_json='{"x":{"value":"ok"}}',
+        invalid_json='{"Foo":{"value":"ok"}}',
+        expected_error_type="missing",
+    )
+
+
+def test_main_jsonschema_nullable_root_reuse_keeps_class_base(output_file: Path) -> None:
+    """Reuse nullable root models as classes, not as Optional base expressions."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "nullable_reuse.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="nullable_reuse.py",
+        extra_args=[
+            "--output-model-type",
+            DataModelType.PydanticV2BaseModel.value,
+            "--target-python-version",
+            "3.10",
+            "--use-union-operator",
+            "--reuse-model",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
         force_exec_validation=True,
     )
 
@@ -12818,7 +13207,7 @@ def test_main_jsonschema_collapse_root_models_parse_warning_emitted_once(output_
 def test_main_jsonschema_collapse_root_models_dict_key_self_reference_preserves_legacy_output(
     output_file: Path,
 ) -> None:
-    """Leave dict-key-only root references collapsed when the recursion retry is not needed."""
+    """Keep dict-key-only circular roots named before they can produce invalid annotations."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_dict_key_self_reference_legacy.json",
         output_path=output_file,
@@ -12826,7 +13215,7 @@ def test_main_jsonschema_collapse_root_models_dict_key_self_reference_preserves_
         assert_func=assert_file_content,
         expected_file="collapse_root_models_dict_key_self_reference_legacy.py",
         extra_args=["--collapse-root-models", "--disable-timestamp", "--formatters", "builtin"],
-        skip_code_validation=True,
+        force_exec_validation=True,
     )
 
 
@@ -12838,6 +13227,23 @@ def test_main_jsonschema_collapse_root_models_transitive_reference_cycle(output_
         input_file_type="jsonschema",
         assert_func=assert_file_content,
         extra_args=["--collapse-root-models"],
+    )
+
+
+def test_main_jsonschema_collapse_root_models_nested_cycle_and_empty(output_file: Path) -> None:
+    """Collapse an acyclic wrapper without descending forever through nested models."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_nested_cycle_and_empty.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=[
+            "--collapse-root-models",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+        force_exec_validation=True,
     )
 
 

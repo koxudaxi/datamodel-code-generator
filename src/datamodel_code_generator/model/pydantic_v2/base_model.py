@@ -31,6 +31,7 @@ from datamodel_code_generator.model.base import (
     DataModelFieldBase,
     _get_template_with_custom_dir,
 )
+from datamodel_code_generator.model.field_name import PydanticFieldNameResolver
 from datamodel_code_generator.model.imports import IMPORT_CLASSVAR
 from datamodel_code_generator.model.pydantic_base import (
     BaseModelBase,
@@ -76,7 +77,7 @@ from datamodel_code_generator.python_literal import (
     _normalize_string,
     represent_untrusted_python_value,
 )
-from datamodel_code_generator.reference import ModelResolver, ModelType
+from datamodel_code_generator.reference import FieldNameResolver, ModelResolver, ModelType
 from datamodel_code_generator.types import chain_as_tuple
 
 if TYPE_CHECKING:
@@ -146,6 +147,13 @@ def _supports_pydantic_typed_extra_dict_key(data_type: DataType) -> bool:  # noq
         ):
             return True
     return False
+
+
+def _get_schema_runtime_validation_root_model() -> type[DataModel]:
+    """Return the executable root model owned by the Pydantic v2 output."""
+    from datamodel_code_generator.model.pydantic_v2.root_model import RootModel  # noqa: PLC0415
+
+    return RootModel
 
 
 class Constraints(_Constraints):
@@ -817,11 +825,13 @@ class BaseModel(BaseModelBase):
     BASE_CLASS_ALIAS: ClassVar[str] = "_BaseModel"
     SUPPORTS_TREE_SCOPE_REUSE_MODEL_INHERITANCE: ClassVar[bool] = True
     FIELD_NAME_MODEL_TYPE: ClassVar[ModelType] = ModelType.PYDANTIC
+    FIELD_NAME_RESOLVER_CLASS: ClassVar[type[FieldNameResolver]] = PydanticFieldNameResolver
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = True
     SUPPORTS_INHERITED_DISCRIMINATOR_ENUM: ClassVar[bool] = True
     SUPPORTS_FIELD_RENAMING: ClassVar[bool] = True
     SUPPORTS_ANNOTATED_CONSTRAINTS: ClassVar[bool] = True
     SUPPORTS_SCHEMA_RUNTIME_VALIDATION: ClassVar[bool] = True
+    SCHEMA_RUNTIME_VALIDATION_ROOT_MODEL = staticmethod(_get_schema_runtime_validation_root_model)
     ANNOTATED_CONSTRAINTS_CONTEXT: ClassVar[object | None] = _ANNOTATED_CONSTRAINTS_CONTEXT
     SUPPORTS_CONFIG_EXTRA: ClassVar[bool] = True
     SUPPORTS_ARBITRARY_TYPES_ALLOWED: ClassVar[bool] = True

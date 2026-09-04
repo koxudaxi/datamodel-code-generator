@@ -52,6 +52,12 @@ EXPECTED_STARTUP_MEASUREMENT_CASES = {
 
 
 @pytest.fixture(scope="module")
+def openapi_large_yaml_text() -> str:
+    """Read the YAML constructor benchmark input outside the measured call."""
+    return (PERFORMANCE_DATA_PATH / "openapi_large.yaml").read_text(encoding="utf-8")
+
+
+@pytest.fixture(scope="module")
 def simple_pydantic_v2_data_types() -> list[DataType]:
     """Prepare normalized types outside the field-construction benchmark."""
     return [DataType(type="str") for _ in range(5000)]
@@ -174,6 +180,19 @@ def unique_items_performance_schema() -> dict[str, object]:
                 "items": {"type": "integer"},
             }
         },
+    }
+
+
+@pytest.fixture(scope="module")
+def scalar_root_performance_schema() -> dict[str, object]:
+    """Prepare unshared scalar root references outside the measured call."""
+    field_count = 500
+    return {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "ScalarRootPerformance",
+        "type": "object",
+        "properties": {f"value_{index}": {"$ref": "#/$defs/Value"} for index in range(field_count)},
+        "$defs": {"Value": {"type": "string"}},
     }
 
 
@@ -506,6 +525,44 @@ def test_perf_unique_items_schema_validators(
 
 @pytest.mark.perf
 @pytest.mark.benchmark
+def test_perf_unique_items_collapsed_builtin(
+    unique_items_performance_schema: dict[str, object],
+) -> None:
+    """Track collapsed root-model replacement with the builtin formatter."""
+    result = generate(
+        unique_items_performance_schema,
+        input_file_type=InputFileType.JsonSchema,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        collapse_root_models=True,
+        disable_timestamp=True,
+        formatters=[Formatter.BUILTIN],
+    )
+    assert isinstance(result, str)
+    assert "class UniqueItemsPerformance(BaseModel):" in result
+    assert result.endswith("    value_499: list[int] | None = None")
+
+
+@pytest.mark.perf
+@pytest.mark.benchmark
+def test_perf_scalar_root_collapsed_builtin(
+    scalar_root_performance_schema: dict[str, object],
+) -> None:
+    """Track incremental root-reference counts with the builtin formatter."""
+    result = generate(
+        scalar_root_performance_schema,
+        input_file_type=InputFileType.JsonSchema,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        collapse_root_models=True,
+        disable_timestamp=True,
+        formatters=[Formatter.BUILTIN],
+    )
+    assert isinstance(result, str)
+    assert "class ScalarRootPerformance(BaseModel):" in result
+    assert result.endswith("    value_499: str | None = None")
+
+
+@pytest.mark.perf
+@pytest.mark.benchmark
 def test_perf_unique_items_runtime_scalar_validation(
     unique_items_runtime_model: Any,
     unique_items_scalar_payload: list[int],
@@ -560,7 +617,7 @@ def test_perf_pattern_properties_adapter_reuse(
     [
         (["-m", "datamodel_code_generator.__main__", "--version"], "datamodel-codegen "),
         (["-m", "datamodel_code_generator.__main__", "--help"], "usage:"),
-        (["-m", "datamodel_code_generator.__main__", "--list-deprecations"], "Warning since"),
+        (["-m", "datamodel_code_generator.__main__", "--list-deprecations"], "Since"),
     ],
 )
 def test_perf_cli_fast_path_subprocesses(args: list[str], expected_text: str) -> None:
@@ -724,6 +781,23 @@ def test_perf_large_models_pydantic_v2_noformat(tmp_path: Path) -> None:
         output=output_file,
         output_model_type=DataModelType.PydanticV2BaseModel,
         formatters=[],
+    )
+    content = output_file.read_text()
+    assert content.count("class Model") >= 500
+
+
+@pytest.mark.perf
+@pytest.mark.benchmark
+def test_perf_large_models_pydantic_v2_builtin_double_quotes(tmp_path: Path) -> None:
+    """Benchmark built-in string normalization when generated output has no quote candidates."""
+    output_file = tmp_path / "output.py"
+    generate(
+        input_=PERFORMANCE_DATA_PATH / "large_models.json",
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        formatters=[Formatter.BUILTIN],
+        use_double_quotes=True,
     )
     content = output_file.read_text()
     assert content.count("class Model") >= 500
@@ -947,6 +1021,15 @@ def test_perf_multiple_files_to_multiple_outputs(tmp_path: Path) -> None:
     assert output_dir.exists()
     py_files = list(output_dir.glob("**/*.py"))
     assert len(py_files) >= 1
+
+
+@pytest.mark.perf
+@pytest.mark.benchmark
+def test_perf_load_yaml_openapi_large(openapi_large_yaml_text: str) -> None:
+    """Benchmark production YAML loading without including fixture I/O."""
+    from datamodel_code_generator._source import load_yaml
+
+    load_yaml(openapi_large_yaml_text)
 
 
 @pytest.mark.perf

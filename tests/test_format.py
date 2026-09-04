@@ -7,6 +7,7 @@ import pickle
 import shutil
 import subprocess
 import sys
+import tokenize
 import warnings
 from pathlib import Path
 from typing import cast
@@ -63,6 +64,16 @@ BUILTIN_FORMATTER_LOCAL_CONSTANTS = {
     "STRING_PREFIX_PATTERN",
 }
 BUILTIN_FORMATTER_EXPECTED_PATH = Path(__file__).parent / "data" / "expected" / "builtin_formatter"
+BUILTIN_STRING_NORMALIZATION_INPUT_PATH = (
+    Path(__file__).parent / "data" / "python" / "builtin_formatter_string_normalization.txt"
+)
+BUILTIN_STRING_NORMALIZATION_EXPECTED_PATH = BUILTIN_FORMATTER_EXPECTED_PATH / (
+    "string_normalization.txt" if sys.version_info[:2] >= (3, 12) else "string_normalization_legacy.txt"
+)
+BUILTIN_PEP695_INVALID_INPUT_PATH = Path(__file__).parent / "data" / "python" / "builtin_formatter_pep695_invalid.txt"
+BUILTIN_PEP695_INVALID_EXPECTED_PATH = BUILTIN_FORMATTER_EXPECTED_PATH / (
+    "pep695_invalid.txt" if sys.version_info[:2] >= (3, 12) else "pep695_invalid_legacy.txt"
+)
 
 
 def test_builtin_formatter_moved_names_are_reexported() -> None:
@@ -841,6 +852,87 @@ def test_apply_builtin_formatter_normalizes_simple_string_quotes() -> None:
     )
 
 
+def test_builtin_formatter_string_normalization_fixture() -> None:
+    """Keep quote normalization and its no-op path byte-compatible across source shapes."""
+    formatted_cases: list[str] = []
+    corpus = BUILTIN_STRING_NORMALIZATION_INPUT_PATH.read_text(encoding="utf-8")
+    for case in corpus.split("\n---CASE---\n"):
+        name, source = case.split("\n", 1)
+        formatted = apply_builtin_formatter(
+            source,
+            string_normalization=True,
+        )
+        formatted_cases.append(f"[{name}]\n{formatted}")
+
+    assert_output(
+        "\n".join(formatted_cases),
+        BUILTIN_STRING_NORMALIZATION_EXPECTED_PATH,
+    )
+
+
+def test_builtin_formatter_string_normalization_preserves_pep695_invalid_errors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Keep tokenizer errors from invalid PEP 695 fallback sources unchanged."""
+    monkeypatch.setattr(builtin_formatter.sys, "version_info", (3, 11, 0, "final", 0))
+    formatted_cases: list[str] = []
+    corpus = BUILTIN_PEP695_INVALID_INPUT_PATH.read_text(encoding="utf-8")
+    for case in corpus.split("\n---CASE---\n"):
+        name, source = case.split("\n", 1)
+        try:
+            apply_builtin_formatter(
+                source,
+                python_version=PythonVersion.PY_312,
+                string_normalization=True,
+            )
+        except tokenize.TokenError as error:
+            formatted_cases.append(f"[{name}]\n{type(error).__name__}\n")
+        else:
+            formatted_cases.append(f"[{name}]\n{source}")
+
+    assert_output(
+        "\n".join(formatted_cases),
+        BUILTIN_PEP695_INVALID_EXPECTED_PATH,
+    )
+
+
+def test_builtin_formatter_string_normalization_fallback_handles_private_inputs() -> None:
+    """Keep the private normalization helper safe for non-exact strings and lexical whitespace."""
+    assert (
+        builtin_formatter._normalize_string_quotes_if_needed(
+            'value = "ok"',
+            source_is_valid=False,
+        )
+        == 'value = "ok"'
+    )
+    assert (
+        builtin_formatter._normalize_string_quotes_if_needed(
+            "value\t=1",
+            source_is_valid=True,
+        )
+        == "value =1"
+    )
+    assert (
+        builtin_formatter._normalize_string_quotes_if_needed(
+            "value = 1\f+2",
+            source_is_valid=True,
+        )
+        == "value = 1 +2"
+    )
+
+    class StringSubclass(str):  # noqa: FURB189, SLOT000 - intentionally exercises a hostile string subclass
+        def __contains__(self, _item: object) -> bool:
+            raise AssertionError
+
+    assert (
+        builtin_formatter._normalize_string_quotes_if_needed(
+            StringSubclass('value = "ok"'),
+            source_is_valid=True,
+        )
+        == 'value = "ok"'
+    )
+
+
 def test_apply_builtin_formatter_normalizes_blank_after_class_docstring() -> None:
     """Test built-in formatter keeps black-compatible class docstring spacing."""
     code = (
@@ -1254,7 +1346,11 @@ def test_builtin_formatter_comment_token_guard_skips_lines_without_hash(
     def fail_generate_tokens(*_args: object, **_kwargs: object) -> None:
         pytest.fail("comment-token guard should skip tokenization")  # pragma: no cover
 
-    monkeypatch.setattr(builtin_formatter.tokenize, "generate_tokens", fail_generate_tokens)
+    monkeypatch.setattr(
+        builtin_formatter,
+        "tokenize",
+        mock.Mock(wraps=builtin_formatter.tokenize, generate_tokens=fail_generate_tokens),
+    )
 
     assert not builtin_formatter._has_comment_token("value = 1")
 
@@ -1279,12 +1375,17 @@ def test_builtin_formatter_blank_line_guard_skips_tokenize_without_multiline_str
     def fail_generate_tokens(*_args: object, **_kwargs: object) -> None:
         pytest.fail("blank-line guard should skip tokenization")  # pragma: no cover
 
-    monkeypatch.setattr(builtin_formatter.tokenize, "generate_tokens", fail_generate_tokens)
+    monkeypatch.setattr(
+        builtin_formatter,
+        "tokenize",
+        mock.Mock(wraps=builtin_formatter.tokenize, generate_tokens=fail_generate_tokens),
+    )
 
     code = "class Model:\n    pass\n\n\n\nclass OtherModel:\n    pass"
 
-    assert builtin_formatter._normalize_top_level_blank_lines(code) == (
-        "class Model:\n    pass\n\n\nclass OtherModel:\n    pass"
+    assert_output(
+        f"{builtin_formatter._normalize_top_level_blank_lines(code)}\n",
+        BUILTIN_FORMATTER_EXPECTED_PATH / "blank_line_normalization.txt",
     )
 
 
@@ -2078,7 +2179,7 @@ def test_apply_builtin_formatter_matches_black_isort_for_normalized_expected_fil
 
 def test_format_code_un_exist_custom_formatter() -> None:
     """Test error when custom formatter module doesn't exist."""
-    with pytest.raises(ModuleNotFoundError):
+    with pytest.raises(datamodel_code_generator.Error, match="Unable to import custom formatter"):
         _ = CodeFormatter(
             PythonVersionMin,
             custom_formatters=[UN_EXIST_FORMATTER],

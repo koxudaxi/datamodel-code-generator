@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import timedelta
 from decimal import Decimal
 from enum import Enum
@@ -19,7 +19,7 @@ class Status(Enum):
 @dataclass
 class Address:
     street: str
-    zip: str | None
+    zip: str | None = None
 
 
 MD5: TypeAlias = bytes
@@ -40,17 +40,11 @@ class User:
     """
     Stable identifier
     """
-    active: bool
-    age: int
     visits: int
     score: float
     rating: float
     payload: bytes
-    status: Status
-    tags: list[str]
-    attributes: dict[str, str]
     address: Address
-    previous: User | None
     hash: MD5
     traceId: TraceId
     price: Decimal
@@ -66,5 +60,11 @@ class User:
     localUpdatedAt: str
     localProcessedAt: str
     duration: Duration
-    choice: str | int | None
     rawDecimalText: str
+    active: bool | None = True
+    age: int | None = 0
+    status: Status | None = Status.ACTIVE
+    tags: list[str] | None = field(default_factory=list)
+    attributes: dict[str, str] | None = field(default_factory=dict)
+    previous: User | None = None
+    choice: str | int | None = None

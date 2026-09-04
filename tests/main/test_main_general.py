@@ -6,6 +6,7 @@ import ast
 import inspect
 import json
 import platform
+import shutil
 import sys
 import tokenize
 import warnings
@@ -34,9 +35,10 @@ from datamodel_code_generator import (
     HTTPBackend,
     InputFileType,
     SchemaParseError,
+    _create_parser_config,
+    _create_typed_parser_config,
     _find_future_import_insertion_point,
     _generate_config_values,
-    _get_internal_parser_config_model,
     chdir,
     generate,
     snooper_to_methods,
@@ -46,7 +48,6 @@ from datamodel_code_generator.__main__ import (
     Config,
     Exit,
     _create_config,
-    _prepare_cli_config_args,
     run_generate_from_config,
 )
 from datamodel_code_generator.arguments import _dataclass_arguments, arg_parser
@@ -107,6 +108,7 @@ class _GenerateParseAbort(BaseException):
 @pytest.mark.allow_direct_assert
 def test_collapse_root_models_retry_reraises_second_recursion_error(mocker: MockerFixture) -> None:
     """Retry root-model collapsing exactly once and expose the second recursion error."""
+    assert datamodel_code_generator._CollapseRootModelsRecursionError.__module__ == "datamodel_code_generator"
     retry_error = RecursionError("retry parse recursion")
 
     def raise_collapse_recursion(*_: Any, **__: Any) -> None:
@@ -154,6 +156,36 @@ def test_collapse_root_models_retry_normalizes_sentinel_without_cause(mocker: Mo
     assert parse_with_disposal.call_count == 2
 
 
+@freeze_time("2019-07-26")
+def test_collapse_root_models_retry_preserves_circular_schema_output(mocker: MockerFixture) -> None:
+    """Retry a real circular-root schema without changing its generated output."""
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    original_parse = JsonSchemaParser.parse
+    fail_initial_parse = True
+    initial_error = RecursionError()
+
+    def parse_after_initial_recursion(parser: JsonSchemaParser, *args: Any, **kwargs: Any) -> Any:
+        nonlocal fail_initial_parse
+        if fail_initial_parse:
+            fail_initial_parse = False
+            raise datamodel_code_generator._CollapseRootModelsRecursionError from initial_error
+        return original_parse(parser, *args, **kwargs)
+
+    mocker.patch.object(JsonSchemaParser, "parse", autospec=True, side_effect=parse_after_initial_recursion)
+
+    result = generate(
+        JSON_SCHEMA_DATA_PATH / "collapse_root_models_self_reference.json",
+        input_file_type=InputFileType.JsonSchema,
+        collapse_root_models=True,
+    )
+
+    assert_output(
+        f"{cast('str', result)}\n",
+        EXPECTED_MAIN_PATH / "jsonschema" / "jsonschema_collapse_root_models_self_reference.py",
+    )
+
+
 def test_parser_collects_empty_model_metadata() -> None:
     """Collect an empty metadata payload when parsing emits no models."""
     from datamodel_code_generator.model_metadata import dump_model_metadata
@@ -175,6 +207,93 @@ def test_parser_collects_empty_model_metadata() -> None:
         )
     finally:
         parser._dispose()
+
+
+def test_parser_run_context_preserves_subclass_lifecycle_hooks(tmp_path: Path) -> None:
+    """Keep custom parser hooks and output stable under facade-managed run settings."""
+    from datamodel_code_generator.parser.base import ParserRunContext
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    class RunContextJsonSchemaParser(JsonSchemaParser):
+        events: list[str]
+
+        def parse_raw(self) -> None:
+            self.events.append(f"parse:{self._source_path_for_diagnostics()}")
+            warnings.warn("custom parse warning", stacklevel=1)
+            super().parse_raw()
+
+        def _report_parse_diagnostics(self) -> None:
+            self.events.append(f"diagnostics:{self._source_path_for_diagnostics()}")
+            warnings.warn("custom diagnostic warning", stacklevel=1)
+            super()._report_parse_diagnostics()
+
+        def _build_code_formatter(
+            self,
+            settings_path: Path | None,
+            *,
+            is_multi_module_output: bool,
+        ) -> CodeFormatter:
+            formatter_cwd = self.run_context.formatter_cwd
+            self.events.append(f"formatter:{formatter_cwd.name if formatter_cwd is not None else None}")
+            return super()._build_code_formatter(
+                settings_path,
+                is_multi_module_output=is_multi_module_output,
+            )
+
+        def _dispose(self) -> None:
+            self.events.append("dispose")
+            super()._dispose()
+
+    input_path = JSON_SCHEMA_DATA_PATH / "person.json"
+    formatter_cwd = tmp_path / "formatter-root"
+    formatter_cwd.mkdir()
+    parser = RunContextJsonSchemaParser(
+        input_path,
+        base_path=input_path.parent,
+        builtin_format_line_length=88,
+        formatters=[Formatter.BUILTIN],
+        use_standard_collections=True,
+        use_union_operator=True,
+    )
+    parser.events = []
+    parser.configure_run_context(
+        diagnostic_source_path=Path("diagnostic-person.json"),
+        formatter_cwd=formatter_cwd,
+        preserve_circular_root_models=True,
+        suppress_parse_warnings=True,
+    )
+    parser.events.append(f"preserve:{parser.run_context.preserve_circular_root_models}")
+    with warnings.catch_warnings(record=True) as warning_records:
+        warnings.simplefilter("always")
+        generated = parser.parse()
+    parser.dispose()
+    parser.configure_run_context()
+    parser.events.append(f"default:{parser.run_context == ParserRunContext()}")
+    parser._diagnostic_source_path = Path("legacy.json")
+    parser._formatter_cwd = formatter_cwd
+    parser._preserve_circular_root_models = True
+    legacy_diagnostic_source_path = parser._diagnostic_source_path
+    legacy_formatter_cwd = parser._formatter_cwd
+    parser.events.append(
+        "legacy:"
+        f"{legacy_diagnostic_source_path.name if legacy_diagnostic_source_path is not None else None},"
+        f"{legacy_formatter_cwd.name if legacy_formatter_cwd is not None else None},"
+        f"{parser._preserve_circular_root_models}"
+    )
+
+    assert_output(
+        "# generated by datamodel-codegen:\n#   filename:  person.json\n\n" + generated,
+        EXPECTED_MAIN_PATH / "person.py",
+    )
+    assert_output(
+        "\n".join(parser.events) + "\n",
+        EXPECTED_MAIN_PATH / "parser_run_context_lifecycle.txt",
+    )
+    assert_warnings_do_not_contain(
+        warning_records,
+        "custom parse warning",
+        "custom diagnostic warning",
+    )
 
 
 def test_parser_retains_builtin_import_cache_and_invalidates_custom_cache() -> None:
@@ -1080,19 +1199,6 @@ def test_cli_pyproject_ignores_generate_only_options(output_file: Path, tmp_path
 
 
 @pytest.mark.allow_direct_assert
-def test_prepare_cli_config_args_applies_derived_flags() -> None:
-    """CLI-only implied flags are applied before the single validation path."""
-    prepared_args = _prepare_cli_config_args({"output_model_type": DataModelType.MsgspecStruct.value})
-    alias_args = _prepare_cli_config_args({"use_type_alias_type": True})
-
-    assert prepared_args["use_annotated"] is True
-    assert prepared_args["field_constraints"] is True
-    assert alias_args == {"use_type_alias_type": True, "use_type_alias": True}
-    assert GenerateConfig(use_type_alias_type=True).use_type_alias is True
-    assert _prepare_cli_config_args({}) == {}
-
-
-@pytest.mark.allow_direct_assert
 def test_create_config_empty_pyproject_uses_single_validated_cli_config() -> None:
     """An empty pyproject config can validate the final CLI config directly."""
     config = _create_config(
@@ -1129,21 +1235,106 @@ def test_create_config_pyproject_branch_keeps_input_source_override() -> None:
     assert config.validation is True
 
 
-@pytest.mark.allow_direct_assert
-def test_internal_parser_config_model_copy_supports_deep_update() -> None:
-    """The internal parser config keeps the parser-facing model_copy contract."""
-    nested = {"items": [1]}
-    config = _get_internal_parser_config_model().model_construct(name="before", nested=nested)
-    plain_copy = config.model_copy()
-    copied = config.model_copy(
-        update={"name": "after"},
-        deep=True,
+@pytest.mark.parametrize(
+    ("config_name", "args"),
+    [
+        pytest.param("pyproject_msgspec_implicit.toml", (), id="single"),
+        pytest.param("pyproject_msgspec_implicit_job.toml", ("--all-jobs",), id="batch"),
+    ],
+)
+def test_pyproject_msgspec_derives_constraints_from_final_config(
+    config_name: str,
+    args: tuple[str, ...],
+    tmp_path: Path,
+) -> None:
+    """Pyproject and batch msgspec settings preserve constraints from a nested working directory."""
+    project_path = tmp_path / "project"
+    nested_path = project_path / "nested"
+    nested_path.mkdir(parents=True)
+    shutil.copyfile(
+        JSON_SCHEMA_DATA_PATH / "msgspec_array_length_constraints.json",
+        project_path / "msgspec_array_length_constraints.json",
     )
-    nested["items"].append(2)
+    shutil.copyfile(DATA_PATH / "config" / config_name, project_path / "pyproject.toml")
 
-    assert plain_copy.name == "before"
-    assert copied.name == "after"
-    assert copied.nested == {"items": [1]}
+    with chdir(nested_path):
+        run_main_with_args(args)
+
+    assert_file_content(project_path / "model.py", "jsonschema/msgspec_array_length_constraints_use_annotated.py")
+
+
+def test_cli_output_model_override_does_not_keep_pyproject_msgspec_defaults(tmp_path: Path) -> None:
+    """A CLI backend override does not retain implicit msgspec Annotated output."""
+    project_path = tmp_path / "project"
+    nested_path = project_path / "nested"
+    nested_path.mkdir(parents=True)
+    shutil.copyfile(
+        JSON_SCHEMA_DATA_PATH / "msgspec_array_length_constraints.json",
+        project_path / "msgspec_array_length_constraints.json",
+    )
+    shutil.copyfile(DATA_PATH / "config" / "pyproject_msgspec_implicit.toml", project_path / "pyproject.toml")
+
+    with chdir(nested_path):
+        run_main_with_args(["--output-model-type", "pydantic_v2.BaseModel"])
+
+    assert_file_content(project_path / "model.py", "pyproject_msgspec_cli_pydantic.py")
+
+
+@pytest.mark.parametrize(
+    "config_name",
+    [
+        "pyproject_msgspec_use_annotated.toml",
+        "pyproject_msgspec_use_annotated_field_constraints.toml",
+    ],
+)
+def test_cli_no_use_annotated_clears_only_implicit_field_constraints(config_name: str, tmp_path: Path) -> None:
+    """An explicit CLI opt-out preserves only explicitly configured constraints."""
+    project_path = tmp_path / "project"
+    nested_path = project_path / "nested"
+    nested_path.mkdir(parents=True)
+    shutil.copyfile(
+        JSON_SCHEMA_DATA_PATH / "msgspec_array_length_constraints.json",
+        project_path / "msgspec_array_length_constraints.json",
+    )
+    shutil.copyfile(DATA_PATH / "config" / config_name, project_path / "pyproject.toml")
+
+    with chdir(nested_path):
+        run_main_with_args(["--no-use-annotated"])
+
+    assert_file_content(project_path / "model.py", "pyproject_msgspec_no_annotated.py")
+
+
+def test_cli_relative_output_remains_relative_to_the_invocation_directory(tmp_path: Path) -> None:
+    """Only pyproject-origin paths use the pyproject directory as their base."""
+    project_path = tmp_path / "project"
+    nested_path = project_path / "nested"
+    nested_path.mkdir(parents=True)
+    shutil.copyfile(
+        JSON_SCHEMA_DATA_PATH / "msgspec_array_length_constraints.json",
+        project_path / "msgspec_array_length_constraints.json",
+    )
+    shutil.copyfile(DATA_PATH / "config" / "pyproject_msgspec_implicit.toml", project_path / "pyproject.toml")
+
+    with chdir(nested_path):
+        run_main_with_args(["--output", "cli-model.py"])
+
+    assert_file_content(nested_path / "cli-model.py", "jsonschema/msgspec_array_length_constraints_use_annotated.py")
+
+
+def test_cli_without_pyproject_keeps_absolute_input_and_output_paths(
+    monkeypatch: pytest.MonkeyPatch, output_file: Path
+) -> None:
+    """A CLI invocation outside a pyproject continues to use its supplied paths."""
+    monkeypatch.chdir(output_file.parent)
+
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--disable-timestamp"],
+        assert_func=assert_file_content,
+        expected_file="person.py",
+    )
 
 
 @pytest.mark.allow_direct_assert
@@ -1157,6 +1348,59 @@ def test_generate_config_values_supports_non_pydantic_config() -> None:
     config_like.dynamic = "value"
 
     assert _generate_config_values(cast("Any", config_like)) == {"dynamic": "value"}
+
+
+@pytest.mark.allow_direct_assert
+def test_internal_parser_config_model_copy_supports_deep_update() -> None:
+    """The private compatibility config keeps its model-copy contract."""
+    nested = {"items": [1]}
+    config = _create_parser_config(
+        GenerateConfig(),
+        cast("Any", {"name": "before", "nested": nested}),
+    )
+    plain_copy = config.model_copy()
+    copied = config.model_copy(update={"name": "after"}, deep=True)
+    retry_copy = config.model_copy(
+        update={
+            "repair_invalid_dotted_stdout": False,
+            "forced_invalid_dotted_stdout_repair_modules": (("models",),),
+        }
+    )
+    nested["items"].append(2)
+
+    assert plain_copy.name == "before"
+    assert copied.name == "after"
+    assert copied.nested == {"items": [1]}
+    assert retry_copy.repair_invalid_dotted_stdout is False
+    assert retry_copy.forced_invalid_dotted_stdout_repair_modules == (("models",),)
+    assert config._source_context is not None
+    assert config._source_context.encoding == "utf-8"
+
+
+@pytest.mark.allow_direct_assert
+def test_create_parser_config_filters_generation_fields_and_freezes_source_context() -> None:
+    """Parser config owns declared fields while source policy stays in a typed context."""
+    from dataclasses import FrozenInstanceError
+
+    from datamodel_code_generator._parser_context import ParserSourceContext
+    from datamodel_code_generator.config import JSONSchemaParserConfig
+
+    config = GenerateConfig(output=Path("generated.py"), encoding="utf-16", http_timeout=3.5)
+    parser_config = _create_typed_parser_config(
+        config,
+        JSONSchemaParserConfig,
+        cast("Any", {"schema_version_mode": None}),
+    )
+    source_context = parser_config._source_context
+
+    assert isinstance(source_context, ParserSourceContext)
+    assert parser_config.http_timeout == pytest.approx(3.5)
+    assert not hasattr(parser_config, "output")
+    assert source_context.encoding == "utf-16"
+    assert not hasattr(source_context, "__dict__")
+    attribute = "encoding"
+    with pytest.raises(FrozenInstanceError):
+        setattr(source_context, attribute, "utf-8")
 
 
 @pytest.mark.allow_direct_assert
@@ -4225,6 +4469,41 @@ def test_generate_multimodule_builtin_directory_matches_fixture(output_dir: Path
     assert_directory_content(output_dir, EXPECTED_MAIN_PATH / "jsonschema" / "all_exports_multi_file")
 
 
+def test_generate_builtin_string_normalization_matches_fixture(output_file: Path) -> None:
+    """Keep double-quote normalization byte-compatible with the external fixture."""
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
+        input_file_type=InputFileType.JsonSchema,
+        formatters=[Formatter.BUILTIN],
+        use_double_quotes=True,
+        disable_timestamp=True,
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_PATH / "jsonschema" / "person_use_double_quotes.py",
+    )
+
+
+def test_generate_builtin_string_normalization_module_split(output_dir: Path) -> None:
+    """Keep double-quote normalization byte-compatible for every generated module."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "module_split_single" / "input.json",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+            "--use-double-quotes",
+            "--module-split-mode",
+            "single",
+            "--all-exports-scope",
+            "recursive",
+            "--use-exact-imports",
+        ],
+        expected_directory=EXPECTED_MAIN_PATH / "jsonschema" / "module_split_single",
+    )
+
+
 @pytest.mark.allow_direct_assert
 def test_generated_modules_type_alias_is_exported() -> None:
     """Test that GeneratedModules is exported from the module."""
@@ -5019,14 +5298,14 @@ def test_generate_disposes_parser_when_parse_raises(parse_error: BaseException, 
     """Test generate() releases parser-owned references while preserving parse failures."""
     parser = mocker.Mock()
     parser.parse.side_effect = parse_error
-    parser._dispose.side_effect = RuntimeError("dispose failed")
+    parser.dispose.side_effect = RuntimeError("dispose failed")
     mocker.patch.object(datamodel_code_generator, "_build_parser", return_value=parser)
 
     with pytest.raises(type(parse_error)) as exc_info:
         generate("{}", input_file_type=InputFileType.JsonSchema, formatters=[])
 
     assert exc_info.value is parse_error
-    parser._dispose.assert_called_once_with()
+    parser.dispose.assert_called_once_with()
 
 
 def test_parser_with_config_and_options_raises_error() -> None:

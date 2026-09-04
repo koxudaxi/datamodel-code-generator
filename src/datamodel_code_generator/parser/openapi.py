@@ -25,9 +25,9 @@ from datamodel_code_generator import (
     Error,
     InputFileType,
     OpenAPIScope,
-    YamlValue,
     snooper_to_methods,
 )
+from datamodel_code_generator._source import YamlValue
 from datamodel_code_generator.deprecations import warn_deprecated
 from datamodel_code_generator.enums import OpenAPIVersion, VersionMode
 from datamodel_code_generator.parser.base import Result, get_special_path
@@ -644,7 +644,20 @@ class OpenAPIParser(JsonSchemaParser):
                     if item_parameters:
                         operation = operation.copy()
                         if "parameters" in raw_operation:
-                            operation["parameters"] = [*raw_operation["parameters"], *item_parameters]
+                            operation_parameters = raw_operation["parameters"]
+                            overridden_parameters = {
+                                key
+                                for parameter in operation_parameters
+                                if (key := self._parameter_key(parameter)) is not None
+                            }
+                            operation["parameters"] = [
+                                *operation_parameters,
+                                *(
+                                    parameter
+                                    for parameter in item_parameters
+                                    if self._parameter_key(parameter) not in overridden_parameters
+                                ),
+                            ]
                         else:
                             operation["parameters"] = item_parameters.copy()
                     if security is not None and "security" not in operation:
@@ -653,6 +666,16 @@ class OpenAPIParser(JsonSchemaParser):
                             operation = operation.copy()
                         operation["security"] = security
                     self.parse_operation(operation, [*path, operation_name])
+
+    def _parameter_key(self, parameter: Any) -> tuple[str, str] | None:
+        """Return the OpenAPI identity used for operation-level parameter overrides."""
+        if not isinstance(parameter, dict):
+            return None  # pragma: no cover - OpenAPI validation rejects malformed parameters
+        if isinstance(ref := parameter.get("$ref"), str):
+            parameter = self.get_ref_model(ref)
+        if not isinstance(name := parameter.get("name"), str) or not isinstance(location := parameter.get("in"), str):
+            return None  # pragma: no cover - OpenAPI validation rejects malformed parameters
+        return name, location
 
     def parse_schema(
         self,
@@ -981,6 +1004,8 @@ class OpenAPIParser(JsonSchemaParser):
 
     def _collect_discriminator_schemas(self) -> None:
         """Collect schemas with discriminators but no oneOf/anyOf, and find their subtypes."""
+        self._discriminator_schemas.clear()
+        self._discriminator_subtypes.clear()
         schemas: dict[str, Any] = self.raw_obj.get("components", {}).get("schemas", {})
         potential_subtypes: dict[str, list[str]] = {}
 

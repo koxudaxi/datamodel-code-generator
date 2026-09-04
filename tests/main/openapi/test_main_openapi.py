@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import importlib
 import inspect
 import json
 import pickle
@@ -668,6 +669,62 @@ def test_main_openapi_discriminator_short_mapping_names(output_file: Path) -> No
     )
 
 
+def test_main_openapi_discriminator_oneof_short_mapping(output_file: Path) -> None:
+    """Use short mapping keys as discriminator literals for oneOf schemas."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "discriminator_oneof_short_mapping.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="discriminator_oneof_short_mapping.py",
+        extra_args=["--disable-timestamp"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="generated_discriminator_oneof_short_mapping",
+        model_name="Pet",
+        valid_json='{"petType":"cat","meow":"yes"}',
+        invalid_json='{"petType":"Cat"}',
+        expected_error_type="union_tag_invalid",
+    )
+
+
+def test_main_openapi_discriminator_state_isolated_per_document(output_dir: Path) -> None:
+    """Do not apply one input document's discriminator metadata to another."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "discriminator_state_isolation",
+        output_path=output_dir,
+        input_file_type="openapi",
+        expected_directory=EXPECTED_OPENAPI_PATH / "discriminator_state_isolation",
+        extra_args=["--disable-timestamp"],
+        runtime_validation_module="b",
+        runtime_validation_model_name="Holder",
+        runtime_validation_data={"pet": {"name": "Milo"}},
+    )
+
+
+def test_main_openapi_path_parameter_operation_override(output_file: Path) -> None:
+    """Operation parameters override matching path-item parameters."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "path_parameter_override.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="path_parameter_override.py",
+        extra_args=["--openapi-scopes", "paths", "parameters", "--disable-timestamp"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="generated_path_parameter_override",
+        model_name="PetsGetParametersQuery",
+        valid_json='{"limit":100}',
+        invalid_json='{"limit":101}',
+        expected_error_type="less_than_equal",
+    )
+
+
 def test_main_openapi_discriminator_external_mapping(output_file: Path) -> None:
     """Mapping-only discriminator subtypes can be external refs."""
     run_main_and_assert(
@@ -867,6 +924,30 @@ def test_main_modular_no_file(tmp_path: Path) -> None:
         input_file_type=None,
         expected_exit=Exit.ERROR,
     )
+
+
+def test_main_modular_treat_dot_as_module_keeps_subpackage_initializer(output_dir: Path) -> None:
+    """Do not replace a generated subpackage initializer with the root module result."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "modular.yaml",
+        output_path=output_dir,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        output_to_expected=[("foo/__init__.py", "modular_treat_dot_as_module/foo_init.py")],
+        extra_args=["--treat-dot-as-module", "--disable-timestamp", "--formatters", "builtin"],
+    )
+    sys.path.insert(0, str(output_dir.parent))
+    try:
+        module = importlib.import_module(f"{output_dir.name}.foo")
+        assert_output(
+            f"{json.dumps(module.__all__)}\n",
+            EXPECTED_OPENAPI_PATH / "modular_treat_dot_as_module/foo_exports.txt",
+        )
+    finally:
+        sys.path.remove(str(output_dir.parent))
+        for loaded_module in tuple(sys.modules):
+            if loaded_module == output_dir.name or loaded_module.startswith(f"{output_dir.name}."):
+                del sys.modules[loaded_module]
 
 
 def test_main_modular_filename(output_file: Path) -> None:
@@ -4351,6 +4432,29 @@ def test_main_openapi_allof_required_inherited_options(
     )
 
 
+def test_main_openapi_allof_required_inherited_collision_msgspec(output_file: Path) -> None:
+    """Keep inherited wire aliases distinct after resolving colliding Python field names."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_required_inherited_collision.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_required_inherited_collision_msgspec.py",
+        extra_args=[
+            "--output-model-type",
+            DataModelType.MsgspecStruct.value,
+            "--target-python-version",
+            "3.11",
+            "--allof-class-hierarchy",
+            "always",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+        force_exec_validation=True,
+    )
+
+
 @pytest.mark.parametrize(
     ("read_write_mode", "expected_file"),
     [
@@ -6029,6 +6133,44 @@ def test_main_openapi_discriminator(input_: str, output: str, output_file: Path)
         input_file_type="openapi",
         assert_func=assert_file_content,
         expected_file=EXPECTED_OPENAPI_PATH / "discriminator" / output,
+    )
+
+
+@pytest.mark.parametrize(
+    ("output_model_type", "expected_file"),
+    [
+        pytest.param(
+            DataModelType.DataclassesDataclass.value,
+            "discriminator/dataclass_constructor_order.py",
+            id="dataclass",
+        ),
+        pytest.param(
+            DataModelType.MsgspecStruct.value,
+            "discriminator/msgspec_constructor_order.py",
+            id="msgspec",
+        ),
+    ],
+)
+def test_main_openapi_discriminator_constructor_order(
+    output_file: Path,
+    output_model_type: str,
+    expected_file: str,
+) -> None:
+    """Place injected required discriminator fields before optional constructor fields."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "discriminator.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=[
+            "--output-model-type",
+            output_model_type,
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+        force_exec_validation=True,
     )
 
 
@@ -9189,6 +9331,18 @@ def test_main_openapi_x_enum_names(output_file: Path) -> None:
         input_file_type="openapi",
         assert_func=assert_file_content,
         expected_file="x_enum_names.py",
+    )
+
+
+def test_main_openapi_x_enum_descriptions_null(output_file: Path) -> None:
+    """Treat null x-enum-descriptions entries as missing descriptions."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "x_enum_descriptions_null.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="x_enum_descriptions_null.py",
+        extra_args=["--use-field-description"],
     )
 
 

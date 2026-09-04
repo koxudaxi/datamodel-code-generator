@@ -2,11 +2,33 @@
 
 from __future__ import annotations
 
+import copy
+import os
+import pickle
+import subprocess
+import sys
+from collections import Counter
+from pathlib import Path
 from typing import cast
 
 import pytest
 
-from datamodel_code_generator.reference import FieldNameResolver, ModelResolver, PydanticFieldNameResolver
+from datamodel_code_generator.reference import FieldNameResolver, ModelResolver, ModelType, PydanticFieldNameResolver
+from tests.conftest import assert_output
+from tests.data.python.model_resolver_pickle_types import (
+    GLOBAL_REDUCE_MODEL_RESOLVER,
+    CustomDictStateModelResolver,
+    CustomStateModelResolver,
+    SlottedModelResolver,
+    TupleReduceModelResolver,
+)
+
+EXPECTED_RESOLVER_PATH = Path(__file__).parent / "data" / "expected" / "resolver"
+MODEL_RESOLVER_PICKLE_HELPER = Path(__file__).parent / "data" / "python" / "model_resolver_pickle_compat.py"
+MODEL_RESOLVER_MAIN_PICKLE = Path(__file__).parent / "data" / "python" / "model_resolver_main_protocol4.pickle.b64"
+MODEL_RESOLVER_SLOTTED_MAIN_PICKLE = (
+    Path(__file__).parent / "data" / "python" / "model_resolver_slotted_main_protocol4.pickle.b64"
+)
 
 
 @pytest.mark.parametrize(
@@ -22,6 +44,285 @@ def test_get_valid_field_name(name: str, expected_resolved: str) -> None:
     """Test field name resolution to valid Python identifiers."""
     resolver = FieldNameResolver()
     assert expected_resolved == resolver.get_valid_name(name)
+
+
+def test_model_resolver_default_field_policy_is_lazy_and_compatible() -> None:
+    """Load output-owned defaults only when their legacy model type is requested."""
+    resolver = ModelResolver()
+
+    assert resolver.get_valid_field_name("schema") == "schema_"
+    assert resolver.get_valid_field_name("schema", model_type=ModelType.CLASS) == "schema"
+    assert resolver.get_valid_field_name("schema", model_type=ModelType.PYDANTIC) == "schema_"
+    assert resolver.get_valid_field_name("field", model_type=ModelType.MSGSPEC) == "field_"
+    assert resolver.get_valid_field_name("mro", model_type=ModelType.ENUM) == "mro_"
+    field_name_resolvers = resolver.field_name_resolvers
+    assert type(field_name_resolvers) is dict
+    assert list(field_name_resolvers) == [ModelType.ENUM, ModelType.PYDANTIC, ModelType.CLASS, ModelType.MSGSPEC]
+    assert resolver.field_name_resolvers is field_name_resolvers
+
+
+def test_output_field_name_resolver_legacy_exports_are_lazy_aliases() -> None:
+    """Keep existing direct resolver imports compatible after moving ownership."""
+    from datamodel_code_generator.model.msgspec import MsgspecFieldNameResolver as OutputMsgspecFieldNameResolver
+    from datamodel_code_generator.reference import DEFAULT_FIELD_NAME_RESOLVERS, MsgspecFieldNameResolver
+
+    reference_module = sys.modules["datamodel_code_generator.reference"]
+    assert MsgspecFieldNameResolver is OutputMsgspecFieldNameResolver
+    assert isinstance(DEFAULT_FIELD_NAME_RESOLVERS, dict)
+    assert {
+        ModelType.ENUM: type(ModelResolver().field_name_resolvers[ModelType.ENUM]),
+        ModelType.PYDANTIC: PydanticFieldNameResolver,
+        ModelType.CLASS: FieldNameResolver,
+        ModelType.MSGSPEC: OutputMsgspecFieldNameResolver,
+    } == DEFAULT_FIELD_NAME_RESOLVERS
+    namespace: dict[str, object] = {}
+    exec("from datamodel_code_generator.reference import *", namespace)
+    legacy_names = {"PydanticFieldNameResolver", "MsgspecFieldNameResolver", "DEFAULT_FIELD_NAME_RESOLVERS"}
+    assert legacy_names <= set(dir(reference_module))
+    assert legacy_names <= namespace.keys()
+
+
+def test_model_resolver_preserves_mutable_legacy_default_registry() -> None:
+    """Honor the resolver registry snapshot used by existing extensions."""
+    from datamodel_code_generator.reference import DEFAULT_FIELD_NAME_RESOLVERS
+
+    class CustomFieldNameResolver(FieldNameResolver):
+        pass
+
+    original_resolver_class = DEFAULT_FIELD_NAME_RESOLVERS[ModelType.CLASS]
+    DEFAULT_FIELD_NAME_RESOLVERS[ModelType.CLASS] = CustomFieldNameResolver
+    try:
+        resolver = ModelResolver()
+    finally:
+        DEFAULT_FIELD_NAME_RESOLVERS[ModelType.CLASS] = original_resolver_class
+
+    assert type(resolver.field_name_resolvers[ModelType.CLASS]) is CustomFieldNameResolver
+
+
+def test_model_resolver_preserves_removed_legacy_default() -> None:
+    """Keep missing registry entries missing in resolver snapshots."""
+    from datamodel_code_generator.reference import DEFAULT_FIELD_NAME_RESOLVERS
+
+    original_resolver_classes = DEFAULT_FIELD_NAME_RESOLVERS.copy()
+    del DEFAULT_FIELD_NAME_RESOLVERS[ModelType.CLASS]
+    try:
+        resolver = ModelResolver()
+        with pytest.raises(KeyError, match="CLASS"):
+            resolver.default_class_name_generator("name")
+    finally:
+        DEFAULT_FIELD_NAME_RESOLVERS.clear()
+        DEFAULT_FIELD_NAME_RESOLVERS.update(original_resolver_classes)
+
+
+def test_model_resolver_lazy_field_aliases_are_isolated_from_input() -> None:
+    """Preserve eager resolver isolation while constructing resolvers lazily."""
+    aliases = {"schema": "schema_name"}
+    resolver = ModelResolver(aliases=aliases)
+    aliases.clear()
+
+    assert resolver.get_valid_field_name_and_alias("schema") == ("schema_name", "schema")
+
+
+def test_model_resolver_public_field_mapping_preserves_independent_instances_and_replacement() -> None:
+    """Retain the mutable plain-dict compatibility surface outside the fast path."""
+    resolver = ModelResolver(
+        field_name_resolver_classes={
+            ModelType.PYDANTIC: FieldNameResolver,
+            ModelType.CLASS: FieldNameResolver,
+        }
+    )
+    field_name_resolvers = resolver.field_name_resolvers
+
+    assert field_name_resolvers[ModelType.PYDANTIC] is not field_name_resolvers[ModelType.CLASS]
+    replacement = {ModelType.CLASS: FieldNameResolver(special_field_name_prefix="replacement")}
+    resolver.field_name_resolvers = replacement
+    assert resolver.field_name_resolvers is replacement
+    assert resolver.default_class_name_generator("3name") == "Replacement3name"
+
+
+def test_model_resolver_output_providers_load_only_for_compatibility_access() -> None:
+    """Exercise the lazy fast path and the full legacy mapping in a fresh process."""
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import sys; "
+                "from datamodel_code_generator.reference import ModelResolver, ModelType; "
+                "modules = ('datamodel_code_generator.model.pydantic_v2.base_model', "
+                "'datamodel_code_generator.model.msgspec'); "
+                "resolver = ModelResolver(); "
+                "print(*(module in sys.modules for module in modules)); "
+                "print(resolver.get_valid_field_name('value', model_type=ModelType.CLASS)); "
+                "print(*(module in sys.modules for module in modules)); "
+                "mapping = resolver.field_name_resolvers; "
+                "print(type(mapping).__name__, *(model_type.name for model_type in mapping)); "
+                "print(*(module in sys.modules for module in modules)); "
+                "print(*(type(mapping[model_type]).__module__ for model_type in "
+                "(ModelType.PYDANTIC, ModelType.MSGSPEC))); "
+                "import pickle; "
+                "print(*(type(pickle.loads(pickle.dumps(mapping[model_type]))).__name__ for model_type in "
+                "(ModelType.PYDANTIC, ModelType.MSGSPEC))); "
+                "import datamodel_code_generator.reference as reference; "
+                "namespace = {}; exec('from datamodel_code_generator.reference import *', namespace); "
+                "legacy_names = ('PydanticFieldNameResolver', 'MsgspecFieldNameResolver', "
+                "'DEFAULT_FIELD_NAME_RESOLVERS'); "
+                "print(*(name in dir(reference) for name in legacy_names)); "
+                "print(*(name in namespace for name in legacy_names))"
+            ),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert_output(result.stdout, EXPECTED_RESOLVER_PATH / "field_name_resolver_laziness.txt")
+
+
+def test_model_resolver_pickles_are_compatible_across_the_resolver_state_rename(  # noqa: PLR0914
+    tmp_path: Path,
+) -> None:
+    """Load a main-branch pickle and expose current pickles to the earlier public layout."""
+    resolver = ModelResolver()
+    shallow_copy = copy.copy(resolver)
+    deep_copy = copy.deepcopy(resolver)
+    shallow_copy.field_name_resolvers[ModelType.CLASS] = FieldNameResolver(special_field_name_prefix="current")
+    current_pickle_path = tmp_path / "model-resolver-current.pickle"
+    current_pickle_path.write_bytes(pickle.dumps(resolver, protocol=4))
+
+    replacement_resolver = ModelResolver()
+    replacement_resolver.field_name_resolvers = {
+        ModelType.CLASS: FieldNameResolver(special_field_name_prefix="replacement")
+    }
+    replacement_shallow_copy = copy.copy(replacement_resolver)
+    replacement_deep_copy = copy.deepcopy(replacement_resolver)
+    replacement_pickle_copy = pickle.loads(pickle.dumps(replacement_resolver, protocol=4))
+
+    slotted_resolver = SlottedModelResolver()
+    slotted_resolver.slot_marker = "current-slot"
+    current_slotted_pickle_path = tmp_path / "model-resolver-slotted-current.pickle"
+    current_slotted_pickle = pickle.dumps(slotted_resolver, protocol=4)
+    current_slotted_pickle_path.write_bytes(current_slotted_pickle)
+    restored_slotted_resolver = pickle.loads(current_slotted_pickle)
+    restored_custom_state_resolver = pickle.loads(pickle.dumps(CustomStateModelResolver(), protocol=4))
+    restored_custom_dict_state_resolver = pickle.loads(pickle.dumps(CustomDictStateModelResolver(), protocol=4))
+    restored_global_resolver = pickle.loads(pickle.dumps(GLOBAL_REDUCE_MODEL_RESOLVER, protocol=4))
+    restored_tuple_reduce_resolver = pickle.loads(pickle.dumps(TupleReduceModelResolver(), protocol=4))
+    private_state_resolver = ModelResolver.__new__(ModelResolver)
+    private_state_resolver.__setstate__(ModelResolver().__dict__.copy())
+    legacy_base_path_state = ModelResolver(base_path=tmp_path).__dict__.copy()
+    del legacy_base_path_state["_resolved_base_path_cache"]
+    legacy_base_path_resolver = ModelResolver.__new__(ModelResolver)
+    legacy_base_path_resolver.__setstate__(legacy_base_path_state)
+    legacy_base_path_ref = legacy_base_path_resolver.resolve_ref("schema.json#/value")
+
+    outputs = [
+        (
+            "current copy semantics\n"
+            f"shallow mapping shared: {shallow_copy.field_name_resolvers is resolver.field_name_resolvers}\n"
+            f"deep mapping shared: {deep_copy.field_name_resolvers is resolver.field_name_resolvers}\n"
+            f"shallow mutation shared: {resolver.get_valid_field_name('3name', model_type=ModelType.CLASS)}\n"
+            f"deep copy isolated: {deep_copy.get_valid_field_name('3name', model_type=ModelType.CLASS)}\n"
+            "replacement shallow shared: "
+            f"{replacement_shallow_copy.field_name_resolvers is replacement_resolver.field_name_resolvers}\n"
+            "replacement deep shared: "
+            f"{replacement_deep_copy.field_name_resolvers is replacement_resolver.field_name_resolvers}\n"
+            "replacement pickle shared: "
+            f"{replacement_pickle_copy.field_name_resolvers is replacement_resolver.field_name_resolvers}\n"
+            "replacement pickle field: "
+            f"{replacement_pickle_copy.get_valid_field_name('3name', model_type=ModelType.CLASS)}\n"
+            "current slotted roundtrip\n"
+            f"state layout: {'private' if '_field_name_resolvers' in vars(restored_slotted_resolver) else 'public'}\n"
+            f"slot marker: {restored_slotted_resolver.slot_marker}\n"
+            f"custom state: {restored_custom_state_resolver.restored_state}\n"
+            f"custom dict state: {restored_custom_dict_state_resolver.restored_state}\n"
+            f"global reduce identity: {restored_global_resolver is GLOBAL_REDUCE_MODEL_RESOLVER}\n"
+            f"tuple reduce type: {type(restored_tuple_reduce_resolver).__name__}\n"
+            "private state accepted: "
+            f"{private_state_resolver.get_valid_field_name('3name', model_type=ModelType.CLASS)}\n"
+            f"legacy base cache ref: {legacy_base_path_ref}\n"
+        )
+    ]
+    for direction, pickle_path in (
+        ("main-to-current", MODEL_RESOLVER_MAIN_PICKLE),
+        ("main-slotted-to-current", MODEL_RESOLVER_SLOTTED_MAIN_PICKLE),
+        ("current-to-main", current_pickle_path),
+        ("current-slotted-to-main", current_slotted_pickle_path),
+    ):
+        result = subprocess.run(
+            [sys.executable, str(MODEL_RESOLVER_PICKLE_HELPER), direction, str(pickle_path)],
+            check=True,
+            capture_output=True,
+            env={**os.environ, "PYTHONPATH": str(Path(__file__).parent.parent)},
+            text=True,
+        )
+        outputs.append(result.stdout)
+
+    assert_output("".join(outputs), EXPECTED_RESOLVER_PATH / "model_resolver_pickle_compatibility.txt")
+
+
+def test_model_resolver_reference_name_cache_preserves_multiplicity() -> None:
+    """Keep a name reserved until every non-unique reference releases it."""
+    delete_resolver = ModelResolver()
+    delete_resolver.add(["first"], "User", class_name=True, unique=False)
+    delete_resolver.add(["second"], "User", class_name=True, unique=False)
+    delete_resolver.add(["third"], "User", class_name=True, unique=False)
+    delete_duplicate_count = str(delete_resolver._reference_names_cache)
+    delete_resolver.delete(["first"])
+    delete_resolver.delete(["second"])
+    delete_allocated = delete_resolver.add(["fourth"], "User", class_name=True)
+
+    rename_resolver = ModelResolver()
+    rename_resolver.add(["first"], "User", class_name=True, unique=False)
+    rename_resolver.add(["second"], "User", class_name=True, unique=False)
+    rename_resolver.add(["first"], "Admin", class_name=True, unique=False)
+    rename_allocated = rename_resolver.add(["third"], "User", class_name=True)
+
+    refresh_resolver = ModelResolver()
+    refresh_resolver.add(["first"], "User", class_name=True, unique=False)
+    refresh_resolver.add(["second"], "User", class_name=True, unique=False)
+    refresh_resolver.refresh_reference_names()
+    refresh_resolver.delete(["first"])
+
+    same_name_resolver = ModelResolver()
+    same_name_resolver.add(["entry"], "user-name", class_name=True)
+    same_name_resolver.add(["entry"], "user_name", class_name=True)
+    same_name_resolver.refresh_reference_names()
+    same_name_resolver.delete(["entry"])
+    same_name_allocated = same_name_resolver.add(["next"], "user_name", class_name=True)
+
+    legacy_cache_resolver = ModelResolver()
+    legacy_cache_resolver.add(["first"], "User", class_name=True, unique=False)
+    legacy_cache_resolver.add(["second"], "User", class_name=True, unique=False)
+    legacy_state = legacy_cache_resolver.__dict__.copy()
+    legacy_state["_reference_names_cache"] = {"User"}
+    restored_resolver = ModelResolver.__new__(ModelResolver)
+    restored_resolver.__setstate__(legacy_state)
+    restored_resolver.delete(["first"])
+    legacy_allocated = restored_resolver.add(["third"], "User", class_name=True)
+
+    counter_state = legacy_cache_resolver.__dict__.copy()
+    counter_state["_reference_names_cache"] = Counter(User=2)
+    counter_restored_resolver = ModelResolver.__new__(ModelResolver)
+    counter_restored_resolver.__setstate__(counter_state)
+    counter_restored_resolver.delete(["first"])
+    counter_allocated = counter_restored_resolver.add(["third"], "User", class_name=True)
+
+    assert_output(
+        "".join((
+            f"delete retained: {delete_resolver.references['third#'].name}\n",
+            f"delete allocated: {delete_allocated.name}\n",
+            f"duplicate count: {delete_duplicate_count}\n",
+            f"single count: {delete_resolver._reference_names_cache}\n",
+            f"rename retained: {rename_resolver.references['second#'].name}\n",
+            f"rename allocated: {rename_allocated.name}\n",
+            f"refresh allocated: {refresh_resolver.add(['third'], 'User', class_name=True).name}\n",
+            f"same-name reallocated: {same_name_allocated.name}\n",
+            f"legacy cache allocated: {legacy_allocated.name}\n",
+            f"counter cache allocated: {counter_allocated.name}\n",
+        )),
+        EXPECTED_RESOLVER_PATH / "reference_name_multiplicity.txt",
+    )
 
 
 @pytest.mark.parametrize(

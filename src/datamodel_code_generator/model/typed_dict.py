@@ -8,6 +8,7 @@ from __future__ import annotations
 import keyword
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase, _rebuild_model_with_datamodel_namespace
 from datamodel_code_generator.model.base import UNDEFINED
 from datamodel_code_generator.model.imports import (
@@ -32,7 +33,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping
     from pathlib import Path
 
-    from datamodel_code_generator.imports import Import, Imports
+    from datamodel_code_generator.imports import Imports
     from datamodel_code_generator.reference import Reference
 
 
@@ -66,6 +67,28 @@ class TypedDict(DataModel):
     REQUIRES_ADDITIONAL_PROPERTIES_REFERENCE_CLASSES: ClassVar[bool] = True
     SUPPORTS_TYPED_DICT_TOTAL_FALSE: ClassVar[bool] = True
     SUPPORTS_DESERIALIZED_DEFAULT_VALUES: ClassVar[bool] = False
+
+    @classmethod
+    def store_additional_properties_type(  # noqa: PLR0913
+        cls,
+        extra_template_data: dict[str, Any],
+        type_hint: str,
+        reference_classes: set[str] | None = None,
+        *,
+        root_model_type: type[DataModel] | None = None,
+        imports: tuple[Import, ...] = (),
+        use_backport: bool = False,
+    ) -> None:
+        """Store TypedDict extra-item imports without exposing them to other outputs."""
+        super().store_additional_properties_type(
+            extra_template_data,
+            type_hint,
+            reference_classes,
+            root_model_type=root_model_type,
+            use_backport=use_backport,
+        )
+        if imports:
+            extra_template_data["additionalPropertiesImports"] = imports
 
     @classmethod
     def resolve_module_import_conflicts(
@@ -144,7 +167,7 @@ class TypedDict(DataModel):
         elif additional_props_type and not is_base_class:
             if isinstance(additional_props_type, _InternalTypeExpression):
                 typed_dict_kwargs["extra_items"] = additional_props_type.code
-            elif len(self._additional_properties_reference_classes):
+            elif len(self.additional_properties_reference_classes):
                 typed_dict_kwargs["extra_items"] = represent_untrusted_python_value(additional_props_type)
             else:
                 typed_dict_kwargs["extra_items"] = represent_untrusted_public_type_name(additional_props_type)
@@ -188,7 +211,12 @@ class TypedDict(DataModel):
     @property
     def imports(self) -> tuple[Import, ...]:
         """Get imports, using the TypedDict backport when required by the target version."""
-        base_imports = super().imports
+        extra_item_imports = tuple(
+            import_
+            for import_ in self.extra_template_data.get("additionalPropertiesImports", ())
+            if isinstance(import_, Import)
+        )
+        base_imports = (*super().imports, *extra_item_imports)
         if not self._requires_typeddict_backport:
             return base_imports
         return (*(i for i in base_imports if i != IMPORT_TYPED_DICT), IMPORT_TYPED_DICT_BACKPORT)

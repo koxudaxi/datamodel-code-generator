@@ -1,0 +1,8 @@
+__init__.py: entrypoint
+parser/base.py: parser
+config.py: config
+input_model.py: input-model
+reference.py: reference
+model/base.py: output-model
+model/__init__.py: output-model
+types.py: shared

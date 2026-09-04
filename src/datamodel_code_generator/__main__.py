@@ -123,6 +123,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, NamedTuple, Optional, 
 from urllib.parse import ParseResult, urlparse
 
 from datamodel_code_generator import (
+    _SINGLE_MODULE_OUTPUT_DIRECTORY_ERROR,
     AllExportsScope,
     ClassNameAffixScope,
     DataModelType,
@@ -697,14 +698,11 @@ def _explicit_config_args(args: Namespace) -> dict[str, _RawConfigValue]:
 
 
 def _prepare_cli_config_args(set_args: Mapping[str, _RawConfigValue]) -> dict[str, _RawConfigValue]:
-    """Apply CLI-only derived config values before validation."""
+    """Apply validation-time CLI config values before merging."""
     if not set_args:
         return {}
 
     prepared_args = dict(set_args)
-    if prepared_args.get("output_model_type") == DataModelType.MsgspecStruct.value:
-        prepared_args["use_annotated"] = True
-
     if prepared_args.get("use_annotated"):
         prepared_args["field_constraints"] = True
 
@@ -729,6 +727,21 @@ def _create_config(
     cli_namespace = ArgNamespace(**cli_config_args)
     config.merge_args(cli_namespace)
     return config
+
+
+def _apply_implicit_cli_config_values(
+    config: Config,
+    pyproject_config: Mapping[str, _RawConfigValue],
+    cli_config_args: Mapping[str, _RawConfigValue],
+) -> None:
+    """Apply CLI defaults after pyproject, command-line, and preset values have merged."""
+    explicit_fields = {field.replace("-", "_") for field in pyproject_config} | set(cli_config_args)
+    if config.output_model_type is DataModelType.MsgspecStruct and "use_annotated" not in explicit_fields:
+        config.use_annotated = True
+
+    if "field_constraints" in explicit_fields:
+        return
+    config.field_constraints = config.use_annotated
 
 
 def _apply_preset(
@@ -1210,6 +1223,35 @@ def _normalize_pyproject_config(config: Mapping[str, Any]) -> dict[str, Any]:
     return normalized
 
 
+_PYPROJECT_RELATIVE_PATH_FIELDS = frozenset({
+    "custom_file_header_path",
+    "custom_template_dir",
+    "diff_against",
+    "emit_model_metadata",
+    "http_local_ref_path",
+    "input",
+    "lockfile",
+    "output",
+})
+
+
+def _resolve_pyproject_relative_paths(config: dict[str, Any], pyproject_path: Path | None) -> dict[str, Any]:
+    """Resolve only pyproject-relative paths from the pyproject directory."""
+    if pyproject_path is None:
+        return config
+
+    config_directory = pyproject_path.parent
+    updates = {
+        field_name: config_directory / resolved_path
+        for field_name in _PYPROJECT_RELATIVE_PATH_FIELDS
+        if isinstance(path := config.get(field_name), str | Path)
+        and not (resolved_path := Path(path).expanduser()).is_absolute()
+    }
+    if not updates:
+        return config
+    return {**config, **updates}
+
+
 def _validate_job_watch_settings(name: str, config: Mapping[str, Any]) -> None:
     """Keep the persistent scheduler outside profile and job configs."""
     if fields := BATCH_OUTER_CONFIG_FIELDS & _normalize_pyproject_config(config).keys():
@@ -1256,7 +1298,7 @@ def _get_job_config(  # noqa: PLR0913
     for alternate_source in ("url", "input_model", "input-model"):
         resolved_config.pop(alternate_source, None)
     resolved_config.update({key: value for key, value in job.items() if key != "profile"})
-    normalized_config = _normalize_pyproject_config(resolved_config)
+    normalized_config = _resolve_pyproject_relative_paths(_normalize_pyproject_config(resolved_config), pyproject_path)
     if any(source in normalized_config for source in ("input_model", "url")):
         msg = f"Job '{name}' only supports an 'input' file; use a separate job for each input source"
         raise Error(msg)
@@ -1273,6 +1315,7 @@ def _get_job_config(  # noqa: PLR0913
         raise ValueError(msg)
     config = _create_config(normalized_config, cli_config_args)
     _apply_preset(config, normalized_config, cli_config_args)
+    _apply_implicit_cli_config_values(config, normalized_config, cli_config_args)
     _validate_final_config(config)
     if command_only_fields := [
         field_name for field_name in sorted(BATCH_COMMAND_ONLY_CONFIG_FIELDS) if getattr(config, field_name)
@@ -2828,6 +2871,8 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
             print(command_output)  # noqa: T201
         return Exit.OK
 
+    pyproject_config = _resolve_pyproject_relative_paths(pyproject_config, pyproject_path)
+
     cli_config_args: dict[str, _RawConfigValue] = {}
     if _batch_config is not None:
         # Generation adjusts a few Config fields while resolving templates and
@@ -2842,9 +2887,17 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
         try:
             config = _create_config(pyproject_config, cli_config_args)
             _apply_preset(config, pyproject_config, cli_config_args)
+            _apply_implicit_cli_config_values(config, pyproject_config, cli_config_args)
             _validate_final_config(config)
         except Error as e:
             print(str(e), file=sys.stderr)  # noqa: T201
+            return Exit.ERROR
+        except Exception as e:
+            from pydantic import ValidationError  # noqa: PLC0415
+
+            if not isinstance(e, ValidationError):
+                raise
+            print(f"Invalid configuration: {e}", file=sys.stderr)  # noqa: T201
             return Exit.ERROR
 
     watch_dependencies = dependencies
@@ -3241,6 +3294,9 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
     except InvalidClassNameError as e:
         print(f"{e} You have to set `--class-name` option", file=sys.stderr)  # noqa: T201
         return cleanup_and_return(Exit.ERROR)
+    except UnicodeDecodeError as e:
+        print(f"Unable to decode input using encoding {config.encoding!r}: {e}", file=sys.stderr)  # noqa: T201
+        return cleanup_and_return(Exit.ERROR)
     except Error as e:
         print(str(e), file=sys.stderr)  # noqa: T201
         return cleanup_and_return(Exit.ERROR)
@@ -3253,6 +3309,15 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
         import traceback  # noqa: PLC0415
 
         print(traceback.format_exc(), file=sys.stderr)  # noqa: T201
+        return cleanup_and_return(Exit.ERROR)
+
+    if (
+        config.output is not None
+        and config.output.is_dir()
+        and generate_output is not None
+        and generate_output.is_file()
+    ):
+        print(_SINGLE_MODULE_OUTPUT_DIRECTORY_ERROR, file=sys.stderr)  # noqa: T201
         return cleanup_and_return(Exit.ERROR)
 
     if writes_json_output_file and generate_output is not None and config.output is not None:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import sys
 from collections import defaultdict
 from copy import deepcopy
 from dataclasses import dataclass
@@ -74,6 +75,7 @@ from datamodel_code_generator.model.pydantic_v2.base_model import (
 from datamodel_code_generator.model.pydantic_v2.base_model import (
     _safe_config_dict_items,
     _strip_legacy_pydantic_extra_post_class_assignment,
+    _uses_legacy_pydantic_extra_template,
 )
 from datamodel_code_generator.model.pydantic_v2.dataclass import DataClass as PydanticDataclassModel
 from datamodel_code_generator.model.pydantic_v2.dataclass import DataModelField as PydanticDataclassField
@@ -231,6 +233,15 @@ def test_msgspec_custom_template_data_keeps_raw_options() -> None:
         extra_template_data=defaultdict(dict, {"Empty": {"base_class_kwargs": "invalid"}}),
     )
     assert empty_model._custom_template_data()["base_class_kwargs"] == "invalid"
+
+    keyword_only_model = MsgspecStruct(
+        fields=[],
+        reference=Reference(path="KeywordOnly", original_name="KeywordOnly", name="KeywordOnly"),
+        extra_template_data=defaultdict(dict, {"KeywordOnly": {"base_class_kwargs": "invalid"}}),
+        keyword_only=True,
+    )
+    assert keyword_only_model.has_keyword_only_definition() is True
+    assert "class KeywordOnly(Struct, kw_only=True):" in keyword_only_model.render()
 
 
 def test_builtin_pydantic_config_literals_are_safe() -> None:
@@ -533,6 +544,38 @@ def test_typed_dict_template_type_expressions_are_non_executing() -> None:
 
     with pytest.raises(TypeError, match="must be created by the parser"):
         _InternalTypeExpression("dict[str, int]", object())
+
+
+def test_typed_dict_extra_item_imports_do_not_leak_to_other_outputs() -> None:
+    """Only TypedDict consumes imports attached to PEP 728 extra_items metadata."""
+    extra_item_import = Import.from_full_path("datetime.datetime")
+    typed_dict_metadata: dict[str, Any] = {}
+    pydantic_metadata: dict[str, Any] = {}
+
+    TypedDictModel.store_additional_properties_type(
+        typed_dict_metadata,
+        "datetime",
+        imports=(extra_item_import,),
+    )
+    BaseModel.store_additional_properties_type(
+        pydantic_metadata,
+        "datetime",
+        imports=(extra_item_import,),
+    )
+
+    typed_dict = TypedDictModel(
+        fields=[],
+        reference=Reference(path="Typed", original_name="Typed", name="Typed"),
+        extra_template_data=defaultdict(dict, {"Typed": typed_dict_metadata}),
+    )
+    pydantic_model = BaseModel(
+        fields=[],
+        reference=Reference(path="Pydantic", original_name="Pydantic", name="Pydantic"),
+        extra_template_data=defaultdict(dict, {"Pydantic": pydantic_metadata}),
+    )
+
+    assert extra_item_import in typed_dict.imports
+    assert extra_item_import not in pydantic_model.imports
 
 
 def test_typed_dict_include_only_custom_dir_keeps_builtin_context_safe(tmp_path: Path) -> None:
@@ -956,6 +999,51 @@ def test_direct_data_models_reuse_bounded_custom_template_cache(tmp_path: Path) 
         assert _missing_custom_template_state.count == 1
     finally:
         _clear_custom_template_caches()
+
+
+def test_clear_custom_template_caches_refreshes_legacy_pydantic_template_detection(tmp_path: Path) -> None:
+    """Template cache clears refresh Pydantic's legacy typed-extra detection."""
+    template_path = tmp_path / "BaseModel.jinja2"
+    template_path.write_text(
+        "{% if field.use_pydantic_extra_annotation_assignment %}{% endif %}",
+        encoding="utf-8",
+    )
+    try:
+        assert _uses_legacy_pydantic_extra_template(str(template_path)) is True
+        template_path.write_text("class {{ class_name }}: pass", encoding="utf-8")
+        assert _uses_legacy_pydantic_extra_template(str(template_path)) is True
+
+        _clear_custom_template_caches()
+
+        assert _uses_legacy_pydantic_extra_template(str(template_path)) is False
+    finally:
+        _clear_custom_template_caches()
+
+
+def test_clear_custom_template_caches_does_not_import_pydantic_adapter() -> None:
+    """Cache clearing leaves the Pydantic adapter unloaded when it was not imported."""
+    module_name = "datamodel_code_generator.model.pydantic_v2.base_model"
+    module = sys.modules.pop(module_name, None)
+    if module is None:  # pragma: no cover
+        pytest.fail("Expected the Pydantic adapter module to be loaded for this lazy-import check")
+    try:
+        _clear_custom_template_caches()
+        assert module_name not in sys.modules
+    finally:
+        sys.modules[module_name] = module
+
+
+def test_clear_custom_template_caches_tolerates_partially_initialized_pydantic_adapter(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Cache clearing remains safe while the lazy Pydantic adapter is initializing."""
+    module_name = "datamodel_code_generator.model.pydantic_v2.base_model"
+    module = sys.modules[module_name]
+    monkeypatch.delattr(module, "_uses_legacy_pydantic_extra_template")
+
+    _clear_custom_template_caches()
+
+    assert sys.modules[module_name] is module
 
 
 def test_data_model_create_typed_extra_field_unsupported() -> None:
@@ -2202,6 +2290,9 @@ def test_msgspec_unset_type_hint_handles_empty_and_simple_types() -> None:
     none_field = _msgspec_field(DataType(is_optional=True))
     assert none_field.type_hint == "Union[None, UnsetType]"
     assert none_field.imports == (IMPORT_MSGSPEC_UNSETTYPE, IMPORT_UNION, IMPORT_MSGSPEC_UNSET)
+    raw_none_field = _msgspec_field(DataType(type=NONE))
+    assert raw_none_field.type_hint == "Union[None, UnsetType]"
+    assert raw_none_field.imports == (IMPORT_MSGSPEC_UNSETTYPE, IMPORT_UNION, IMPORT_MSGSPEC_UNSET)
 
 
 @pytest.mark.parametrize(
@@ -3101,6 +3192,27 @@ def test_field_import_cache_normalizes_union_on_cache_hit(monkeypatch: pytest.Mo
         assert cached_field.imports == (IMPORT_OPTIONAL,)
         assert cached_field.data_type.is_optional is True
         uncached.assert_not_called()
+    finally:
+        DataModelFieldBase._field_imports_cache.clear()
+
+
+def test_field_import_cache_distinguishes_fixed_tuple_item_count() -> None:
+    """Fixed-length empty and Any tuples need distinct cached imports."""
+    DataModelFieldBase._field_imports_cache.clear()
+    try:
+        empty_tuple = DataModelFieldBase(
+            name="empty",
+            data_type=DataType(is_tuple=True, tuple_item_count=0),
+            required=True,
+        )
+        any_tuple = DataModelFieldBase(
+            name="values",
+            data_type=DataType(is_tuple=True, tuple_item_count=2),
+            required=True,
+        )
+
+        assert empty_tuple.imports == (Import.from_full_path("typing.Tuple"),)
+        assert any_tuple.imports == (IMPORT_ANY, Import.from_full_path("typing.Tuple"))
     finally:
         DataModelFieldBase._field_imports_cache.clear()
 

@@ -5,6 +5,34 @@ This changelog is automatically generated from GitHub Releases.
 
 ---
 
+## [0.76.1](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.76.1) - 2026-09-02
+
+## What's Changed
+* Update CHANGELOG for 0.76.0 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3812
+* Update release benchmark data by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3813
+* Fix payload runtime validation exclusions by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3815
+* Optimize collapsed root model replacement by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3826
+* Track collapsed root model references incrementally by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3827
+* Skip unnecessary built-in string normalization by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3828
+* Fix runtime validator output model ownership by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3817
+* Move parser source loading by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3818
+* Move field name policies to output models by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3820
+* Decouple parser run lifecycle by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3821
+* Move parser recursion signal by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3822
+* Move output template context to models by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3823
+* Isolate parser source context by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3824
+* Decouple input model transport by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3825
+* Enforce architecture boundaries by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3832
+* Allow null enum descriptions by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3835
+* Fix release draft analysis for stacked PRs by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3836
+* Fix paginated release draft reads by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3837
+* Fix release draft PR permissions by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3847
+
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.76.0...0.76.1
+
+---
+
 ## [0.76.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.76.0) - 2026-08-29
 
 ## Breaking Changes

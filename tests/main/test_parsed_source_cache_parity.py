@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import marshal
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from threading import Barrier, Event
 from typing import TYPE_CHECKING
 
@@ -15,15 +16,35 @@ from datamodel_code_generator import (
     _is_parsed_source_cache_enabled,
     _parser_source_data_cache,
     enable_parsed_source_cache,
+    load_data,
     load_data_from_path,
+    load_yaml,
 )
+from datamodel_code_generator import _source as source_loading
 from tests.conftest import assert_mutable_copy_is_isolated, assert_output
 from tests.main.conftest import JSON_SCHEMA_DATA_PATH, OPEN_API_DATA_PATH, run_main_with_args
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from pathlib import Path
     from typing import Any
+
+
+def test_source_loading_facade_keeps_compatible_exports() -> None:
+    """Keep public source helpers identical while parsers use their neutral owner."""
+    exports = {
+        "enable_parsed_source_cache": (enable_parsed_source_cache, source_loading.enable_parsed_source_cache),
+        "load_data": (load_data, source_loading.load_data),
+        "load_data_from_path": (load_data_from_path, source_loading.load_data_from_path),
+        "load_yaml": (load_yaml, source_loading.load_yaml),
+    }
+    report = "\n".join(
+        f"{name}: identity={public is neutral}, module={public.__module__}"
+        for name, (public, neutral) in exports.items()
+    )
+
+    assert_output(
+        report + "\n", Path(__file__).parents[1] / "data" / "expected" / "main" / "source_loading_boundary.txt"
+    )
 
 
 def _input_file_type_option(input_file_type: InputFileType) -> str:

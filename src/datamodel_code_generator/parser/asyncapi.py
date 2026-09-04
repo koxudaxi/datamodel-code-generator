@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from pydantic import Field, StrictStr, ValidationError
 from typing_extensions import Unpack
 
-from datamodel_code_generator import Error, InputFileType, YamlValue, snooper_to_methods
+from datamodel_code_generator import Error, InputFileType, snooper_to_methods
 from datamodel_code_generator.deprecations import warn_deprecated
 from datamodel_code_generator.enums import AsyncAPIVersion
 from datamodel_code_generator.parser.jsonschema import get_model_by_path, unescape_json_pointer_segment
@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
     from urllib.parse import ParseResult
 
+    from datamodel_code_generator._source import YamlValue
     from datamodel_code_generator._types import AsyncAPIParserConfigDict
     from datamodel_code_generator.config import AsyncAPIParserConfig
     from datamodel_code_generator.parser.schema_version import OpenAPISchemaFeatures
@@ -259,6 +260,8 @@ class AsyncAPIParser(OpenAPIParser):
 
     def _collect_discriminator_schemas(self) -> None:
         """Collect discriminator metadata from component schemas."""
+        self._discriminator_schemas.clear()
+        self._discriminator_subtypes.clear()
         schemas = self.raw_obj.get("components", {}).get("schemas", {})
         if not isinstance(schemas, dict):
             return
