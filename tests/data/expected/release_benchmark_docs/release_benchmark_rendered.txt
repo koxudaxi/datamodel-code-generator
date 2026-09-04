@@ -40,6 +40,6 @@ The benchmark data on this page is loaded from `docs/data/release-benchmarks.jso
 - Benchmark results are collected on GitHub Actions CI runners, so median timings can vary slightly with runner load and workflow timing; rerun benchmarks before treating small differences as regressions.
 - The Python version is the workflow input, defaulting to the latest configured CI Python.
 - Release packages are installed from PyPI in isolated virtual environments.
-- The `main` snapshot is installed from the GitHub repository when it is explicitly selected.
+- Every benchmark update measures `main` from an exact commit resolved at workflow start and replaces the previous `main` snapshot.
 - Input coverage currently focuses on OpenAPI and JSON Schema.
 - Historical updates commit `docs/data/release-benchmarks.json`; the page renders that JSON client-side.

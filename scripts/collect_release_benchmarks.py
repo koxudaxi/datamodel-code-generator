@@ -29,6 +29,11 @@ try:
 except ModuleNotFoundError:  # pragma: no cover - direct script execution
     from release_benchmark_errors import compact_benchmark_error
 
+try:
+    from scripts.release_benchmark_safety import MAIN_VERSION
+except ModuleNotFoundError:  # pragma: no cover - direct script execution
+    from release_benchmark_safety import MAIN_VERSION
+
 ROOT = Path(__file__).resolve().parents[1]
 GITHUB_PACKAGE_URL = "git+https://github.com/koxudaxi/datamodel-code-generator.git"
 DEFAULT_OUTPUT = ROOT / ".benchmarks" / "release-benchmarks.json"
@@ -42,6 +47,7 @@ TIMEOUT_EXIT_CODE = 124
 STATUS_OK = "ok"
 STATUS_FAILED = "failed"
 STATUS_UNSUPPORTED = "unsupported"
+MAIN_REF_PATTERN = re.compile(rf"^(?:{MAIN_VERSION}|[0-9a-f]{{40}})$")
 
 
 @dataclass(frozen=True, slots=True)
@@ -152,14 +158,14 @@ def _truncate_error(text: str) -> str:
     return f"{compact[: MAX_ERROR_LENGTH - 3]}..."
 
 
-def _install_spec(version: str) -> str:
-    if (normalized := _normalize_version(version)) == "main":
-        return f"datamodel-code-generator[ruff] @ {GITHUB_PACKAGE_URL}@main"
+def _install_spec(version: str, *, main_ref: str = MAIN_VERSION) -> str:
+    if (normalized := _normalize_version(version)) == MAIN_VERSION:
+        return f"datamodel-code-generator[ruff] @ {GITHUB_PACKAGE_URL}@{main_ref}"
     return f"datamodel-code-generator[ruff]=={normalized}"
 
 
-def _install_command(python_path: Path, version: str) -> list[str]:
-    spec = _install_spec(version)
+def _install_command(python_path: Path, version: str, *, main_ref: str) -> list[str]:
+    spec = _install_spec(version, main_ref=main_ref)
     if uv_path := shutil.which("uv"):
         return [uv_path, "pip", "install", "--python", str(python_path), spec]
     return [str(python_path), "-m", "pip", "install", spec]
@@ -174,8 +180,8 @@ def _create_venv(path: Path) -> Path:
     return _venv_python(path)
 
 
-def _install_release(python_path: Path, version: str, *, timeout: int, retries: int) -> str:
-    command = _install_command(python_path, version)
+def _install_release(python_path: Path, version: str, *, main_ref: str, timeout: int, retries: int) -> str:
+    command = _install_command(python_path, version, main_ref=main_ref)
     last_error = ""
     for attempt in range(retries):
         result = _run_subprocess(command, timeout=timeout)
@@ -321,6 +327,7 @@ def benchmark_version(
     *,
     formatters: tuple[str, ...],
     config: BenchmarkConfig,
+    main_ref: str = MAIN_VERSION,
 ) -> list[BenchmarkResult]:
     """Benchmark one released datamodel-code-generator version."""
     with tempfile.TemporaryDirectory(prefix="datamodel-code-generator-release-bench-") as tmp:
@@ -329,6 +336,7 @@ def benchmark_version(
         if error := _install_release(
             venv_python,
             version,
+            main_ref=main_ref,
             timeout=config.timeout,
             retries=config.install_retries,
         ):
@@ -345,19 +353,45 @@ def _result_payload(result: BenchmarkResult | dict[str, object]) -> dict[str, ob
     return result
 
 
-def _payload(results: list[BenchmarkResult] | list[dict[str, object]], *, runs: int, warmups: int) -> dict[str, object]:
+def _result_version(result: BenchmarkResult | dict[str, object]) -> str:
+    version = ""
+    match result:
+        case BenchmarkResult(version=result_version):
+            version = result_version
+        case dict():
+            version = str(result.get("version", ""))
+        case _:
+            pass
+    return version
+
+
+def _payload(
+    results: list[BenchmarkResult] | list[dict[str, object]],
+    *,
+    runs: int,
+    warmups: int,
+    main_ref: str = MAIN_VERSION,
+) -> dict[str, object]:
+    generated_at = datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+    metadata = {
+        "generated_at": generated_at,
+        "workflow": os.environ.get("GITHUB_WORKFLOW", "local"),
+        "workflow_run_id": os.environ.get("GITHUB_RUN_ID", ""),
+        "collector_sha": os.environ.get("GITHUB_SHA", ""),
+        "os": _runner_os(),
+        "python_version": platform.python_version(),
+        "runs_per_case": str(runs),
+        "warmups_per_case": str(warmups),
+    }
+    if any(_result_version(result) == MAIN_VERSION for result in results):
+        metadata.update({
+            "main_snapshot_generated_at": generated_at,
+            "main_snapshot_workflow_run_id": os.environ.get("GITHUB_RUN_ID", ""),
+            "main_snapshot_collector_sha": main_ref if re.fullmatch(r"[0-9a-f]{40}", main_ref) else "",
+        })
     return {
         "schema_version": 1,
-        "metadata": {
-            "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
-            "workflow": os.environ.get("GITHUB_WORKFLOW", "local"),
-            "workflow_run_id": os.environ.get("GITHUB_RUN_ID", ""),
-            "collector_sha": os.environ.get("GITHUB_SHA", ""),
-            "os": _runner_os(),
-            "python_version": platform.python_version(),
-            "runs_per_case": str(runs),
-            "warmups_per_case": str(warmups),
-        },
+        "metadata": metadata,
         "entries": [_result_payload(result) for result in results],
     }
 
@@ -375,6 +409,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--warmups", type=int, default=DEFAULT_WARMUPS, help="Warmup runs per case")
     parser.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT_SECONDS, help="Subprocess timeout in seconds")
     parser.add_argument("--install-retries", type=int, default=DEFAULT_INSTALL_RETRIES, help="PyPI install retry count")
+    parser.add_argument(
+        "--main-ref",
+        default=MAIN_VERSION,
+        help="Exact 40-character commit SHA used when benchmarking main (defaults to the moving main branch)",
+    )
     parser.add_argument(
         "--formatters",
         default=",".join(DEFAULT_FORMATTERS),
@@ -406,6 +445,8 @@ def _validate_args(args: argparse.Namespace) -> str:
         )
         if error
     ]
+    if not MAIN_REF_PATTERN.fullmatch(args.main_ref):
+        errors.append(f"--main-ref must be 'main' or a 40-character lowercase commit SHA, got {args.main_ref!r}")
     if not errors:
         return ""
     return "\n".join(errors)
@@ -438,11 +479,14 @@ def main() -> int:
                 version,
                 formatters=formatters,
                 config=config,
+                main_ref=args.main_ref,
             )
         )
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(_payload(results, runs=args.runs, warmups=args.warmups), indent=2) + "\n")
+    args.output.write_text(
+        json.dumps(_payload(results, runs=args.runs, warmups=args.warmups, main_ref=args.main_ref), indent=2) + "\n"
+    )
     print(f"Wrote {args.output}", file=sys.stderr)
     return 0
 

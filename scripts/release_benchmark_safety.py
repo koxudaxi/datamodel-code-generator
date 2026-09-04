@@ -11,6 +11,17 @@ if TYPE_CHECKING:
 
 EntryField = tuple[str, re.Pattern[str]]
 
+MAIN_VERSION = "main"
+MAIN_SNAPSHOT_METADATA_KEYS = (
+    "main_snapshot_generated_at",
+    "main_snapshot_workflow_run_id",
+    "main_snapshot_collector_sha",
+)
+MAIN_SNAPSHOT_FALLBACK_KEYS = {
+    "main_snapshot_generated_at": "generated_at",
+    "main_snapshot_workflow_run_id": "workflow_run_id",
+    "main_snapshot_collector_sha": "collector_sha",
+}
 SAFE_LABEL_PATTERN = re.compile(r"^(?:main|[A-Za-z0-9][A-Za-z0-9._+-]*)$")
 SAFE_FIELD_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 SAFE_METADATA_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 ._:/+-]*$")
@@ -49,6 +60,7 @@ INCOMING_METADATA_KEYS = (
     "pypistats_last_month",
     "pypistats_timeseries_days",
     "pypistats_timeseries_downloads",
+    *MAIN_SNAPSHOT_METADATA_KEYS,
 )
 
 
@@ -163,12 +175,13 @@ def safe_metadata_value(metadata: Mapping[str, object], key: str, *, path: Path)
             if (version := safe_release_version(raw_version, path=path, field=key))
         ]
         return ",".join(versions)
-    if isinstance(value, (int, float)):
-        text = str(value)
-    elif isinstance(value, str):
-        text = value.strip()
-    else:
-        return ""
+    match value:
+        case int() | float():
+            text = str(value)
+        case str():
+            text = value.strip()
+        case _:
+            return ""
     if not text:
         return ""
     if SAFE_METADATA_PATTERN.fullmatch(text):

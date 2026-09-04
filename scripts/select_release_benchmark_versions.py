@@ -20,9 +20,9 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 try:
-    from scripts.release_benchmark_safety import safe_release_version
+    from scripts.release_benchmark_safety import MAIN_VERSION, safe_release_version
 except ModuleNotFoundError:  # pragma: no cover - direct script execution
-    from release_benchmark_safety import safe_release_version
+    from release_benchmark_safety import MAIN_VERSION, safe_release_version
 
 if importlib.util.find_spec("certifi"):
     import certifi
@@ -110,6 +110,7 @@ class SelectionConfig:
     history_days: int
     limit: int
     now: datetime
+    include_main: bool = False
 
 
 def _utc_now() -> datetime:
@@ -274,8 +275,34 @@ def _selected_explicit_releases(
             usage_by_version.get(version),
         )
         for raw_version in _split_csv_words(explicit_versions)
-        if (version := _safe_normalize_version(raw_version))
+        if (version := _safe_normalize_version(raw_version)) and version != MAIN_VERSION
     ][:limit]
+
+
+def _explicit_requests_main(explicit_versions: str) -> bool:
+    return any(_safe_normalize_version(version) == MAIN_VERSION for version in _split_csv_words(explicit_versions))
+
+
+def _is_main_only_request(explicit_versions: str) -> bool:
+    """Return whether explicit input contains only the synthetic main version."""
+    if not (versions := _split_csv_words(explicit_versions)):
+        return False
+    return all(_safe_normalize_version(version) == MAIN_VERSION for version in versions)
+
+
+def _main_only_selection(config: SelectionConfig) -> VersionSelection:
+    """Build selection metadata without reading external release or download sources."""
+    return VersionSelection(
+        schema_version=1,
+        generated_at=_timestamp(config.now),
+        package=PACKAGE_NAME,
+        strategy="explicit",
+        history_days=config.history_days,
+        limit=config.limit,
+        selected_versions=[MAIN_VERSION],
+        releases=[],
+        download_stats={},
+    )
 
 
 def _selected_usage_releases(
@@ -373,6 +400,9 @@ def _load_clickpy_usage(
 
 def select_versions(config: SelectionConfig) -> VersionSelection:
     """Resolve benchmark release versions and package download metadata."""
+    if _is_main_only_request(config.explicit_versions):
+        return _main_only_selection(config)
+
     releases = _release_versions(_read_json(config.pypi_source))
     usage, clickpy_stats = _load_clickpy_usage(
         config.clickpy_source,
@@ -404,6 +434,9 @@ def select_versions(config: SelectionConfig) -> VersionSelection:
         **clickpy_stats,
         "pypistats": _load_pypistats(config.recent_source, config.overall_source),
     }
+    selected_versions = [release.version for release in selected]
+    if config.include_main or _explicit_requests_main(config.explicit_versions):
+        selected_versions.append(MAIN_VERSION)
     return VersionSelection(
         schema_version=1,
         generated_at=_timestamp(config.now),
@@ -411,7 +444,7 @@ def select_versions(config: SelectionConfig) -> VersionSelection:
         strategy=strategy,
         history_days=config.history_days,
         limit=config.limit,
-        selected_versions=[release.version for release in selected],
+        selected_versions=selected_versions,
         releases=selected,
         download_stats=download_stats,
     )
@@ -452,6 +485,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--versions", default="", help="Comma, whitespace, or newline separated release versions/tags")
     parser.add_argument("--history-days", type=int, default=DEFAULT_HISTORY_DAYS, help="Release upload lookback window")
     parser.add_argument("--limit", type=int, default=DEFAULT_LIMIT, help="Maximum selected release versions")
+    parser.add_argument(
+        "--include-main",
+        action="store_true",
+        help="Append the current main branch snapshot without counting it against the release limit",
+    )
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT, help="Selection JSON output path")
     parser.add_argument("--pypi-json", default=PYPI_JSON_URL, help="PyPI project JSON URL or fixture path")
     parser.add_argument("--clickpy-json", default=None, help="ClickPy version-download JSON fixture path")
@@ -479,6 +517,7 @@ def main() -> int:
             history_days=args.history_days,
             limit=args.limit,
             now=now,
+            include_main=args.include_main,
         )
     )
     if not selection.selected_versions:

@@ -11,12 +11,17 @@ import argparse
 import json
 import os
 import platform
+import re
 import sys
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
 try:
     from scripts.release_benchmark_safety import (
+        MAIN_SNAPSHOT_FALLBACK_KEYS,
+        MAIN_SNAPSHOT_METADATA_KEYS,
+        MAIN_VERSION,
         safe_incoming_metadata,
         safe_release_dates,
         safe_release_version,
@@ -27,6 +32,9 @@ try:
     )
 except ModuleNotFoundError:  # pragma: no cover - direct script execution
     from release_benchmark_safety import (
+        MAIN_SNAPSHOT_FALLBACK_KEYS,
+        MAIN_SNAPSHOT_METADATA_KEYS,
+        MAIN_VERSION,
         safe_incoming_metadata,
         safe_release_dates,
         safe_release_version,
@@ -42,6 +50,19 @@ DEFAULT_INCOMING_DATA = ROOT / ".benchmarks" / "release-benchmarks.json"
 DEFAULT_OUTPUT = DEFAULT_BASE_DATA
 
 EntryKey = tuple[str, str, str, str]
+MAIN_SHA_PATTERN = re.compile(r"^[0-9a-f]{40}$")
+
+
+@dataclass(frozen=True, slots=True)
+class HistoryMergeOptions:
+    """Optional controls for one history merge."""
+
+    selection_path: Path | None = None
+    generated_at: str = ""
+    current_main_sha: str = ""
+
+
+DEFAULT_HISTORY_MERGE_OPTIONS = HistoryMergeOptions()
 
 
 def _timestamp() -> str:
@@ -100,11 +121,34 @@ def _entry_sort_key(entry: dict[str, object]) -> tuple[tuple[int, int, int, int,
     return version_sort_key(version), input_type, case, formatter
 
 
+def _contains_main_snapshot(entries: list[dict[str, object]]) -> bool:
+    """Return whether a benchmark payload includes the synthetic main snapshot."""
+    return any(_entry_key(entry)[0] == MAIN_VERSION for entry in entries)
+
+
+def _current_main_entries(
+    entries: list[dict[str, object]], incoming_metadata: dict[str, object], current_main_sha: str
+) -> list[dict[str, object]]:
+    """Exclude a main snapshot when it no longer matches the repository's main SHA."""
+    if not current_main_sha or not _contains_main_snapshot(entries):
+        return entries
+    if _string(incoming_metadata.get("main_snapshot_collector_sha")) == current_main_sha:
+        return entries
+    return [entry for entry in entries if _entry_key(entry)[0] != MAIN_VERSION]
+
+
 def _merged_entries(
     base_entries: list[dict[str, object]], incoming_entries: list[dict[str, object]]
 ) -> list[dict[str, object]]:
     incoming_by_key = {_entry_key(entry): entry for entry in incoming_entries}
-    merged_by_key = {_entry_key(entry): entry for entry in base_entries if _entry_key(entry) not in incoming_by_key}
+    replaces_main = _contains_main_snapshot(incoming_entries)
+    merged_by_key: dict[EntryKey, dict[str, object]] = {}
+    for entry in base_entries:
+        if (entry_key := _entry_key(entry)) in incoming_by_key:
+            continue
+        if replaces_main and entry_key[0] == MAIN_VERSION:
+            continue
+        merged_by_key[entry_key] = entry
     merged_by_key.update(incoming_by_key)
     return sorted(merged_by_key.values(), key=_entry_sort_key)
 
@@ -203,7 +247,7 @@ def _merged_metadata(
     safe_incoming = safe_incoming_metadata(incoming_metadata, path=DEFAULT_INCOMING_DATA)
     metadata: dict[str, object] = {
         **base_metadata,
-        **safe_incoming,
+        **{key: value for key, value in safe_incoming.items() if key not in MAIN_SNAPSHOT_METADATA_KEYS},
     }
     versions = _unique_versions(entries)
     fallback_runs = _string(safe_incoming.get("runs_per_case")) or _string(base_metadata.get("runs_per_case"))
@@ -221,7 +265,20 @@ def _merged_metadata(
     })
     if last_month := _int_string(safe_incoming.get("pypistats_last_month")):
         metadata["pypistats_last_month"] = last_month
+    if not _contains_main_snapshot(entries):
+        for key in MAIN_SNAPSHOT_METADATA_KEYS:
+            metadata.pop(key, None)
     return metadata
+
+
+def _update_main_snapshot_metadata(metadata: dict[str, object], incoming_metadata: dict[str, object]) -> None:
+    """Replace metadata describing the main snapshot in place."""
+    safe_incoming = safe_incoming_metadata(incoming_metadata, path=DEFAULT_INCOMING_DATA)
+    for key in MAIN_SNAPSHOT_METADATA_KEYS:
+        if value := _string(safe_incoming.get(key)) or _string(safe_incoming.get(MAIN_SNAPSHOT_FALLBACK_KEYS[key])):
+            metadata[key] = value
+        else:
+            metadata.pop(key, None)
 
 
 def merge_release_benchmark_history(
@@ -229,8 +286,7 @@ def merge_release_benchmark_history(
     base_data_path: Path,
     incoming_data_path: Path,
     output_path: Path,
-    selection_path: Path | None = None,
-    generated_at: str = "",
+    options: HistoryMergeOptions = DEFAULT_HISTORY_MERGE_OPTIONS,
 ) -> dict[str, object]:
     """Merge incoming release benchmark data into committed historical data."""
     base_payload = _payload(base_data_path)
@@ -238,19 +294,26 @@ def merge_release_benchmark_history(
         msg = f"Incoming benchmark data not found: {incoming_data_path}"
         raise FileNotFoundError(msg)
     incoming_payload = _payload(incoming_data_path)
-    entries = _merged_entries(
-        _entries(base_payload, path=base_data_path),
-        _entries(incoming_payload, path=incoming_data_path),
+    base_entries = _entries(base_payload, path=base_data_path)
+    incoming_entries = _entries(incoming_payload, path=incoming_data_path)
+    if options.current_main_sha and not MAIN_SHA_PATTERN.fullmatch(options.current_main_sha):
+        msg = f"--current-main-sha must be a 40-character lowercase commit SHA, got {options.current_main_sha!r}"
+        raise ValueError(msg)
+    base_entries = _current_main_entries(base_entries, _metadata(base_payload), options.current_main_sha)
+    incoming_entries = _current_main_entries(incoming_entries, _metadata(incoming_payload), options.current_main_sha)
+    entries = _merged_entries(base_entries, incoming_entries)
+    metadata = _merged_metadata(
+        _metadata(base_payload),
+        _metadata(incoming_payload),
+        entries,
+        selection_path=options.selection_path,
+        generated_at=options.generated_at,
     )
+    if _contains_main_snapshot(incoming_entries):
+        _update_main_snapshot_metadata(metadata, _metadata(incoming_payload))
     payload = {
         "schema_version": incoming_payload.get("schema_version") or base_payload.get("schema_version") or 1,
-        "metadata": _merged_metadata(
-            _metadata(base_payload),
-            _metadata(incoming_payload),
-            entries,
-            selection_path=selection_path,
-            generated_at=generated_at,
-        ),
+        "metadata": metadata,
         "entries": entries,
     }
     _write_json(output_path, payload)
@@ -264,6 +327,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--incoming-data", type=Path, default=DEFAULT_INCOMING_DATA, help="New benchmark JSON artifact")
     parser.add_argument("--selection", type=Path, default=None, help="Optional refreshed release selection JSON")
     parser.add_argument("--generated-at", default="", help="UTC generated_at override for deterministic tests")
+    parser.add_argument(
+        "--current-main-sha",
+        default="",
+        help="Discard an incoming main snapshot unless it matches this 40-character commit SHA",
+    )
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT, help="Merged benchmark history JSON output")
     return parser.parse_args(argv)
 
@@ -275,8 +343,11 @@ def main(argv: list[str] | None = None) -> int:
         base_data_path=args.base_data,
         incoming_data_path=args.incoming_data,
         output_path=args.output,
-        selection_path=args.selection,
-        generated_at=args.generated_at,
+        options=HistoryMergeOptions(
+            selection_path=args.selection,
+            generated_at=args.generated_at,
+            current_main_sha=args.current_main_sha,
+        ),
     )
     print(f"Wrote {args.output}", file=sys.stderr)
     return 0
