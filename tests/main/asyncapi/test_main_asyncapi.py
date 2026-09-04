@@ -19,6 +19,7 @@ from tests.main.conftest import (
     BACKEND_GOLDEN_CASES,
     BACKEND_GOLDEN_TARGET_ARGS,
     DATA_PATH,
+    EXPECTED_ASYNC_API_PATH,
     run_generate_file_and_assert,
     run_main_and_assert,
 )
@@ -94,6 +95,20 @@ def test_main_asyncapi_3_json(output_file: Path) -> None:
         input_file_type="asyncapi",
         assert_func=assert_file_content,
         expected_file="order_events.py",
+    )
+
+
+def test_main_asyncapi_discriminator_state_isolated_per_document(output_dir: Path) -> None:
+    """Reset document-local discriminator metadata for directory inputs."""
+    run_main_and_assert(
+        input_path=ASYNC_API_DATA_PATH / "discriminator_state_isolation",
+        output_path=output_dir,
+        input_file_type="asyncapi",
+        expected_directory=EXPECTED_ASYNC_API_PATH / "discriminator_state_isolation",
+        extra_args=["--disable-timestamp"],
+        runtime_validation_module="b",
+        runtime_validation_model_name="Holder",
+        runtime_validation_data={"pet": {"name": "Milo"}},
     )
 
 

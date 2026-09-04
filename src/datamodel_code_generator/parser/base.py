@@ -1763,6 +1763,10 @@ def _check_discriminator_mapping_paths(
     discriminator_values: list[DiscriminatorValue],
 ) -> None:
     for name, path in mapping.items():
+        if "/" not in path and "#" not in path:
+            if model.path.rsplit("/", 1)[-1] == path:
+                discriminator_values.append(name)
+            continue
         if (model.path.split("#/")[-1] != path.split("#/")[-1]) and (
             path.startswith("#/") or model.path[:-1] != path.split("/")[-1]
         ):
