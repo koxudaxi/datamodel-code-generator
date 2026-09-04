@@ -11,7 +11,7 @@ RUN test -n "${VERSION}" \
     || { echo "The VERSION build arg is required." >&2; exit 1; } \
     && python -m venv "${VIRTUAL_ENV}" \
     && pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir "datamodel-code-generator[http]==${VERSION}"
+    && pip install --no-cache-dir --refresh-package=datamodel-code-generator "datamodel-code-generator[http]==${VERSION}"
 
 FROM python:3.14.7-slim-bookworm
 
