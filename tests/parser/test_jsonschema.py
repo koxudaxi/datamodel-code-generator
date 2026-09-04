@@ -307,6 +307,7 @@ def test_schema_validator_required_only_schema_filters() -> None:
 
     assert parser._is_required_only_schema(required_only_schema)
     assert parser._get_required_groups([required_only_schema]) == (("a",),)
+    assert parser._is_required_only_schema(JsonSchemaObject.model_validate({"required": ["a"], "type": ["object"]}))
     assert not parser._is_required_only_schema(True)
     assert not parser._is_required_only_schema(JsonSchemaObject.model_validate({}))
     assert not parser._is_required_only_schema(JsonSchemaObject.model_validate({"required": []}))
@@ -333,6 +334,7 @@ def test_schema_validator_required_only_schema_filters() -> None:
     )
     assert not parser._is_required_only_schema(JsonSchemaObject.model_validate({"required": ["a"], "contains": {}}))
     assert not parser._is_required_only_schema(JsonSchemaObject.model_validate({"required": ["a"], "not": {}}))
+    assert not parser._is_required_only_schema(JsonSchemaObject.model_validate({"required": ["a"], "type": ["null"]}))
     assert (
         parser._get_required_groups([JsonSchemaObject.model_validate({"properties": {"a": {"type": "string"}}})]) == ()
     )
@@ -4875,6 +4877,23 @@ def test_inherited_field_schema_cycle_and_mapping_fallbacks() -> None:
     )
     assert parser._merge_all_of_mapping(JsonSchemaObject.model_validate({"allOf": [True]})) is None
     assert parser._merge_all_of_mapping(JsonSchemaObject.model_validate({})) is None
+
+
+def test_merge_all_of_mapping_accepts_only_object_type_lists() -> None:
+    """Merge singleton object type lists without accepting mixed types."""
+    parser = JsonSchemaParser("")
+    object_only = JsonSchemaObject.model_validate({
+        "allOf": [{"type": ["object"], "additionalProperties": {"type": "integer"}}]
+    })
+    mixed = JsonSchemaObject.model_validate({
+        "allOf": [{"type": ["object", "string"], "additionalProperties": {"type": "integer"}}]
+    })
+
+    merged = parser._merge_all_of_mapping(object_only)
+
+    assert merged is not None
+    assert merged.type == "object"
+    assert parser._merge_all_of_mapping(mixed) is None
 
 
 def test_resolve_type_import_from_defs() -> None:

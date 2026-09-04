@@ -311,6 +311,12 @@ class FieldNameResolver:
         self.special_field_name_prefix: str | None = (
             "field" if special_field_name_prefix is None else special_field_name_prefix
         )
+        if self.special_field_name_prefix and not f"{self.special_field_name_prefix}_x".isidentifier():
+            msg = (
+                f"--special-field-name-prefix '{self.special_field_name_prefix}' "
+                "is not a valid Python identifier prefix"
+            )
+            raise Error(msg)
         self.remove_special_field_name_prefix: bool = remove_special_field_name_prefix
         self.capitalise_enum_members: bool = capitalise_enum_members
         self.no_alias = no_alias
@@ -345,7 +351,7 @@ class FieldNameResolver:
         if name[0] == "#":
             name = name[1:] or self.empty_field_name
 
-        if self.snake_case_field and not ignore_snake_case_field and self.original_delimiter is not None:
+        if self.snake_case_field and not ignore_snake_case_field and self.original_delimiter:
             name = snake_to_upper_camel(name, delimiter=self.original_delimiter)
 
         name = _NON_IDENTIFIER_PATTERN.sub("_", name)
@@ -752,6 +758,7 @@ class ModelResolver:  # noqa: PLR0904
         self._base_path: Path = base_path or Path.cwd()
         self._current_base_path: Path | None = self._base_path
         self._resolved_local_file_parts: dict[tuple[Path, str], str] = {}
+        self._resolved_base_path_cache: Path | None = None
         self.remove_suffix_number: bool = remove_suffix_number
 
         # Handle naming strategy with backward compatibility for parent_scoped_naming
@@ -830,6 +837,7 @@ class ModelResolver:  # noqa: PLR0904
         if "field_name_resolvers" in instance_state:
             instance_state["_field_name_resolvers"] = instance_state.pop("field_name_resolvers")
         self.__dict__.update(instance_state)
+        self.__dict__.setdefault("_resolved_base_path_cache", None)
         for name, value in slot_state.items():
             setattr(self, name, value)
 
@@ -1054,6 +1062,12 @@ class ModelResolver:  # noqa: PLR0904
             resolved_ref += f"#{fragment}"
         return resolved_ref
 
+    def _resolved_base_path(self) -> Path:
+        """Return a cached canonical base path for local references."""
+        if self._resolved_base_path_cache is None:
+            self._resolved_base_path_cache = self._base_path.resolve()
+        return self._resolved_base_path_cache
+
     def resolve_ref(self, path: Sequence[str] | str) -> str:  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
         """Resolve a reference path to its canonical form."""
         joined_path = path if isinstance(path, str) else self.join_path(tuple(path))
@@ -1073,7 +1087,7 @@ class ModelResolver:  # noqa: PLR0904
             if (resolved_file_part := self._resolved_local_file_parts.get(cache_key)) is None:
                 local_file_path = Path(current_base_path, file_path)
                 resolved_file_path = local_file_path.resolve()
-                resolved_file_part = get_relative_path(self._base_path, resolved_file_path).as_posix()
+                resolved_file_part = get_relative_path(self._resolved_base_path(), resolved_file_path).as_posix()
                 if len(self._resolved_local_file_parts) < self._MAX_RESOLVED_LOCAL_FILE_PARTS and not _contains_symlink(
                     local_file_path
                 ):
@@ -1081,6 +1095,15 @@ class ModelResolver:  # noqa: PLR0904
             joined_path = resolved_file_part
             if fragment:
                 joined_path += f"#{fragment}"
+        if "#" in joined_path:
+            file_part, fragment = joined_path.split("#", 1)
+            if (
+                file_part
+                and fragment
+                and not fragment.startswith("/")
+                and (anchor_ref := self.ids.get(file_part, {}).get(f"#{fragment}"))
+            ):
+                return anchor_ref
         if ID_PATTERN.match(joined_path) and SPECIAL_PATH_MARKER not in joined_path:
             id_scope = "/".join(self.current_root)
             scoped_ids = self.ids[id_scope]
@@ -1151,7 +1174,7 @@ class ModelResolver:  # noqa: PLR0904
                     / target_url_path.name
                 )
                 if target_path.exists():
-                    return f"{target_path.resolve().relative_to(self._base_path)}#{path_part}"
+                    return f"{target_path.resolve().relative_to(self._resolved_base_path())}#{path_part}"
 
         return ref
 
