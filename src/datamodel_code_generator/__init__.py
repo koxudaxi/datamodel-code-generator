@@ -151,7 +151,8 @@ YamlValue = TypeAliasType("YamlValue", "dict[str, YamlValue] | list[YamlValue] |
 # without increasing tracemalloc peaks. Higher thresholds or gc.disable() raised peaks by 17%.
 _GC_YOUNG_THRESHOLD: int = 100_000
 _gc_tuning_lock = threading.Lock()
-_gc_tuning_depth: int = 0
+# This one-slot holder keeps the process-wide scope count mutable without allocating state per call.
+_gc_tuning_depth: list[int] = [0]
 _gc_saved_threshold: tuple[int, int, int]
 
 
@@ -162,29 +163,29 @@ def _tuned_gc() -> Iterator[None]:
     Process-global by nature: only the outermost concurrent caller changes and restores the
     threshold, nested or parallel calls are counted, and a host that disabled GC is left alone.
     """
-    global _gc_tuning_depth, _gc_saved_threshold  # noqa: PLW0603
+    global _gc_saved_threshold  # noqa: PLW0603
 
     with _gc_tuning_lock:
-        match _gc_tuning_depth:
+        match _gc_tuning_depth[0]:
             case 0 if gc.isenabled():
                 _gc_saved_threshold = gc.get_threshold()
                 gc.set_threshold(_GC_YOUNG_THRESHOLD, *_gc_saved_threshold[1:])
-                _gc_tuning_depth = 1
+                _gc_tuning_depth[0] = 1
             case 0:
                 # Negative depth records scopes entered while the host disabled GC.
-                _gc_tuning_depth = -1
+                _gc_tuning_depth[0] = -1
             case depth:
-                _gc_tuning_depth = depth + (1 if depth > 0 else -1)
+                _gc_tuning_depth[0] = depth + (1 if depth > 0 else -1)
     try:
         yield
     finally:
         with _gc_tuning_lock:
-            match _gc_tuning_depth:
+            match _gc_tuning_depth[0]:
                 case 1:
-                    _gc_tuning_depth = 0
+                    _gc_tuning_depth[0] = 0
                     gc.set_threshold(*_gc_saved_threshold)
                 case depth:
-                    _gc_tuning_depth = depth - (1 if depth > 0 else -1)
+                    _gc_tuning_depth[0] = depth - (1 if depth > 0 else -1)
 
 
 for _public_source_export in (

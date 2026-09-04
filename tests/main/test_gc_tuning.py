@@ -62,6 +62,12 @@ def test_generate_scopes_tuned_gc_for_e2e_mapping_input(gc_state: tuple[int, int
     schema = json.loads((JSON_SCHEMA_DATA_PATH / "person.json").read_text(encoding="utf-8"))
     observed_thresholds: list[tuple[int, int, int]] = []
     recording_input = _ThresholdRecordingMapping(schema, observed_thresholds)
+    gc.disable()
+    try:
+        with _tuned_gc():
+            disabled_scope_unchanged = gc.get_threshold() == gc_state
+    finally:
+        gc.enable()
 
     returned = generate(
         recording_input,
@@ -89,6 +95,7 @@ def test_generate_scopes_tuned_gc_for_e2e_mapping_input(gc_state: tuple[int, int
     assert_output(
         "\n".join((
             f"mapping_size={len(recording_input)}",
+            f"disabled_scope_unchanged={disabled_scope_unchanged}",
             f"tuned_during_generation={(_GC_YOUNG_THRESHOLD, *gc_state[1:]) in observed_thresholds}",
             f"restored_after_generation={gc.get_threshold() == gc_state}",
             "",
