@@ -144,16 +144,29 @@ def test_strict_equal_handles_non_equivalent_values() -> None:
     )
 
 
-@pytest.fixture(params=("custom", "pure-python"))
-def yaml_loader(request: pytest.FixtureRequest) -> type:
-    """Return both C-backed and pure-Python loader implementations."""
-    match request.param:
+def _select_yaml_loader(name: str) -> type:
+    """Select a supported loader implementation for parity coverage."""
+    match name:
         case "custom":
             return get_safe_loader()
         case "pure-python":
             return _PurePythonFastSafeLoader
         case _:
             raise AssertionError
+
+
+@pytest.fixture(params=("custom", "pure-python"))
+def yaml_loader(request: pytest.FixtureRequest) -> type:
+    """Return both C-backed and pure-Python loader implementations."""
+    return _select_yaml_loader(request.param)
+
+
+def test_yaml_loader_rejects_unknown_implementation() -> None:
+    """Keep the fixture's defensive selector branch covered."""
+    with pytest.raises(AssertionError) as exception_info:
+        _select_yaml_loader("unknown")
+
+    assert_output(f"{type(exception_info.value).__name__}\n", _DATA_PATH / "invalid_loader.txt")
 
 
 @pytest.mark.parametrize("text", _CASES.values(), ids=_CASES)
