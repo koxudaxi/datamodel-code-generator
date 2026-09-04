@@ -146,12 +146,12 @@ def test_strict_equal_handles_non_equivalent_values() -> None:
 
 def _select_yaml_loader(name: str) -> type:
     """Select a supported loader implementation for parity coverage."""
-    loader_class: type
+    loader_class: type = _PurePythonFastSafeLoader
     match name:
         case "custom":
             loader_class = get_safe_loader()
         case "pure-python":
-            loader_class = _PurePythonFastSafeLoader
+            pass
         case _:
             raise AssertionError
     return loader_class
