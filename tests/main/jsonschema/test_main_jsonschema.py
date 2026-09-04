@@ -3621,6 +3621,30 @@ def test_main_generate_pydantic_v2_dataclass_field(output_file: Path) -> None:
         expected_file="pydantic_v2_dataclass_field.py",
         output_model_type=DataModelType.PydanticV2Dataclass,
     )
+    module_name = "generated_pydantic_v2_dataclass_field"
+    spec = importlib.util.spec_from_file_location(module_name, output_file)
+    if spec is None or spec.loader is None:  # pragma: no cover
+        pytest.fail(f"Unable to load generated module from {output_file}", pytrace=False)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    try:
+        spec.loader.exec_module(module)
+        first = module.Product(id=1, name="first", price=1)
+        second = module.Product(id=2, name="second", price=2)
+        assert_mutable_copy_is_isolated(
+            original=second.tags,
+            copied=first.tags,
+            mutate_copied=lambda value: value.append("tag"),
+            label="pydantic dataclass list default",
+        )
+        assert_mutable_copy_is_isolated(
+            original=second.metadata,
+            copied=first.metadata,
+            mutate_copied=lambda value: value.update(key="value"),
+            label="pydantic dataclass dict default",
+        )
+    finally:
+        sys.modules.pop(module_name, None)
 
 
 def test_main_generate_pydantic_v2_dataclass_required_field_order(output_file: Path) -> None:
@@ -9170,6 +9194,30 @@ def test_main_typed_dict_extra_items(output_file: Path) -> None:
     )
 
 
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "22",
+    reason="Installed black doesn't support Python version 3.10",
+)
+def test_main_typed_dict_extra_items_imports(output_file: Path) -> None:
+    """TypedDict extra_items carries imports required by its value type."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "typed_dict_extra_items_datetime.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="typed_dict_extra_items_datetime.py",
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--target-python-version",
+            "3.10",
+            "--output-datetime-class",
+            "datetime",
+        ],
+        force_exec_validation=True,
+    )
+
+
 @pytest.mark.parametrize(("output_model_type", "expected_name"), BACKEND_GOLDEN_CASES)
 def test_main_additional_properties_output_context(
     output_file: Path,
@@ -10331,6 +10379,66 @@ def test_main_msgspec_null_field(output_file: Path) -> None:
             "--target-python-version",
             "3.10",
         ],
+        force_exec_validation=True,
+    )
+    import msgspec
+
+    with _generated_model(output_file, "msgspec_null_field", "Model") as model:
+        explicit_null = msgspec.json.decode(b'{"required_null":null,"optional_null":null}', type=model)
+        missing_null = msgspec.json.decode(b'{"required_null":null}', type=model)
+        if explicit_null.optional_null is not None:  # pragma: no cover
+            pytest.fail(f"Expected explicit null, got {explicit_null.optional_null!r}")
+        if missing_null.optional_null is not msgspec.UNSET:  # pragma: no cover
+            pytest.fail(f"Expected omitted null to stay UNSET, got {missing_null.optional_null!r}")
+
+
+@MSGSPEC_LEGACY_BLACK_SKIP
+def test_main_msgspec_boolean_enum_literal(output_file: Path) -> None:
+    """Msgspec enum literals lower boolean values to bool rather than Literal."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "msgspec_boolean_enum_literal.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="msgspec_boolean_enum_literal.py",
+        extra_args=[
+            "--output-model-type",
+            "msgspec.Struct",
+            "--enum-field-as-literal",
+            "all",
+            "--use-union-operator",
+            "--target-python-version",
+            "3.10",
+            "--formatters",
+            "builtin",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+    )
+
+
+@MSGSPEC_LEGACY_BLACK_SKIP
+def test_main_msgspec_non_dict_base_class_kwargs(output_file: Path) -> None:
+    """Malformed public msgspec kwargs do not block generator-owned kw_only output."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "simple_string.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="msgspec_non_dict_base_class_kwargs.py",
+        extra_args=[
+            "--output-model-type",
+            "msgspec.Struct",
+            "--keyword-only",
+            "--extra-template-data",
+            str(JSON_SCHEMA_DATA_PATH / "extra_data_msgspec_non_dict.json"),
+            "--target-python-version",
+            "3.10",
+            "--formatters",
+            "builtin",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
     )
 
 

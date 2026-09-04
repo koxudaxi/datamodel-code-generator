@@ -249,6 +249,16 @@ def test_constructor_default_classifiers_ignore_rendered_syntax_in_values_and_me
             id="pydantic-dataclass",
         ),
         pytest.param(
+            PydanticDataClass,
+            PydanticDataclassField(
+                name="pydantic_mutable_default",
+                data_type=DataType(type="list"),
+                default=[],
+                required=False,
+            ),
+            id="pydantic-dataclass-mutable-default",
+        ),
+        pytest.param(
             MsgspecStruct,
             MsgspecDataModelField(
                 name="msgspec_factory",
@@ -312,6 +322,31 @@ def test_dataclass_mutable_defaults_with_metadata_use_factories(default: object,
 
     assert str(field) == f"field(metadata={{'note': 'preserved'}}, default_factory={factory})"
     assert StandardDataClass.FIELD_DEFAULT_CLASSIFIER(field) == (True, False)
+
+
+@pytest.mark.allow_direct_assert
+@pytest.mark.parametrize(
+    ("default", "factory"),
+    [
+        pytest.param([], "list", id="empty-list"),
+        pytest.param({}, "dict", id="empty-dict"),
+        pytest.param(set(), "set", id="empty-set"),
+        pytest.param(["value"], "lambda: ['value']", id="list"),
+        pytest.param({"key": "value"}, "lambda: {'key': 'value'}", id="dict"),
+        pytest.param({"value"}, "lambda: {'value'}", id="set"),
+    ],
+)
+def test_pydantic_dataclass_mutable_defaults_use_factories(default: object, factory: str) -> None:
+    """Pydantic dataclasses need Field factories for mutable defaults."""
+    field = PydanticDataclassField(
+        name="mutable_default",
+        data_type=DataType(type="object"),
+        default=default,
+        required=False,
+    )
+
+    assert field.dataclass_field == f"Field(default_factory={factory})"
+    assert PydanticDataClass.FIELD_DEFAULT_CLASSIFIER(field) == (True, False)
 
 
 @pytest.mark.allow_direct_assert

@@ -351,6 +351,25 @@ def test_deserialize_decimal_defaults_condecimal_collision(output_file: Path) ->
     )
 
 
+def test_condecimal_constraints_alias_decimal_without_defaults(output_file: Path) -> None:
+    """Alias Decimal used in condecimal constraints even when no value is deserialized."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "condecimal_decimal_collision_no_default.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="serialized_decimal_defaults/condecimal_collision_no_default.py",
+        extra_args=[
+            *BACKEND_GOLDEN_TARGET_ARGS,
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+            "--use-decimal-for-multiple-of",
+        ],
+        force_exec_validation=True,
+    )
+
+
 def test_deserialize_decimal_defaults_with_decimal_multiple_of(output_file: Path) -> None:
     """Use the Pydantic condecimal descriptor created for number multipleOf constraints."""
     with warnings.catch_warnings(record=True) as recorded_warnings:

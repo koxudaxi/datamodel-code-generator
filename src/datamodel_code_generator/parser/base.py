@@ -2174,6 +2174,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self._source_context = getattr(config, "_source_context", None) or _source_context_from_config(config)
         self._has_bound_python_types = False
         self._has_runtime_expressions = False
+        self._constrained_decimal_alias_model_ids: set[int] = set()
 
         self.keyword_only = config.keyword_only
         self.target_pydantic_version = config.target_pydantic_version
@@ -3752,10 +3753,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         if deserialized_default:
             self.__normalize_default_value_constraints(models)
 
-    def __normalize_default_value_constraints(self, models: list[DataModel]) -> None:
+    def __normalize_default_value_constraints(self, models: list[DataModel]) -> bool:
         """Keep backend-declared runtime constraint values structured until alias resolution."""
         from decimal import Decimal  # noqa: PLC0415
 
+        normalized = False
         for model, _, data_type in iter_models_field_data_types(models):
             if (
                 not model.SUPPORTS_DESERIALIZED_DEFAULT_VALUES
@@ -3787,6 +3789,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             runtime_imports = data_type.runtime_expression_imports
             data_type._set_runtime_expression_imports((*runtime_imports, descriptor.constructor_import))  # noqa: SLF001
             self._register_runtime_expression()
+            normalized = True
+        return normalized
 
     def __resolve_default_value_descriptor(self, data_type: DataType) -> tuple[Import, DefaultValueDescriptor] | None:
         """Return a backend-declared scalar descriptor and its emitted annotation import."""
@@ -5601,6 +5605,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         can_retain_cache: bool,
     ) -> bool:
         """Prepare aliases, imports, and inherited enums before default processing."""
+        if "Decimal" in all_module_fields:
+            self._constrained_decimal_alias_model_ids.update(map(id, models))
         self.__alias_shadowed_imports(models, all_module_fields, can_retain_cache=can_retain_cache)
         self.__override_required_field(models, can_retain_cache=can_retain_cache)
         self.__replace_unique_list_to_set(models, can_retain_cache=can_retain_cache)
@@ -5679,7 +5685,14 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
     def _finalize_structured_imports(self, contexts: list[ModuleContext]) -> None:
         """Resolve aliases introduced after generic base classes are applied."""
-        if not (self._has_bound_python_types or self._has_runtime_expressions):
+        has_structured_imports = self._has_bound_python_types or self._has_runtime_expressions
+        if not has_structured_imports and not self._constrained_decimal_alias_model_ids:
+            return
+        if models := [
+            model for ctx in contexts for model in ctx.models if id(model) in self._constrained_decimal_alias_model_ids
+        ]:
+            has_structured_imports = self.__normalize_default_value_constraints(models) or has_structured_imports
+        if not has_structured_imports:
             return
         for ctx in contexts:
             all_module_fields = {field.name for model in ctx.models for field in model.fields if field.name is not None}

@@ -27,11 +27,13 @@ class RenderPlan:
     Field_: Annotated[str | None, Field(alias='Field(')] = 'value'
     literal_convert_marker: str | None = 'lambda: convert'
     nested_factory: Nested | None = Field(default_factory=Nested)
-    nested_convert: Annotated[Nested | None, Field(validate_default=True)] = {
-        'value': 'Field('
-    }
-    empty_nested_convert: Annotated[Nested | None, Field(validate_default=True)] = {}
-    empty_nested_list_convert: Annotated[
-        list[Nested] | None, Field(validate_default=True)
-    ] = []
+    nested_convert: Nested | None = Field(
+        default_factory=lambda: {'value': 'Field('}, validate_default=True
+    )
+    empty_nested_convert: Nested | None = Field(
+        default_factory=dict, validate_default=True
+    )
+    empty_nested_list_convert: list[Nested] | None = Field(
+        default_factory=list, validate_default=True
+    )
     class_var_marker: ClassVar[str | None] = 'value'
