@@ -5,6 +5,28 @@ This changelog is automatically generated from GitHub Releases.
 
 ---
 
+## [0.76.2](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.76.2) - 2026-09-04
+
+## What's Changed
+* Update CHANGELOG for 0.76.1 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3850
+* Harden JSON Schema resolution by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3838
+* Preserve reference naming invariants by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3839
+* Correct model backend output by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3840
+* Preserve parser model reuse by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3841
+* Correct input format semantics by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3842
+* Correct OpenAPI and AsyncAPI generation by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3843
+* Harden runtime edge cases by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3844
+* Harden CLI configuration and errors by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3845
+* Tune GC thresholds during generation by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3848
+* Speed up PyYAML document construction by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3849
+* Bump the github-actions group with 4 updates by @dependabot[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3851
+* Skip unnecessary release analysis by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3853
+
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.76.1...0.76.2
+
+---
+
 ## [0.76.1](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.76.1) - 2026-09-02
 
 ## What's Changed
