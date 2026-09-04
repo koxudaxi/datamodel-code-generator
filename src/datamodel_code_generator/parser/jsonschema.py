@@ -9726,9 +9726,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         relative_path, separator, object_path = resolved_ref.partition("#")
         if not separator or not object_path or object_path.startswith("/"):
             return ref
-        if "#" in object_path:
-            msg = f"Invalid external $ref: {ref}"
-            raise Error(msg)
 
         ref_body = self._get_ref_body(relative_path)
         if (anchor_pointer := _find_json_schema_anchor_pointer(ref_body, object_path)) is not None:

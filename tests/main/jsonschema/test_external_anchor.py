@@ -5,9 +5,6 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
-import pytest
-
-from datamodel_code_generator import Error
 from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.parser.jsonschema import JsonSchemaParser, _find_json_schema_anchor_pointer
 from datamodel_code_generator.reference import ModelResolver
@@ -17,6 +14,8 @@ from tests.main.jsonschema.conftest import EXPECTED_JSON_SCHEMA_PATH, assert_fil
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    import pytest
 
 
 def test_main_jsonschema_external_anchor_with_legacy_shorthand(output_file: Path) -> None:
@@ -84,16 +83,15 @@ def test_main_jsonschema_malformed_external_ref_is_wrapped(
     assert_output(capsys.readouterr().err, EXPECTED_JSON_SCHEMA_PATH / "malformed_external_ref.txt")
 
 
-def test_jsonschema_malformed_anchor_ref_is_rejected_during_type_resolution() -> None:
+def test_main_jsonschema_malformed_anchor_ref_is_wrapped(capsys: pytest.CaptureFixture[str], output_file: Path) -> None:
     """Reject multi-fragment external refs before fetching their external target."""
-    source = JSON_SCHEMA_DATA_PATH / "external_ref_errors" / "malformed_anchor.json"
-    ref = json.loads(source.read_text(encoding="utf-8"))["properties"]["value"]["$ref"]
-    parser = JsonSchemaParser(source, base_path=source.parent)
-
-    with pytest.raises(Error) as exception_info:
-        parser.get_ref_data_type(ref)
-
-    assert_output(f"{exception_info.value}\n", EXPECTED_JSON_SCHEMA_PATH / "malformed_anchor_external_ref.txt")
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "external_ref_errors" / "malformed_anchor.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+    )
+    assert_output(capsys.readouterr().err, EXPECTED_JSON_SCHEMA_PATH / "malformed_anchor_external_ref.txt")
 
 
 def test_model_resolver_uses_cached_external_anchor_from_schema_fixture() -> None:
