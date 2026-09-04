@@ -1,1 +1,2 @@
-blocked file
+same_exception=True
+message=blocked file

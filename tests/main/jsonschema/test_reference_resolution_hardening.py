@@ -104,8 +104,11 @@ def test_jsonschema_non_directory_permission_error_is_preserved(
     with pytest.raises(PermissionError) as exception_info:
         parser._get_ref_body_from_remote(source.name)
 
-    assert exception_info.value is permission_error
-    assert_output(f"{exception_info.value}\n", EXPECTED_JSON_SCHEMA_PATH / "permission_external_ref.txt")
+    assert_output(
+        f"same_exception={exception_info.value is permission_error}\n"
+        f"message={exception_info.value}\n",
+        EXPECTED_JSON_SCHEMA_PATH / "permission_external_ref.txt",
+    )
 
 
 def test_jsonschema_external_ref_mapping_returns_loaded_reference() -> None:
