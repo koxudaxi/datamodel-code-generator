@@ -973,6 +973,15 @@ class GenerationStore:  # noqa: PLR0904
         new_data_type: DataType,
     ) -> None:
         """Replace a nested data type with append-position compatibility."""
+        if parent_data_type.dict_key is old_data_type:
+            cache_owners = self._cache_owners_for_data_type(parent_data_type)
+            old_data_type.parent = None
+            parent_data_type.dict_key = new_data_type
+            new_data_type.parent = parent_data_type
+            self._invalidate_owner_caches(*cache_owners)
+            self._invalidate_after_mutation()
+            return
+
         old_id = id(old_data_type)
         self.set_nested_data_types(
             parent_data_type,

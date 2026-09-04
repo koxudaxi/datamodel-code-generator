@@ -179,7 +179,13 @@ MISSING_SENTINEL_PAYLOAD_CASE_IDS = (
     "openapi/missing_sentinel_nullable.yaml::components.schemas.MissingSentinelNullable",
 )
 PAYLOAD_BACKEND_EXTRA_ARGS_BY_CASE_ID: dict[str, dict[PayloadBackend, tuple[str, ...]]] = {
-    case_id: {PayloadBackend.PYDANTIC_V2: ("--use-missing-sentinel",)} for case_id in MISSING_SENTINEL_PAYLOAD_CASE_IDS
+    **{
+        case_id: {PayloadBackend.PYDANTIC_V2: ("--use-missing-sentinel",)}
+        for case_id in MISSING_SENTINEL_PAYLOAD_CASE_IDS
+    },
+    "jsonschema/collapse_root_models_property_names_reference.json": dict.fromkeys(
+        PayloadBackend, ("--collapse-root-models",)
+    ),
 }
 ROUND_TRIP_EXCLUDED_CASES: dict[str, str] = {
     "jsonschema/default_factory_nested_model_with_dict.json": (

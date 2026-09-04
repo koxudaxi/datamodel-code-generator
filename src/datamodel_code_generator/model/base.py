@@ -1505,6 +1505,9 @@ class TemplateBase(ABC):
 class BaseClassDataType(DataType):
     """DataType subclass for base class references."""
 
+    def _apply_nullable_from_reference(self) -> None:
+        """Keep nullable model references out of class inheritance clauses."""
+
 
 UNDEFINED: Any = object()
 
@@ -1567,6 +1570,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     SUPPORTS_BOOLEAN_LITERAL: ClassVar[bool] = True
     REQUIRES_FIELD_DEPENDENCY_ORDERING: ClassVar[bool] = False
     REQUIRES_TAGGED_UNION_DISCRIMINATOR: ClassVar[bool] = False
+    REQUIRES_UNIQUE_FIELD_ALIASES: ClassVar[bool] = False
     REQUIRES_ADDITIONAL_PROPERTIES_REFERENCE_CLASSES: ClassVar[bool] = False
     SUPPORTS_TYPED_DICT_TOTAL_FALSE: ClassVar[bool] = False
     SUPPORTS_DESERIALIZED_DEFAULT_VALUES: ClassVar[bool] = True
