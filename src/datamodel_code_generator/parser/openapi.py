@@ -1,6 +1,6 @@
-"""OpenAPI and Swagger specification parser.
+"""OpenAPI specification parser.
 
-Extends JsonSchemaParser to handle OpenAPI 2.0 (Swagger), 3.0, 3.1, and 3.2
+Extends JsonSchemaParser to handle OpenAPI 3.0, 3.1, and 3.2
 specifications, including paths, operations, parameters, and request/response bodies.
 """
 
@@ -201,7 +201,7 @@ _FIELD_NAME_RESOLVER = FieldNameResolver()
 
 @snooper_to_methods()
 class OpenAPIParser(JsonSchemaParser):
-    """Parser for OpenAPI 2.0/3.0/3.1/3.2 and Swagger specifications."""
+    """Parser for OpenAPI 3.0, 3.1, and 3.2 specifications."""
 
     SCHEMA_PATHS: ClassVar[list[str]] = ["#/components/schemas"]
     _input_file_type: ClassVar[InputFileType] = InputFileType.OpenAPI
