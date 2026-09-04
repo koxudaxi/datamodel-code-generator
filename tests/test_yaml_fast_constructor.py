@@ -149,10 +149,11 @@ def yaml_loader(request: pytest.FixtureRequest) -> type:
     """Return both C-backed and pure-Python loader implementations."""
     match request.param:
         case "custom":
-            loader = get_safe_loader()
+            return get_safe_loader()
+        case "pure-python":
+            return _PurePythonFastSafeLoader
         case _:
-            loader = _PurePythonFastSafeLoader
-    return loader
+            raise AssertionError
 
 
 @pytest.mark.parametrize("text", _CASES.values(), ids=_CASES)
