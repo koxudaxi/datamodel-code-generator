@@ -646,8 +646,7 @@ def _is_object_only_type(type_: str | list[str] | None) -> bool:
     match type_:
         case None | "object" | ["object"]:
             return True
-        case _:
-            return False
+    return False
 
 
 def _find_json_schema_anchor_pointer(schema: YamlValue, anchor: str) -> str | None:
