@@ -641,12 +641,26 @@ _JSON_SCHEMA_SINGLE_KEYWORDS = frozenset({
 _JSON_SCHEMA_SINGLE_OR_SEQUENCE_KEYWORDS = frozenset({"extends", "items"})
 
 
+def _is_object_only_type(type_: str | list[str] | None) -> bool:
+    """Return whether a schema type permits only object values."""
+    match type_:
+        case None | "object" | ["object"]:
+            return True
+        case _:
+            return False
+
+
 def _find_json_schema_anchor_pointer(schema: YamlValue, anchor: str) -> str | None:
     """Return the JSON pointer for an anchor within one schema document."""
     pending: list[tuple[YamlValue, tuple[str, ...]]] = [(schema, ())]
     while pending:
         value, path = pending.pop()
         if not isinstance(value, dict):
+            continue
+        # An embedded $id starts a distinct schema resource. This search is scoped
+        # to the resource supplied as ``schema``, so its anchors must not leak into
+        # the parent resource's anchor namespace.
+        if path and "$id" in value:
             continue
         if value.get("$anchor") == anchor:
             return "/" + "/".join(part.replace("~", "~0").replace("/", "~1") for part in path)
@@ -6212,12 +6226,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                         schema = self._load_ref_schema_object(schema.ref)
                 case _:
                     return None
-            has_non_object_type = schema.type is not None and schema.type != "object"
             if (
                 schema.properties
                 or schema.patternProperties
                 or schema.propertyNames is not None
-                or has_non_object_type
+                or not _is_object_only_type(schema.type)
                 or not isinstance(schema.additionalProperties, JsonSchemaObject)
             ):
                 return None
@@ -6236,7 +6249,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             merged,
             obj.model_dump(exclude={"allOf"}, exclude_unset=True, by_alias=True),
         )
-        merged.setdefault("type", "object")
+        if merged.get("type") == ["object"]:
+            merged["type"] = "object"
+        else:
+            merged.setdefault("type", "object")
         return self.SCHEMA_OBJECT_TYPE.model_validate(merged)
 
     def parse_combined_schema(  # noqa: PLR0912
@@ -6343,11 +6359,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return False
         if any(key not in item.__metadata_only_fields__ and not key.startswith("x-") for key in item.extras):
             return False
-        match item.type:
-            case None | "object" | ["object"]:
-                return True
-            case _:
-                return False
+        return _is_object_only_type(item.type)
 
     def _get_required_groups(self, items: Sequence[JsonSchemaObject | bool]) -> tuple[tuple[str, ...], ...]:
         if not items:

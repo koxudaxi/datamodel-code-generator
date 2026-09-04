@@ -45,6 +45,19 @@ def test_jsonschema_anchor_search_visits_only_schema_keyword_locations() -> None
     assert_output(output, EXPECTED_JSON_SCHEMA_PATH / "anchor_keyword_locations.txt")
 
 
+def test_jsonschema_anchor_search_keeps_nested_resources_isolated() -> None:
+    """Do not leak nested-resource anchors into their parent resource."""
+    source = JSON_SCHEMA_DATA_PATH / "external_anchor" / "child.json"
+    document = json.loads(source.read_text(encoding="utf-8"))
+    nested_resource = document["$defs"]["NestedChild"]
+    output = (
+        f"parent: {_find_json_schema_anchor_pointer(document, 'anchored-child')}\n"
+        f"nested: {_find_json_schema_anchor_pointer(nested_resource, 'anchored-child')}\n"
+    )
+
+    assert_output(output, EXPECTED_JSON_SCHEMA_PATH / "anchor_nested_resource.txt")
+
+
 def test_main_jsonschema_external_id_resolved_to_local_ref(output_file: Path) -> None:
     """Do not reinterpret an external $id that resolves to a local reference."""
     run_main_and_assert(

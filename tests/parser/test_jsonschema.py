@@ -4879,6 +4879,23 @@ def test_inherited_field_schema_cycle_and_mapping_fallbacks() -> None:
     assert parser._merge_all_of_mapping(JsonSchemaObject.model_validate({})) is None
 
 
+def test_merge_all_of_mapping_accepts_only_object_type_lists() -> None:
+    """Merge singleton object type lists without accepting mixed types."""
+    parser = JsonSchemaParser("")
+    object_only = JsonSchemaObject.model_validate({
+        "allOf": [{"type": ["object"], "additionalProperties": {"type": "integer"}}]
+    })
+    mixed = JsonSchemaObject.model_validate({
+        "allOf": [{"type": ["object", "string"], "additionalProperties": {"type": "integer"}}]
+    })
+
+    merged = parser._merge_all_of_mapping(object_only)
+
+    assert merged is not None
+    assert merged.type == "object"
+    assert parser._merge_all_of_mapping(mixed) is None
+
+
 def test_resolve_type_import_from_defs() -> None:
     """Test _resolve_type_import_from_defs resolves imports from $defs with x-python-import."""
     schema_dict: dict[str, Any] = {

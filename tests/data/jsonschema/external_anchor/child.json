@@ -13,6 +13,14 @@
       "properties": {
         "count": {"type": "integer"}
       }
+    },
+    "NestedChild": {
+      "$id": "nested-child.json",
+      "$anchor": "anchored-child",
+      "type": "object",
+      "properties": {
+        "value": {"type": "number"}
+      }
     }
   },
   "default": {

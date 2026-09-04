@@ -7929,6 +7929,29 @@ def test_main_jsonschema_additional_properties_schema_with_allof_ref(output_file
     )
 
 
+def test_main_jsonschema_allof_mapping_object_type_list(output_file: Path) -> None:
+    """Merge object-only type lists with inline typed additional properties."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_mapping_object_type_list.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="allof_mapping_object_type_list.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_mapping_object_type_list",
+        model_name="AllOfObjectTypeListExtra",
+        valid_json='{"size":1}',
+        invalid_json='{"size":[]}',
+        expected_error_type="int_type",
+        expected_attribute_path=("root", "size"),
+        expected_attribute_value=1,
+    )
+
+
 def test_main_jsonschema_additional_properties_enum_schema_with_properties(output_file: Path) -> None:
     """Test additionalProperties enum schema validates typed extra values."""
     run_main_and_assert(

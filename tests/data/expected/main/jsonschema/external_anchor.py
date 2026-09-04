@@ -14,7 +14,12 @@ class LegacyChild(BaseModel):
     count: int | None = None
 
 
+class NestedChild(BaseModel):
+    value: float | None = None
+
+
 class ExternalAnchor(BaseModel):
     anchored: AnchoredChild | None = None
     anchored_again: AnchoredChild | None = None
     legacy: LegacyChild | None = None
+    nested: NestedChild | None = None
