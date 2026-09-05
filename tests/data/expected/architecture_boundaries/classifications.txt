@@ -3,6 +3,8 @@ parser/base.py: parser
 config.py: config
 input_model.py: input-model
 reference.py: reference
-model/base.py: output-model
-model/__init__.py: output-model
+model/base.py: shared-model
+model/__init__.py: model-composition
+model/pydantic_v2/base_model.py: output-model
+model/runtime_validation.py: shared-model
 types.py: shared

@@ -41225,10 +41225,14 @@ paths:
 
 Run `python scripts/check_architecture_boundaries.py` to validate these rules. The checker parses imports and semantic
 backend inspection with the Python AST, including lazy and dynamic imports. Entrypoint, parser, configuration,
-input-model, reference, and output-model files are classified explicitly, so private parser lifecycle access and
-reference-owned backend policy cannot hide in the shared layer. Its legacy allowlist is keyed by file, enclosing symbol,
-rule, and target; extra occurrences fail, and removed dependencies make stale entries fail so the exception cannot
-silently become permanent. The same check runs in pre-commit and pytest with actionable diagnostics.
+input-model, reference, model-composition, output-model, and shared-model files are classified explicitly. The
+composition root may select concrete backends, while shared-model modules must remain neutral: they cannot import a
+concrete backend or resolve one through `sys.modules`, including module-name constants and aliases. This keeps
+backend-specific lifecycle and cache ownership with the backend or composition root, without blocking neutral module
+registry access such as `sys.modules[model_type.__module__]`. Private parser lifecycle access and reference-owned
+backend policy therefore cannot hide in the shared layer. Its legacy allowlist is keyed by file, enclosing symbol, rule,
+and target; extra occurrences fail, and removed dependencies make stale entries fail so the exception cannot silently
+become permanent. The same check runs in pre-commit and pytest with actionable diagnostics.
 
 ## Rendering And Formatting
 
@@ -41384,12 +41388,14 @@ python scripts/check_architecture_boundaries.py
 ```
 
 The guard rejects concrete output-backend imports and backend-name inspection in
-parsers, private `parser._*` imports from shared code, parser/backend dependencies
+parsers, concrete backend imports or `sys.modules` lookups from shared model
+modules, private `parser._*` imports from shared code, parser/backend dependencies
 from configuration, and local output-family mappings in `input_model.py`. Move
 output behavior to a neutral capability on `DataModel` or `DataModelFieldBase`,
-and move reusable helpers to a neutral package module. Do not add an allowlist
-entry for new code. Existing entries document compatibility debt, have bounded
-occurrence counts, and fail when stale.
+keep backend lifecycle and cache management with its backend or the model
+composition root, and move reusable helpers to a neutral package module. Do not
+add an allowlist entry for new code. Existing entries document compatibility debt,
+have bounded occurrence counts, and fail when stale.
 
 Tests for the checker use source fixtures and expected reports under
 `tests/data/architecture_boundaries/` and

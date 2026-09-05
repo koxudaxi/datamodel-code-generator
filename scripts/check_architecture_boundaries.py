@@ -19,9 +19,12 @@ Layer: TypeAlias = Literal[
     "config",
     "input-model",
     "reference",
+    "model-composition",
     "output-model",
+    "shared-model",
     "shared",
 ]
+SharedModelAliasState: TypeAlias = tuple[set[str], set[str], set[str], dict[str, str]]
 
 CONCRETE_BACKEND_ROOTS: Final = frozenset({
     "dataclass",
@@ -39,6 +42,25 @@ REFERENCE_BACKEND_DEFINITION_MARKERS: Final = ("dataclass", "msgspec", "pydantic
 REFERENCE_EXTERNAL_BACKEND_ROOTS: Final = frozenset({"msgspec"})
 DYNAMIC_ATTRIBUTE_MIN_ARGS: Final = 2
 _BACKEND_MODULE_PART_COUNT: Final = 3
+_DYNAMIC_IMPORT_ATTRIBUTE_NAMES: Final = frozenset({"__import__", "import_module"})
+_SHARED_MODEL_BACKEND_IMPORT_MESSAGE: Final = (
+    "shared model code must not depend on a concrete backend; expose a neutral capability instead"
+)
+_SHARED_MODEL_BACKEND_MODULE_ACCESS_MESSAGE: Final = (
+    "shared model code must not inspect a concrete backend through sys.modules; "
+    "move backend lifecycle or cache management to the backend or composition root"
+)
+_NEUTRAL_MODEL_FILENAMES: Final = frozenset({
+    "base.py",
+    "enum.py",
+    "imports.py",
+    "output.py",
+    "runtime_validation.py",
+    "scalar.py",
+    "type_alias.py",
+    "types.py",
+    "union.py",
+})
 
 
 @dataclass(frozen=True, order=True)
@@ -191,7 +213,9 @@ def _module_name(path: Path, layer: Layer) -> str:
             "config": "datamodel_code_generator.config_fixture",
             "input-model": "datamodel_code_generator.input_model_fixture",
             "reference": "datamodel_code_generator.reference_fixture",
+            "model-composition": "datamodel_code_generator.model.composition_fixture",
             "output-model": "datamodel_code_generator.model.fixture",
+            "shared-model": "datamodel_code_generator.model.shared_fixture",
             "shared": "datamodel_code_generator.shared_fixture",
         }[layer]
 
@@ -249,8 +273,12 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
         self.violations: list[Violation] = []
         self.backend_aliases: dict[str, str] = {}
         self.package_root_aliases: set[str] = set()
+        self.dynamic_import_aliases = set(_DYNAMIC_IMPORT_ATTRIBUTE_NAMES)
+        self.sys_aliases: set[str] = set()
+        self.sys_modules_aliases: set[str] = set()
+        self.shared_model_scope_contexts: list[tuple[bool, SharedModelAliasState]] = []
         self.data_model_type_aliases = {"DataModelType"}
-        self.string_constants = self._collect_string_constants(tree)
+        self.string_constants = {} if layer == "shared-model" else self._collect_string_constants(tree)
 
     @staticmethod
     def _collect_string_constants(tree: ast.Module) -> dict[str, str]:
@@ -259,8 +287,12 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
             match node:
                 case ast.Assign(targets=[ast.Name(id=name)], value=ast.Constant(value=str() as value)):
                     constants[name] = value
+                case ast.Assign(targets=[ast.Name(id=name)], value=ast.Name(id=alias)) if alias in constants:
+                    constants[name] = constants[alias]
                 case ast.AnnAssign(target=ast.Name(id=name), value=ast.Constant(value=str() as value)):
                     constants[name] = value
+                case ast.AnnAssign(target=ast.Name(id=name), value=ast.Name(id=alias)) if alias in constants:
+                    constants[name] = constants[alias]
         return constants
 
     @property
@@ -270,36 +302,78 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
 
     def visit_ClassDef(self, node: ast.ClassDef) -> None:
         """Track class context for stable allowlist entries."""
-        self._visit_named_scope(node)
+        self._visit_named_scope(node, class_scope=True)
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
         """Track function context for stable allowlist entries."""
-        self._visit_named_scope(node)
+        self._visit_named_scope(node, class_scope=False)
 
     def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
         """Track async function context for stable allowlist entries."""
-        self._visit_named_scope(node)
+        self._visit_named_scope(node, class_scope=False)
 
-    def _visit_named_scope(self, node: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef) -> None:
+    def _visit_named_scope(
+        self,
+        node: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
+        *,
+        class_scope: bool,
+    ) -> None:
         """Track one scope and reject output-specific definitions in reference code."""
+        aliases = self._snapshot_shared_model_aliases()
         self.qualnames.append(node.name)
-        if self.layer == "reference" and any(
-            marker in node.name.replace("_", "").casefold() for marker in REFERENCE_BACKEND_DEFINITION_MARKERS
-        ):
-            self._add(
-                node,
-                "reference-backend-definition",
-                node.name,
-                "reference code must not define concrete output-backend policy; move it to the output model",
-            )
-        self.generic_visit(node)
-        self.qualnames.pop()
+        scoped_aliases = False
+        try:
+            self._visit_outer_scope_expressions(node)
+            if aliases is not None and self.shared_model_scope_contexts and self.shared_model_scope_contexts[-1][0]:
+                class_aliases = self.shared_model_scope_contexts[-1][1]
+                self._restore_shared_model_aliases(self._copy_shared_model_aliases(class_aliases))
+            if aliases is not None:
+                self.shared_model_scope_contexts.append((class_scope, self._copy_current_shared_model_aliases()))
+                scoped_aliases = True
+            if aliases is not None:
+                self._discard_function_parameter_aliases(node)
+            if self.layer == "reference" and any(
+                marker in node.name.replace("_", "").casefold() for marker in REFERENCE_BACKEND_DEFINITION_MARKERS
+            ):
+                self._add(
+                    node,
+                    "reference-backend-definition",
+                    node.name,
+                    "reference code must not define concrete output-backend policy; move it to the output model",
+                )
+            for statement in node.body:
+                self.visit(statement)
+        finally:
+            if scoped_aliases:
+                self.shared_model_scope_contexts.pop()
+            self.qualnames.pop()
+            self._restore_shared_model_aliases(aliases)
+
+    def _visit_outer_scope_expressions(
+        self,
+        node: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
+    ) -> None:
+        for decorator in node.decorator_list:
+            self.visit(decorator)
+        for name, value in ast.iter_fields(node):
+            if name in {"body", "decorator_list"}:
+                continue
+            if isinstance(value, ast.AST):
+                self.visit(value)
+            elif isinstance(value, list):
+                for item in value:
+                    self.visit(item)
 
     def visit_Import(self, node: ast.Import) -> None:
         """Check direct absolute backend and private-parser imports."""
         for alias in node.names:
             if alias.name == "datamodel_code_generator":
                 self.package_root_aliases.add(alias.asname or alias.name)
+            alias_name = alias.asname or alias.name.partition(".")[0]
+            if self.layer == "shared-model":
+                self._discard_shared_model_aliases({alias_name})
+                if alias.name == "sys":
+                    self.sys_aliases.add(alias_name)
             self._record_import_alias(alias.asname or alias.name.partition(".")[0], alias.name)
             self._check_import(node, alias.name)
 
@@ -308,6 +382,13 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
         module = _normalize_import(node.module, node.level, self.current_module, self.path)
         for alias in node.names:
             target = f"{module}.{alias.name}" if module else alias.name
+            alias_name = alias.asname or alias.name
+            if self.layer == "shared-model":
+                self._discard_shared_model_aliases({alias_name})
+                if module == "sys" and alias.name == "modules":
+                    self.sys_modules_aliases.add(alias_name)
+            if module in {"builtins", "importlib"} and alias.name in _DYNAMIC_IMPORT_ATTRIBUTE_NAMES:
+                self.dynamic_import_aliases.add(alias_name)
             if self.layer == "parser" and module == "datamodel_code_generator" and alias.name.startswith("_"):
                 self._add(
                     node,
@@ -331,8 +412,10 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
         """Check dynamic imports, semantic getattr, and backend module identity helpers."""
         chain = _attribute_chain(node.func)
         dynamic_target = None
-        match self.layer, chain[-1:], node.args:
-            case ("parser" | "config" | "reference", ("__import__" | "import_module",), [first_argument, *_]):
+        match self.layer, node.args:
+            case ("parser" | "config" | "reference" | "shared-model", [first_argument, *_]) if self._is_dynamic_import(
+                chain
+            ):
                 dynamic_target = self._resolved_string(first_argument)
             case _:
                 pass
@@ -349,6 +432,13 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
                         dynamic_target,
                         "reference code must not import concrete output backends except bounded compatibility exports",
                     )
+                case "shared-model":
+                    self._add(
+                        node,
+                        "shared-model-backend-import",
+                        dynamic_target,
+                        _SHARED_MODEL_BACKEND_IMPORT_MESSAGE,
+                    )
                 case _:
                     self._add(
                         node,
@@ -357,6 +447,19 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
                         "parser/config layers must not dynamically import output backends; "
                         "declare a neutral capability",
                     )
+
+        if (
+            self.layer == "shared-model"
+            and self._is_sys_modules_get(node)
+            and (target := self._resolved_string(node.args[0]))
+            and _concrete_backend_module(target)
+        ):
+            self._add(
+                node,
+                "shared-model-backend-module-access",
+                target,
+                _SHARED_MODEL_BACKEND_MODULE_ACCESS_MESSAGE,
+            )
 
         self._check_entrypoint_private_call(node, chain)
 
@@ -416,6 +519,39 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
                 "backend-module-identity",
                 target,
                 "parser code must not identify an output backend by module/name; declare a neutral capability",
+            )
+        self.generic_visit(node)
+
+    def visit_Assign(self, node: ast.Assign) -> None:
+        """Track shared-model aliases for the module registry and concrete module strings."""
+        self.visit(node.value)
+        for target in node.targets:
+            self.visit(target)
+        if self.layer == "shared-model":
+            self._record_shared_model_aliases(node.targets, node.value)
+
+    def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
+        """Track annotated shared-model aliases for the module registry and concrete module strings."""
+        self.visit(node.annotation)
+        if node.value is not None:
+            self.visit(node.value)
+        self.visit(node.target)
+        if self.layer == "shared-model":
+            self._record_shared_model_aliases((node.target,), node.value)
+
+    def visit_Subscript(self, node: ast.Subscript) -> None:
+        """Reject concrete backend lookups through the module registry."""
+        if (
+            self.layer == "shared-model"
+            and self._is_sys_modules_registry(node.value)
+            and (target := self._resolved_string(node.slice))
+            and _concrete_backend_module(target)
+        ):
+            self._add(
+                node,
+                "shared-model-backend-module-access",
+                target,
+                _SHARED_MODEL_BACKEND_MODULE_ACCESS_MESSAGE,
             )
         self.generic_visit(node)
 
@@ -495,6 +631,102 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
             "entrypoint code must use the Parser public lifecycle and run-context API",
         )
 
+    def _is_dynamic_import(self, chain: tuple[str, ...]) -> bool:
+        if len(chain) == 1:
+            return chain[0] in self.dynamic_import_aliases
+        return bool(chain) and chain[-1] in _DYNAMIC_IMPORT_ATTRIBUTE_NAMES
+
+    def _is_sys_modules_registry(self, node: ast.AST) -> bool:
+        match node:
+            case ast.Name(id=name):
+                return name in self.sys_modules_aliases
+            case ast.Attribute(value=ast.Name(id=name), attr="modules"):
+                return name in self.sys_aliases
+        return False
+
+    def _is_sys_modules_get(self, node: ast.Call) -> bool:
+        match node.func:
+            case ast.Attribute(value=value, attr="get"):
+                return bool(node.args) and self._is_sys_modules_registry(value)
+        return False
+
+    def _snapshot_shared_model_aliases(self) -> SharedModelAliasState | None:
+        if self.layer != "shared-model":
+            return None
+        return self._copy_current_shared_model_aliases()
+
+    def _copy_current_shared_model_aliases(self) -> SharedModelAliasState:
+        return (
+            self.dynamic_import_aliases.copy(),
+            self.sys_aliases.copy(),
+            self.sys_modules_aliases.copy(),
+            self.string_constants.copy(),
+        )
+
+    @staticmethod
+    def _copy_shared_model_aliases(aliases: SharedModelAliasState) -> SharedModelAliasState:
+        return (
+            aliases[0].copy(),
+            aliases[1].copy(),
+            aliases[2].copy(),
+            aliases[3].copy(),
+        )
+
+    def _restore_shared_model_aliases(
+        self,
+        aliases: SharedModelAliasState | None,
+    ) -> None:
+        if aliases is None:
+            return
+        (
+            self.dynamic_import_aliases,
+            self.sys_aliases,
+            self.sys_modules_aliases,
+            self.string_constants,
+        ) = aliases
+
+    def _discard_function_parameter_aliases(self, node: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef) -> None:
+        match node:
+            case ast.FunctionDef(args=args) | ast.AsyncFunctionDef(args=args):
+                arguments = (*args.posonlyargs, *args.args, *args.kwonlyargs)
+                names = {argument.arg for argument in arguments}
+                if args.vararg is not None:
+                    names.add(args.vararg.arg)
+                if args.kwarg is not None:
+                    names.add(args.kwarg.arg)
+                self._discard_shared_model_aliases(names)
+            case _:
+                pass
+
+    def _discard_shared_model_aliases(self, names: set[str]) -> None:
+        self.dynamic_import_aliases.difference_update(names)
+        self.sys_aliases.difference_update(names)
+        self.sys_modules_aliases.difference_update(names)
+        for name in names:
+            self.string_constants.pop(name, None)
+
+    def _record_shared_model_aliases(
+        self,
+        targets: list[ast.expr] | tuple[ast.expr, ...],
+        value: ast.expr | None,
+    ) -> None:
+        names = {target.id for target in targets if isinstance(target, ast.Name)}
+        if not names:
+            return
+        string_value = self._resolved_string(value)
+        is_registry = value is not None and self._is_sys_modules_registry(value)
+        is_sys = isinstance(value, ast.Name) and value.id in self.sys_aliases
+        is_dynamic_import = isinstance(value, ast.Name) and value.id in self.dynamic_import_aliases
+        self._discard_shared_model_aliases(names)
+        if string_value is not None:
+            self.string_constants.update(dict.fromkeys(names, string_value))
+        if is_sys:
+            self.sys_aliases.update(names)
+        if is_registry:
+            self.sys_modules_aliases.update(names)
+        if is_dynamic_import:
+            self.dynamic_import_aliases.update(names)
+
     def _record_import_alias(self, alias: str, target: str) -> None:
         if backend := _concrete_backend_module(target):
             self.backend_aliases[alias] = backend
@@ -522,6 +754,14 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
                 "config-backend-import",
                 target,
                 "configuration must receive output implementations through a neutral registry or injection",
+            )
+            return
+        if self.layer == "shared-model" and _concrete_backend_module(target):
+            self._add(
+                node,
+                "shared-model-backend-import",
+                target,
+                _SHARED_MODEL_BACKEND_IMPORT_MESSAGE,
             )
             return
         if target.startswith("datamodel_code_generator.parser._") and self.layer != "parser":
@@ -565,19 +805,23 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
 
 def _classify_source_path(path: Path) -> Layer:
     relative = path.resolve().relative_to(SOURCE_ROOT)
+    layer: Layer = "shared"
     match relative.parts:
         case ("__init__.py",):
-            return "entrypoint"
+            layer = "entrypoint"
         case ("parser", *_):
-            return "parser"
+            layer = "parser"
         case ("config.py" | "input_model.py" as filename,):
-            return "config" if filename == "config.py" else "input-model"
+            layer = "config" if filename == "config.py" else "input-model"
         case ("reference.py",):
-            return "reference"
+            layer = "reference"
+        case ("model", "__init__.py"):
+            layer = "model-composition"
+        case ("model", filename) if filename in _NEUTRAL_MODEL_FILENAMES:
+            layer = "shared-model"
         case ("model", *_):
-            return "output-model"
-        case _:
-            return "shared"
+            layer = "output-model"
+    return layer
 
 
 def iter_python_files(paths: list[Path]) -> list[Path]:

@@ -92,12 +92,14 @@ python scripts/check_architecture_boundaries.py
 ```
 
 The guard rejects concrete output-backend imports and backend-name inspection in
-parsers, private `parser._*` imports from shared code, parser/backend dependencies
+parsers, concrete backend imports or `sys.modules` lookups from shared model
+modules, private `parser._*` imports from shared code, parser/backend dependencies
 from configuration, and local output-family mappings in `input_model.py`. Move
 output behavior to a neutral capability on `DataModel` or `DataModelFieldBase`,
-and move reusable helpers to a neutral package module. Do not add an allowlist
-entry for new code. Existing entries document compatibility debt, have bounded
-occurrence counts, and fail when stale.
+keep backend lifecycle and cache management with its backend or the model
+composition root, and move reusable helpers to a neutral package module. Do not
+add an allowlist entry for new code. Existing entries document compatibility debt,
+have bounded occurrence counts, and fail when stale.
 
 Tests for the checker use source fixtures and expected reports under
 `tests/data/architecture_boundaries/` and

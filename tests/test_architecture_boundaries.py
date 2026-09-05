@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import runpy
+import subprocess
 import sys
 from pathlib import Path
+from shutil import copyfile
 
 import pytest
 
@@ -35,6 +37,7 @@ def test_architecture_boundary_detector_reports_cross_layer_dependencies() -> No
         (FIXTURE_ROOT / "input_model" / "forbidden.py", "input-model"),
         (FIXTURE_ROOT / "reference" / "forbidden.py", "reference"),
         (FIXTURE_ROOT / "output_model" / "forbidden.py", "output-model"),
+        (FIXTURE_ROOT / "shared_model" / "forbidden.py", "shared-model"),
         (FIXTURE_ROOT / "shared" / "forbidden.py", "shared"),
     ]
     violations = check_architecture_boundaries.check_files(files, allowlist={})
@@ -46,7 +49,7 @@ def test_architecture_boundary_detector_reports_cross_layer_dependencies() -> No
 
 
 def test_architecture_boundary_source_classification() -> None:
-    """Keep entrypoint, reference, and output-model ownership explicit."""
+    """Keep entrypoint, model composition, and shared-model ownership explicit."""
     source_root = ROOT / "src" / "datamodel_code_generator"
     paths = (
         source_root / "__init__.py",
@@ -56,6 +59,8 @@ def test_architecture_boundary_source_classification() -> None:
         source_root / "reference.py",
         source_root / "model" / "base.py",
         source_root / "model" / "__init__.py",
+        source_root / "model" / "pydantic_v2" / "base_model.py",
+        source_root / "model" / "runtime_validation.py",
         source_root / "types.py",
     )
     classification = "".join(
@@ -64,6 +69,20 @@ def test_architecture_boundary_source_classification() -> None:
     )
 
     assert_output(classification, EXPECTED_ROOT / "classifications.txt")
+
+
+def test_architecture_boundary_detector_allows_shared_and_composition_model_dependencies() -> None:
+    """Keep neutral registry access and concrete backend composition available to their owners."""
+    files: list[tuple[Path, check_architecture_boundaries.Layer]] = [
+        (FIXTURE_ROOT / "shared_model" / "allowed.py", "shared-model"),
+        (FIXTURE_ROOT / "model_composition" / "allowed.py", "model-composition"),
+    ]
+    violations = check_architecture_boundaries.check_files(files, allowlist={})
+
+    assert_output(
+        check_architecture_boundaries.format_report(violations),
+        EXPECTED_ROOT / "clean.txt",
+    )
 
 
 def test_architecture_boundary_detector_reports_stale_allowlist_entries() -> None:
@@ -175,4 +194,43 @@ def test_architecture_boundary_cli_reports_actionable_failures(
             f"entrypoint stderr: {entrypoint_output.err!r}\n"
         ),
         EXPECTED_ROOT / "cli.txt",
+    )
+
+
+def test_architecture_boundary_cli_checks_the_full_source_tree() -> None:
+    """Run the installed architecture guard as a real process, as pre-commit does."""
+    completed = subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "check_architecture_boundaries.py")],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert_output(
+        f"exit: {completed.returncode}\nstdout: {completed.stdout!r}\nstderr:\n{completed.stderr}",
+        EXPECTED_ROOT / "cli_subprocess.txt",
+    )
+
+
+def test_architecture_boundary_cli_reports_shared_model_backend_access(tmp_path: Path) -> None:
+    """Run the executable guard against an isolated source fixture with a concrete backend lookup."""
+    script_path = tmp_path / "scripts" / "check_architecture_boundaries.py"
+    source_path = tmp_path / "src" / "datamodel_code_generator" / "model" / "base.py"
+    script_path.parent.mkdir()
+    source_path.parent.mkdir(parents=True)
+    copyfile(ROOT / "scripts" / "check_architecture_boundaries.py", script_path)
+    copyfile(FIXTURE_ROOT / "shared_model" / "forbidden.py", source_path)
+
+    completed = subprocess.run(
+        [sys.executable, str(script_path)],
+        cwd=tmp_path,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert_output(
+        f"exit: {completed.returncode}\nstdout: {completed.stdout!r}\nstderr:\n{completed.stderr}",
+        EXPECTED_ROOT / "cli_subprocess_forbidden.txt",
     )

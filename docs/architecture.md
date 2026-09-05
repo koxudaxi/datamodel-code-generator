@@ -266,10 +266,14 @@ paths:
 
 Run `python scripts/check_architecture_boundaries.py` to validate these rules. The checker parses imports and semantic
 backend inspection with the Python AST, including lazy and dynamic imports. Entrypoint, parser, configuration,
-input-model, reference, and output-model files are classified explicitly, so private parser lifecycle access and
-reference-owned backend policy cannot hide in the shared layer. Its legacy allowlist is keyed by file, enclosing symbol,
-rule, and target; extra occurrences fail, and removed dependencies make stale entries fail so the exception cannot
-silently become permanent. The same check runs in pre-commit and pytest with actionable diagnostics.
+input-model, reference, model-composition, output-model, and shared-model files are classified explicitly. The
+composition root may select concrete backends, while shared-model modules must remain neutral: they cannot import a
+concrete backend or resolve one through `sys.modules`, including module-name constants and aliases. This keeps
+backend-specific lifecycle and cache ownership with the backend or composition root, without blocking neutral module
+registry access such as `sys.modules[model_type.__module__]`. Private parser lifecycle access and reference-owned
+backend policy therefore cannot hide in the shared layer. Its legacy allowlist is keyed by file, enclosing symbol, rule,
+and target; extra occurrences fail, and removed dependencies make stale entries fail so the exception cannot silently
+become permanent. The same check runs in pre-commit and pytest with actionable diagnostics.
 
 ## Rendering And Formatting
 
