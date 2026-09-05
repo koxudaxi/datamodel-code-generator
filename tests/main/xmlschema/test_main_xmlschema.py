@@ -24,6 +24,7 @@ from tests.main.conftest import (
     DATA_PATH,
     EXPECTED_XML_SCHEMA_PATH,
     XML_SCHEMA_DATA_PATH,
+    assert_generated_model_json_validation,
     assert_path_cache_evicts_lru_entries,
     run_generate_file_and_assert,
     run_main_and_assert,
@@ -279,6 +280,39 @@ def test_main_xmlschema_boolean_whitespace_defaults(output_file: Path) -> None:
         input_file_type="xmlschema",
         assert_func=assert_file_content,
         expected_file="boolean_whitespace_defaults.py",
+    )
+
+
+def test_generate_xmlschema_nillable_boolean_api(output_file: Path) -> None:
+    """Generate XSD nillable lexical values through the public Python API."""
+    run_generate_file_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "nillable_boolean.xsd",
+        output_path=output_file,
+        input_file_type=InputFileType.XMLSchema,
+        assert_func=assert_file_content,
+        expected_file="nillable_boolean.py",
+    )
+
+
+def test_main_xmlschema_nillable_boolean(output_file: Path) -> None:
+    """Treat XML Schema nillable true and 1 lexical values equivalently."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "nillable_boolean.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        assert_func=assert_file_content,
+        expected_file="nillable_boolean.py",
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="generated_xmlschema_nillable_boolean",
+        model_name="Root",
+        valid_json='{"nillableTrue":null,"nillableOne":null,"nillableFalse":"false","nillableZero":"zero","unspecified":"value"}',
+        invalid_json='{"nillableTrue":null,"nillableOne":null,"nillableFalse":"false","nillableZero":null,"unspecified":"value"}',
+        expected_error_type="string_type",
+        expected_attribute_path=("nillableOne",),
+        expected_attribute_value=None,
     )
 
 

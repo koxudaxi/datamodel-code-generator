@@ -892,7 +892,7 @@ class _XMLSchemaConverter:
             schema["default"] = self._parse_literal(str(element.get("default")), schema, parse_temporal=True)
         if "fixed" in element.attrib:
             self._apply_fixed_value(schema, self._parse_literal(str(element.get("fixed")), schema))
-        if element.get("nillable") == "true":
+        if element.get("nillable") in {"true", "1"}:
             schema = self._make_nullable(schema)
         if element.get("abstract") == "true":
             schema["x-xsd-abstract"] = True
