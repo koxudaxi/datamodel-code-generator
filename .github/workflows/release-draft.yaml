@@ -12,6 +12,7 @@ on:
 concurrency:
   group: release-draft
   cancel-in-progress: false
+  queue: max
 
 jobs:
   analyze:
@@ -23,6 +24,8 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
+    outputs:
+      skip_changelog: ${{ steps.analysis-route.outputs.skip_changelog }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -296,6 +299,18 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             "/repos/$GITHUB_REPOSITORY/issues/${{ github.event.pull_request.number }}/labels" \
             -f labels[]="breaking-change" \
+            --silent
+
+      - name: Exclude maintenance changes from release notes
+        if: needs.analyze.outputs.skip_changelog == 'true' && steps.analysis.outputs.has_breaking_changes != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/$GITHUB_REPOSITORY/issues/${{ github.event.pull_request.number }}/labels" \
+            -f labels[]="skip-changelog" \
             --silent
 
       - name: Post analysis result to PR
