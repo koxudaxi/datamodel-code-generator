@@ -48,6 +48,7 @@ from tests.conftest import (
     assert_output,
     create_assert_file_content,
     freeze_time,
+    validate_generated_code,
 )
 
 if TYPE_CHECKING:
@@ -69,6 +70,7 @@ EXPECTED_MAIN_KR_PATH = DATA_PATH / "expected" / "main_kr"
 EXPECTED_OUTPUT_FORMAT_JSON_PATH = EXPECTED_MAIN_KR_PATH / "output_format_json"
 EXPECTED_EMPTY_OUTPUT_PATH = DATA_PATH / "expected" / "__init__.py"
 JOBS_PYPROJECT_TEMPLATE = DATA_PATH / "config" / "pyproject_jobs.toml"
+FALSE_BOOLEAN_OPTIONAL_ACTIONS_PYPROJECT = DATA_PATH / "config" / "false_boolean_optional_actions.toml"
 GENERATE_PROMPT_JSON_ARGS = [
     "--input",
     "tests/data/jsonschema/person.json",
@@ -1171,7 +1173,7 @@ http-headers = ["Authorization: Bearer token", "X-Custom: value"]
 
 
 def test_generate_cli_command_with_false_boolean(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    """Test --generate-cli-command with regular boolean set to false (should be skipped)."""
+    """Test --generate-cli-command preserves the existing negative snake-case flag."""
     pyproject_toml = """
 [tool.datamodel-codegen]
 input = "schema.yaml"
@@ -1185,6 +1187,77 @@ snake-case-field = false
             capsys=capsys,
             expected_stdout_path=EXPECTED_GENERATE_CLI_COMMAND_PATH / "false_boolean.txt",
         )
+
+
+def test_generate_cli_command_with_false_boolean_optional_actions(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test --generate-cli-command preserves false BooleanOptionalAction values."""
+    shutil.copy(FALSE_BOOLEAN_OPTIONAL_ACTIONS_PYPROJECT, tmp_path / "pyproject.toml")
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--generate-cli-command"],
+            capsys=capsys,
+            expected_stdout_path=EXPECTED_GENERATE_CLI_COMMAND_PATH / "false_boolean_optional_actions.txt",
+        )
+
+
+def test_generate_cli_command_json_with_false_boolean_optional_actions(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test JSON CLI command output preserves false BooleanOptionalAction values."""
+    shutil.copy(FALSE_BOOLEAN_OPTIONAL_ACTIONS_PYPROJECT, tmp_path / "pyproject.toml")
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--generate-cli-command", "--output-format", "json"],
+            capsys=capsys,
+            expected_stdout_path=EXPECTED_OUTPUT_FORMAT_JSON_PATH / "cli_command_false_boolean_optional_actions.txt",
+            assert_no_stderr=True,
+        )
+
+
+@pytest.mark.parametrize(
+    ("input_name", "output_model_type", "expected_file"),
+    [
+        ("person.json", "pydantic_v2.BaseModel", "generate_cli_command/no_use_union_operator.py"),
+        ("typed_dict_closed.json", "typing.TypedDict", "generate_cli_command/no_use_closed_typed_dict.py"),
+    ],
+)
+def test_generate_cli_command_reconstructs_false_boolean_optional_actions(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    input_name: str,
+    output_model_type: str,
+    expected_file: str,
+) -> None:
+    """Test reconstructed CLI commands retain false BooleanOptionalAction behavior."""
+    shutil.copy(JSON_SCHEMA_DATA_PATH / input_name, tmp_path / "schema.json")
+    (tmp_path / "pyproject.toml").write_text(
+        (DATA_PATH / "config" / "false_boolean_round_trip.toml")
+        .read_text(encoding="utf-8")
+        .format(output_model_type=output_model_type),
+        encoding="utf-8",
+    )
+    config_output = tmp_path / "from-config.py"
+    command_output = tmp_path / "from-command.py"
+
+    with chdir(tmp_path):
+        run_main_with_args(["--input", "schema.json", "--output", str(config_output)])
+        run_main_with_args(["--generate-cli-command", "--output-format", "json"], capsys=capsys)
+        generated_command = json.loads(capsys.readouterr().out)
+        run_main_with_args([
+            *generated_command["arguments"][1:],
+            "--ignore-pyproject",
+            "--output",
+            str(command_output),
+        ])
+
+    assert_file_content(config_output, expected_file)
+    assert_file_content(command_output, expected_file)
+    validate_generated_code(config_output.read_text(), str(config_output), do_exec=True)
+    validate_generated_code(command_output.read_text(), str(command_output), do_exec=True)
 
 
 def test_generate_cli_command_excludes_excluded_options(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
