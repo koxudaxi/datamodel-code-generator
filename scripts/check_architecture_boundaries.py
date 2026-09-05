@@ -805,9 +805,10 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
 
 def _classify_source_path(path: Path) -> Layer:
     relative = path.resolve().relative_to(SOURCE_ROOT)
+    layer: Layer = "shared"
     match relative.parts:
         case ("__init__.py",):
-            layer: Layer = "entrypoint"
+            layer = "entrypoint"
         case ("parser", *_):
             layer = "parser"
         case ("config.py" | "input_model.py" as filename,):
@@ -820,8 +821,6 @@ def _classify_source_path(path: Path) -> Layer:
             layer = "shared-model"
         case ("model", *_):
             layer = "output-model"
-        case _:
-            layer = "shared"
     return layer
 
 
