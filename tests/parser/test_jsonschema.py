@@ -1504,6 +1504,33 @@ def test_get_model_by_path(schema: dict, path: str, model: dict) -> None:
     assert get_model_by_path(schema, path.split("/") if path else []) == model
 
 
+@pytest.mark.parametrize("path", [["0"], [0]])
+def test_get_model_by_path_preserves_integer_keys(path: list[str] | list[int]) -> None:
+    """Keep both supported key types when decoding raw lookup paths."""
+    assert get_model_by_path([{"type": "integer"}], path) == {"type": "integer"}
+    assert get_model_by_path({"0": {"type": "string"}}, path) == {"type": "string"}
+
+
+def test_ref_raw_schema_decodes_json_pointer_segments_once() -> None:
+    """Keep decoded pointer tokens from being decoded again during lookup."""
+    once_value = {"type": "string"}
+    schema = {
+        "$defs": {
+            "a/b~1c": once_value,
+            "a/b~0c": {"type": "integer"},
+            "a/b": {"type": "number"},
+        }
+    }
+    parser = JsonSchemaParser("")
+    parser.raw_obj = schema
+
+    assert split_json_pointer(schema, "$defs/a~1b~01c") == ["$defs", "a/b~1c"]
+    assert parser._get_ref_raw_schema("#/$defs/a~1b~01c") is once_value
+    assert parser._get_ref_raw_schema("#/$defs/a~1b~00c") == {"type": "integer"}
+    assert parser._get_ref_raw_schema("#/$defs/a%7E1b") == {"type": "number"}
+    assert parser._ref_schema_exists("#/$defs/a~1b~01c")
+
+
 @pytest.mark.parametrize(
     ("path", "match"),
     [

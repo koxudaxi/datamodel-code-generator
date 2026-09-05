@@ -2638,6 +2638,67 @@ def test_main_json_pointer(output_file: Path) -> None:
     )
 
 
+@pytest.mark.parametrize("strict_refs", [False, True])
+@pytest.mark.parametrize("entry_point", ["api", "cli"])
+def test_json_pointer_decoding_api_and_cli(output_file: Path, strict_refs: bool, entry_point: str) -> None:
+    """Resolve URI-fragment pointer tokens exactly once through every public entry point."""
+    input_path = JSON_SCHEMA_DATA_PATH / "json_pointer_decoding" / "root.json"
+
+    if entry_point == "api":
+        run_generate_and_assert(
+            input_=input_path,
+            expected_file=EXPECTED_JSON_SCHEMA_PATH / "json_pointer_decoding_api.py",
+            input_file_type=InputFileType.JsonSchema,
+            strict_refs=strict_refs,
+            disable_timestamp=True,
+        )
+        run_generate_file_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            assert_func=assert_file_content,
+            expected_file="json_pointer_decoding.py",
+            strict_refs=strict_refs,
+            disable_timestamp=True,
+        )
+    else:
+        run_main_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file="json_pointer_decoding.py",
+            extra_args=["--disable-timestamp", *(["--strict-refs"] if strict_refs else [])],
+            force_exec_validation=True,
+        )
+
+    payloads = json.loads((input_path.parent / "payloads.json").read_text(encoding="utf-8"))
+    for invalid in payloads["invalid"]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="json_pointer_decoding",
+            model_name="PointerRoot",
+            valid_json=json.dumps(payloads["valid"]),
+            invalid_json=json.dumps({**payloads["valid"], invalid["field"]: []}),
+            expected_error_type=invalid["error"],
+            expected_attribute_path=("once", "root"),
+            expected_attribute_value="once",
+        )
+
+
+def test_json_pointer_decoding_preserves_ordinary_references(output_file: Path) -> None:
+    """Keep ordinary escaped tokens, array indices and external references byte-identical."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "json_pointer_decoding" / "control.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="json_pointer_decoding_control.py",
+        extra_args=["--strict-refs", "--disable-timestamp"],
+        force_exec_validation=True,
+    )
+
+
 def test_main_nested_json_pointer(output_file: Path) -> None:
     """Test nested JSON pointer references."""
     run_main_and_assert(
