@@ -3832,6 +3832,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         *,
         can_retain_cache: bool,
     ) -> None:
+        """Convert matching defaults to enum members while preserving unmatched list values."""
         if not self.set_default_enum_member and DefaultValueType.Enum not in self.deserialize_default_value_types:
             return
         for model in models:
