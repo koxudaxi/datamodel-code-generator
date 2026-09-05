@@ -1,0 +1,21 @@
+{
+  "name": "boolean references",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "values": {
+        "type": "array",
+        "prefixItems": [
+          {"$ref": "#/$defs/Allowed"},
+          {"$ref": "#Anchor"}
+        ]
+      }
+    },
+    "$defs": {
+      "Allowed": true,
+      "Unused": false,
+      "Anchor": {"$anchor": "Anchor", "type": "string"},
+      "Ignored": null
+    }
+  }
+}

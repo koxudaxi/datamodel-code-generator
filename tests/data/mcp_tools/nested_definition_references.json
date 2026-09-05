@@ -1,0 +1,126 @@
+{
+  "tools": [
+    {
+      "name": "demo tool",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "outer": {
+            "$ref": "#/$defs/Outer"
+          },
+          "escaped": {
+            "$ref": "#/$defs/a~1b"
+          },
+          "node": {
+            "$ref": "#/$defs/Node"
+          },
+          "allowed": {
+            "$ref": "#/$defs/Allowed"
+          },
+          "denied": {
+            "$ref": "#/$defs/Denied"
+          }
+        },
+        "required": [
+          "outer",
+          "escaped",
+          "node"
+        ],
+        "$defs": {
+          "Inner": {
+            "type": "string"
+          },
+          "Outer": {
+            "type": "object",
+            "properties": {
+              "inner": {
+                "$ref": "#/$defs/Inner",
+                "default": {
+                  "$ref": "#/$defs/Inner"
+                }
+              }
+            },
+            "required": [
+              "inner"
+            ]
+          },
+          "a/b": {
+            "type": "integer"
+          },
+          "Node": {
+            "type": "object",
+            "properties": {
+              "child": {
+                "$ref": "#/$defs/Node"
+              }
+            }
+          },
+          "Allowed": true,
+          "Denied": false,
+          "Unused": false
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "outer": {
+            "$ref": "#/definitions/Outer"
+          },
+          "escaped": {
+            "$ref": "#/definitions/a~1b"
+          },
+          "allowed": {
+            "$ref": "#/definitions/Allowed"
+          },
+          "denied": {
+            "$ref": "#/definitions/Denied"
+          }
+        },
+        "definitions": {
+          "Inner": {
+            "type": "string"
+          },
+          "Outer": {
+            "type": "object",
+            "properties": {
+              "inner": {
+                "$ref": "#/definitions/Inner",
+                "default": {
+                  "$ref": "#/definitions/Inner"
+                }
+              }
+            },
+            "required": [
+              "inner"
+            ]
+          },
+          "a/b": {
+            "type": "integer"
+          },
+          "Allowed": true,
+          "Denied": false,
+          "Unused": true
+        }
+      }
+    },
+    {
+      "name": "demo tool",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "$ref": "#/$defs/Inner"
+          }
+        },
+        "required": [
+          "label"
+        ],
+        "$defs": {
+          "Inner": {
+            "type": "integer"
+          }
+        }
+      }
+    }
+  ]
+}

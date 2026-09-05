@@ -56,6 +56,7 @@ from datamodel_code_generator.deprecations import DEPRECATIONS, Deprecation
 from datamodel_code_generator.format import CodeFormatter, Formatter, PythonVersion
 from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.parser import LiteralType
+from datamodel_code_generator.parser.mcp import convert_mcp_tools_to_jsonschema
 from datamodel_code_generator.parser.openapi import OpenAPIParser
 from tests.conftest import (
     HttpxGetMockFactory,
@@ -1566,6 +1567,95 @@ def test_mcp_tools_dangling_local_ref(output_file: Path) -> None:
             assert_func=assert_file_content,
             expected_file="mcp_tools/external_ref.py",
         )
+
+
+@pytest.mark.parametrize(
+    "input_name",
+    ["nested_definition_references", "nested_keyword_references", "boolean_definition_references"],
+)
+def test_mcp_tools_hoisted_definition_references_conversion(input_name: str) -> None:
+    """Preserve references to renamed definitions while hoisting MCP schemas."""
+    source = json.loads((DATA_PATH / "mcp_tools" / f"{input_name}.json").read_text())
+    converted = convert_mcp_tools_to_jsonschema(source)
+    assert_output(
+        f"{json.dumps(converted, indent=2)}\n",
+        EXPECTED_MAIN_PATH / "mcp_tools" / f"{input_name}.txt",
+    )
+
+
+def test_mcp_tools_hoisted_definition_references_cli(output_file: Path) -> None:
+    """Generate strict MCP models with renamed nested definitions through the CLI."""
+    run_main_and_assert(
+        input_path=DATA_PATH / "mcp_tools" / "nested_definition_references.json",
+        output_path=output_file,
+        input_file_type="mcp-tools",
+        assert_func=assert_file_content,
+        expected_file="mcp_tools/nested_definition_references.py",
+        extra_args=["--strict-refs", "--disable-timestamp"],
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="mcp_nested_definition_references_cli",
+        model_name="DemoToolInput",
+        valid_json='{"outer":{"inner":"ok"},"escaped":1,"node":{}}',
+        invalid_json='{"outer":{"inner":1},"escaped":1,"node":{}}',
+        expected_error_type="string_type",
+    )
+
+
+def test_mcp_tools_hoisted_definition_references_api(output_file: Path) -> None:
+    """Generate strict MCP models with renamed nested definitions through the API."""
+    run_generate_file_and_assert(
+        input_path=DATA_PATH / "mcp_tools" / "nested_definition_references.json",
+        output_path=output_file,
+        input_file_type=InputFileType.MCPTools,
+        assert_func=assert_file_content,
+        expected_file="mcp_tools/nested_definition_references.py",
+        strict_refs=True,
+        disable_timestamp=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="mcp_nested_definition_references_api",
+        model_name="DemoToolInput",
+        valid_json='{"outer":{"inner":"ok"},"escaped":1,"node":{}}',
+        invalid_json='{"outer":{"inner":1},"escaped":1,"node":{}}',
+        expected_error_type="string_type",
+    )
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+def test_mcp_tools_hoisted_keyword_references(entrypoint: str, output_file: Path) -> None:
+    """Keep schemas below keyword-shaped property names when hoisting definitions."""
+    input_path = DATA_PATH / "mcp_tools" / "nested_keyword_references.json"
+    expected_file = "mcp_tools/nested_keyword_references.py"
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type="mcp-tools",
+            assert_func=assert_file_content,
+            expected_file=expected_file,
+            extra_args=["--strict-refs", "--disable-timestamp"],
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type=InputFileType.MCPTools,
+            assert_func=assert_file_content,
+            expected_file=expected_file,
+            strict_refs=True,
+            disable_timestamp=True,
+        )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name=f"mcp_hoisted_keyword_references_{entrypoint}",
+        model_name="NestedInput",
+        valid_json='{"outer":{"default":"ok","const":"ok","enum":"ok","examples":"ok"}}',
+        invalid_json='{"outer":{"default":1}}',
+        expected_error_type="string_type",
+    )
 
 
 @pytest.mark.parametrize(argnames="input_kind", argvalues=["mapping", "list", "string"])
