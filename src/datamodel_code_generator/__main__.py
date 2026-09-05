@@ -1598,7 +1598,7 @@ def _plan_jobs_unchecked(args: Namespace) -> BatchPlan:
     return BatchPlan(tuple(plans), watch, watch_delay, pyproject_path)
 
 
-TomlValue: TypeAlias = str | bool | list["TomlValue"] | tuple["TomlValue", ...]
+TomlValue: TypeAlias = str | bool | int | float | list["TomlValue"] | tuple["TomlValue", ...]
 
 
 def _json_ready(value: Any) -> Any:
@@ -1631,6 +1631,8 @@ def _format_toml_value(value: TomlValue) -> str:
         return "true" if value else "false"
     if isinstance(value, str):
         return json.dumps(value, ensure_ascii=False)
+    if isinstance(value, int | float):
+        return str(value)
     formatted_items = [_format_toml_value(item) for item in value]
     return f"[{', '.join(formatted_items)}]"
 
