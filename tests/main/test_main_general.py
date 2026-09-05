@@ -4087,6 +4087,58 @@ def test_generate_does_not_capture_legacy_output_cwd(tmp_path: Path) -> None:
     assert_file_content(normal_output, "generate_with_empty_formatters.py")
 
 
+def test_generate_resolves_relative_custom_template_dir_from_caller_cwd(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Keep API template paths anchored to the caller when output changes cwd."""
+    project_root = Path(__file__).parents[2]
+    relative_template_dir = Path("tests/data/templates_relative_dir")
+    expected_file = EXPECTED_MAIN_PATH / "jsonschema" / "custom_template_relative.py"
+    monkeypatch.chdir(project_root)
+
+    generate_options = {
+        "input_file_type": InputFileType.JsonSchema,
+        "custom_template_dir": relative_template_dir,
+    }
+    with freeze_time(TIMESTAMP):
+        run_generate_and_assert(
+            input_=JSON_SCHEMA_DATA_PATH / "pet_simple.json",
+            expected_file=expected_file.with_stem("custom_template_relative_api"),
+            **generate_options,
+        )
+        run_generate_file_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "pet_simple.json",
+            output_path=tmp_path / "relative" / "model.py",
+            assert_func=assert_file_content,
+            expected_file=expected_file,
+            **generate_options,
+        )
+        run_generate_file_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "pet_simple.json",
+            output_path=tmp_path / "absolute" / "model.py",
+            assert_func=assert_file_content,
+            expected_file=expected_file,
+            **{
+                **generate_options,
+                "custom_template_dir": project_root / relative_template_dir,
+            },
+        )
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "pet_simple.json",
+            output_path=tmp_path / "cli.py",
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file=expected_file,
+            force_exec_validation=True,
+            extra_args=[
+                "--custom-template-dir",
+                str(relative_template_dir),
+            ],
+        )
+    for output_path in (tmp_path / "relative" / "model.py", tmp_path / "absolute" / "model.py"):
+        validate_generated_code(output_path.read_text(encoding="utf-8"), str(output_path), do_exec=True)
+
+
 def test_generate_with_custom_formatter_and_empty_formatters(output_file: Path) -> None:
     """Keep custom formatting when the built-in formatter list is empty."""
     run_generate_file_and_assert(
