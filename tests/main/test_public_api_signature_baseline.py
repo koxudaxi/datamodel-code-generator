@@ -431,6 +431,7 @@ def _baseline_generate(
     schema_version_mode: VersionMode | None = None,
     external_ref_mapping: dict[str, str] | None = None,
 ) -> str | object | None:
+    """Baseline mirror of generate() used for signature comparison."""
     raise NotImplementedError
 
 
@@ -640,6 +641,7 @@ class _BaselineParser:
         module_split_mode: ModuleSplitMode | None = None,
         collect_model_metadata: bool = False,
     ) -> str | dict[tuple[str, ...], Any]:
+        """Baseline mirror of parser parse() used for signature comparison."""
         raise NotImplementedError
 
 
