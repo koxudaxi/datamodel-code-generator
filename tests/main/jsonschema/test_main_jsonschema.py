@@ -14798,6 +14798,220 @@ def test_generate_refreshes_custom_template_directory_between_calls(tmp_path: Pa
         )
 
 
+def test_generate_refreshes_mutable_custom_templates_between_calls(tmp_path: Path) -> None:
+    """Repeated API calls observe custom root, include, fallback, and added templates."""
+    output_path = tmp_path / "output.py"
+    custom_template_dir = tmp_path / "templates"
+    custom_template_path = custom_template_dir / "pydantic_v2" / "BaseModel.jinja2"
+    included_template_path = custom_template_path.with_name("body.jinja2")
+    custom_template_path.parent.mkdir(parents=True)
+    template_data_path = DATA_PATH / "templates_refresh_mutable"
+    shutil.copyfile(template_data_path / "root_include.jinja2", custom_template_path)
+    shutil.copyfile(template_data_path / "body_first.jinja2", included_template_path)
+    generate_kwargs = {
+        "custom_template_dir": custom_template_dir,
+        "disable_timestamp": True,
+        "formatters": [Formatter.BUILTIN],
+    }
+
+    for _ in range(2):
+        run_generate_file_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "custom_template_refresh.json",
+            output_path=output_path,
+            input_file_type=InputFileType.JsonSchema,
+            assert_func=assert_file_content,
+            expected_file="custom_template_refresh/first.py",
+            **generate_kwargs,
+        )
+
+    shutil.copyfile(template_data_path / "body_second.jinja2", included_template_path)
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "custom_template_refresh.json",
+        output_path=output_path,
+        input_file_type=InputFileType.JsonSchema,
+        assert_func=assert_file_content,
+        expected_file="custom_template_refresh/second.py",
+        **generate_kwargs,
+    )
+
+    shutil.copyfile(template_data_path / "root_changed.jinja2", custom_template_path)
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "custom_template_refresh.json",
+        output_path=output_path,
+        input_file_type=InputFileType.JsonSchema,
+        assert_func=assert_file_content,
+        expected_file="custom_template_refresh/changed.py",
+        **generate_kwargs,
+    )
+
+    legacy_template_path = custom_template_path.parent.parent / "BaseModel.jinja2"
+    shutil.copyfile(template_data_path / "root_legacy.jinja2", legacy_template_path)
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "custom_template_refresh.json",
+        output_path=output_path,
+        input_file_type=InputFileType.JsonSchema,
+        assert_func=assert_file_content,
+        expected_file="custom_template_refresh/legacy.py",
+        **generate_kwargs,
+    )
+
+    legacy_template_path.unlink()
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "custom_template_refresh.json",
+        output_path=output_path,
+        input_file_type=InputFileType.JsonSchema,
+        assert_func=assert_file_content,
+        expected_file="custom_template_refresh/changed.py",
+        **generate_kwargs,
+    )
+
+    custom_template_path.unlink()
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "custom_template_refresh.json",
+        output_path=output_path,
+        input_file_type=InputFileType.JsonSchema,
+        assert_func=assert_file_content,
+        expected_file="custom_template_refresh/fallback.py",
+        **generate_kwargs,
+    )
+
+    shutil.copyfile(template_data_path / "root_added.jinja2", custom_template_path)
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "custom_template_refresh.json",
+        output_path=output_path,
+        input_file_type=InputFileType.JsonSchema,
+        assert_func=assert_file_content,
+        expected_file="custom_template_refresh/added.py",
+        **generate_kwargs,
+    )
+
+
+@pytest.mark.skipif(os.name == "nt", reason="directory symlink creation requires elevated privileges")
+def test_generate_refreshes_custom_template_directory_symlink(tmp_path: Path) -> None:
+    """Repeated API calls observe updates in a custom template directory symlink."""
+    template_data_path = DATA_PATH / "templates_refresh_mutable"
+    source_template_dir = tmp_path / "source" / "pydantic_v2"
+    source_template_dir.mkdir(parents=True)
+    (source_template_dir / "cycle").symlink_to(source_template_dir, target_is_directory=True)
+    (source_template_dir / "linked_template.jinja2").symlink_to(template_data_path / "root_first.jinja2")
+    os.mkfifo(source_template_dir / "non_template")
+    custom_template_dir = tmp_path / "templates"
+    custom_template_dir.mkdir()
+    (custom_template_dir / "pydantic_v2").symlink_to(source_template_dir, target_is_directory=True)
+    custom_template_path = source_template_dir / "BaseModel.jinja2"
+    output_path = tmp_path / "output.py"
+    generate_kwargs = {
+        "custom_template_dir": custom_template_dir,
+        "disable_timestamp": True,
+        "formatters": [Formatter.BUILTIN],
+    }
+
+    shutil.copyfile(template_data_path / "root_first.jinja2", custom_template_path)
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "custom_template_refresh.json",
+        output_path=output_path,
+        input_file_type=InputFileType.JsonSchema,
+        assert_func=assert_file_content,
+        expected_file="custom_template_refresh/first.py",
+        **generate_kwargs,
+    )
+
+    shutil.copyfile(template_data_path / "root_second.jinja2", custom_template_path)
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "custom_template_refresh.json",
+        output_path=output_path,
+        input_file_type=InputFileType.JsonSchema,
+        assert_func=assert_file_content,
+        expected_file="custom_template_refresh/second.py",
+        **generate_kwargs,
+    )
+
+
+@pytest.mark.skipif(os.name == "nt", reason="directory symlink creation requires elevated privileges")
+def test_generate_refreshes_retargeted_custom_template_directory_symlink(tmp_path: Path) -> None:
+    """A custom template directory alias reloads after its target changes."""
+    custom_template_dir = tmp_path / "templates"
+    custom_template_dir.mkdir()
+    target_directories = [custom_template_dir / f"a-target-{index:02}" for index in range(64)]
+    for target_directory in target_directories:
+        target_directory.mkdir()
+    template_data_path = DATA_PATH / "templates_refresh_mutable"
+    custom_template_alias = custom_template_dir / "pydantic_v2"
+    custom_template_alias.symlink_to(target_directories[0], target_is_directory=True)
+    root_directories = next(os.walk(custom_template_dir))[1]
+    alias_index = root_directories.index(custom_template_alias.name)
+    candidates = [
+        custom_template_dir / name
+        for name in (*root_directories[:alias_index], *root_directories[alias_index + 1 :])
+        if name.startswith("a-target-")
+    ]
+    first_target, second_target = candidates[:2]
+    shutil.copyfile(template_data_path / "root_first.jinja2", first_target / "BaseModel.jinja2")
+    shutil.copyfile(template_data_path / "root_second.jinja2", second_target / "BaseModel.jinja2")
+    custom_template_alias.unlink()
+    custom_template_alias.symlink_to(first_target, target_is_directory=True)
+    output_path = tmp_path / "output.py"
+    generate_kwargs = {
+        "custom_template_dir": custom_template_dir,
+        "disable_timestamp": True,
+        "formatters": [Formatter.BUILTIN],
+    }
+
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "custom_template_refresh.json",
+        output_path=output_path,
+        input_file_type=InputFileType.JsonSchema,
+        assert_func=assert_file_content,
+        expected_file="custom_template_refresh/first.py",
+        **generate_kwargs,
+    )
+
+    custom_template_alias.unlink()
+    custom_template_alias.symlink_to(second_target, target_is_directory=True)
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "custom_template_refresh.json",
+        output_path=output_path,
+        input_file_type=InputFileType.JsonSchema,
+        assert_func=assert_file_content,
+        expected_file="custom_template_refresh/second.py",
+        **generate_kwargs,
+    )
+
+
+def test_main_refreshes_modified_custom_template_between_calls(tmp_path: Path) -> None:
+    """Repeated main() calls reload an updated custom root template."""
+    custom_template_dir = tmp_path / "templates"
+    custom_template_path = custom_template_dir / "pydantic_v2" / "BaseModel.jinja2"
+    custom_template_path.parent.mkdir(parents=True)
+    output_path = tmp_path / "output.py"
+    extra_args = [
+        "--custom-template-dir",
+        str(custom_template_dir),
+        "--disable-timestamp",
+    ]
+    template_data_path = DATA_PATH / "templates_refresh_mutable"
+
+    shutil.copyfile(template_data_path / "root_first.jinja2", custom_template_path)
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "custom_template_refresh.json",
+        output_path=output_path,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="custom_template_refresh/first.py",
+        extra_args=extra_args,
+    )
+
+    shutil.copyfile(template_data_path / "root_second.jinja2", custom_template_path)
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "custom_template_refresh.json",
+        output_path=output_path,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="custom_template_refresh/second.py",
+        extra_args=extra_args,
+    )
+
+
 @pytest.mark.parametrize(
     ("output_model", "expected_output"),
     [

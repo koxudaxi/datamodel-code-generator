@@ -64,6 +64,14 @@ class _DeferredFastSafeLoader(get_safe_loader()):
 _DeferredFastSafeLoader.yaml_constructors["!deferred"] = _construct_deferred_mapping
 
 
+class _CustomMapping(dict[Any, Any]):  # noqa: FURB189
+    """Make custom mapping construction observable in parity coverage."""
+
+
+class _CustomSequence(list[Any]):  # noqa: FURB189
+    """Make custom sequence construction observable in parity coverage."""
+
+
 def _construct(text: str, loader_class: type, *, standard: bool) -> tuple[Any, str | None, list[tuple[str, str]]]:
     loader = loader_class(text)
     with warnings.catch_warnings(record=True) as caught:
@@ -180,6 +188,220 @@ def test_fast_constructor_matches_standard_cases(text: str, yaml_loader: type) -
 def test_fast_constructor_drains_nested_deferred_generators() -> None:
     """Keep PyYAML's generator queue in breadth-first order across nested constructors."""
     _assert_parity("outer: !deferred {nested: !!omap [{key: value}]}\n", _DeferredFastSafeLoader)
+
+
+@pytest.mark.parametrize(
+    ("constructor_form", "custom_tags", "input_path", "expected_path", "error_path"),
+    [
+        pytest.param(
+            "return",
+            ("map",),
+            _DATA_PATH / "custom_return.yaml",
+            _DATA_PATH / "custom_return_map.txt",
+            _DATA_PATH / "custom_error.yaml",
+            id="return-map",
+        ),
+        pytest.param(
+            "return",
+            ("seq",),
+            _DATA_PATH / "custom_return.yaml",
+            _DATA_PATH / "custom_return_seq.txt",
+            _DATA_PATH / "custom_error.yaml",
+            id="return-seq",
+        ),
+        pytest.param(
+            "return",
+            ("map", "seq"),
+            _DATA_PATH / "custom_return.yaml",
+            _DATA_PATH / "custom_return_map_seq.txt",
+            _DATA_PATH / "custom_error.yaml",
+            id="return-map-seq",
+        ),
+        pytest.param(
+            "generator",
+            ("map",),
+            _DATA_PATH / "custom_generator.yaml",
+            _DATA_PATH / "custom_generator_map.txt",
+            _DATA_PATH / "custom_error.yaml",
+            id="generator-map",
+        ),
+        pytest.param(
+            "generator",
+            ("seq",),
+            _DATA_PATH / "custom_generator.yaml",
+            _DATA_PATH / "custom_generator_seq.txt",
+            _DATA_PATH / "custom_error.yaml",
+            id="generator-seq",
+        ),
+        pytest.param(
+            "generator",
+            ("map", "seq"),
+            _DATA_PATH / "custom_generator.yaml",
+            _DATA_PATH / "custom_generator_map_seq.txt",
+            _DATA_PATH / "custom_error.yaml",
+            id="generator-map-seq",
+        ),
+    ],
+)
+def test_fast_constructor_preserves_custom_map_seq_constructors(  # noqa: PLR0914
+    constructor_form: str,
+    custom_tags: tuple[str, ...],
+    input_path: Path,
+    expected_path: Path,
+    error_path: Path,
+) -> None:
+    """Delegate map and sequence extensions to PyYAML without changing their behavior."""
+    text = input_path.read_text(encoding="utf-8")
+    callback_log: list[str] = []
+
+    class CustomMapSeqFastSafeLoader(get_safe_loader()):
+        """Install the selected custom constructors over the optimized loader."""
+
+        yaml_constructors = get_safe_loader().yaml_constructors.copy()
+
+    if constructor_form == "return":
+
+        def construct_mapping(loader: Any, node: Any) -> _CustomMapping:
+            callback_log.append("map")
+            return _CustomMapping(loader.construct_mapping(node))
+
+        def construct_sequence(loader: Any, node: Any) -> _CustomSequence:
+            callback_log.append("seq")
+            return _CustomSequence(loader.construct_sequence(node))
+
+    else:
+
+        def construct_mapping(loader: Any, node: Any) -> Iterator[Any]:
+            callback_log.append("map")
+            result = _CustomMapping()
+            yield result
+            result.update(loader.construct_mapping(node))
+
+        def construct_sequence(loader: Any, node: Any) -> Iterator[Any]:
+            callback_log.append("seq")
+            result = _CustomSequence()
+            yield result
+            result.extend(loader.construct_sequence(node))
+
+    if "map" in custom_tags:
+        CustomMapSeqFastSafeLoader.add_constructor("tag:yaml.org,2002:map", construct_mapping)
+    if "seq" in custom_tags:
+        CustomMapSeqFastSafeLoader.add_constructor("tag:yaml.org,2002:seq", construct_sequence)
+
+    callback_log.clear()
+    standard = _construct(text, CustomMapSeqFastSafeLoader, standard=True)
+    standard_callbacks = ",".join(callback_log)
+    standard_data = standard[0]
+
+    callback_log.clear()
+    fast = _construct(text, CustomMapSeqFastSafeLoader, standard=False)
+    fast_callbacks = ",".join(callback_log)
+    fast_data = fast[0]
+
+    callback_log.clear()
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        public_data = yaml.load(text, Loader=CustomMapSeqFastSafeLoader)
+    public = (public_data, None, [(str(item.message), item.category.__name__) for item in caught])
+    public_callbacks = ",".join(callback_log)
+
+    mapping_type = _CustomMapping if "map" in custom_tags else dict
+    sequence_type = _CustomSequence if "seq" in custom_tags else list
+    mapping_types = all(
+        type(value) is mapping_type
+        for value in (
+            standard_data,
+            fast_data,
+            public_data,
+            standard_data["entry"],
+            fast_data["entry"],
+            public_data["entry"],
+        )
+    )
+    sequence_types = all(
+        type(value) is sequence_type
+        for value in (
+            standard_data["defaults"]["labels"],
+            fast_data["defaults"]["labels"],
+            public_data["defaults"]["labels"],
+        )
+    )
+    aliases = (
+        standard_data["entry"] is standard_data["copy"]
+        and fast_data["entry"] is fast_data["copy"]
+        and public_data["entry"] is public_data["copy"]
+    )
+    nested_references = (
+        standard_data["entry"]["labels"] is standard_data["defaults"]["labels"]
+        and fast_data["entry"]["labels"] is fast_data["defaults"]["labels"]
+        and public_data["entry"]["labels"] is public_data["defaults"]["labels"]
+    )
+    merge = (
+        standard_data["entry"]["category"] == "base"
+        and fast_data["entry"]["category"] == "base"
+        and public_data["entry"]["category"] == "base"
+    )
+    cycle = (
+        "self" in standard_data
+        and standard_data["self"]["child"] is standard_data["self"]
+        and "self" in fast_data
+        and fast_data["self"]["child"] is fast_data["self"]
+        and "self" in public_data
+        and public_data["self"]["child"] is public_data["self"]
+    )
+
+    error_text = error_path.read_text(encoding="utf-8")
+    callback_log.clear()
+    standard_error = _construct(error_text, CustomMapSeqFastSafeLoader, standard=True)
+    standard_error_callbacks = ",".join(callback_log)
+
+    callback_log.clear()
+    fast_error = _construct(error_text, CustomMapSeqFastSafeLoader, standard=False)
+    fast_error_callbacks = ",".join(callback_log)
+
+    callback_log.clear()
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        try:
+            public_error_data, public_error_message = yaml.load(error_text, Loader=CustomMapSeqFastSafeLoader), None
+        except Exception as exc:  # noqa: BLE001
+            public_error_data, public_error_message = None, f"{type(exc).__name__}: {exc}"
+    public_error = (
+        public_error_data,
+        public_error_message,
+        [(str(item.message), item.category.__name__) for item in caught],
+    )
+    public_error_callbacks = ",".join(callback_log)
+
+    assert_output(
+        "\n".join((
+            f"fast_{_parity_report(standard, fast).replace(chr(10), ',').rstrip(',')}",
+            f"public_{_parity_report(standard, public).replace(chr(10), ',').rstrip(',')}",
+            f"standard_callbacks={standard_callbacks}",
+            f"fast_callbacks={fast_callbacks}",
+            f"public_callbacks={public_callbacks}",
+            f"callback_order={standard_callbacks == fast_callbacks}",
+            f"public_callback_order={standard_callbacks == public_callbacks}",
+            f"mapping_types={mapping_types}",
+            f"sequence_types={sequence_types}",
+            f"aliases={aliases}",
+            f"nested_references={nested_references}",
+            f"merge={merge}",
+            f"cycle={cycle}",
+            f"error_fast_{_parity_report(standard_error, fast_error).replace(chr(10), ',').rstrip(',')}",
+            f"error_public_{_parity_report(standard_error, public_error).replace(chr(10), ',').rstrip(',')}",
+            f"error_standard={standard_error[1]}",
+            f"error_fast={fast_error[1]}",
+            f"error_public={public_error[1]}",
+            f"error_standard_callbacks={standard_error_callbacks}",
+            f"error_fast_callbacks={fast_error_callbacks}",
+            f"error_public_callbacks={public_error_callbacks}",
+            f"error_callback_order={standard_error_callbacks == fast_error_callbacks}",
+            f"error_public_callback_order={standard_error_callbacks == public_error_callbacks}",
+            "",
+        )),
+        expected_path,
+    )
 
 
 @pytest.mark.parametrize("path", _SCHEMA_PATHS, ids=lambda path: str(path.relative_to(Path(__file__).parent / "data")))

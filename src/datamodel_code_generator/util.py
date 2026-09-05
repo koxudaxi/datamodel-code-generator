@@ -155,6 +155,8 @@ def _fast_construct_document(loader: Any, root: Any) -> Any:  # noqa: PLR0914, P
     generator_marker = object()
 
     constructors = loader.yaml_constructors
+    plain_map = constructors.get(map_tag) is SafeConstructor.construct_yaml_map
+    plain_seq = constructors.get(seq_tag) is SafeConstructor.construct_yaml_seq
     plain_str = constructors.get(str_tag) is SafeConstructor.construct_yaml_str
     flatten_mapping = loader.flatten_mapping
     construct_object = loader.construct_object
@@ -175,9 +177,9 @@ def _fast_construct_document(loader: Any, root: Any) -> Any:  # noqa: PLR0914, P
 
         node_class = node.__class__
         match node_class:
-            case _ if node_class is MappingNode and node.tag == map_tag:
+            case _ if node_class is MappingNode and node.tag == map_tag and plain_map:
                 value: Any = {}
-            case _ if node_class is SequenceNode and node.tag == seq_tag:
+            case _ if node_class is SequenceNode and node.tag == seq_tag and plain_seq:
                 value = []
             case _:
                 return delegate(node)

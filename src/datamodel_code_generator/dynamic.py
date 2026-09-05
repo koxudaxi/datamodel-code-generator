@@ -76,16 +76,44 @@ def _execute_single_module(
     return models
 
 
-def _get_relative_imports(code: str) -> set[str]:
-    """Extract relative import module names from code using AST."""
-    imports: set[str] = set()
+def _path_to_relative_module_path(path_tuple: tuple[str, ...]) -> tuple[str, ...] | None:
+    """Convert a generated Python file path to its path relative to the package."""
+    filepath = PurePath(path_tuple[-1])
+    if filepath.suffix != ".py":
+        return None
+    if filepath.stem == "__init__":
+        return path_tuple[:-1]
+    return (*path_tuple[:-1], filepath.stem)
+
+
+def _get_relative_import_paths(
+    path_tuple: tuple[str, ...],
+    code: str,
+    module_paths: dict[tuple[str, ...], tuple[str, ...]],
+) -> set[tuple[str, ...]]:
+    """Resolve relative imports in a generated module to generated file paths."""
+    imports: set[tuple[str, ...]] = set()
+    package_path = path_tuple[:-1]
     tree = ast.parse(code)
     for node in ast.walk(tree):
-        if isinstance(node, ast.ImportFrom) and node.level == 1:
-            if node.module:
-                imports.add(node.module.split(".")[0])
-            else:
-                imports.update(alias.name for alias in node.names)
+        if not isinstance(node, ast.ImportFrom) or not node.level or node.level > len(package_path) + 1:
+            continue
+
+        base_path = package_path[: len(package_path) - node.level + 1]
+        if node.module:
+            module_path = (*base_path, *node.module.split("."))
+            if imported_path := module_paths.get(module_path):
+                imports.add(imported_path)
+        else:
+            module_path = base_path
+
+        for alias in node.names:
+            if alias.name == "*":
+                continue
+            if (imported_path := module_paths.get((*module_path, alias.name))) or (
+                node.module is None and (imported_path := module_paths.get(module_path))
+            ):
+                imports.add(imported_path)
     return imports
 
 
@@ -94,15 +122,15 @@ def _build_module_edges(modules: dict[tuple[str, ...], str]) -> dict[tuple[str, 
 
     Returns edges where edges[u] contains v means u must come before v.
     """
-    name_to_path: dict[str, tuple[str, ...]] = {}
+    module_paths: dict[tuple[str, ...], tuple[str, ...]] = {}
     for path in modules:
-        if (filepath := PurePath(path[-1])).suffix == ".py" and (name := filepath.stem) != "__init__":
-            name_to_path[name] = path
+        if (module_path := _path_to_relative_module_path(path)) is not None:
+            module_paths[module_path] = path
 
     edges: dict[tuple[str, ...], set[tuple[str, ...]]] = {path: set() for path in modules}
     for path, code in modules.items():
-        for imported in _get_relative_imports(code):
-            if dep_path := name_to_path.get(imported):
+        for dep_path in _get_relative_import_paths(path, code, module_paths):
+            if dep_path != path:
                 edges[dep_path].add(path)
     return edges
 
@@ -137,7 +165,7 @@ def _execute_multi_module(
             module = types.ModuleType(generated_module_name)
             module.__dict__["__builtins__"] = builtins.__dict__
             module.__package__ = (
-                package_name if _is_init_file(path_tuple) else ".".join(generated_module_name.split(".")[:-1])
+                generated_module_name if _is_init_file(path_tuple) else ".".join(generated_module_name.split(".")[:-1])
             )
             register_module(generated_module_name, module)
             all_namespaces[generated_module_name] = module.__dict__
@@ -202,7 +230,7 @@ def _make_cache_key(schema: Mapping[str, Any], config: GenerateConfig, module_na
     Returns None if the schema is not JSON-serializable.
     """
     try:
-        schema_json = json.dumps(dict(schema), sort_keys=True, separators=(",", ":"))
+        schema_json = json.dumps(dict(schema), separators=(",", ":"))
         config_json = config.model_dump_json(exclude_defaults=True)
         module_name_json = (
             json.dumps({"module_name": module_name}, sort_keys=True, separators=(",", ":"))

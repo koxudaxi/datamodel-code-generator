@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import ast
+import os
 import sys
 from collections import defaultdict
 from copy import deepcopy
 from dataclasses import dataclass
+from errno import ENOENT
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Any
@@ -27,6 +29,7 @@ from datamodel_code_generator.imports import (
     Import,
 )
 from datamodel_code_generator.model.base import (
+    _MAX_CUSTOM_TEMPLATE_SIGNATURES,
     _MAX_MISSING_CUSTOM_TEMPLATE_SUBDIRS,
     UNDEFINED,
     DataModel,
@@ -34,6 +37,7 @@ from datamodel_code_generator.model.base import (
     TemplateBase,
     _annotation_typing_import_names,
     _clear_custom_template_caches,
+    _get_custom_template_signature,
     _get_environment,
     _get_environment_with_absolute_path,
     _get_template_with_absolute_path,
@@ -96,6 +100,9 @@ from datamodel_code_generator.python_literal import (
 )
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import ANY, NONE, DataType, Types
+from tests.conftest import assert_output
+
+_SYMLINK_CREATION_SKIP = pytest.mark.skipif(os.name == "nt", reason="symlink creation requires elevated privileges")
 
 
 class A(TemplateBase):
@@ -997,8 +1004,90 @@ def test_direct_data_models_reuse_bounded_custom_template_cache(tmp_path: Path) 
         _remember_missing_custom_template_subdir(missing_subdir.parent, missing_subdir)
         _remember_missing_custom_template_subdir(missing_subdir.parent, missing_subdir)
         assert _missing_custom_template_state.count == 1
+
+        for index in range(_MAX_CUSTOM_TEMPLATE_SIGNATURES + 1):
+            _refresh_custom_template_paths(tmp_path / f"signature-{index}")
+        assert_output(
+            f"{len(_missing_custom_template_state.signatures)}\n",
+            Path(__file__).parent.parent / "data/expected/model/custom_template_signature_cache_size.txt",
+        )
     finally:
         _clear_custom_template_caches()
+
+
+@pytest.mark.parametrize(
+    "failed_path_kind",
+    [
+        "directory",
+        "directory_scan",
+        pytest.param("file", marks=_SYMLINK_CREATION_SKIP),
+        pytest.param("directory_link", marks=_SYMLINK_CREATION_SKIP),
+        pytest.param("file_link", marks=_SYMLINK_CREATION_SKIP),
+    ],
+)
+def test_custom_template_signature_tolerates_stat_errors(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failed_path_kind: str
+) -> None:
+    """A disappearing custom directory or template does not abort generation setup."""
+    template_path = tmp_path / "pydantic_v2" / "BaseModel.jinja2"
+    template_path.parent.mkdir()
+    template_path.write_text("template", encoding="utf-8")
+    error_message = "simulated template path race"
+    if failed_path_kind.endswith("link"):
+        link_target = tmp_path / "target"
+        template_path.unlink()
+        if failed_path_kind == "directory_link":
+            failed_path = template_path.parent
+            failed_path.rmdir()
+            link_target.mkdir()
+            failed_path.symlink_to(link_target, target_is_directory=True)
+        else:
+            failed_path = template_path
+            failed_path.symlink_to(link_target)
+
+        def raise_readlink_error(_: Path) -> Path:
+            raise FileNotFoundError(ENOENT, error_message)
+
+        monkeypatch.setattr(Path, "readlink", raise_readlink_error)
+    elif failed_path_kind == "file":
+        template_path.unlink()
+        template_path.symlink_to("missing_template")
+    elif failed_path_kind == "directory_scan":
+
+        def raise_scandir_error(*_: Any, **__: Any) -> Any:
+            raise FileNotFoundError(ENOENT, error_message)
+
+        monkeypatch.setattr(os, "scandir", raise_scandir_error)
+    else:
+
+        def raise_stat_error(*_: Any, **__: Any) -> Any:
+            raise FileNotFoundError(ENOENT, error_message)
+
+        monkeypatch.setattr(Path, "stat", raise_stat_error)
+
+    assert_output(
+        _get_custom_template_signature(tmp_path).hex() + "\n",
+        Path(__file__).parent.parent
+        / "data/expected/model"
+        / (
+            "custom_template_signature_dangling_link.txt"
+            if failed_path_kind == "file"
+            else "custom_template_signature_empty.txt"
+        ),
+    )
+
+
+@_SYMLINK_CREATION_SKIP
+def test_custom_template_signature_tracks_root_directory_symlink(tmp_path: Path) -> None:
+    """A custom template root symlink participates in its signature."""
+    (tmp_path / "target").mkdir()
+    template_directory = tmp_path / "templates"
+    template_directory.symlink_to("target", target_is_directory=True)
+
+    assert_output(
+        _get_custom_template_signature(template_directory).hex() + "\n",
+        Path(__file__).parent.parent / "data/expected/model/custom_template_signature_root_link.txt",
+    )
 
 
 def test_clear_custom_template_caches_refreshes_legacy_pydantic_template_detection(tmp_path: Path) -> None:
