@@ -44,7 +44,6 @@ from datamodel_code_generator import (
     snooper_to_methods,
 )
 from datamodel_code_generator.__main__ import (
-    BOOLEAN_OPTIONAL_OPTIONS,
     Config,
     Exit,
     _create_config,
@@ -1405,21 +1404,11 @@ def test_create_parser_config_filters_generation_fields_and_freezes_source_conte
 
 @pytest.mark.allow_direct_assert
 def test_boolean_optional_option_sets_are_pinned() -> None:
-    """Pin BooleanOptionalAction and the pyproject-generation special subset separately."""
+    """Pin BooleanOptionalAction destinations used by CLI command generation."""
     boolean_optional_dests = [
         action.dest for action in arg_parser._actions if isinstance(action, BooleanOptionalAction)
     ]
 
-    assert sorted(BOOLEAN_OPTIONAL_OPTIONS) == snapshot([
-        "allow_population_by_field_name",
-        "collapse_root_models",
-        "snake_case_field",
-        "use_frozen_field",
-        "use_specialized_enum",
-        "use_standard_collections",
-        "use_standard_primitive_types",
-        "use_type_checking_imports",
-    ])
     assert boolean_optional_dests == snapshot([
         "allow_remote_refs",
         "allow_private_network",
@@ -1437,7 +1426,6 @@ def test_boolean_optional_option_sets_are_pinned() -> None:
         "use_frozen_field",
         "use_type_checking_imports",
     ])
-    assert set(boolean_optional_dests) >= BOOLEAN_OPTIONAL_OPTIONS
 
 
 @pytest.mark.allow_direct_assert
