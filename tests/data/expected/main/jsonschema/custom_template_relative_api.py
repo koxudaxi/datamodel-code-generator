@@ -8,5 +8,5 @@ from pydantic import BaseModel
 
 
 class Pet(BaseModel):
-    template_revision = 'v1'
-    include_revision = 'v1'
+    template_revision: str = 'caller'
+    include_revision: str = 'caller'

@@ -4092,8 +4092,8 @@ def test_generate_resolves_relative_custom_template_dir_from_caller_cwd(
 ) -> None:
     """Keep API template paths anchored to the caller when output changes cwd."""
     project_root = Path(__file__).parents[2]
-    relative_template_dir = Path("tests/data/templates_refresh/v1")
-    expected_file = EXPECTED_MAIN_PATH / "jsonschema" / "custom_template_refresh_v1.py"
+    relative_template_dir = Path("tests/data/templates_relative_dir")
+    expected_file = EXPECTED_MAIN_PATH / "jsonschema" / "custom_template_relative.py"
     monkeypatch.chdir(project_root)
 
     generate_options = {
@@ -4103,7 +4103,7 @@ def test_generate_resolves_relative_custom_template_dir_from_caller_cwd(
     with freeze_time(TIMESTAMP):
         run_generate_and_assert(
             input_=JSON_SCHEMA_DATA_PATH / "pet_simple.json",
-            expected_file=expected_file.with_stem("custom_template_refresh_v1_api"),
+            expected_file=expected_file.with_stem("custom_template_relative_api"),
             **generate_options,
         )
         run_generate_file_and_assert(
@@ -4125,15 +4125,18 @@ def test_generate_resolves_relative_custom_template_dir_from_caller_cwd(
         )
         run_main_and_assert(
             input_path=JSON_SCHEMA_DATA_PATH / "pet_simple.json",
-            output_path=tmp_path / "cli" / "model.py",
+            output_path=tmp_path / "cli.py",
             input_file_type="jsonschema",
             assert_func=assert_file_content,
             expected_file=expected_file,
+            force_exec_validation=True,
             extra_args=[
                 "--custom-template-dir",
                 str(relative_template_dir),
             ],
         )
+    for output_path in (tmp_path / "relative" / "model.py", tmp_path / "absolute" / "model.py"):
+        validate_generated_code(output_path.read_text(encoding="utf-8"), str(output_path), do_exec=True)
 
 
 def test_generate_with_custom_formatter_and_empty_formatters(output_file: Path) -> None:
