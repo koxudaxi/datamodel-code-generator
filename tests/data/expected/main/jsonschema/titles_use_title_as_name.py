@@ -32,7 +32,7 @@ class ProcessingTaskTitle(BaseModel):
     processing_status_union: ProcessingStatusUnionTitle | None = Field(
         'COMPLETED', title='Processing Status Union Title', validate_default=True
     )
-    processing_status: ProcessingStatusTitle | None = 'COMPLETED'
+    processing_status: ProcessingStatusTitle | None = ProcessingStatusTitle.COMPLETED
     name: str | None = None
     kind: Kind | None = None
 
@@ -57,7 +57,7 @@ class ProcessingStatusUnionTitle(
     RootModel[ProcessingStatusDetail | ExtendedProcessingTask | ProcessingStatusTitle]
 ):
     root: ProcessingStatusDetail | ExtendedProcessingTask | ProcessingStatusTitle = (
-        Field('COMPLETED', title='Processing Status Union Title', validate_default=True)
+        Field(ProcessingStatusTitle.COMPLETED, title='Processing Status Union Title')
     )
 
 

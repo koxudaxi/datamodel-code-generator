@@ -95,7 +95,7 @@ class NestedVersionEnum(Enum):
 
 class NestedVersion(RootModel[NestedVersionEnum | None]):
     root: NestedVersionEnum | None = Field(
-        'RC1', description='nullable enum', examples=['RC2']
+        NestedVersionEnum.RC1, description='nullable enum', examples=['RC2']
     )
 
 
@@ -116,5 +116,5 @@ class VersionEnum(Enum):
 
 class Version(RootModel[VersionEnum | None]):
     root: VersionEnum | None = Field(
-        'RC1', description='nullable enum', examples=['RC2']
+        VersionEnum.RC1, description='nullable enum', examples=['RC2']
     )

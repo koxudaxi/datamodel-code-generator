@@ -17,5 +17,5 @@ class ProcessingStatus(Enum):
 
 class ProcessingTask(BaseModel):
     processing_status: ProcessingStatus | None = Field(
-        'COMPLETED', title='Status of the task'
+        ProcessingStatus.COMPLETED, title='Status of the task'
     )

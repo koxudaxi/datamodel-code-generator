@@ -82,7 +82,7 @@ class SpecMatrix(BaseModel):
     bytesDefault: bytes | None = b'\xff'
     stringDefault: str | None = 'foo'
     recordDefault: DefaultRecord | None = Field({'value': 1}, validate_default=True)
-    enumDefault: DefaultEnum | None = 'FOO'
+    enumDefault: DefaultEnum | None = DefaultEnum.FOO
     arrayDefault: list[int] | None = [1]
     mapDefault: dict[str, int] | None = {'a': 1}
     fixedDefault: DefaultFixed | None = Field(b'\xff', validate_default=True)

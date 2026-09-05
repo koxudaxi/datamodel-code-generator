@@ -22,8 +22,8 @@ class RedistributeEnum(Enum):
 
 class User(BaseModel):
     name: str | None = None
-    animal: Animal | None = 'dog'
-    pet: Animal | None = 'cat'
+    animal: Animal | None = Animal.dog
+    pet: Animal | None = Animal.cat
     redistribute: list[RedistributeEnum] | None = None
 
 

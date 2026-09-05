@@ -18681,6 +18681,21 @@ def test_main_jsonschema_enum_member_special_defaults(output_file: Path) -> None
     )
 
 
+def test_main_jsonschema_enum_defaults_resolve_by_default(output_file: Path) -> None:
+    """Enum defaults resolve to members without any flag.
+
+    https://github.com/koxudaxi/datamodel-code-generator/issues/3797
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_member_special_defaults.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="enum_member_special_defaults.py",
+        importable_module_name="generated_enum_defaults_by_default",
+    )
+
+
 @pytest.mark.parametrize(
     "deserialize_args",
     [

@@ -62,7 +62,7 @@ class User(Struct):
     rawDecimalText: str
     active: bool | UnsetType = True
     age: int | UnsetType = 0
-    status: Status | UnsetType = 'ACTIVE'
+    status: Status | UnsetType = Status.ACTIVE
     tags: list[str] | UnsetType = field(default_factory=list)
     attributes: dict[str, str] | UnsetType = field(default_factory=dict)
     previous: User | None | UnsetType = UNSET

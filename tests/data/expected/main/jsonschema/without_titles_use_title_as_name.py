@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from enum import Enum
 
-from pydantic import BaseModel, Field, RootModel
+from pydantic import BaseModel, RootModel
 
 
 class ProcessingStatus(Enum):
@@ -31,8 +31,8 @@ class ProcessingStatusUnion(BaseModel):
 class ProcessingTask(BaseModel):
     processing_status_union: (
         ProcessingStatusUnion | ExtendedProcessingTask | ProcessingStatus | None
-    ) = Field('COMPLETED', validate_default=True)
-    processing_status: ProcessingStatus | None = 'COMPLETED'
+    ) = ProcessingStatus.COMPLETED
+    processing_status: ProcessingStatus | None = ProcessingStatus.COMPLETED
     name: str | None = None
     kind: Kind | None = None
 

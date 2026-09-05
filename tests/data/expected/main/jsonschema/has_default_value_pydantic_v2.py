@@ -38,7 +38,7 @@ class Person(BaseModel):
     id: ID | None = Field('abc', validate_default=True)
     user: Pet | None = None
     firstName: str | None = Field(None, description="The person's first name.")
-    team: TeamType | None = 'Department'
-    anotherTeam: TeamType | None = 'Department'
+    team: TeamType | None = TeamType.Department
+    anotherTeam: TeamType | None = TeamType.Department
     Family_1: Family | None = Field(None, alias='Family')
     FamilyPets_1: FamilyPets | None = Field(None, alias='FamilyPets')

@@ -31,8 +31,8 @@ class ProcessingStatusUnion(BaseModel):
 class ProcessingTask(BaseModel):
     processing_status_union: (
         ProcessingStatusUnion | ExtendedProcessingTask | ProcessingStatus | None
-    ) = Field('COMPLETED', title='Processing Status Union Title', validate_default=True)
-    processing_status: ProcessingStatus | None = 'COMPLETED'
+    ) = Field(ProcessingStatus.COMPLETED, title='Processing Status Union Title')
+    processing_status: ProcessingStatus | None = ProcessingStatus.COMPLETED
     name: str | None = None
     kind: Kind | None = None
 

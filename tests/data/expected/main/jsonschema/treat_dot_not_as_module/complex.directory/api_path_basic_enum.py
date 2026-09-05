@@ -16,5 +16,5 @@ class ProcessingStatus(Enum):
 
 
 class BasicEnum(BaseModel):
-    processing_status: ProcessingStatus | None = 'COMPLETED'
+    processing_status: ProcessingStatus | None = ProcessingStatus.COMPLETED
     name: str | None = None

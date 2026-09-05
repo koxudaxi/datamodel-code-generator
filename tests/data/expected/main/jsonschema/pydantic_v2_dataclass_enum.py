@@ -26,4 +26,4 @@ class Priority(IntEnum):
 class Order:
     order_id: str
     status: Status
-    priority: Priority | None = 2
+    priority: Priority | None = Priority.integer_2
