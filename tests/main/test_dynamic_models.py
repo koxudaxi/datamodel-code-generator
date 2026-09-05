@@ -30,7 +30,12 @@ from datamodel_code_generator.config import GenerateConfig
 from datamodel_code_generator.enums import ModuleSplitMode
 from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.types import StrictTypes
-from tests.conftest import assert_directory_content, assert_generated_modules_output, assert_output
+from tests.conftest import (
+    assert_directory_content,
+    assert_generated_modules_output,
+    assert_inputs_not_mutated,
+    assert_output,
+)
 from tests.main.conftest import JSON_SCHEMA_DATA_PATH, OPEN_API_DATA_PATH
 
 if TYPE_CHECKING:
@@ -261,29 +266,73 @@ def test_cache_miss_different_config() -> None:
     assert sorted(models2.keys()) == ["Person"]
 
 
-def test_cache_distinguishes_property_order() -> None:
-    """Keep cached dynamic models in the same field order as uncached generation."""
-    first_schema = json.loads((DATA_PATH / "cache_field_order_first.json").read_text(encoding="utf-8"))
-    second_schema = json.loads((DATA_PATH / "cache_field_order_second.json").read_text(encoding="utf-8"))
+@pytest.mark.parametrize(
+    ("fixture_prefix", "payload_name", "expected_name"),
+    [
+        ("cache_field_order", "field", "cache_field_order.txt"),
+        ("cache_nested_field_order", "nested", "cache_nested_field_order.txt"),
+        ("cache_defs_model_order", "defs", "cache_defs_model_order.txt"),
+        ("cache_openapi_components_order", "openapi", "cache_openapi_components_order.txt"),
+    ],
+)
+def test_cache_distinguishes_schema_order(
+    fixture_prefix: str,
+    payload_name: str,
+    expected_name: str,
+) -> None:
+    """Keep cached models aligned with both orders of order-sensitive schemas."""
+    first_schema = json.loads((DATA_PATH / f"{fixture_prefix}_first.json").read_text(encoding="utf-8"))
+    second_schema = json.loads((DATA_PATH / f"{fixture_prefix}_second.json").read_text(encoding="utf-8"))
+    payloads = json.loads((DATA_PATH / "cache_order_payloads.json").read_text(encoding="utf-8"))[payload_name]
     config = GenerateConfig(
-        input_file_type=InputFileType.JsonSchema,
         disable_timestamp=True,
         formatters=[],
     )
 
-    first_model = generate_dynamic_models(first_schema, config=config)["Example"]
-    cached_second_model = generate_dynamic_models(second_schema, config=config)["Example"]
-    cached_first_model = generate_dynamic_models(first_schema, config=config)["Example"]
-    uncached_second_model = generate_dynamic_models(second_schema, config=config, cache_size=0)["Example"]
-
-    actual = {
-        "first_cache_hit": first_model is cached_first_model,
-        "cached_second_fields": list(cached_second_model.model_fields),
-        "uncached_second_fields": list(uncached_second_model.model_fields),
-        "cached_second_json": cached_second_model(first="x", second=1).model_dump_json(),
-        "uncached_second_json": uncached_second_model(first="x", second=1).model_dump_json(),
-    }
-    assert_output(f"{json.dumps(actual, indent=2)}\n", EXPECTED_PATH / "cache_field_order.txt")
+    actual: dict[str, Any] = {}
+    for order_name, initial_schema, followup_schema in (
+        ("first_then_second", first_schema, second_schema),
+        ("second_then_first", second_schema, first_schema),
+    ):
+        clear_dynamic_models_cache()
+        initial_input = types.MappingProxyType(initial_schema)
+        followup_input = types.MappingProxyType(followup_schema)
+        initial_schema_json = json.dumps(initial_schema, separators=(",", ":"))
+        followup_schema_json = json.dumps(followup_schema, separators=(",", ":"))
+        with assert_inputs_not_mutated({"initial_schema": initial_schema, "followup_schema": followup_schema}):
+            initial_models = generate_dynamic_models(initial_input, config=config)
+            cached_followup_models = generate_dynamic_models(followup_input, config=config)
+            cached_initial_models = generate_dynamic_models(initial_input, config=config)
+            uncached_followup_models = generate_dynamic_models(followup_input, config=config, cache_size=0)
+        actual[order_name] = {
+            "input_mapping_types": [type(initial_input).__name__, type(followup_input).__name__],
+            "input_mappings_unchanged": [
+                json.dumps(initial_schema, separators=(",", ":")) == initial_schema_json,
+                json.dumps(followup_schema, separators=(",", ":")) == followup_schema_json,
+            ],
+            "initial_cache_hit": initial_models is cached_initial_models,
+            "followup_cache_miss": cached_followup_models is not initial_models,
+            "initial_classes_reused": {
+                name: initial_models[name] is cached_initial_models[name] for name in initial_models
+            },
+            "cached_followup_model_order": list(cached_followup_models),
+            "uncached_followup_model_order": list(uncached_followup_models),
+            "cached_followup_fields": {
+                name: list(model.model_fields) for name, model in cached_followup_models.items()
+            },
+            "uncached_followup_fields": {
+                name: list(model.model_fields) for name, model in uncached_followup_models.items()
+            },
+            "cached_followup_json": {
+                name: cached_followup_models[name].model_validate(payload).model_dump_json()
+                for name, payload in payloads.items()
+            },
+            "uncached_followup_json": {
+                name: uncached_followup_models[name].model_validate(payload).model_dump_json()
+                for name, payload in payloads.items()
+            },
+        }
+    assert_output(f"{json.dumps(actual, indent=2)}\n", EXPECTED_PATH / expected_name)
 
 
 def test_cache_hits_do_not_reorder_fifo_eviction() -> None:
