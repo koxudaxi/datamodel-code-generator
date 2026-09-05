@@ -24,7 +24,7 @@ Layer: TypeAlias = Literal[
     "shared-model",
     "shared",
 ]
-SharedModelAliasState: TypeAlias = tuple[set[str], set[str], set[str], dict[str, str]]
+SharedModelAliasState: TypeAlias = tuple[set[str], set[str], set[str], set[str], dict[str, str]]
 
 CONCRETE_BACKEND_ROOTS: Final = frozenset({
     "dataclass",
@@ -43,6 +43,7 @@ REFERENCE_EXTERNAL_BACKEND_ROOTS: Final = frozenset({"msgspec"})
 DYNAMIC_ATTRIBUTE_MIN_ARGS: Final = 2
 _BACKEND_MODULE_PART_COUNT: Final = 3
 _DYNAMIC_IMPORT_ATTRIBUTE_NAMES: Final = frozenset({"__import__", "import_module"})
+_DYNAMIC_IMPORT_PROVIDER_ROOTS: Final = frozenset({"builtins", "importlib"})
 _SHARED_MODEL_BACKEND_IMPORT_MESSAGE: Final = (
     "shared model code must not depend on a concrete backend; expose a neutral capability instead"
 )
@@ -274,26 +275,95 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
         self.backend_aliases: dict[str, str] = {}
         self.package_root_aliases: set[str] = set()
         self.dynamic_import_aliases = set(_DYNAMIC_IMPORT_ATTRIBUTE_NAMES)
+        self.dynamic_import_provider_aliases: set[str] = set()
+        (
+            self.module_dynamic_import_provider_aliases,
+            self.module_dynamic_import_provider_alias_names,
+        ) = self._collect_dynamic_import_provider_aliases(tree) if layer == "shared-model" else (set(), set())
         self.sys_aliases: set[str] = set()
         self.sys_modules_aliases: set[str] = set()
         self.shared_model_scope_contexts: list[tuple[bool, SharedModelAliasState]] = []
         self.data_model_type_aliases = {"DataModelType"}
-        self.string_constants = {} if layer == "shared-model" else self._collect_string_constants(tree)
+        self.module_string_constants, self.module_string_constant_names = self._collect_string_constants(
+            tree,
+            clear_reassigned=layer == "shared-model",
+        )
+        self.string_constants = {} if layer == "shared-model" else self.module_string_constants.copy()
 
     @staticmethod
-    def _collect_string_constants(tree: ast.Module) -> dict[str, str]:
+    def _collect_string_constants(
+        tree: ast.Module,
+        *,
+        clear_reassigned: bool,
+    ) -> tuple[dict[str, str], set[str]]:
         constants: dict[str, str] = {}
+        names: set[str] = set()
         for node in tree.body:
             match node:
-                case ast.Assign(targets=[ast.Name(id=name)], value=ast.Constant(value=str() as value)):
-                    constants[name] = value
-                case ast.Assign(targets=[ast.Name(id=name)], value=ast.Name(id=alias)) if alias in constants:
-                    constants[name] = constants[alias]
-                case ast.AnnAssign(target=ast.Name(id=name), value=ast.Constant(value=str() as value)):
-                    constants[name] = value
-                case ast.AnnAssign(target=ast.Name(id=name), value=ast.Name(id=alias)) if alias in constants:
-                    constants[name] = constants[alias]
-        return constants
+                case (
+                    ast.Assign(targets=[ast.Name(id=name)], value=value)
+                    | ast.AnnAssign(target=ast.Name(id=name), value=value)
+                ):
+                    names.add(name)
+                    match value:
+                        case ast.Constant(value=str() as string_value):
+                            constants[name] = string_value
+                        case ast.Name(id=alias) if alias in constants:
+                            constants[name] = constants[alias]
+                        case _ if clear_reassigned:
+                            constants.pop(name, None)
+                        case _:
+                            pass
+        return constants, names
+
+    @staticmethod
+    def _import_alias_name(alias: ast.alias) -> str:
+        return alias.asname or alias.name.partition(".")[0]
+
+    @staticmethod
+    def _is_dynamic_import_provider_alias(alias: ast.alias) -> bool:
+        return alias.name in _DYNAMIC_IMPORT_PROVIDER_ROOTS or (
+            alias.asname is None and alias.name.partition(".")[0] in _DYNAMIC_IMPORT_PROVIDER_ROOTS
+        )
+
+    @classmethod
+    def _collect_dynamic_import_provider_aliases(cls, tree: ast.Module) -> tuple[set[str], set[str]]:
+        aliases: set[str] = set()
+        names: set[str] = set()
+        for node in tree.body:
+            match node:
+                case ast.Import(names=imports):
+                    for imported in imports:
+                        alias_name = cls._import_alias_name(imported)
+                        names.add(alias_name)
+                        aliases.discard(alias_name)
+                        if cls._is_dynamic_import_provider_alias(imported):
+                            aliases.add(alias_name)
+                case ast.ImportFrom(names=imports):
+                    imported_names = {imported.asname or imported.name for imported in imports}
+                    names.update(imported_names)
+                    aliases.difference_update(imported_names)
+                case ast.Assign(targets=targets, value=ast.Name(id=alias)):
+                    assigned_names = {target.id for target in targets if isinstance(target, ast.Name)}
+                    is_provider_alias = alias in aliases
+                    names.update(assigned_names)
+                    aliases.difference_update(assigned_names)
+                    if is_provider_alias:
+                        aliases.update(assigned_names)
+                case ast.Assign(targets=targets):
+                    assigned_names = {target.id for target in targets if isinstance(target, ast.Name)}
+                    names.update(assigned_names)
+                    aliases.difference_update(assigned_names)
+                case ast.AnnAssign(target=ast.Name(id=name), value=ast.Name(id=alias)):
+                    is_provider_alias = alias in aliases
+                    names.add(name)
+                    aliases.discard(name)
+                    if is_provider_alias:
+                        aliases.add(name)
+                case ast.AnnAssign(target=ast.Name(id=name)):
+                    names.add(name)
+                    aliases.discard(name)
+        return aliases, names
 
     @property
     def qualname(self) -> str:
@@ -327,6 +397,19 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
             if aliases is not None and self.shared_model_scope_contexts and self.shared_model_scope_contexts[-1][0]:
                 class_aliases = self.shared_model_scope_contexts[-1][1]
                 self._restore_shared_model_aliases(self._copy_shared_model_aliases(class_aliases))
+            if (
+                aliases is not None
+                and isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+                and all(class_scope for class_scope, _ in self.shared_model_scope_contexts)
+            ):
+                self.string_constants = {
+                    name: value
+                    for name, value in self.string_constants.items()
+                    if name not in self.module_string_constant_names
+                }
+                self.string_constants.update(self.module_string_constants)
+                self.dynamic_import_provider_aliases.difference_update(self.module_dynamic_import_provider_alias_names)
+                self.dynamic_import_provider_aliases.update(self.module_dynamic_import_provider_aliases)
             if aliases is not None:
                 self.shared_model_scope_contexts.append((class_scope, self._copy_current_shared_model_aliases()))
                 scoped_aliases = True
@@ -369,9 +452,11 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
         for alias in node.names:
             if alias.name == "datamodel_code_generator":
                 self.package_root_aliases.add(alias.asname or alias.name)
-            alias_name = alias.asname or alias.name.partition(".")[0]
+            alias_name = self._import_alias_name(alias)
             if self.layer == "shared-model":
                 self._discard_shared_model_aliases({alias_name})
+                if self._is_dynamic_import_provider_alias(alias):
+                    self.dynamic_import_provider_aliases.add(alias_name)
                 if alias.name == "sys":
                     self.sys_aliases.add(alias_name)
             self._record_import_alias(alias.asname or alias.name.partition(".")[0], alias.name)
@@ -412,13 +497,12 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
         """Check dynamic imports, semantic getattr, and backend module identity helpers."""
         chain = _attribute_chain(node.func)
         dynamic_target = None
-        match self.layer, node.args:
-            case ("parser" | "config" | "reference" | "shared-model", [first_argument, *_]) if self._is_dynamic_import(
-                chain
-            ):
-                dynamic_target = self._resolved_string(first_argument)
-            case _:
-                pass
+        if (
+            self.layer in {"parser", "config", "reference", "shared-model"}
+            and self._is_dynamic_import(node.func)
+            and (argument := self._dynamic_import_target_argument(node)) is not None
+        ):
+            dynamic_target = self._resolved_string(argument)
         if dynamic_target and (
             _is_reference_backend_import(dynamic_target)
             if self.layer == "reference"
@@ -539,6 +623,22 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
         if self.layer == "shared-model":
             self._record_shared_model_aliases((node.target,), node.value)
 
+    def visit_If(self, node: ast.If) -> None:
+        """Retain shared-model aliases that remain possible after either branch."""
+        if self.layer != "shared-model":
+            self.generic_visit(node)
+            return
+        self.visit(node.test)
+        initial = self._copy_current_shared_model_aliases()
+        for statement in node.body:
+            self.visit(statement)
+        body_aliases = self._copy_current_shared_model_aliases()
+        self._restore_shared_model_aliases(self._copy_shared_model_aliases(initial))
+        for statement in node.orelse:
+            self.visit(statement)
+        orelse_aliases = self._copy_current_shared_model_aliases()
+        self._restore_shared_model_aliases(self._merge_shared_model_aliases(body_aliases, orelse_aliases))
+
     def visit_Subscript(self, node: ast.Subscript) -> None:
         """Reject concrete backend lookups through the module registry."""
         if (
@@ -631,10 +731,24 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
             "entrypoint code must use the Parser public lifecycle and run-context API",
         )
 
-    def _is_dynamic_import(self, chain: tuple[str, ...]) -> bool:
-        if len(chain) == 1:
-            return chain[0] in self.dynamic_import_aliases
-        return bool(chain) and chain[-1] in _DYNAMIC_IMPORT_ATTRIBUTE_NAMES
+    def _is_dynamic_import(self, node: ast.AST) -> bool:
+        match node:
+            case ast.Name(id=name):
+                return name in self.dynamic_import_aliases
+            case ast.Attribute(attr=attribute):
+                if attribute not in _DYNAMIC_IMPORT_ATTRIBUTE_NAMES:
+                    return False
+                if self.layer != "shared-model":
+                    return True
+                chain = _attribute_chain(node)
+                return len(chain) > 1 and chain[0] in self.dynamic_import_provider_aliases
+        return False
+
+    @staticmethod
+    def _dynamic_import_target_argument(node: ast.Call) -> ast.expr | None:
+        if node.args:
+            return node.args[0]
+        return next((keyword.value for keyword in node.keywords if keyword.arg == "name"), None)
 
     def _is_sys_modules_registry(self, node: ast.AST) -> bool:
         match node:
@@ -658,6 +772,7 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
     def _copy_current_shared_model_aliases(self) -> SharedModelAliasState:
         return (
             self.dynamic_import_aliases.copy(),
+            self.dynamic_import_provider_aliases.copy(),
             self.sys_aliases.copy(),
             self.sys_modules_aliases.copy(),
             self.string_constants.copy(),
@@ -670,6 +785,35 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
             aliases[1].copy(),
             aliases[2].copy(),
             aliases[3].copy(),
+            aliases[4].copy(),
+        )
+
+    @staticmethod
+    def _merge_shared_model_aliases(
+        body_aliases: SharedModelAliasState,
+        orelse_aliases: SharedModelAliasState,
+    ) -> SharedModelAliasState:
+        string_constants: dict[str, str] = {}
+        for name in body_aliases[4].keys() | orelse_aliases[4].keys():
+            body_value = body_aliases[4].get(name)
+            orelse_value = orelse_aliases[4].get(name)
+            if body_value == orelse_value:
+                string_constants[name] = body_aliases[4][name]
+            elif concrete_value := next(
+                (
+                    value
+                    for value in (body_value, orelse_value)
+                    if value is not None and _concrete_backend_module(value)
+                ),
+                None,
+            ):
+                string_constants[name] = concrete_value
+        return (
+            body_aliases[0] | orelse_aliases[0],
+            body_aliases[1] | orelse_aliases[1],
+            body_aliases[2] | orelse_aliases[2],
+            body_aliases[3] | orelse_aliases[3],
+            string_constants,
         )
 
     def _restore_shared_model_aliases(
@@ -680,6 +824,7 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
             return
         (
             self.dynamic_import_aliases,
+            self.dynamic_import_provider_aliases,
             self.sys_aliases,
             self.sys_modules_aliases,
             self.string_constants,
@@ -700,6 +845,7 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
 
     def _discard_shared_model_aliases(self, names: set[str]) -> None:
         self.dynamic_import_aliases.difference_update(names)
+        self.dynamic_import_provider_aliases.difference_update(names)
         self.sys_aliases.difference_update(names)
         self.sys_modules_aliases.difference_update(names)
         for name in names:
@@ -716,7 +862,8 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
         string_value = self._resolved_string(value)
         is_registry = value is not None and self._is_sys_modules_registry(value)
         is_sys = isinstance(value, ast.Name) and value.id in self.sys_aliases
-        is_dynamic_import = isinstance(value, ast.Name) and value.id in self.dynamic_import_aliases
+        is_dynamic_import = value is not None and self._is_dynamic_import(value)
+        is_dynamic_import_provider = isinstance(value, ast.Name) and value.id in self.dynamic_import_provider_aliases
         self._discard_shared_model_aliases(names)
         if string_value is not None:
             self.string_constants.update(dict.fromkeys(names, string_value))
@@ -726,6 +873,8 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
             self.sys_modules_aliases.update(names)
         if is_dynamic_import:
             self.dynamic_import_aliases.update(names)
+        if is_dynamic_import_provider:
+            self.dynamic_import_provider_aliases.update(names)
 
     def _record_import_alias(self, alias: str, target: str) -> None:
         if backend := _concrete_backend_module(target):

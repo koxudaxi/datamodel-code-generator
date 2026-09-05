@@ -2,6 +2,9 @@ import sys
 
 CONCRETE_BACKEND = "datamodel_code_generator.model.pydantic_v2.base_model"
 registry = {}
+CLEARED_MODULE_BACKEND = CONCRETE_BACKEND
+CLEARED_MODULE_BACKEND = object()
+REASSIGNED_MODULE_BACKEND = CONCRETE_BACKEND
 
 
 def rebuild_namespace(model_type: type[object]) -> dict[str, object]:
@@ -23,6 +26,29 @@ def reassigned_string() -> None:
     local_backend = CONCRETE_BACKEND
     local_backend = None
     local_registry[local_backend]
+
+
+def cleared_module_constant() -> None:
+    local_registry = sys.modules
+    local_registry[CLEARED_MODULE_BACKEND]
+
+
+def conditional_neutral_backend(enabled: bool) -> None:
+    local_registry = sys.modules
+    local_backend = "neutral.module"
+    if enabled:
+        local_backend = "another.neutral.module"
+    local_registry[local_backend]
+
+
+def reassigned_module_constant() -> None:
+    local_registry = sys.modules
+    local_registry[REASSIGNED_MODULE_BACKEND]
+
+
+def cleared_later_module_constant() -> None:
+    local_registry = sys.modules
+    local_registry[CLEARED_LATER_BACKEND]
 
 
 def shadowed_import_aliases() -> None:
@@ -47,3 +73,8 @@ class ClassScope:
 
     def method(self) -> None:
         registry.get(CONCRETE_BACKEND)
+
+
+REASSIGNED_MODULE_BACKEND = object()
+CLEARED_LATER_BACKEND = CONCRETE_BACKEND
+CLEARED_LATER_BACKEND = None

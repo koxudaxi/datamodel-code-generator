@@ -48,6 +48,29 @@ def test_architecture_boundary_detector_reports_cross_layer_dependencies() -> No
     )
 
 
+@pytest.mark.parametrize(
+    ("fixture", "expected"),
+    [
+        (
+            FIXTURE_ROOT / "shared_model_dynamic_import" / "forbidden.py",
+            EXPECTED_ROOT / "shared_model_dynamic_import.txt",
+        ),
+        (FIXTURE_ROOT / "shared_model_dynamic_import" / "allowed.py", EXPECTED_ROOT / "clean.txt"),
+    ],
+)
+def test_architecture_boundary_detector_handles_shared_model_dynamic_imports(
+    fixture: Path,
+    expected: Path,
+) -> None:
+    """Reject concrete dynamic imports while allowing shadowed aliases without a target."""
+    violations = check_architecture_boundaries.check_files([(fixture, "shared-model")], allowlist={})
+
+    assert_output(
+        check_architecture_boundaries.format_report(violations),
+        expected,
+    )
+
+
 def test_architecture_boundary_source_classification() -> None:
     """Keep entrypoint, model composition, and shared-model ownership explicit."""
     source_root = ROOT / "src" / "datamodel_code_generator"
@@ -213,14 +236,28 @@ def test_architecture_boundary_cli_checks_the_full_source_tree() -> None:
     )
 
 
-def test_architecture_boundary_cli_reports_shared_model_backend_access(tmp_path: Path) -> None:
-    """Run the executable guard against an isolated source fixture with a concrete backend lookup."""
+@pytest.mark.parametrize(
+    ("fixture", "expected"),
+    [
+        (FIXTURE_ROOT / "shared_model" / "forbidden.py", EXPECTED_ROOT / "cli_subprocess_forbidden.txt"),
+        (
+            FIXTURE_ROOT / "shared_model_dynamic_import" / "forbidden.py",
+            EXPECTED_ROOT / "cli_subprocess_shared_model_dynamic_import.txt",
+        ),
+    ],
+)
+def test_architecture_boundary_cli_reports_shared_model_backend_access(
+    tmp_path: Path,
+    fixture: Path,
+    expected: Path,
+) -> None:
+    """Run the executable guard against isolated shared-model backend access fixtures."""
     script_path = tmp_path / "scripts" / "check_architecture_boundaries.py"
     source_path = tmp_path / "src" / "datamodel_code_generator" / "model" / "base.py"
     script_path.parent.mkdir()
     source_path.parent.mkdir(parents=True)
     copyfile(ROOT / "scripts" / "check_architecture_boundaries.py", script_path)
-    copyfile(FIXTURE_ROOT / "shared_model" / "forbidden.py", source_path)
+    copyfile(fixture, source_path)
 
     completed = subprocess.run(
         [sys.executable, str(script_path)],
@@ -232,5 +269,5 @@ def test_architecture_boundary_cli_reports_shared_model_backend_access(tmp_path:
 
     assert_output(
         f"exit: {completed.returncode}\nstdout: {completed.stdout!r}\nstderr:\n{completed.stderr}",
-        EXPECTED_ROOT / "cli_subprocess_forbidden.txt",
+        expected,
     )
