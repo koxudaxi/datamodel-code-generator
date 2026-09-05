@@ -18688,6 +18688,26 @@ def test_main_jsonschema_enum_member_special_defaults(output_file: Path) -> None
         pytest.param(["--set-default-enum-member"], id="legacy-option"),
     ],
 )
+def test_main_jsonschema_enum_list_defaults(deserialize_args: list[str], output_file: Path) -> None:
+    """Preserve unmatched enum-list defaults while converting every matching enum branch."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_list_defaults.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", *deserialize_args],
+        assert_func=assert_file_content,
+        expected_file="enum_list_defaults.py",
+        importable_module_name="generated_enum_list_defaults",
+    )
+
+
+@pytest.mark.parametrize(
+    "deserialize_args",
+    [
+        pytest.param(["--deserialize-default-values", "enum"], id="generic-option"),
+        pytest.param(["--set-default-enum-member"], id="legacy-option"),
+    ],
+)
 def test_main_jsonschema_enum_member_typed_defaults(deserialize_args: list[str], output_file: Path) -> None:
     """Test enum defaults resolve to the member with a matching JSON type."""
     run_main_and_assert(
