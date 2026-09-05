@@ -274,10 +274,16 @@ class _PydanticDataclassField(DataModelFieldV2):
         return self._render_field_call((default_argument, *plan.arguments))
 
     def _has_field_statement(self) -> bool:
-        """Include a required assignment forced by dataclass inheritance."""
+        """Include Field imports for forced assignments and dictionary factories."""
+        if self.is_class_var:
+            return False
         if self._has_forced_field_assignment:
             return True
-        return super()._has_field_statement()
+        if super()._has_field_statement():
+            return True
+        if self.required and not self.use_default_with_required:
+            return False
+        return isinstance(self.default, dict)
 
     def _get_field_render_plan(self) -> _PydanticFieldRenderPlan:
         """Include a forced required assignment in every rendered Field() view."""
