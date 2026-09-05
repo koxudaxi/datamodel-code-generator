@@ -83,6 +83,7 @@ from tests.main.conftest import (
     OPEN_API_DATA_PATH,
     PYTHON_DATA_PATH,
     TIMESTAMP,
+    _optional_test_parsed_source_cache,
     assert_generated_model_json_validation,
     run_generate_and_assert,
     run_generate_file_and_assert,
@@ -4612,6 +4613,104 @@ def test_generate_returns_dict_for_multiple_modules(tmp_path: Path) -> None:
         EXPECTED_MAIN_PATH / "generate_returns_dict_for_multiple_modules",
         transform=lambda output: output.replace("#   filename:  <dict>", "#   filename:  <tmpdir>"),
     )
+
+
+def test_generate_path_lists_keep_caller_or_common_base(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Generate relative and external API path lists without changing module paths."""
+    source_dir = JSON_SCHEMA_DATA_PATH / "multiple_files"
+    list_api_expected_dir = EXPECTED_MAIN_PATH / "jsonschema" / "path_list_inputs_api"
+    list_file_expected_dir = EXPECTED_MAIN_PATH / "jsonschema" / "path_list_inputs"
+    directory_expected_dir = EXPECTED_MAIN_PATH / "jsonschema" / "multiple_files"
+    source_names = ("file_d.json", "file_b.json", "file_a.json", "file_c.json")
+    absolute_paths = [source_dir / name for name in source_names]
+    formatters = [Formatter.BLACK, Formatter.ISORT]
+
+    monkeypatch.chdir(source_dir)
+    relative_paths = [Path(name) for name in source_names]
+    for input_paths in (relative_paths, absolute_paths):
+        with assert_inputs_not_mutated({"input_paths": input_paths}):
+            modules = generate(input_paths, input_file_type=InputFileType.Auto, formatters=formatters)
+        assert_generated_modules_output(modules, list_api_expected_dir)
+
+    run_generate_and_assert(
+        input_=Path("file_b.json"),
+        input_file_type=InputFileType.Auto,
+        expected_file=EXPECTED_MAIN_PATH / "jsonschema" / "path_list_single" / "file_b.py",
+        formatters=formatters,
+    )
+    run_generate_and_assert(
+        input_=(source_dir / "file_b.json").read_text(encoding="utf-8"),
+        input_file_type=InputFileType.Auto,
+        input_filename="file_b.json",
+        expected_file=EXPECTED_MAIN_PATH / "jsonschema" / "path_list_single" / "file_b.py",
+        formatters=formatters,
+    )
+
+    single_modules = generate([Path("file_b.json")], input_file_type=InputFileType.Auto, formatters=formatters)
+    assert_generated_modules_output(
+        single_modules,
+        EXPECTED_MAIN_PATH / "jsonschema" / "path_list_single",
+    )
+
+    monkeypatch.chdir(tmp_path)
+    with assert_inputs_not_mutated({"input_paths": absolute_paths}):
+        modules = generate(absolute_paths, input_file_type=InputFileType.Auto, formatters=formatters)
+    assert_generated_modules_output(modules, list_api_expected_dir)
+
+    api_output = tmp_path / "api"
+    with assert_inputs_not_mutated({"input_paths": absolute_paths}):
+        generate(
+            absolute_paths,
+            input_file_type=InputFileType.JsonSchema,
+            output=api_output,
+            formatters=formatters,
+        )
+    assert_directory_content(api_output, list_file_expected_dir)
+
+    run_main_and_assert(
+        input_path=source_dir,
+        output_path=tmp_path / "cli",
+        input_file_type="jsonschema",
+        expected_directory=directory_expected_dir,
+    )
+
+
+@pytest.mark.parametrize("use_cache", [False, True])
+@pytest.mark.parametrize(("encoding", "newline"), [("utf-8", "\n"), ("utf-16", "\r\n")])
+def test_generate_auto_path_list_reuses_detected_first_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, use_cache: bool, encoding: str, newline: str
+) -> None:
+    """Reuse Auto detection text while generating all real path-list sources."""
+    reads: dict[str, int] = defaultdict(int)
+
+    class CountingPath(type(Path())):
+        """Count actual source opens without replacing file-system behavior."""
+
+        def open(self, *args: Any, **kwargs: Any) -> Any:
+            reads[self.name] += 1
+            return super().open(*args, **kwargs)
+
+    source_dir = JSON_SCHEMA_DATA_PATH / "multiple_files"
+    source_names = ("file_d.json", "file_b.json", "file_a.json", "file_c.json")
+    for name in source_names:
+        text = (source_dir / name).read_text(encoding="utf-8")
+        (tmp_path / name).write_bytes(text.replace("\n", newline).encode(encoding))
+    input_paths = [CountingPath(tmp_path / name) for name in source_names]
+    monkeypatch.chdir(tmp_path)
+    with _optional_test_parsed_source_cache(use_cache), assert_inputs_not_mutated({"input_paths": input_paths}):
+        for _ in range(3):
+            reads.clear()
+            modules = generate(
+                input_paths,
+                input_file_type=InputFileType.Auto,
+                encoding=encoding,
+                formatters=[Formatter.BLACK, Formatter.ISORT],
+            )
+            assert_generated_modules_output(
+                modules,
+                EXPECTED_MAIN_PATH / "jsonschema" / "path_list_inputs_api",
+            )
+            assert reads == dict.fromkeys(source_names, 1)
 
 
 def test_generate_modular_stdout_and_directory_match_fixture(output_dir: Path) -> None:
