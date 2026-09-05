@@ -209,17 +209,6 @@ EXCLUDED_CONFIG_OPTIONS: frozenset[str] = frozenset({
     "watch_delay",
 })
 
-BOOLEAN_OPTIONAL_OPTIONS: frozenset[str] = frozenset({
-    "allow_population_by_field_name",
-    "collapse_root_models",
-    "snake_case_field",
-    "use_frozen_field",
-    "use_type_checking_imports",
-    "use_specialized_enum",
-    "use_standard_collections",
-    "use_standard_primitive_types",
-})
-
 ORIGINAL_FIELD_NAME_DELIMITER_ERROR = "`--original-field-name-delimiter` can not be used without `--snake-case-field`."
 SENSITIVE_COMMAND_OPTIONS: frozenset[str] = frozenset({"--http-headers", "--http-query-parameters"})
 REDACTED_COMMAND_ARGUMENT = "<redacted>"
@@ -1886,6 +1875,20 @@ def _format_cli_value(value: str | list[str]) -> str:
     return f'"{value}"' if " " in value else value
 
 
+@lru_cache(maxsize=1)
+def _negative_boolean_options() -> dict[str, str]:
+    """Index parser-defined negative flags only when command generation needs them."""
+    from argparse import BooleanOptionalAction  # noqa: PLC0415
+
+    return {
+        action.dest: option
+        for action in arg_parser._actions  # noqa: SLF001
+        if isinstance(action, BooleanOptionalAction)
+        for option in action.option_strings
+        if option.startswith("--no-")
+    }
+
+
 def generate_cli_command(config: dict[str, TomlValue]) -> str:
     """Generate CLI command from pyproject.toml configuration."""
     parts: list[str] = ["datamodel-codegen"]
@@ -1899,8 +1902,8 @@ def generate_cli_command(config: dict[str, TomlValue]) -> str:
         if isinstance(value, bool):
             if value:
                 parts.append(f"--{cli_key}")
-            elif key in BOOLEAN_OPTIONAL_OPTIONS:
-                parts.append(f"--no-{cli_key}")
+            elif negative_option := _negative_boolean_options().get(key):
+                parts.append(negative_option)
         elif isinstance(value, list):
             parts.extend((f"--{cli_key}", _format_cli_value(cast("list[str]", value))))
         else:
