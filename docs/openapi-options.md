@@ -27,8 +27,8 @@ Controls which sections of the OpenAPI specification to generate models from.
 | Scope | Description |
 |-------|-------------|
 | `schemas` | Generate from `#/components/schemas` (default) |
-| `parameters` | Generate from `#/components/parameters` |
-| `paths` | Generate from path operation parameters |
+| `parameters` | Include parameter models for operations selected by `paths` or `webhooks` |
+| `paths` | Generate models from path operation request bodies and responses |
 
 ### Default behavior (schemas only)
 
@@ -38,41 +38,50 @@ datamodel-codegen --input openapi.yaml --output models.py
 
 Generates models only from `#/components/schemas`.
 
-### Include parameters
+### Include operation schemas
 
 ```bash
 datamodel-codegen --input openapi.yaml --output models.py \
-  --openapi-scopes schemas parameters
+  --openapi-scopes schemas paths
 ```
 
-Also generates models from `#/components/parameters`.
+Also generates models from operation request bodies and responses.
 
-### Include path-level definitions
+### Include operation parameter models
 
 ```bash
 datamodel-codegen --input openapi.yaml --output models.py \
   --openapi-scopes schemas parameters paths
 ```
 
-Generates models from all sources, including inline path operation parameters.
+Also generates a query parameter model for each operation that has query parameters.
+Add `--include-path-parameters` to include URL path parameters in these models.
+Parameters can be declared inline or referenced from `#/components/parameters`.
+Unreferenced entries in `components.parameters` do not generate standalone models,
+and the `parameters` scope alone does not select operations.
 
 ### When to use each scope
 
 | Use Case | Recommended Scopes |
 |----------|-------------------|
 | Basic model generation | `schemas` (default) |
-| Reusable parameter types | `schemas parameters` |
-| Complete API coverage | `schemas parameters paths` |
+| Request and response models | `schemas paths` |
+| Request, response, and query parameter models | `schemas paths parameters` |
 
 ---
 
 ## `--include-path-parameters`
 
-Includes path parameters as fields in generated models.
+Includes path parameters as fields in generated operation parameter models.
+Use this with `--openapi-scopes paths parameters`.
 
 ### OpenAPI Example
 
 ```yaml
+openapi: "3.0.3"
+info:
+  title: Orders API
+  version: "1.0"
 paths:
   /users/{user_id}/orders/{order_id}:
     get:
@@ -80,42 +89,41 @@ paths:
       parameters:
         - name: user_id
           in: path
+          required: true
           schema:
             type: string
         - name: order_id
           in: path
+          required: true
           schema:
             type: integer
+      responses:
+        '204':
+          description: No content
 ```
 
 ### Without `--include-path-parameters`
 
-```python
-class GetOrderResponse(BaseModel):
-    # Only response body fields
-    items: list[Item]
-    total: float
-```
+Only query parameters are included in operation parameter models. This example
+has only path parameters, so it does not generate a parameter model without the flag.
 
 ### With `--include-path-parameters`
 
 ```bash
-datamodel-codegen --input openapi.yaml --output models.py --include-path-parameters
+datamodel-codegen --input openapi.yaml --output models.py \
+  --openapi-scopes paths parameters --include-path-parameters --use-operation-id-as-name
 ```
 
 ```python
-class GetOrderResponse(BaseModel):
+class GetOrderParameters(BaseModel):
     user_id: str
     order_id: int
-    items: list[Item]
-    total: float
 ```
 
 ### When to use
 
 - Building request validation models that include URL parameters
-- Creating unified request/response types for API clients
-- Generating models for frameworks that expect all parameters in one object
+- Grouping query and URL path parameters in one operation parameter model
 
 ---
 
