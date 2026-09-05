@@ -1348,18 +1348,9 @@ def _get_template_with_custom_dir(
     return template_adapter(template) if template_adapter is not None else template
 
 
-def _clear_custom_template_path_caches() -> None:
-    """Clear path-sensitive caches after a custom-template directory changes."""
-    cached_path_exists.cache_clear()
-    if (pydantic_v2_base_model := sys.modules.get("datamodel_code_generator.model.pydantic_v2.base_model")) is not None:
-        legacy_template_cache = getattr(pydantic_v2_base_model, "_uses_legacy_pydantic_extra_template", None)
-        if (cache_clear := getattr(legacy_template_cache, "cache_clear", None)) is not None:
-            cache_clear()
-
-
 def _clear_custom_template_render_caches() -> None:
     """Clear cached loaders, environments, and templates after a source change."""
-    _clear_custom_template_path_caches()
+    cached_path_exists.cache_clear()
     _get_environment.cache_clear()
     _get_template_with_custom_dir.cache_clear()
     _get_environment_with_absolute_path.cache_clear()

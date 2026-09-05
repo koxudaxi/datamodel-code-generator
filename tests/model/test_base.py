@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import ast
 import os
-import sys
 from collections import defaultdict
 from copy import deepcopy
 from dataclasses import dataclass
@@ -79,7 +78,6 @@ from datamodel_code_generator.model.pydantic_v2.base_model import (
 from datamodel_code_generator.model.pydantic_v2.base_model import (
     _safe_config_dict_items,
     _strip_legacy_pydantic_extra_post_class_assignment,
-    _uses_legacy_pydantic_extra_template,
 )
 from datamodel_code_generator.model.pydantic_v2.dataclass import DataClass as PydanticDataclassModel
 from datamodel_code_generator.model.pydantic_v2.dataclass import DataModelField as PydanticDataclassField
@@ -1088,51 +1086,6 @@ def test_custom_template_signature_tracks_root_directory_symlink(tmp_path: Path)
         _get_custom_template_signature(template_directory).hex() + "\n",
         Path(__file__).parent.parent / "data/expected/model/custom_template_signature_root_link.txt",
     )
-
-
-def test_clear_custom_template_caches_refreshes_legacy_pydantic_template_detection(tmp_path: Path) -> None:
-    """Template cache clears refresh Pydantic's legacy typed-extra detection."""
-    template_path = tmp_path / "BaseModel.jinja2"
-    template_path.write_text(
-        "{% if field.use_pydantic_extra_annotation_assignment %}{% endif %}",
-        encoding="utf-8",
-    )
-    try:
-        assert _uses_legacy_pydantic_extra_template(str(template_path)) is True
-        template_path.write_text("class {{ class_name }}: pass", encoding="utf-8")
-        assert _uses_legacy_pydantic_extra_template(str(template_path)) is True
-
-        _clear_custom_template_caches()
-
-        assert _uses_legacy_pydantic_extra_template(str(template_path)) is False
-    finally:
-        _clear_custom_template_caches()
-
-
-def test_clear_custom_template_caches_does_not_import_pydantic_adapter() -> None:
-    """Cache clearing leaves the Pydantic adapter unloaded when it was not imported."""
-    module_name = "datamodel_code_generator.model.pydantic_v2.base_model"
-    module = sys.modules.pop(module_name, None)
-    if module is None:  # pragma: no cover
-        pytest.fail("Expected the Pydantic adapter module to be loaded for this lazy-import check")
-    try:
-        _clear_custom_template_caches()
-        assert module_name not in sys.modules
-    finally:
-        sys.modules[module_name] = module
-
-
-def test_clear_custom_template_caches_tolerates_partially_initialized_pydantic_adapter(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Cache clearing remains safe while the lazy Pydantic adapter is initializing."""
-    module_name = "datamodel_code_generator.model.pydantic_v2.base_model"
-    module = sys.modules[module_name]
-    monkeypatch.delattr(module, "_uses_legacy_pydantic_extra_template")
-
-    _clear_custom_template_caches()
-
-    assert sys.modules[module_name] is module
 
 
 def test_data_model_create_typed_extra_field_unsupported() -> None:

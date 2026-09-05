@@ -48,6 +48,7 @@ from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.format import Formatter, is_supported_in_black
 from datamodel_code_generator.model import base as model_base
 from datamodel_code_generator.model import get_data_model_types
+from datamodel_code_generator.model.base import TEMPLATE_DIR
 from datamodel_code_generator.model.msgspec import DataModelField as MsgspecDataModelField
 from datamodel_code_generator.model.pydantic_v2.version import (
     PYDANTIC_V2_DATACLASS_ALIAS_NEEDS_FALLBACK,
@@ -14884,6 +14885,47 @@ def test_generate_refreshes_mutable_custom_templates_between_calls(tmp_path: Pat
         expected_file="custom_template_refresh/added.py",
         **generate_kwargs,
     )
+
+
+def test_generate_refreshes_legacy_pydantic_template_detection_between_calls(tmp_path: Path) -> None:
+    """Repeated API calls re-evaluate a custom Pydantic template in both directions."""
+    custom_template_dir = tmp_path / "templates"
+    custom_template_path = custom_template_dir / "pydantic_v2" / "BaseModel.jinja2"
+    custom_template_path.parent.mkdir(parents=True)
+    output_path = tmp_path / "output.py"
+    generate_kwargs = {
+        "custom_template_dir": custom_template_dir,
+        "disable_timestamp": True,
+        "formatters": [Formatter.BUILTIN],
+    }
+
+    template_sources = (
+        (TEMPLATE_DIR / "pydantic_v2" / "BaseModel.jinja2", False),
+        (
+            DATA_PATH / "templates_pydantic_extra_pre_3593" / "pydantic_v2" / "BaseModel.jinja2",
+            True,
+        ),
+        (TEMPLATE_DIR / "pydantic_v2" / "BaseModel.jinja2", False),
+    )
+    legacy_warning_fragment = "was rewritten automatically for Pydantic typed-extra compatibility"
+    compatibility_warning_fragment = "Legacy custom template"
+    for template_source, expects_legacy_warning in template_sources:
+        shutil.copyfile(template_source, custom_template_path)
+        with warnings.catch_warnings(record=True) as recorded_warnings:
+            warnings.simplefilter("always", UserWarning)
+            run_generate_file_and_assert(
+                input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_schema_with_properties.json",
+                output_path=output_path,
+                input_file_type=InputFileType.JsonSchema,
+                assert_func=assert_file_content,
+                expected_file="custom_template_refresh/legacy_pydantic_extra.py",
+                output_model_type=DataModelType.PydanticV2BaseModel,
+                **generate_kwargs,
+            )
+        if expects_legacy_warning:
+            assert_warnings_contain(recorded_warnings, legacy_warning_fragment)
+        else:
+            assert_warnings_do_not_contain(recorded_warnings, compatibility_warning_fragment)
 
 
 @pytest.mark.skipif(os.name == "nt", reason="directory symlink creation requires elevated privileges")
