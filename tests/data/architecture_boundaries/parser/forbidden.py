@@ -13,8 +13,8 @@ TYPED_BACKEND_MODULE_ALIAS: str = BACKEND_MODULE
 
 
 def load_backends():
-    importlib.import_module(BACKEND_MODULE)
-    load_backend(BACKEND_MODULE)
+    importlib.import_module(BACKEND_MODULE_ALIAS)
+    load_backend(TYPED_BACKEND_MODULE_ALIAS)
     return __import__("datamodel_code_generator.model.pydantic_base")
 
 
