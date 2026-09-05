@@ -1,11 +1,11 @@
 from collections.abc import Callable
 
-import importlib
+import importlib as import_provider
 
 
 CONCRETE_BACKEND = "datamodel_code_generator.model.pydantic_v2.base_model"
 
-load_module = importlib.import_module
+load_module = import_provider.import_module
 
 
 def use_shadowed_alias(load_module: Callable[[str], None]) -> None:
@@ -13,9 +13,18 @@ def use_shadowed_alias(load_module: Callable[[str], None]) -> None:
 
 
 class NeutralImporter:
-    def import_module(self) -> None:
+    def import_module(self, module: str) -> None:
         pass
 
 
-neutral_importlib = NeutralImporter()
-neutral_importlib.import_module()
+neutral_provider = NeutralImporter()
+neutral_loader = neutral_provider.import_module
+neutral_loader(CONCRETE_BACKEND)
+NeutralImporter().import_module(CONCRETE_BACKEND)
+
+def use_shadowed_provider(import_provider: NeutralImporter) -> None:
+    import_provider.import_module(CONCRETE_BACKEND)
+
+
+import_provider = NeutralImporter()
+import_provider.import_module(CONCRETE_BACKEND)
