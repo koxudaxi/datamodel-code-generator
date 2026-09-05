@@ -17,6 +17,11 @@ import pydantic
 import pytest
 from packaging import version
 
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    import tomli as tomllib
+
 from datamodel_code_generator import MIN_VERSION, Error, chdir, inferred_message
 from datamodel_code_generator import __main__ as main_module
 from datamodel_code_generator import _publication as publication_module
@@ -918,6 +923,44 @@ def test_generate_pyproject_config_with_list_options(capsys: pytest.CaptureFixtu
         capsys=capsys,
         expected_stdout_path=EXPECTED_GENERATE_PYPROJECT_CONFIG_PATH / "list_options.txt",
     )
+
+
+def test_generate_pyproject_config_with_float_option(capsys: pytest.CaptureFixture[str]) -> None:
+    """Serialize finite floating-point CLI options as TOML values."""
+    run_main_with_args(
+        ["--generate-pyproject-config", "--http-timeout", "1.5"],
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_GENERATE_PYPROJECT_CONFIG_PATH / "float_option.txt",
+        assert_no_stderr=True,
+    )
+
+
+def test_generate_pyproject_config_float_round_trip(tmp_path: Path, output_file: Path) -> None:
+    """Preserve normal output when generated floating-point config is used."""
+    config_output = generate_pyproject_config(Namespace(http_timeout=1.5))
+    assert_output(config_output, EXPECTED_GENERATE_PYPROJECT_CONFIG_PATH / "float_option_helper.txt")
+    tomllib.loads(config_output)
+    expected_output_path = DATA_PATH / "expected" / "main" / "person.py"
+
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--disable-timestamp", "--http-timeout", "1.5"],
+    )
+    assert_output(output_file.read_text(encoding="utf-8"), expected_output_path)
+
+    config_output_file = tmp_path / "from_config.py"
+    (tmp_path / "pyproject.toml").write_text(config_output, encoding="utf-8")
+    with chdir(tmp_path):
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+            output_path=config_output_file,
+            input_file_type="jsonschema",
+            extra_args=["--disable-timestamp"],
+        )
+
+    assert_output(config_output_file.read_text(encoding="utf-8"), expected_output_path)
 
 
 def test_generate_pyproject_config_with_multiple_options(capsys: pytest.CaptureFixture[str]) -> None:
@@ -4787,6 +4830,17 @@ def test_output_format_json_generate_pyproject_config(capsys: pytest.CaptureFixt
         expected_exit=Exit.OK,
         capsys=capsys,
         expected_stdout_path=EXPECTED_OUTPUT_FORMAT_JSON_PATH / "pyproject_config.txt",
+        assert_no_stderr=True,
+    )
+
+
+def test_output_format_json_generate_pyproject_config_with_float_option(capsys: pytest.CaptureFixture[str]) -> None:
+    """Emit floating-point pyproject options in structured JSON."""
+    run_main_with_args(
+        ["--generate-pyproject-config", "--http-timeout", "1.5", "--output-format", "json"],
+        expected_exit=Exit.OK,
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_OUTPUT_FORMAT_JSON_PATH / "pyproject_config_float.txt",
         assert_no_stderr=True,
     )
 
