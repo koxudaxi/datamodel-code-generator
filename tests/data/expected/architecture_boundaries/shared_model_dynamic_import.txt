@@ -1,0 +1,3 @@
+Architecture boundary violations found:
+tests/data/architecture_boundaries/shared_model_dynamic_import/forbidden.py:7:1: [shared-model-backend-import] datamodel_code_generator.model.pydantic_v2.base_model: shared model code must not depend on a concrete backend; expose a neutral capability instead (in <module>)
+tests/data/architecture_boundaries/shared_model_dynamic_import/forbidden.py:8:1: [shared-model-backend-import] datamodel_code_generator.model.pydantic_v2.base_model: shared model code must not depend on a concrete backend; expose a neutral capability instead (in <module>)

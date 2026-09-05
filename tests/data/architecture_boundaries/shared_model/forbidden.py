@@ -15,6 +15,11 @@ TYPED_CONCRETE_BACKEND: str = CONCRETE_BACKEND_ALIAS
 module_registry = loaded_modules
 runtime_modules = runtime.modules
 typed_registry: object = loaded_modules
+TOP_LEVEL_BACKEND = "datamodel_code_generator.model.pydantic_v2.base_model"
+runtime.modules[TOP_LEVEL_BACKEND]
+TOP_LEVEL_BACKEND = object()
+if enabled:
+    CONDITIONAL_LATER_BACKEND = "datamodel_code_generator.model.pydantic_v2.base_model"
 
 
 def inspect_backend() -> None:
@@ -64,6 +69,31 @@ def inspect_local_dynamic_alias() -> None:
     local_loader(CONCRETE_BACKEND)
 
 
+def inspect_later_module_constant() -> None:
+    runtime.modules[LATER_CONCRETE_BACKEND]
+
+
+def inspect_conditional_later_module_constant() -> None:
+    runtime.modules[CONDITIONAL_LATER_BACKEND]
+
+
+def inspect_conditional_registry(enabled: bool) -> None:
+    conditional_registry = runtime.modules
+    if enabled:
+        conditional_registry = {}
+    conditional_registry[CONCRETE_BACKEND]
+
+
+def inspect_conditional_backend(enabled: bool) -> None:
+    conditional_registry = runtime.modules
+    conditional_backend = CONCRETE_BACKEND
+    if enabled:
+        conditional_backend = "neutral.module"
+    else:
+        conditional_backend = CONCRETE_BACKEND_ALIAS
+    conditional_registry[conditional_backend]
+
+
 def inspect_default(module_registry=module_registry.get(CONCRETE_BACKEND)) -> None:
     pass
 
@@ -85,3 +115,12 @@ class BaseEvaluatedClass(module_registry.get(CONCRETE_BACKEND)):
 class ClassBackend:
     local_registry = runtime.modules
     model = local_registry[CONCRETE_BACKEND]
+
+
+class ForwardModuleClass:
+    def inspect(self) -> None:
+        runtime.modules[CLASS_LATER_CONCRETE_BACKEND]
+
+
+LATER_CONCRETE_BACKEND = "datamodel_code_generator.model.pydantic_v2.base_model"
+CLASS_LATER_CONCRETE_BACKEND = "datamodel_code_generator.model.pydantic_v2.base_model"

@@ -10,6 +10,9 @@ from ..model.pydantic_v2 import RootModel
 BACKEND_MODULE = "datamodel_code_generator.model.dataclass"
 BACKEND_MODULE_ALIAS = BACKEND_MODULE
 TYPED_BACKEND_MODULE_ALIAS: str = BACKEND_MODULE
+OVERWRITTEN_BACKEND_MODULE = "datamodel_code_generator.model.dataclass"
+importlib.import_module(OVERWRITTEN_BACKEND_MODULE)
+OVERWRITTEN_BACKEND_MODULE = None
 
 
 def load_backends():

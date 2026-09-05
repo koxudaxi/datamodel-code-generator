@@ -1,0 +1,6 @@
+exit: 1
+stdout: ''
+stderr:
+Architecture boundary violations found:
+src/datamodel_code_generator/model/base.py:7:1: [shared-model-backend-import] datamodel_code_generator.model.pydantic_v2.base_model: shared model code must not depend on a concrete backend; expose a neutral capability instead (in <module>)
+src/datamodel_code_generator/model/base.py:8:1: [shared-model-backend-import] datamodel_code_generator.model.pydantic_v2.base_model: shared model code must not depend on a concrete backend; expose a neutral capability instead (in <module>)
