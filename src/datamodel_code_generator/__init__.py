@@ -1855,7 +1855,7 @@ def _prepare_generation_config(config: GenerateConfig, caller_cwd: Path) -> tupl
     """Resolve configuration paths before any process-relative generation work."""
     caller_path_updates = {
         field: absolute_path
-        for field in ("output", "emit_model_metadata", "custom_file_header_path")
+        for field in ("output", "emit_model_metadata", "custom_file_header_path", "custom_template_dir")
         if (absolute_path := _absolute_generation_path(getattr(config, field), caller_cwd))
         is not getattr(config, field)
     }
