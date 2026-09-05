@@ -17,16 +17,39 @@ REPOSITORY_ROOT = Path(__file__).parents[1]
 ROUTING_CASES = (
     ("blank_record", 1, "requires_claude"),
     ("empty", 0, "requires_claude"),
+    ("empty", 1, "requires_claude"),
     ("empty_path", 1, "requires_claude"),
+    ("docs_guide", 1, "requires_claude"),
+    ("dockerfile", 1, "requires_claude"),
     ("invalid_json", 1, "requires_claude"),
+    ("invalid_record_type", 1, "requires_claude"),
     ("invalid_type", 1, "requires_claude"),
+    ("lock_file", 1, "requires_claude"),
     ("malformed", 1, "requires_claude"),
+    ("mismatched_count", 3, "requires_claude"),
     ("newline", 1, "requires_claude"),
+    ("package_metadata", 1, "requires_claude"),
+    ("playground", 1, "requires_claude"),
+    ("pre_commit_hooks", 1, "requires_claude"),
+    ("prompt_data", 1, "requires_claude"),
+    ("readme", 1, "requires_claude"),
     ("rename", 1, "requires_claude"),
+    ("rename_safe", 1, "safe"),
     ("runtime", 1, "requires_claude"),
     ("safe", 5, "safe"),
     ("safe", 3_000, "requires_claude"),
+    ("shipped_action", 1, "requires_claude"),
+    ("skip_safe", 16, "skip_changelog"),
+    ("tests_root", 1, "requires_claude"),
+    ("unknown_path", 1, "requires_claude"),
+    ("unsafe_mixed", 3, "requires_claude"),
     ("whitespace", 1, "requires_claude"),
+    ("workflow_docs_deploy", 1, "requires_claude"),
+    ("workflow_docker", 1, "requires_claude"),
+    ("workflow_known", 1, "skip_changelog"),
+    ("workflow_publish", 1, "requires_claude"),
+    ("workflow_root", 1, "requires_claude"),
+    ("workflow_unknown", 1, "requires_claude"),
 )
 
 
@@ -153,6 +176,48 @@ def test_main_missing_changed_files_fail_closed(tmp_path: Path) -> None:
     preparer.main([
         "--changed-files-path",
         str(tmp_path / "missing.files"),
+        "--expected-changed-files",
+        "1",
+        "--analysis-path",
+        str(tmp_path / "analysis.json"),
+        "--github-output-path",
+        str(github_output_path),
+    ])
+
+    assert_output(github_output_path.read_text(encoding="utf-8"), DATA_PATH / "missing.txt")
+
+
+def test_main_unreadable_changed_files_fail_closed(tmp_path: Path) -> None:
+    """A non-file path list cannot suppress release processing."""
+    changed_files_path = tmp_path / "changed-files"
+    changed_files_path.mkdir()
+    github_output_path = tmp_path / "github-output.txt"
+    github_output_path.touch()
+
+    preparer.main([
+        "--changed-files-path",
+        str(changed_files_path),
+        "--expected-changed-files",
+        "1",
+        "--analysis-path",
+        str(tmp_path / "analysis.json"),
+        "--github-output-path",
+        str(github_output_path),
+    ])
+
+    assert_output(github_output_path.read_text(encoding="utf-8"), DATA_PATH / "missing.txt")
+
+
+def test_main_invalid_utf8_changed_files_fail_closed(tmp_path: Path) -> None:
+    """A non-UTF-8 path list cannot suppress release processing."""
+    changed_files_path = tmp_path / "changed-files"
+    changed_files_path.write_bytes(b"\x80")
+    github_output_path = tmp_path / "github-output.txt"
+    github_output_path.touch()
+
+    preparer.main([
+        "--changed-files-path",
+        str(changed_files_path),
         "--expected-changed-files",
         "1",
         "--analysis-path",
