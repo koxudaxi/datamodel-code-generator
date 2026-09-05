@@ -66,6 +66,7 @@ from tests.conftest import (
     assert_generated_modules_output,
     assert_httpx_get_kwargs,
     assert_inputs_not_mutated,
+    assert_mutable_copy_is_isolated,
     assert_no_uncommented_generated_code,
     assert_output,
     assert_runtime_import_package,
@@ -1699,6 +1700,89 @@ def test_mcp_tools_referenced_false_definition_api(input_name: str) -> None:
     """Reject unsupported false definitions instead of emitting a permissive model."""
     with pytest.raises(Error, match="Referenced MCP boolean false definition is not supported: Denied"):
         generate(DATA_PATH / "mcp_tools" / f"{input_name}.json", input_file_type=InputFileType.MCPTools)
+
+
+@pytest.mark.parametrize("input_name", ["schema_value_references", "schema_reference_positions"])
+def test_mcp_tools_schema_value_references_conversion(input_name: str) -> None:
+    """Keep schema-instance values unchanged while normalizing MCP definitions."""
+    source = json.loads((DATA_PATH / "mcp_tools" / f"{input_name}.json").read_text())
+    with assert_inputs_not_mutated({"source": source}):
+        converted = convert_mcp_tools_to_jsonschema(source)
+    assert_output(
+        f"{json.dumps(converted, indent=2)}\n",
+        EXPECTED_MAIN_PATH / "mcp_tools" / f"{input_name}.txt",
+    )
+
+
+def test_mcp_tools_schema_value_references_isolated() -> None:
+    """Keep converted instance values independently mutable from the source."""
+    source = json.loads((DATA_PATH / "mcp_tools" / "schema_value_references.json").read_text())
+    converted = convert_mcp_tools_to_jsonschema(source)
+    assert_mutable_copy_is_isolated(
+        original=source["inputSchema"]["properties"]["item"]["default"],
+        copied=converted["$defs"]["SchemaValuesInput"]["properties"]["item"]["default"],
+        mutate_copied=lambda value: value["nested"].append({"$ref": "changed"}),
+        label="MCP default payload",
+    )
+
+
+def test_mcp_tools_schema_value_references_cli(output_file: Path) -> None:
+    """Keep MCP schema-instance values in strict CLI-generated model defaults."""
+    run_main_and_assert(
+        input_path=DATA_PATH / "mcp_tools" / "schema_value_references.json",
+        output_path=output_file,
+        input_file_type="mcp-tools",
+        assert_func=assert_file_content,
+        expected_file="mcp_tools/schema_value_references.py",
+        extra_args=["--strict-refs", "--disable-timestamp"],
+    )
+    source = json.loads((DATA_PATH / "mcp_tools" / "schema_value_references.json").read_text())
+    for model_name, field_name in (
+        ("SchemaValuesInput", "item"),
+        ("SchemaValuesInput", "sequence"),
+        ("SchemaValuesOutput", "item"),
+        ("SchemaValuesOutput", "sequence"),
+    ):
+        assert_generated_model_json_validation(
+            output_file,
+            module_name=f"mcp_schema_value_references_cli_{model_name}",
+            model_name=model_name,
+            valid_json="{}",
+            invalid_json='{"item":"not-an-object"}',
+            expected_error_type="dict_type",
+            expected_attribute_path=(field_name,),
+            expected_attribute_value=source["inputSchema"]["properties"][field_name]["default"],
+        )
+
+
+def test_mcp_tools_schema_value_references_api(output_file: Path) -> None:
+    """Keep MCP schema-instance values in strict API-generated model defaults."""
+    run_generate_file_and_assert(
+        input_path=DATA_PATH / "mcp_tools" / "schema_value_references.json",
+        output_path=output_file,
+        input_file_type=InputFileType.MCPTools,
+        assert_func=assert_file_content,
+        expected_file="mcp_tools/schema_value_references.py",
+        strict_refs=True,
+        disable_timestamp=True,
+    )
+    source = json.loads((DATA_PATH / "mcp_tools" / "schema_value_references.json").read_text())
+    for model_name, field_name in (
+        ("SchemaValuesInput", "item"),
+        ("SchemaValuesInput", "sequence"),
+        ("SchemaValuesOutput", "item"),
+        ("SchemaValuesOutput", "sequence"),
+    ):
+        assert_generated_model_json_validation(
+            output_file,
+            module_name=f"mcp_schema_value_references_api_{model_name}",
+            model_name=model_name,
+            valid_json="{}",
+            invalid_json='{"item":"not-an-object"}',
+            expected_error_type="dict_type",
+            expected_attribute_path=(field_name,),
+            expected_attribute_value=source["inputSchema"]["properties"][field_name]["default"],
+        )
 
 
 @pytest.mark.parametrize(argnames="input_kind", argvalues=["mapping", "list", "string"])

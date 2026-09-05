@@ -202,80 +202,53 @@ def _local_definition_ref_name(ref: str) -> tuple[str, str, str] | None:
     return None
 
 
-def _rewrite_local_definition_ref(ref: str, ref_map: Mapping[str, str]) -> str:
+def _rewrite_local_definition_ref(ref: str, ref_map: Mapping[str, str], references: set[str]) -> str:
     if local_ref := _local_definition_ref_name(ref):
         name, escaped_name, suffix = local_ref
-        return f"#/$defs/{ref_map.get(name, escaped_name)}{suffix}"
+        definition_name = ref_map.get(name, escaped_name)
+        references.add(definition_name)
+        return f"#/$defs/{definition_name}{suffix}"
     return ref
 
 
 def _rewrite_schema_refs(
     value: Any,
     ref_map: Mapping[str, str],
+    references: set[str],
     *,
     strip_root_definitions: bool = False,
-    schema_positions_only: bool = False,
 ) -> Any:
+    """Copy a schema, rewriting references only at schema-bearing keywords."""
     if isinstance(value, Mapping):
         rewritten: dict[str, Any] = {}
         for key, item in value.items():
             if strip_root_definitions and key in DEFINITION_KEYS:
                 continue
             if key in {"$ref", "$dynamicRef"} and isinstance(item, str):
-                rewritten[key] = _rewrite_local_definition_ref(item, ref_map)
+                rewritten[key] = _rewrite_local_definition_ref(item, ref_map, references)
                 continue
-            if schema_positions_only and key in SCHEMA_MAP_KEYS and isinstance(item, Mapping):
+            if key in SCHEMA_MAP_KEYS and isinstance(item, Mapping):
                 rewritten[key] = {
-                    name: _rewrite_schema_refs(child, ref_map, schema_positions_only=True)
-                    for name, child in item.items()
+                    name: _rewrite_schema_refs(child, ref_map, references) for name, child in item.items()
                 }
-            elif not schema_positions_only or key in SCHEMA_VALUE_KEYS:
-                rewritten[key] = _rewrite_schema_refs(
-                    item,
-                    ref_map,
-                    schema_positions_only=schema_positions_only,
-                )
+            elif key in SCHEMA_VALUE_KEYS:
+                rewritten[key] = _rewrite_schema_refs(item, ref_map, references)
             else:
-                rewritten[key] = item
+                rewritten[key] = deepcopy(item)
         return rewritten
     if isinstance(value, list):
-        return [_rewrite_schema_refs(item, ref_map, schema_positions_only=schema_positions_only) for item in value]
+        return [_rewrite_schema_refs(item, ref_map, references) for item in value]
     return value
-
-
-def _schema_local_definition_refs(value: Any) -> set[str]:
-    references: set[str] = set()
-
-    def visit(item: Any) -> None:
-        if isinstance(item, Mapping):
-            for key, child in item.items():
-                if key in {"$ref", "$dynamicRef"} and isinstance(child, str):
-                    if local_ref := _local_definition_ref_name(child):
-                        references.add(local_ref[0])
-                    continue
-                if key in SCHEMA_MAP_KEYS and isinstance(child, Mapping):
-                    for schema in child.values():
-                        visit(schema)
-                elif key in SCHEMA_VALUE_KEYS:
-                    visit(child)
-        elif isinstance(item, list):
-            for child in item:
-                visit(child)
-
-    visit(value)
-    return references
 
 
 def _normalize_schema(
     schema: JSONSchemaMapping,
     definition_name: str,
     used_names: set[str],
+    references: set[str],
     parent_ref_map: MutableMapping[str, str] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    schema_copy = dict(deepcopy(schema))
-    root_definitions = [
-        definitions for key in DEFINITION_KEYS if isinstance(definitions := schema_copy.get(key), Mapping)
-    ]
+    root_definitions = [definitions for key in DEFINITION_KEYS if isinstance(definitions := schema.get(key), Mapping)]
     local_ref_map: dict[str, str] = {}
     for definitions in root_definitions:
         for name in definitions:
@@ -284,7 +257,6 @@ def _normalize_schema(
                 used_names,
             )
     ref_map: MutableMapping[str, str] = ChainMap(local_ref_map, parent_ref_map) if parent_ref_map else local_ref_map
-    referenced_definitions: set[str] | None = None
 
     hoisted_definitions: dict[str, Any] = {}
     for definitions in root_definitions:
@@ -296,24 +268,19 @@ def _normalize_schema(
                         inner_schema,
                         local_ref_map[definition_key],
                         used_names,
+                        references,
                         ref_map,
                     )
                     hoisted_definitions.update(nested)
                     hoisted_definitions[local_ref_map[definition_key]] = normalized
                 case bool():
-                    if referenced_definitions is None:
-                        referenced_definitions = _schema_local_definition_refs(schema_copy)
-                    if definition_key in referenced_definitions:
-                        if inner_schema is False:
-                            msg = f"Referenced MCP boolean false definition is not supported: {definition_key}"
-                            raise Error(msg)
-                        hoisted_definitions[local_ref_map[definition_key]] = inner_schema
+                    hoisted_definitions[local_ref_map[definition_key]] = inner_schema
 
     normalized_schema = _rewrite_schema_refs(
-        schema_copy,
+        schema,
         ref_map,
+        references,
         strip_root_definitions=True,
-        schema_positions_only=parent_ref_map is not None,
     )
     normalized_schema["title"] = definition_name
     return normalized_schema, hoisted_definitions
@@ -331,8 +298,17 @@ def _add_tool_schema_definition(
     base_name = _to_definition_name(tool.name)
     definition_name = _unique_definition_name(f"{base_name} {suffix}", used_names)
     schema = tool.input_schema if schema_key == "inputSchema" else tool.output_schema
-    normalized, hoisted_definitions = _normalize_schema(schema, definition_name, used_names)
-    definitions.update(hoisted_definitions)
+    references: set[str] = set()
+    normalized, hoisted_definitions = _normalize_schema(schema, definition_name, used_names, references)
+    # A later sibling definition can reference a boolean schema hoisted earlier.
+    for name, value in hoisted_definitions.items():
+        if isinstance(value, bool):
+            if name not in references:
+                continue
+            if value is False:
+                msg = f"Referenced MCP boolean false definition is not supported: {name}"
+                raise Error(msg)
+        definitions[name] = value
     definitions[definition_name] = normalized
 
 
