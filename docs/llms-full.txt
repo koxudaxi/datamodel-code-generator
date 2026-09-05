@@ -41381,6 +41381,28 @@ are intentionally outside the generated-output helper policy. Use
 reasonably be expressed with the shared helpers, such as external-request mock
 checks or intermediate-state checks.
 
+## Release notes
+
+Release notes should describe changes that affect users: features, fixes,
+generated output, performance, compatibility, installation requirements, and
+the official GitHub Action or Playground.
+
+Use the `skip-changelog` PR label for changes that only maintain tests, CI,
+release automation, generated documentation, or development tooling. The
+release workflow adds it automatically when every changed file is a known
+maintenance file, including CHANGELOG updates and release benchmark data.
+Other changes need a maintainer's judgment before applying the label.
+
+Check the complete diff before excluding dependency updates, refactors, or
+documentation changes. They can affect users through `action.yml`, packaged
+CLI prompt data, Playground assets, or generated code. A PR that mixes
+maintenance with user-facing changes should stay in the release notes.
+
+The label only filters GitHub's generated change list. Breaking-change
+analysis still runs independently, and the full comparison link remains
+available. Excluded PRs receive no release notification unless they are
+referenced elsewhere in the release body.
+
 ## Architecture boundaries
 
 Before adding a dependency between layers, check `docs/architecture.md` and run:

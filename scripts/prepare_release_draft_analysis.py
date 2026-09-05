@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
-from collections.abc import Iterable  # ruff: ignore[typing-only-standard-library-import] - fast runtime import
+from collections.abc import Iterable  # ruff: ignore[typing-only-standard-library-import]  # fast runtime import
 from pathlib import Path
 
 FILE_CHANGE_KEYS = frozenset({"path", "previous_path"})
@@ -16,6 +16,35 @@ SAFE_EXACT_PATHS = frozenset({
 })
 SAFE_ROOTS = frozenset({"tests"})
 SAFE_REASONING = "Only release automation or tests changed, so generated output and public interfaces are unaffected."
+CHANGELOG_SAFE_EXACT_PATHS = frozenset({
+    ".coderabbit.yaml",
+    ".github/dependabot.yaml",
+    ".github/workflows/changelog.yaml",
+    ".github/workflows/cli-docs.yaml",
+    ".github/workflows/codeql.yaml",
+    ".github/workflows/codespell.yaml",
+    ".github/workflows/codspeed.yaml",
+    ".github/workflows/config-types.yaml",
+    ".github/workflows/generated-docs-sync.yaml",
+    ".github/workflows/lint.yaml",
+    ".github/workflows/perf-memory.yaml",
+    ".github/workflows/release-draft.yaml",
+    ".github/workflows/release-notify.yaml",
+    ".github/workflows/schema-docs.yaml",
+    ".github/workflows/test.yaml",
+    ".pre-commit-config.yaml",
+    "CHANGELOG.md",
+    "docs/data/release-benchmarks.json",
+    "scripts/benchmark_builtin_templates.py",
+    "scripts/check_architecture_boundaries.py",
+    "scripts/generate_changelog.sh",
+    "scripts/measure_generation_memory.py",
+    "scripts/measure_startup.py",
+    "scripts/prepare_release_draft_analysis.py",
+    "scripts/select_ci_test_shard.py",
+    "scripts/validate_release_draft_analysis.py",
+    "tox.ini",
+})
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -40,6 +69,18 @@ def _is_safe_path(path: str) -> bool:
     return False
 
 
+def _is_safe_changelog_path(path: str) -> bool:
+    """Return whether one exact changed path can be omitted from release notes."""
+    if not path or path != path.strip():
+        return False
+    if path in CHANGELOG_SAFE_EXACT_PATHS:
+        return True
+    match path.split("/", 2):
+        case ["tests", relative_path, *_] if relative_path:
+            return True
+    return False
+
+
 def _paths_from_record(raw_record: str) -> tuple[str, ...] | None:
     """Parse one exact GitHub API file record without ambiguous framing."""
     if not (record := raw_record.strip()):
@@ -58,32 +99,41 @@ def _paths_from_record(raw_record: str) -> tuple[str, ...] | None:
     return None
 
 
-def _count_safe_file_changes(changed_files: Iterable[str]) -> int | None:
-    """Count safely framed file records, or reject the stream immediately."""
+def _classify_file_changes(changed_files: Iterable[str], expected_changed_files: int) -> tuple[bool, bool]:
+    """Return semantic-analysis and changelog policies from one file-record stream."""
+    if expected_changed_files <= 0:
+        return True, False
+
+    skip_semantic_analysis = True
+    skip_changelog = True
     file_count = 0
     for raw_record in changed_files:
-        if not (paths := _paths_from_record(raw_record)) or not all(map(_is_safe_path, paths)):
-            return None
+        if not (paths := _paths_from_record(raw_record)):
+            return True, False
         file_count += 1
-    return file_count
+        skip_semantic_analysis = skip_semantic_analysis and all(map(_is_safe_path, paths))
+        skip_changelog = skip_changelog and all(map(_is_safe_changelog_path, paths))
+        if not skip_semantic_analysis and not skip_changelog:
+            return True, False
+
+    if file_count != expected_changed_files:
+        return True, False
+    return not skip_semantic_analysis, skip_changelog
 
 
-def _requires_claude(changed_files_path: Path, expected_changed_files: int) -> bool:
-    """Return whether any changed path needs semantic release analysis."""
-    if expected_changed_files <= 0:
-        return True
+def _release_draft_policies(changed_files_path: Path, expected_changed_files: int) -> tuple[bool, bool]:
+    """Return fail-closed semantic-analysis and changelog decisions."""
     try:
         with changed_files_path.open(encoding="utf-8") as changed_files:
-            file_count = _count_safe_file_changes(changed_files)
+            return _classify_file_changes(changed_files, expected_changed_files)
     except (OSError, UnicodeError):
-        return True
-    return file_count is None or file_count != expected_changed_files
+        return True, False
 
 
 def main(argv: list[str] | None = None) -> None:
-    """Write the workflow route and, for safe changes, a trusted analysis."""
+    """Write release-analysis and changelog-routing decisions for the workflow."""
     args = _parse_args(argv)
-    requires_claude = _requires_claude(args.changed_files_path, args.expected_changed_files)
+    requires_claude, skip_changelog = _release_draft_policies(args.changed_files_path, args.expected_changed_files)
     if not requires_claude:
         args.analysis_path.write_text(
             json.dumps({
@@ -96,6 +146,7 @@ def main(argv: list[str] | None = None) -> None:
         )
     with args.github_output_path.open("a", encoding="utf-8") as github_output:
         github_output.write(f"requires_claude={str(requires_claude).lower()}\n")
+        github_output.write(f"skip_changelog={str(skip_changelog).lower()}\n")
 
 
 if __name__ == "__main__":  # pragma: no cover - exercised by subprocess tests
