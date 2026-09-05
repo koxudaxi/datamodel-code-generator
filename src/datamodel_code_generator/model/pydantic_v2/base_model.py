@@ -10,7 +10,6 @@ import json
 import keyword
 import re
 from collections import defaultdict
-from functools import lru_cache
 from pathlib import Path
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
@@ -205,7 +204,6 @@ _ALIAS_GENERATOR_IMPORTS: dict[str, Import] = {
 }
 
 
-@lru_cache(maxsize=16)
 def _uses_legacy_pydantic_extra_template(template_file_path: str) -> bool:
     """Return whether a custom template uses the pre-0.68.1 typed-extra property."""
     template_source = Path(template_file_path).read_text(encoding="utf-8")

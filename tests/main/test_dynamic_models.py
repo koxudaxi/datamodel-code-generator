@@ -3,18 +3,21 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 import threading
 import types
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import pydantic
 import pytest
 from inline_snapshot import external_file
 
 from datamodel_code_generator import (
+    AllExportsCollisionStrategy,
+    AllExportsScope,
     DataModelType,
     Error,
     InputFileType,
@@ -27,7 +30,7 @@ from datamodel_code_generator.config import GenerateConfig
 from datamodel_code_generator.enums import ModuleSplitMode
 from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.types import StrictTypes
-from tests.conftest import assert_output
+from tests.conftest import assert_directory_content, assert_generated_modules_output, assert_output
 from tests.main.conftest import JSON_SCHEMA_DATA_PATH, OPEN_API_DATA_PATH
 
 if TYPE_CHECKING:
@@ -256,6 +259,52 @@ def test_cache_miss_different_config() -> None:
     assert models1 is not models2
     assert sorted(models1.keys()) == ["User"]
     assert sorted(models2.keys()) == ["Person"]
+
+
+def test_cache_distinguishes_property_order() -> None:
+    """Keep cached dynamic models in the same field order as uncached generation."""
+    first_schema = json.loads((DATA_PATH / "cache_field_order_first.json").read_text(encoding="utf-8"))
+    second_schema = json.loads((DATA_PATH / "cache_field_order_second.json").read_text(encoding="utf-8"))
+    config = GenerateConfig(
+        input_file_type=InputFileType.JsonSchema,
+        disable_timestamp=True,
+        formatters=[],
+    )
+
+    first_model = generate_dynamic_models(first_schema, config=config)["Example"]
+    cached_second_model = generate_dynamic_models(second_schema, config=config)["Example"]
+    cached_first_model = generate_dynamic_models(first_schema, config=config)["Example"]
+    uncached_second_model = generate_dynamic_models(second_schema, config=config, cache_size=0)["Example"]
+
+    actual = {
+        "first_cache_hit": first_model is cached_first_model,
+        "cached_second_fields": list(cached_second_model.model_fields),
+        "uncached_second_fields": list(uncached_second_model.model_fields),
+        "cached_second_json": cached_second_model(first="x", second=1).model_dump_json(),
+        "uncached_second_json": uncached_second_model(first="x", second=1).model_dump_json(),
+    }
+    assert_output(f"{json.dumps(actual, indent=2)}\n", EXPECTED_PATH / "cache_field_order.txt")
+
+
+def test_cache_hits_do_not_reorder_fifo_eviction() -> None:
+    """Keep cache hits from changing which entry FIFO eviction removes."""
+    schemas = [
+        json.loads((DATA_PATH / f"cache_field_order_{name}.json").read_text(encoding="utf-8"))
+        for name in ("first", "second", "third")
+    ]
+    first_models = generate_dynamic_models(schemas[0], cache_size=2)
+    second_models = generate_dynamic_models(schemas[1], cache_size=2)
+    first_hit_models = generate_dynamic_models(schemas[0], cache_size=2)
+    generate_dynamic_models(schemas[2], cache_size=2)
+    second_retained_models = generate_dynamic_models(schemas[1], cache_size=2)
+    first_rebuilt_models = generate_dynamic_models(schemas[0], cache_size=2)
+
+    actual = {
+        "first_hit": first_hit_models is first_models,
+        "second_retained": second_retained_models is second_models,
+        "first_evicted": first_rebuilt_models is not first_models,
+    }
+    assert_output(f"{json.dumps(actual, indent=2)}\n", EXPECTED_PATH / "cache_fifo_order.txt")
 
 
 def test_module_name_is_applied_for_same_schema_with_different_runtime_modules() -> None:
@@ -660,12 +709,153 @@ def test_multi_module_output() -> None:
         },
         "$ref": "#/$defs/Order",
     }
+    config = make_config(module_split_mode=ModuleSplitMode.Single)
     assert_dynamic_models(
         schema,
         {"User": {"name": "Alice", "age": 25}, "Order": {"id": 1, "user": {"name": "Bob", "age": 30}}},
         EXPECTED_PATH / "multi_module_output.json",
-        config=make_config(module_split_mode=ModuleSplitMode.Single),
+        config=config,
     )
+    assert_output(
+        f"{json.dumps({'models': list(generate_dynamic_models(schema, config=config))}, indent=2)}\n",
+        EXPECTED_PATH / "multi_module_model_order.txt",
+    )
+
+
+def test_multi_module_relative_parent_import(tmp_path: Path) -> None:
+    """Resolve parent-package imports before executing generated modules."""
+    schema = json.loads((DATA_PATH / "relative_parent_import.json").read_text(encoding="utf-8"))
+    payload_path = DATA_PATH / "relative_parent_import_payload.json"
+    payload = json.loads(payload_path.read_text(encoding="utf-8"))
+    config = GenerateConfig(
+        input_file_type=InputFileType.JsonSchema,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        module_split_mode=ModuleSplitMode.Single,
+        all_exports_scope=AllExportsScope.Recursive,
+        all_exports_collision_strategy=AllExportsCollisionStrategy.FullPrefix,
+        disable_timestamp=True,
+        formatters=[],
+    )
+    modules = cast("dict[tuple[str, ...], str]", generate(schema, config=config))
+    assert_generated_modules_output(
+        modules,
+        EXPECTED_PATH / "relative_parent_import_modules",
+        transform=lambda output: f"{output}\n",
+    )
+
+    package_name = "runtime_relative_parent_import"
+    models = generate_dynamic_models(schema, config=config, cache_size=0, module_name=package_name)
+    actual = {
+        "models": list(models),
+        "model_module": models["Model"].__module__,
+        "validated": models["Model"].model_validate(payload).model_dump(mode="json"),
+        "modules_restored": not any(
+            name == package_name or name.startswith(f"{package_name}.") for name in sys.modules
+        ),
+    }
+    assert_output(f"{json.dumps(actual, indent=2)}\n", EXPECTED_PATH / "relative_parent_import.txt")
+    dynamic_payload = f"{json.dumps(actual['validated'], indent=2)}\n"
+    assert_output(dynamic_payload, EXPECTED_PATH / "relative_parent_import_payload.txt")
+
+    output_path = tmp_path / "cli_generated"
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "datamodel_code_generator",
+            "--input",
+            str(DATA_PATH / "relative_parent_import.json"),
+            "--output",
+            str(output_path),
+            "--input-file-type",
+            "jsonschema",
+            "--output-model-type",
+            DataModelType.PydanticV2BaseModel.value,
+            "--module-split-mode",
+            ModuleSplitMode.Single.value,
+            "--all-exports-scope",
+            AllExportsScope.Recursive.value,
+            "--all-exports-collision-strategy",
+            AllExportsCollisionStrategy.FullPrefix.value,
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+        check=True,
+        text=True,
+    )
+    assert_directory_content(output_path, EXPECTED_PATH / "relative_parent_import_cli_modules")
+
+    cli_import_result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import json; "
+                "from pathlib import Path; "
+                "from cli_generated.model import Model; "
+                f"payload = json.loads(Path({str(payload_path)!r}).read_text(encoding='utf-8')); "
+                "print(json.dumps(Model.model_validate(payload).model_dump(mode='json'), indent=2))"
+            ),
+        ],
+        capture_output=True,
+        check=True,
+        cwd=tmp_path,
+        text=True,
+    )
+    assert_output(cli_import_result.stdout, EXPECTED_PATH / "relative_parent_import_payload.txt")
+
+
+def test_multi_module_restores_preexisting_modules_after_execution_failure() -> None:
+    """Restore every user module when dynamic execution succeeds or raises."""
+    schema = json.loads((DATA_PATH / "relative_parent_import.json").read_text(encoding="utf-8"))
+    config = GenerateConfig(
+        input_file_type=InputFileType.JsonSchema,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        module_split_mode=ModuleSplitMode.Single,
+        all_exports_scope=AllExportsScope.Recursive,
+        all_exports_collision_strategy=AllExportsCollisionStrategy.FullPrefix,
+        disable_timestamp=True,
+        formatters=[],
+    )
+    package_name = "runtime_nested_module_restore"
+    module_names = (
+        package_name,
+        f"{package_name}.left",
+        f"{package_name}.left.shared",
+        f"{package_name}.right",
+        f"{package_name}.right.deep",
+        f"{package_name}.right.deep.consumer",
+        f"{package_name}.right.shared",
+        f"{package_name}.model",
+    )
+    previous_modules = {name: types.ModuleType(name) for name in module_names}
+    sys.modules.update(previous_modules)
+    try:
+        generate_dynamic_models(schema, config=config, cache_size=0, module_name=package_name)
+        success_restored = {
+            name: module
+            for name, module in sys.modules.items()
+            if name == package_name or name.startswith(f"{package_name}.")
+        } == previous_modules and all(sys.modules[name] is module for name, module in previous_modules.items())
+
+        failing_config = config.model_copy(update={"additional_imports": ["missing.module"]})
+        with pytest.raises(ModuleNotFoundError, match="No module named 'missing'"):
+            generate_dynamic_models(schema, config=failing_config, cache_size=0, module_name=package_name)
+        failure_restored = {
+            name: module
+            for name, module in sys.modules.items()
+            if name == package_name or name.startswith(f"{package_name}.")
+        } == previous_modules and all(sys.modules[name] is module for name, module in previous_modules.items())
+
+        actual = {
+            "success_restored": success_restored,
+            "failure_restored": failure_restored,
+        }
+        assert_output(f"{json.dumps(actual, indent=2)}\n", EXPECTED_PATH / "nested_module_restoration.txt")
+    finally:
+        for name in module_names:
+            sys.modules.pop(name, None)
 
 
 def test_multi_module_output_with_module_name() -> None:
@@ -735,22 +925,18 @@ def test_generated_code_matches_expected() -> None:
     )
 
 
-def test_get_relative_imports_with_module_path() -> None:
-    """Test _get_relative_imports with 'from .module import X' style imports."""
-    from datamodel_code_generator.dynamic import _get_relative_imports
+def test_build_module_edges_ignores_unresolvable_relative_imports() -> None:
+    """Ignore invalid relative imports while building generated-module dependencies."""
+    from datamodel_code_generator.dynamic import _build_module_edges
 
-    code = "from .user import User\nfrom .order import Order"
-    imports = _get_relative_imports(code)
-    assert imports == {"user", "order"}
-
-
-def test_get_relative_imports_with_dotted_module() -> None:
-    """Test _get_relative_imports with dotted module path."""
-    from datamodel_code_generator.dynamic import _get_relative_imports
-
-    code = "from .models.user import User"
-    imports = _get_relative_imports(code)
-    assert imports == {"models"}
+    fixture = json.loads((DATA_PATH / "relative_import_edge_cases.json").read_text(encoding="utf-8"))
+    modules = {tuple(path.split("/")): code for path, code in fixture["modules"].items()}
+    edges = _build_module_edges(modules)
+    actual = {
+        "/".join(path): ["/".join(dependency) for dependency in sorted(dependencies)]
+        for path, dependencies in edges.items()
+    }
+    assert_output(f"{json.dumps(actual, indent=2)}\n", EXPECTED_PATH / "relative_import_edge_cases.txt")
 
 
 def test_build_module_edges_no_matching_import() -> None:

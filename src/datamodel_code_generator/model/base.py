@@ -10,7 +10,7 @@ import ast
 import re
 import sys
 from abc import ABC, abstractmethod
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 from copy import deepcopy
 from dataclasses import dataclass, replace
 from functools import cached_property, lru_cache
@@ -67,6 +67,7 @@ _USE_TYPED_DICT_BACKPORT_TEMPLATE_DATA_KEY = "use_typeddict_backport"
 _MODULE_NAME_INVALID_CHAR_PATTERN = re.compile(r"[^0-9a-zA-Z_]")
 _MODULE_NAME_INVALID_CHAR_WITH_DOTS_PATTERN = re.compile(r"[^0-9a-zA-Z_.]")
 _MAX_MISSING_CUSTOM_TEMPLATE_SUBDIRS = 128
+_MAX_CUSTOM_TEMPLATE_SIGNATURES = 128
 _NESTED_MODEL_DEFAULT_FACTORY_ORDER_KEY = "_nested_model_default_factory_order"
 _NESTED_MODEL_DEFAULT_FACTORY_RECURSIVE_PATHS_KEY = "_nested_model_default_factory_recursive_paths"
 _REQUIRED_INHERITED_DEFAULT_FACTORY_KEY = "_required_inherited_default_factory"
@@ -102,6 +103,7 @@ _BUILTIN_TEMPLATE_INTERNAL_DATA_KEYS: frozenset[str] = frozenset({
 })
 _RESOLVE_REFERENCE_ACTION_CAPABILITIES_MARKER = "__datamodel_code_generator_resolve_reference_action_capabilities__"
 MroT = TypeVar("MroT")
+_CustomTemplateSignature = bytes
 
 
 @dataclass(frozen=True, slots=True)
@@ -142,10 +144,11 @@ def get_resolve_reference_action_capabilities(action: object) -> ResolveReferenc
 class _MissingCustomTemplateState:
     """Bounded bookkeeping for mutable custom-template directories."""
 
-    __slots__ = ("count", "lock", "overflow", "paths")
+    __slots__ = ("count", "lock", "overflow", "paths", "signatures")
 
     def __init__(self) -> None:
         self.paths: dict[Path, tuple[Path, ...]] = {}
+        self.signatures: OrderedDict[Path, _CustomTemplateSignature] = OrderedDict()
         self.count = 0
         self.overflow = False
         self.lock = RLock()
@@ -1345,21 +1348,21 @@ def _get_template_with_custom_dir(
     return template_adapter(template) if template_adapter is not None else template
 
 
+def _clear_custom_template_render_caches() -> None:
+    """Clear cached loaders, environments, and templates after a source change."""
+    cached_path_exists.cache_clear()
+    _get_environment.cache_clear()
+    _get_template_with_custom_dir.cache_clear()
+    _get_environment_with_absolute_path.cache_clear()
+    _get_template_with_absolute_path.cache_clear()
+
+
 def _clear_custom_template_caches() -> None:
     """Clear mutable custom-template path, environment, and template caches."""
     with _missing_custom_template_state.lock:
-        cached_path_exists.cache_clear()
-        _get_environment.cache_clear()
-        _get_template_with_custom_dir.cache_clear()
-        _get_environment_with_absolute_path.cache_clear()
-        _get_template_with_absolute_path.cache_clear()
-        if (
-            pydantic_v2_base_model := sys.modules.get("datamodel_code_generator.model.pydantic_v2.base_model")
-        ) is not None:
-            legacy_template_cache = getattr(pydantic_v2_base_model, "_uses_legacy_pydantic_extra_template", None)
-            if (cache_clear := getattr(legacy_template_cache, "cache_clear", None)) is not None:
-                cache_clear()
+        _clear_custom_template_render_caches()
         _missing_custom_template_state.paths.clear()
+        _missing_custom_template_state.signatures.clear()
         _missing_custom_template_state.count = 0
         _missing_custom_template_state.overflow = False
 
@@ -1379,24 +1382,110 @@ def _remember_missing_custom_template_subdir(custom_template_dir: Path, custom_s
         _missing_custom_template_state.count += 1
 
 
-def _refresh_custom_template_paths(custom_template_dir: Path) -> None:
-    """Refresh cached lookups when a tracked custom subdirectory appears."""
-    with _missing_custom_template_state.lock:
-        overflow = _missing_custom_template_state.overflow
-        match _missing_custom_template_state.paths.get(custom_template_dir):
-            case None:
-                if not overflow:
-                    return
-                missing_subdirs = ()
-            case tracked_subdirs:
-                missing_subdirs = tracked_subdirs
-    if overflow:
-        _clear_custom_template_caches()
+def _visit_custom_template_directory(
+    directory_path: Path,
+    relative_directory: str,
+    entries: list[tuple[str, ...]],
+    visited_directories: set[tuple[int, int]],
+) -> bool:
+    try:
+        if directory_path.is_symlink():
+            link_target = directory_path.readlink()
+            entries.append(("directory-link", relative_directory or ".", link_target.as_posix()))
+        directory_stat = directory_path.stat()
+    except OSError:
+        return False
+    directory_identity = (directory_stat.st_dev, directory_stat.st_ino)
+    if directory_identity in visited_directories:
+        return False
+    visited_directories.add(directory_identity)
+    return True
+
+
+def _scan_custom_template_directory(
+    directory_path: Path,
+    relative_directory: str,
+    entries: list[tuple[str, ...]],
+    pending_directories: list[tuple[Path, str]],
+) -> None:
+    from os import scandir  # noqa: PLC0415
+    from stat import S_ISDIR, S_ISREG  # noqa: PLC0415
+
+    mode_checks = (S_ISDIR, S_ISREG)
+    try:
+        with scandir(directory_path) as directory_entries:
+            for entry in directory_entries:
+                relative_path = f"{relative_directory}/{entry.name}" if relative_directory else entry.name
+                _scan_custom_template_entry(entry, relative_path, entries, pending_directories, mode_checks)
+    except OSError:
         return
-    for path in missing_subdirs:
-        if path.exists():
-            _clear_custom_template_caches()
+
+
+def _scan_custom_template_entry(
+    entry: Any,
+    relative_path: str,
+    entries: list[tuple[str, ...]],
+    pending_directories: list[tuple[Path, str]],
+    mode_checks: tuple[Callable[[int], bool], Callable[[int], bool]],
+) -> None:
+    is_directory, is_regular = mode_checks
+    if entry.is_symlink():
+        try:
+            link_target = Path(entry.path).readlink()
+            if entry.is_dir():
+                pending_directories.append((Path(entry.path), relative_path))
+                return
+        except OSError:
             return
+        entries.append(("file-link", relative_path, link_target.as_posix()))
+    try:
+        stat_result = entry.stat()
+    except OSError:
+        return
+    if is_directory(stat_result.st_mode):
+        pending_directories.append((Path(entry.path), relative_path))
+    elif is_regular(stat_result.st_mode):
+        entries.append((
+            relative_path,
+            str(stat_result.st_mtime_ns),
+            str(stat_result.st_ctime_ns),
+            str(stat_result.st_size),
+        ))
+
+
+def _get_custom_template_signature(custom_template_dir: Path) -> _CustomTemplateSignature:
+    """Return a stable metadata signature for all files a custom template can include."""
+    from hashlib import sha256  # noqa: PLC0415
+
+    entries: list[tuple[str, ...]] = []
+    visited_directories: set[tuple[int, int]] = set()
+    pending_directories = [(custom_template_dir, "")]
+    while pending_directories:
+        directory_path, relative_directory = pending_directories.pop()
+        if _visit_custom_template_directory(directory_path, relative_directory, entries, visited_directories):
+            _scan_custom_template_directory(directory_path, relative_directory, entries, pending_directories)
+    digest = sha256()
+    for entry in sorted(entries):
+        for value in entry:
+            digest.update(value.encode("utf-8", "surrogateescape"))
+            digest.update(b"\0")
+    return digest.digest()
+
+
+def _refresh_custom_template_paths(custom_template_dir: Path) -> None:
+    """Detect custom-template changes once per generation without polling each model."""
+    signature = _get_custom_template_signature(custom_template_dir)
+    with _missing_custom_template_state.lock:
+        if _missing_custom_template_state.overflow:
+            _clear_custom_template_caches()
+        elif _missing_custom_template_state.signatures.get(custom_template_dir) == signature:
+            _missing_custom_template_state.signatures.move_to_end(custom_template_dir)
+            return
+        else:
+            if len(_missing_custom_template_state.signatures) >= _MAX_CUSTOM_TEMPLATE_SIGNATURES:
+                _missing_custom_template_state.signatures.popitem(last=False)
+            _clear_custom_template_render_caches()
+        _missing_custom_template_state.signatures[custom_template_dir] = signature
 
 
 @lru_cache(maxsize=16)

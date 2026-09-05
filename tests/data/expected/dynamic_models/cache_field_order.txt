@@ -1,0 +1,13 @@
+{
+  "first_cache_hit": true,
+  "cached_second_fields": [
+    "second",
+    "first"
+  ],
+  "uncached_second_fields": [
+    "second",
+    "first"
+  ],
+  "cached_second_json": "{\"second\":1,\"first\":\"x\"}",
+  "uncached_second_json": "{\"second\":1,\"first\":\"x\"}"
+}
