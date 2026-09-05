@@ -1,0 +1,16 @@
+exit: 1
+stdout: ''
+stderr:
+Architecture boundary violations found:
+src/datamodel_code_generator/model/base.py:4:1: [shared-model-backend-import] datamodel_code_generator.model.pydantic_v2: shared model code must not depend on a concrete backend; expose a neutral capability instead (in <module>)
+src/datamodel_code_generator/model/base.py:5:1: [shared-model-backend-import] datamodel_code_generator.model.pydantic_v2: shared model code must not depend on a concrete backend; expose a neutral capability instead (in <module>)
+src/datamodel_code_generator/model/base.py:9:1: [shared-model-backend-import] datamodel_code_generator.model.pydantic_v2: shared model code must not depend on a concrete backend; expose a neutral capability instead (in <module>)
+src/datamodel_code_generator/model/base.py:10:1: [shared-model-backend-import] datamodel_code_generator.model.pydantic_v2: shared model code must not depend on a concrete backend; expose a neutral capability instead (in <module>)
+src/datamodel_code_generator/model/base.py:21:5: [shared-model-backend-import] datamodel_code_generator.model.pydantic_v2.base_model: shared model code must not depend on a concrete backend; expose a neutral capability instead (in inspect_backend)
+src/datamodel_code_generator/model/base.py:22:5: [shared-model-backend-import] datamodel_code_generator.model.pydantic_v2.base_model: shared model code must not depend on a concrete backend; expose a neutral capability instead (in inspect_backend)
+src/datamodel_code_generator/model/base.py:23:5: [shared-model-backend-import] datamodel_code_generator.model.pydantic_v2.base_model: shared model code must not depend on a concrete backend; expose a neutral capability instead (in inspect_backend)
+src/datamodel_code_generator/model/base.py:24:5: [shared-model-backend-module-access] datamodel_code_generator.model.pydantic_v2.base_model: shared model code must not inspect a concrete backend through sys.modules; move backend lifecycle or cache management to the backend or composition root (in inspect_backend)
+src/datamodel_code_generator/model/base.py:25:5: [shared-model-backend-module-access] datamodel_code_generator.model.pydantic_v2.base_model: shared model code must not inspect a concrete backend through sys.modules; move backend lifecycle or cache management to the backend or composition root (in inspect_backend)
+src/datamodel_code_generator/model/base.py:26:5: [shared-model-backend-module-access] datamodel_code_generator.model.pydantic_v2.base_model: shared model code must not inspect a concrete backend through sys.modules; move backend lifecycle or cache management to the backend or composition root (in inspect_backend)
+src/datamodel_code_generator/model/base.py:27:5: [shared-model-backend-module-access] datamodel_code_generator.model.pydantic_v2.base_model: shared model code must not inspect a concrete backend through sys.modules; move backend lifecycle or cache management to the backend or composition root (in inspect_backend)
+src/datamodel_code_generator/model/base.py:28:5: [shared-model-backend-module-access] datamodel_code_generator.model.pydantic_v2.base_model: shared model code must not inspect a concrete backend through sys.modules; move backend lifecycle or cache management to the backend or composition root (in inspect_backend)

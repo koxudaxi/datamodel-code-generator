@@ -19,7 +19,9 @@ Layer: TypeAlias = Literal[
     "config",
     "input-model",
     "reference",
+    "model-composition",
     "output-model",
+    "shared-model",
     "shared",
 ]
 
@@ -39,6 +41,24 @@ REFERENCE_BACKEND_DEFINITION_MARKERS: Final = ("dataclass", "msgspec", "pydantic
 REFERENCE_EXTERNAL_BACKEND_ROOTS: Final = frozenset({"msgspec"})
 DYNAMIC_ATTRIBUTE_MIN_ARGS: Final = 2
 _BACKEND_MODULE_PART_COUNT: Final = 3
+_SHARED_MODEL_BACKEND_IMPORT_MESSAGE: Final = (
+    "shared model code must not depend on a concrete backend; expose a neutral capability instead"
+)
+_SHARED_MODEL_BACKEND_MODULE_ACCESS_MESSAGE: Final = (
+    "shared model code must not inspect a concrete backend through sys.modules; "
+    "move backend lifecycle or cache management to the backend or composition root"
+)
+_NEUTRAL_MODEL_FILENAMES: Final = frozenset({
+    "base.py",
+    "enum.py",
+    "imports.py",
+    "output.py",
+    "runtime_validation.py",
+    "scalar.py",
+    "type_alias.py",
+    "types.py",
+    "union.py",
+})
 
 
 @dataclass(frozen=True, order=True)
@@ -191,7 +211,9 @@ def _module_name(path: Path, layer: Layer) -> str:
             "config": "datamodel_code_generator.config_fixture",
             "input-model": "datamodel_code_generator.input_model_fixture",
             "reference": "datamodel_code_generator.reference_fixture",
+            "model-composition": "datamodel_code_generator.model.composition_fixture",
             "output-model": "datamodel_code_generator.model.fixture",
+            "shared-model": "datamodel_code_generator.model.shared_fixture",
             "shared": "datamodel_code_generator.shared_fixture",
         }[layer]
 
@@ -249,6 +271,9 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
         self.violations: list[Violation] = []
         self.backend_aliases: dict[str, str] = {}
         self.package_root_aliases: set[str] = set()
+        self.dynamic_import_aliases = {"__import__", "import_module"}
+        self.sys_aliases: set[str] = set()
+        self.sys_modules_aliases: set[str] = set()
         self.data_model_type_aliases = {"DataModelType"}
         self.string_constants = self._collect_string_constants(tree)
 
@@ -259,8 +284,12 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
             match node:
                 case ast.Assign(targets=[ast.Name(id=name)], value=ast.Constant(value=str() as value)):
                     constants[name] = value
+                case ast.Assign(targets=[ast.Name(id=name)], value=ast.Name(id=alias)) if alias in constants:
+                    constants[name] = constants[alias]
                 case ast.AnnAssign(target=ast.Name(id=name), value=ast.Constant(value=str() as value)):
                     constants[name] = value
+                case ast.AnnAssign(target=ast.Name(id=name), value=ast.Name(id=alias)) if alias in constants:
+                    constants[name] = constants[alias]
         return constants
 
     @property
@@ -300,6 +329,8 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
         for alias in node.names:
             if alias.name == "datamodel_code_generator":
                 self.package_root_aliases.add(alias.asname or alias.name)
+            if alias.name == "sys":
+                self.sys_aliases.add(alias.asname or alias.name)
             self._record_import_alias(alias.asname or alias.name.partition(".")[0], alias.name)
             self._check_import(node, alias.name)
 
@@ -320,6 +351,10 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
                 and alias.name == "DataModelType"
             ):
                 self.data_model_type_aliases.add(alias.asname or alias.name)
+            if module == "sys" and alias.name == "modules":
+                self.sys_modules_aliases.add(alias.asname or alias.name)
+            if module in {"builtins", "importlib"} and alias.name in {"__import__", "import_module"}:
+                self.dynamic_import_aliases.add(alias.asname or alias.name)
             if module == "datamodel_code_generator.model" and alias.name in CONCRETE_BACKEND_ROOTS:
                 self._record_import_alias(alias.asname or alias.name, target)
                 self._check_import(node, target)
@@ -331,8 +366,10 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
         """Check dynamic imports, semantic getattr, and backend module identity helpers."""
         chain = _attribute_chain(node.func)
         dynamic_target = None
-        match self.layer, chain[-1:], node.args:
-            case ("parser" | "config" | "reference", ("__import__" | "import_module",), [first_argument, *_]):
+        match self.layer, node.args:
+            case ("parser" | "config" | "reference" | "shared-model", [first_argument, *_]) if self._is_dynamic_import(
+                chain
+            ):
                 dynamic_target = self._resolved_string(first_argument)
             case _:
                 pass
@@ -349,6 +386,13 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
                         dynamic_target,
                         "reference code must not import concrete output backends except bounded compatibility exports",
                     )
+                case "shared-model":
+                    self._add(
+                        node,
+                        "shared-model-backend-import",
+                        dynamic_target,
+                        _SHARED_MODEL_BACKEND_IMPORT_MESSAGE,
+                    )
                 case _:
                     self._add(
                         node,
@@ -357,6 +401,19 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
                         "parser/config layers must not dynamically import output backends; "
                         "declare a neutral capability",
                     )
+
+        if (
+            self.layer == "shared-model"
+            and self._is_sys_modules_get(node)
+            and (target := self._resolved_string(node.args[0]))
+            and _concrete_backend_module(target)
+        ):
+            self._add(
+                node,
+                "shared-model-backend-module-access",
+                target,
+                _SHARED_MODEL_BACKEND_MODULE_ACCESS_MESSAGE,
+            )
 
         self._check_entrypoint_private_call(node, chain)
 
@@ -416,6 +473,34 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
                 "backend-module-identity",
                 target,
                 "parser code must not identify an output backend by module/name; declare a neutral capability",
+            )
+        self.generic_visit(node)
+
+    def visit_Assign(self, node: ast.Assign) -> None:
+        """Track module-level aliases for the module registry without resolving arbitrary values."""
+        if self.layer == "shared-model" and self.qualname == "<module>":
+            self._record_sys_modules_aliases(node.targets, node.value)
+        self.generic_visit(node)
+
+    def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
+        """Track module-level annotated aliases for the module registry."""
+        if self.layer == "shared-model" and self.qualname == "<module>":
+            self._record_sys_modules_aliases((node.target,), node.value)
+        self.generic_visit(node)
+
+    def visit_Subscript(self, node: ast.Subscript) -> None:
+        """Reject concrete backend lookups through the module registry."""
+        if (
+            self.layer == "shared-model"
+            and self._is_sys_modules_registry(node.value)
+            and (target := self._resolved_string(node.slice))
+            and _concrete_backend_module(target)
+        ):
+            self._add(
+                node,
+                "shared-model-backend-module-access",
+                target,
+                _SHARED_MODEL_BACKEND_MODULE_ACCESS_MESSAGE,
             )
         self.generic_visit(node)
 
@@ -495,6 +580,38 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
             "entrypoint code must use the Parser public lifecycle and run-context API",
         )
 
+    def _is_dynamic_import(self, chain: tuple[str, ...]) -> bool:
+        if chain[-1:] in {("__import__",), ("import_module",)}:
+            return True
+        return len(chain) == 1 and chain[0] in self.dynamic_import_aliases
+
+    def _is_sys_modules_registry(self, node: ast.AST) -> bool:
+        match node:
+            case ast.Name(id=name):
+                return name in self.sys_modules_aliases
+            case ast.Attribute(value=ast.Name(id=name), attr="modules"):
+                return name in self.sys_aliases
+        return False
+
+    def _is_sys_modules_get(self, node: ast.Call) -> bool:
+        match node.func:
+            case ast.Attribute(value=value, attr="get"):
+                return bool(node.args) and self._is_sys_modules_registry(value)
+        return False
+
+    def _record_sys_modules_aliases(
+        self,
+        targets: list[ast.expr] | tuple[ast.expr, ...],
+        value: ast.expr | None,
+    ) -> None:
+        names = {target.id for target in targets if isinstance(target, ast.Name)}
+        if not names:
+            return
+        is_registry = value is not None and self._is_sys_modules_registry(value)
+        self.sys_modules_aliases.difference_update(names)
+        if is_registry:
+            self.sys_modules_aliases.update(names)
+
     def _record_import_alias(self, alias: str, target: str) -> None:
         if backend := _concrete_backend_module(target):
             self.backend_aliases[alias] = backend
@@ -522,6 +639,14 @@ class ArchitectureBoundaryVisitor(ast.NodeVisitor):
                 "config-backend-import",
                 target,
                 "configuration must receive output implementations through a neutral registry or injection",
+            )
+            return
+        if self.layer == "shared-model" and _concrete_backend_module(target):
+            self._add(
+                node,
+                "shared-model-backend-import",
+                target,
+                _SHARED_MODEL_BACKEND_IMPORT_MESSAGE,
             )
             return
         if target.startswith("datamodel_code_generator.parser._") and self.layer != "parser":
@@ -567,17 +692,22 @@ def _classify_source_path(path: Path) -> Layer:
     relative = path.resolve().relative_to(SOURCE_ROOT)
     match relative.parts:
         case ("__init__.py",):
-            return "entrypoint"
+            layer: Layer = "entrypoint"
         case ("parser", *_):
-            return "parser"
+            layer = "parser"
         case ("config.py" | "input_model.py" as filename,):
-            return "config" if filename == "config.py" else "input-model"
+            layer = "config" if filename == "config.py" else "input-model"
         case ("reference.py",):
-            return "reference"
+            layer = "reference"
+        case ("model", "__init__.py"):
+            layer = "model-composition"
+        case ("model", filename) if filename in _NEUTRAL_MODEL_FILENAMES:
+            layer = "shared-model"
         case ("model", *_):
-            return "output-model"
+            layer = "output-model"
         case _:
-            return "shared"
+            layer = "shared"
+    return layer
 
 
 def iter_python_files(paths: list[Path]) -> list[Path]:
