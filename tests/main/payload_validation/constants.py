@@ -186,6 +186,9 @@ PAYLOAD_BACKEND_EXTRA_ARGS_BY_CASE_ID: dict[str, dict[PayloadBackend, tuple[str,
     "jsonschema/collapse_root_models_property_names_reference.json": dict.fromkeys(
         PayloadBackend, ("--collapse-root-models",)
     ),
+    "jsonschema/msgspec_boolean_enum_literal.json": {
+        PayloadBackend.MSGSPEC: ("--enum-field-as-literal", "all"),
+    },
 }
 ROUND_TRIP_EXCLUDED_CASES: dict[str, str] = {
     "jsonschema/default_factory_nested_model_with_dict.json": (
