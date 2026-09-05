@@ -3682,6 +3682,7 @@ def test_ruff_format_only(output_file: Path) -> None:
         extra_args=["--formatters", "ruff-format", "--disable-timestamp"],
         assert_func=assert_file_content,
         expected_file="jsonschema/ruff_formatter_contract_simple_string.py",
+        copy_files=[(RUFF_FORMATTER_CONFIG_PATH, output_file.parent / "pyproject.toml")],
     )
 
 

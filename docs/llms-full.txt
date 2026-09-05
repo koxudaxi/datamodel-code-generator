@@ -41391,9 +41391,10 @@ runtime imports stable without inheriting new Ruff default rules.
 Run the locked focused CLI tests with the normal Python test environment:
 
 ```bash
-$ tox run -e py314-nocov-parallel -- \
+tox run -e py314-nocov-parallel -- \
   tests/main/test_main_general.py::test_ruff_check_and_format_combined \
   tests/main/test_main_general.py::test_ruff_check_only \
+  tests/main/test_main_general.py::test_ruff_format_only \
   tests/main/test_main_general.py::test_ruff_batch_formatting_directory \
   tests/main/test_main_general.py::test_type_checking_imports_default_to_runtime_imports_for_modular_pydantic_ruff \
   tests/main/test_main_general.py::test_no_use_type_checking_imports
@@ -41402,11 +41403,11 @@ $ tox run -e py314-nocov-parallel -- \
 Run the same focused contract against a newer Ruff release with:
 
 ```bash
-$ tox run -e ruff-latest
+tox run -e ruff-latest
 ```
 
 That lane starts with the locked environment and upgrades only Ruff before its
-five formatter tests. The pre-commit `ruff` hook is separate: it lints this
+six formatter tests. The pre-commit `ruff` hook is separate: it lints this
 repository's source with the root `pyproject.toml` policy and does not define
 the generated-output formatter contract.
 
