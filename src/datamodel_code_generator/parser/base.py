@@ -711,6 +711,27 @@ def iter_models_field_data_types(
                 yield model, field, data_type
 
 
+def _replace_default_enum_list_members(
+    default: list[Any],
+    enum_source: Enum,
+    alias: str | None,
+    enum_members: list[Any] | None,
+) -> list[Any] | None:
+    """Replace matching list values without changing the original default list."""
+    values = default if enum_members is None else enum_members
+    for index, value in enumerate(values):
+        if isinstance(value, Member):
+            continue
+        if (enum_member := enum_source.find_member(value)) is None:
+            continue
+        if enum_members is None:
+            enum_members = default.copy()
+        enum_members[index] = enum_member
+        if alias:
+            enum_member.alias = alias
+    return enum_members
+
+
 _PythonTypeImportKey: TypeAlias = tuple[str | None, str]
 
 
@@ -3811,28 +3832,40 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         *,
         can_retain_cache: bool,
     ) -> None:
+        """Convert matching defaults to enum members while preserving unmatched list values."""
         if not self.set_default_enum_member and DefaultValueType.Enum not in self.deserialize_default_value_types:
             return
-        for model, model_field, data_type in iter_models_field_data_types(models):
-            if model_field.default is None:
-                continue
-            if data_type.reference and isinstance(data_type.reference.source, Enum):  # pragma: no cover
-                if isinstance(model_field.default, list):
-                    enum_member: list[Member] | (Member | None) = [
-                        e for e in (data_type.reference.source.find_member(d) for d in model_field.default) if e
-                    ]
-                else:
-                    enum_member = data_type.reference.source.find_member(model_field.default)
-                if not enum_member:
+        for model in models:
+            for model_field in model.fields:
+                if model_field.default is None:
                     continue
-                model_field.default = enum_member
+                default = model_field.default
+                enum_members: list[Any] | None = None
+                for data_type in model_field.data_type.all_data_types:
+                    if (reference := data_type.reference) is None:
+                        continue
+                    if not isinstance(enum_source := reference.source, Enum):
+                        continue
+                    match default:
+                        case list():
+                            enum_members = _replace_default_enum_list_members(
+                                default,
+                                enum_source,
+                                data_type.alias,
+                                enum_members,
+                            )
+                        case _:
+                            if (enum_member := enum_source.find_member(default)) is None:
+                                continue
+                            default = enum_member
+                            if data_type.alias:
+                                enum_member.alias = data_type.alias
+                            break
+                default = enum_members or default
+                if default is model_field.default:
+                    continue
+                model_field.default = default
                 _clear_model_imports_cache_if_retained(model, can_retain_cache=can_retain_cache)
-                if data_type.alias:
-                    if isinstance(enum_member, list):
-                        for enum_member_ in enum_member:
-                            enum_member_.alias = data_type.alias  # ty: ignore[unresolved-attribute]
-                    else:
-                        enum_member.alias = data_type.alias
 
     def __set_validate_default_on_fields(
         self,
