@@ -1,4 +1,9 @@
-"""Fresh-process generation and independent inflect consumer probe."""
+"""Fresh-process generation and independent inflect consumer probe.
+
+These fixtures exercise the inflect 7.5.0 layout selected by uv.lock, including
+its typeguard import and compat.py38 submodule. The production dependency range
+is unchanged; review these fixture assumptions when updating that lock entry.
+"""
 from __future__ import annotations
 
 import importlib
@@ -88,7 +93,8 @@ public_before = None
 typeguard_before = None
 if scenario == 'inflect_first':
     public_before = importlib.import_module('inflect')
-    typeguard_before = sys.modules['typeguard']
+    if (typeguard_before := sys.modules.get('typeguard')) is None:
+        raise RuntimeError('The locked inflect 7.5.0 fixture must import typeguard; review the fixture contract.')
 elif scenario == 'typeguard_first':
     typeguard_before = importlib.import_module('typeguard')
 

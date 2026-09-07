@@ -45,8 +45,25 @@ def test_inflect_independent_callers_preserve_checks_and_names(
 ) -> None:
     """Generate repeatedly in fresh processes without changing independent inflect consumers."""
     root = DATA_PATH.parents[1]
+    coverage_file = os.environ.get("COVERAGE_FILE", "")
+    coverage_args = (
+        [
+            "-m",
+            "coverage",
+            "run",
+            "--branch",
+            "--concurrency=thread",
+            "--parallel-mode",
+            "--source",
+            str(root / "src/datamodel_code_generator"),
+            "--rcfile",
+            str(root / "pyproject.toml"),
+        ]
+        if coverage_file and "-nocov" not in coverage_file
+        else []
+    )
     result = subprocess.run(
-        [sys.executable, str(DATA / "probe.py"), scenario, entrypoint, backend.value, str(output_file)],
+        [sys.executable, *coverage_args, str(DATA / "probe.py"), scenario, entrypoint, backend.value, str(output_file)],
         check=True,
         capture_output=True,
         text=True,
