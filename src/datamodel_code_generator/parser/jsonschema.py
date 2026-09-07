@@ -6250,7 +6250,22 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 and not (schema.enum or schema.allOf or schema.anyOf or schema.oneOf)
                 and not self._schema_requires_model_type(schema)
             ):
-                return (
+                merged_root: JsonSchemaObject | None = None
+                if (
+                    ref
+                    and len(item.model_fields_set) > 1
+                    and item.has_constraint
+                    and self._ref_sibling_keywords_enabled
+                ):
+                    merged = schema.model_dump(exclude_unset=True, by_alias=True)
+                    self._resolve_schema_refs_in_place(merged, self.model_resolver.resolve_ref(ref))
+                    merged.update(item.model_dump(exclude={"ref"}, exclude_unset=True, by_alias=True))
+                    merged.update(obj.model_dump(exclude={"allOf"}, exclude_unset=True, by_alias=True))
+                    self._merge_schema_constraints(
+                        merged, [schema, item, obj], intersect=self.allof_merge_mode != AllOfMergeMode.NoMerge
+                    )
+                    merged_root = self.SCHEMA_OBJECT_TYPE.model_validate(merged)
+                return merged_root or (
                     obj.model_copy(update={"ref": ref, "allOf": []})
                     if ref
                     else self.SCHEMA_OBJECT_TYPE.model_validate({

@@ -1,0 +1,72 @@
+[
+  {
+    "name": "string_2020-12",
+    "valid": [
+      "ab",
+      "abc"
+    ],
+    "invalid": [
+      "a",
+      "abcdef",
+      "abcd"
+    ]
+  },
+  {
+    "name": "string_2019-09",
+    "valid": [
+      "ab",
+      "abc"
+    ],
+    "invalid": [
+      "a",
+      "abcdef",
+      "abcd"
+    ]
+  },
+  {
+    "name": "string_draft-07",
+    "valid": [
+      "ab",
+      "abc",
+      "abcd"
+    ],
+    "invalid": [
+      "a",
+      "abcdef"
+    ]
+  },
+  {
+    "name": "integer",
+    "valid": [
+      3,
+      5
+    ],
+    "invalid": [
+      2,
+      6
+    ]
+  },
+  {
+    "name": "array_external",
+    "valid": [
+      [
+        2
+      ],
+      [
+        2,
+        3
+      ]
+    ],
+    "invalid": [
+      [],
+      [
+        2,
+        3,
+        4
+      ],
+      [
+        1
+      ]
+    ]
+  }
+]
