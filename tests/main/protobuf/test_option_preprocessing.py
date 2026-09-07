@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
 SOURCE_PATH = DATA_PATH / "protobuf_option_preprocessing"
 EXPECTED_PATH = EXPECTED_PROTOBUF_PATH / "option_preprocessing"
-SCHEMAS = ["plain", "comments", "single", "double", "custom"]
+SCHEMAS = ["plain", "comments", "single", "double", "custom", "rpc"]
 
 
 @pytest.mark.parametrize("schema", SCHEMAS)
@@ -120,6 +120,12 @@ def test_protobuf_option_compiler_oracle(schema: str, tmp_path: Path) -> None:
     ])
     assert_output(str(result), EXPECTED_PATH / "protoc_exit.txt")
     descriptor = FileDescriptorSet.FromString(output_path.read_bytes()).file[0]
+    if schema == "rpc":
+        assert_output(
+            json.dumps({service.name: [method.name for method in service.method] for service in descriptor.service})
+            + "\n",
+            EXPECTED_PATH / "rpc_services.txt",
+        )
     assert_output(
         json.dumps(
             {

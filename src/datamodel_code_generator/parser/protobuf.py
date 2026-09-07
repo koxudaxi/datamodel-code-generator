@@ -201,6 +201,7 @@ def _sanitize_proto_source(text: str) -> str:
     result: list[str] = []
     copied = 0
     previous = None
+    before_previous = ""
     for token in tokens:
         match token[0]:
             case "[":
@@ -208,7 +209,7 @@ def _sanitize_proto_source(text: str) -> str:
                 if replacement is not None:
                     result.extend((text[copied : token.start()], replacement))
                     copied = end
-            case "(" if previous is not None and previous[0] == "option":
+            case "(" if previous is not None and previous[0] == "option" and before_previous != "rpc":
                 depth = 0
                 for end_token in tokens:
                     match end_token[0]:
@@ -220,6 +221,7 @@ def _sanitize_proto_source(text: str) -> str:
                             result.append(text[copied : previous.start()])
                             copied = end_token.end()
                             break
+        before_previous = previous[0] if previous is not None else ""
         previous = token
     if not result:
         return text
