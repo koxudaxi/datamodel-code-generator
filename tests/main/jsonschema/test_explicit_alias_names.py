@@ -195,8 +195,10 @@ def test_explicit_alias_names_valid_shadows(case: str, output_file: Path) -> Non
     if case == "msgspec_field":
         with _generated_model(output_file, "explicit_alias_names_msgspec_field", "AliasNames") as model:
             parsed = msgspec.json.decode(b'{"a": "A", "b": 1}', type=model)
-            assert msgspec.to_builtins(parsed) == {"a": "A", "b": 1}
-            assert repr(parsed) == "AliasNames(field='A', b=1)"
+            assert_output(
+                json.dumps(msgspec.to_builtins(parsed), sort_keys=True) + "\n" + repr(parsed) + "\n",
+                JSON_SCHEMA_DATA_PATH.parent / "payloads" / "explicit_alias_msgspec_field.txt",
+            )
             with pytest.raises(msgspec.ValidationError, match="missing required field `b`"):
                 msgspec.json.decode(b'{"a": "A"}', type=model)
         return
