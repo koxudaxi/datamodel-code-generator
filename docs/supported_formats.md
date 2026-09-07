@@ -185,7 +185,7 @@ The tables below are generated from the input type enum, parser routing code, sc
 | Draft 6 | [json-schema.org/draft-06](https://json-schema.org/draft-06/json-schema-release-notes) | `$id`, const, boolean schemas |
 | Draft 7 | [json-schema.org/draft-07](https://json-schema.org/draft-07/json-schema-release-notes) | if/then/else, readOnly/writeOnly |
 | 2019-09 | [json-schema.org/draft/2019-09](https://json-schema.org/draft/2019-09/release-notes) | `$defs`, `$anchor`, `$recursiveRef`/`$recursiveAnchor` |
-| 2020-12 | [json-schema.org/draft/2020-12](https://json-schema.org/draft/2020-12/release-notes) | `prefixItems`, null in type arrays, `$dynamicRef`/`$dynamicAnchor` |
+| 2020-12 | [json-schema.org/draft/2020-12](https://json-schema.org/draft/2020-12/release-notes) | `prefixItems`, `$dynamicRef`/`$dynamicAnchor` |
 
 ### Feature Compatibility Matrix
 
@@ -196,7 +196,7 @@ The tables below are generated from the input type enum, parser routing code, sc
 | Definitions key | `definitions` | `definitions` | `definitions` | `$defs`* | `$defs` |
 | **Type Features** |
 | Boolean schemas | - | Yes | Yes | Yes | Yes |
-| Null in type array | - | - | - | - | Yes |
+| Null in type array | Yes | Yes | Yes | Yes | Yes |
 | const | - | Yes | Yes | Yes | Yes |
 | **Numeric Constraints** |
 | exclusiveMinimum (number) | - (boolean) | Yes | Yes | Yes | Yes |
@@ -388,7 +388,7 @@ The following features are tracked in the codebase with their implementation sta
 
 | Feature | Introduced | Status | Description |
 |---------|------------|--------|-------------|
-| `Null in type array` | 2020-12 | ✅ Supported | Allows `type: ['string', 'null']` syntax for nullable types |
+| `Null in type array` | Draft 4 or earlier | ✅ Supported | Allows `type: ['string', 'null']` syntax for nullable types |
 | `$defs` | 2019-09 | ✅ Supported | Uses `$defs` instead of `definitions` for schema definitions |
 | `prefixItems` | 2020-12 | ✅ Supported | Tuple validation using `prefixItems` keyword |
 | `Boolean schemas` | Draft 6 | ✅ Supported | Allows `true` and `false` as valid schemas |

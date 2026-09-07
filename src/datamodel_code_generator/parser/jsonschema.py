@@ -10162,7 +10162,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 )
             return
 
-        # Check null in type array (Draft 2020-12 / OpenAPI 3.1+)
+        # Check null in type array (JSON Schema / OpenAPI 3.1+)
         type_value = raw.get("type")
         if isinstance(type_value, list) and "null" in type_value and not self.schema_features.null_in_type_array:
             warn(
