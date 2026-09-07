@@ -201,6 +201,51 @@ class Struct(DataModel):
             and any(not base.reference for base in model.base_classes)
         )
 
+    @staticmethod
+    def _has_compatible_layout_chain(bases: list[DataModel]) -> bool:
+        """Recognize one slot-owner chain without retaining transitive ancestor sets.
+
+        Each field records its introduction depth in the chain. A parent-first
+        traversal can therefore distinguish overrides from new slots using only
+        the effective owner depth of each model. A new owner must extend the
+        latest owner; otherwise the detailed diagnostic must inspect the graph.
+        """
+        pending = [(base, False) for base in bases]
+        visited: set[str] = set()
+        owner_depths: dict[str, int] = {}
+        field_depths: dict[str | None, int] = {}
+        latest_depth = 0
+        while pending:
+            base, complete = pending.pop()
+            if not complete and base.path in visited:
+                continue
+            parents = [
+                parent.reference.source
+                for parent in base.base_classes
+                if parent.reference and isinstance(parent.reference.source, Struct)
+            ]
+            if not complete:
+                visited.add(base.path)
+                if Struct._has_opaque_layout_base(base):
+                    return False
+                pending.append((base, True))
+                pending.extend((parent, False) for parent in reversed(parents))
+                continue
+            parent_depth = max((owner_depths.get(parent.path, 0) for parent in parents), default=0)
+            if new_names := [
+                field.name
+                for field in base.fields
+                if not field.is_class_var and field_depths.get(field.name, latest_depth + 1) > parent_depth
+            ]:
+                if parent_depth != latest_depth:
+                    return False
+                latest_depth += 1
+                for name in new_names:
+                    field_depths[name] = latest_depth
+                parent_depth = latest_depth
+            owner_depths[base.path] = parent_depth
+        return True
+
     def _validate_base_layouts(self) -> None:
         """Allow empty mixins and shared layouts, but reject independent slot extensions."""
         if self._uses_custom_root_template:
@@ -210,6 +255,8 @@ class Struct(DataModel):
             for base in reversed(self.base_classes)
             if base.reference and isinstance(base.reference.source, Struct)
         ]
+        if self._has_compatible_layout_chain(bases):
+            return
         visited: set[str] = set()
         layouts: dict[DataModel, set[str]] = {}
         while bases:

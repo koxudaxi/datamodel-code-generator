@@ -502,5 +502,68 @@
       "b": 2,
       "c": 3
     }
+  },
+  {
+    "name": "jsonschema_long_chain",
+    "schema": "jsonschema_long_chain.json",
+    "format": "jsonschema",
+    "options": {},
+    "cli": [],
+    "error": false,
+    "payload": {
+      "field_0": 0,
+      "field_1": 1,
+      "field_2": 2,
+      "field_3": 3,
+      "field_4": 4,
+      "field_5": 5,
+      "field_6": 6,
+      "field_7": 7,
+      "field_8": 8,
+      "field_9": 9,
+      "field_10": 10,
+      "field_11": 11,
+      "field_12": 12,
+      "field_13": 13,
+      "field_14": 14,
+      "field_15": 15
+    }
+  },
+  {
+    "name": "jsonschema_override_chain",
+    "schema": "jsonschema_override_chain.json",
+    "format": "jsonschema",
+    "options": {},
+    "cli": [],
+    "error": false,
+    "payload": {
+      "value": 15
+    }
+  },
+  {
+    "name": "jsonschema_redundant_dag",
+    "schema": "jsonschema_redundant_dag.json",
+    "format": "jsonschema",
+    "options": {},
+    "cli": [],
+    "error": false,
+    "payload": {
+      "field_0": 0,
+      "field_1": 1,
+      "field_2": 2,
+      "field_3": 3,
+      "field_4": 4,
+      "field_5": 5,
+      "field_6": 6,
+      "field_7": 7,
+      "field_8": 8,
+      "field_9": 9,
+      "field_10": 10,
+      "field_11": 11,
+      "field_12": 12,
+      "field_13": 13,
+      "field_14": 14,
+      "field_15": 15
+    }
   }
 ]
