@@ -1,0 +1,30 @@
+{
+  "number_null": [
+    null,
+    0,
+    1.5,
+    "text",
+    {}
+  ],
+  "null_number": [
+    null,
+    0,
+    1.5,
+    "text",
+    {}
+  ],
+  "integer_null": [
+    null,
+    0,
+    1.5,
+    "text",
+    {}
+  ],
+  "null_integer": [
+    null,
+    0,
+    1.5,
+    "text",
+    {}
+  ]
+}
