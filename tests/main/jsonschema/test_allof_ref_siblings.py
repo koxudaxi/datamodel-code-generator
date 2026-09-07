@@ -7,11 +7,13 @@ from operator import itemgetter
 from typing import TYPE_CHECKING
 
 import pytest
+from jsonschema.exceptions import ValidationError as JsonSchemaValidationError
 from jsonschema.validators import validator_for
 from pydantic import ValidationError
 from referencing import Registry, Resource
 
 from datamodel_code_generator import InputFileType
+from tests.conftest import assert_output
 from tests.main.conftest import (
     DATA_PATH,
     JSON_SCHEMA_DATA_PATH,
@@ -73,10 +75,16 @@ def test_allof_ref_siblings(
     )
     validator = validator_for(schema)(schema, registry=registry)
     with _generated_model(output_file, "allof_sibling_model", "Root") as model:
+        actual = []
         for value in case["valid"]:
             validator.validate(value)
-            assert json.loads(model.model_validate_json(json.dumps(value)).model_dump_json()) == value
+            actual.append(json.loads(model.model_validate_json(json.dumps(value)).model_dump_json()))
+        assert_output(
+            json.dumps(actual, indent=2) + "\n",
+            DATA_PATH / "payloads" / "allof_ref_sibling_outputs" / f"{case['name']}.txt",
+        )
         for value in case["invalid"]:
-            assert not validator.is_valid(value)
+            with pytest.raises(JsonSchemaValidationError):
+                validator.validate(value)
             with pytest.raises(ValidationError):
                 model.model_validate_json(json.dumps(value))
