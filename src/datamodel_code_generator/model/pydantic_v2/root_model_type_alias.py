@@ -26,6 +26,8 @@ if TYPE_CHECKING:
 
 def _constrained_root_model(fields: list[DataModelFieldBase]) -> type[RootModel] | None:
     """Keep constraints omitted by the alias template on an executable root class."""
+    if len(fields) == 1 and (data_type := fields[0].data_type).type == "None" and not data_type.is_custom_type:
+        return None
     if any(
         field.constraints and field.constraints.model_dump(exclude={"unique_items"}, exclude_none=True)
         for field in fields
