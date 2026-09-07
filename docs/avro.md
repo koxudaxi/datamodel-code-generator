@@ -115,6 +115,8 @@ Avro logical types are mapped through the generator's normal type handling:
 
 Generated temporal defaults use Avro's day, millisecond, microsecond, or nanosecond units. Timestamp defaults use UTC; local timestamp and time defaults have no timezone. Backends that map these formats to strings receive ISO strings. Defaults outside Python's date/time range, or nanosecond defaults that cannot be represented exactly at microsecond precision, produce an error.
 
+Decimal defaults decode the bytes or fixed value as a signed big-endian integer and apply the declared scale exactly. Generated `Decimal` values preserve trailing zeros and do not depend on the active decimal context's precision. A scale outside Python's Decimal range produces an error.
+
 Avro-specific metadata is preserved in generated JSON Schema extensions such as `x-avro-fullname`, `x-avro-namespace`, `x-avro-aliases`, and `x-avro-logicalType` before model generation.
 
 ## Schema Version
