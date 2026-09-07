@@ -70,6 +70,9 @@ class ModeledIrrelevantConstraintMap(Struct):
     value: str
 
 
+HeterogeneousValueMapInteger: TypeAlias = Annotated[int, Meta(ge=1)]
+
+
 PositiveInt: TypeAlias = Annotated[int, Meta(ge=1)]
 
 
@@ -106,5 +109,5 @@ class Payload(Struct):
     titledValueMap: dict[str, NamedValue]
     modeledIrrelevantConstraintMap: dict[str, ModeledIrrelevantConstraintMap]
     arrayIrrelevantConstraintMap: dict[str, list[int]]
-    heterogeneousValueMap: dict[str, int | str]
+    heterogeneousValueMap: dict[str, HeterogeneousValueMapInteger | str]
     booleanIrrelevantConstraintMap: dict[str, bool]

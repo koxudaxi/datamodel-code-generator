@@ -3078,7 +3078,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         )
         default_value = effective_default if effective_has_default is not None else field.default
         has_default = effective_has_default if effective_has_default is not None else field.has_default
-        skip_constraints = isinstance(field.type, list) and bool(self._get_array_union_non_array_types(field))
+        skip_constraints = self._should_skip_root_field_constraints_for_multiple_types(field) or (
+            isinstance(field.type, list) and bool(self._get_array_union_non_array_types(field))
+        )
         constraints = None
         if not skip_constraints and self.is_constraints_field(field):
             constraints = self._get_constraint_values(field)
@@ -3160,10 +3162,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 Types.any,
             )
 
+        localize_constraints = self._should_skip_root_field_constraints_for_multiple_types(obj)
+
         def _get_data_type(type_: str, format__: str) -> DataType:
             types = self._get_type_with_mappings(type_, format__)
             kwargs_to_pass: dict[str, JsonSchemaDataTypeKwargValue]
-            if self.field_constraints:
+            if self.field_constraints and not localize_constraints:
                 # To prevent type manager from generating conint/confloat,
                 # we only pass constraints that perfectly match specialized types
                 # (like NonNegativeInt -> minimum: 0).
@@ -3189,7 +3193,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
             return self.data_type_manager.get_data_type(
                 types,
-                field_constraints=self.field_constraints,
+                field_constraints=self.field_constraints and not localize_constraints,
                 **kwargs_to_pass,
             )
 
@@ -9586,6 +9590,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 _validate_schema_python_import_path(item.custom_type_path, "customTypePath"),
                 is_custom_type=True,
             )
+        if (union_type := self._parse_constrained_type_union(name, item, path)) is not None:
+            return union_type
         if item.is_array:
             return self.parse_array_fields(name, item, get_special_path("array", path)).data_type
         if item.discriminator and parent and parent.is_array and (item.oneOf or item.anyOf):
@@ -9643,13 +9649,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 if item.has_multiple_types and isinstance(item.type, list):
                     data_types: list[DataType] = []
                     data_types.append(self.parse_object(name, item, object_path, singular_name=singular_name))
-                    data_types.extend(
-                        self.data_type_manager.get_data_type(
-                            self._get_type_with_mappings(t, item.format or "default"),
-                        )
-                        for t in item.type
-                        if t not in {"object", "null"}
-                    )
+                    data_types.extend(self._iter_non_object_union_types(name, item, item.type, path))
                     return self.data_type(data_types=data_types)
                 return self.parse_object(name, item, object_path, singular_name=singular_name)
             if item.patternProperties:
@@ -9705,6 +9705,46 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             for index, item in enumerate(target_items)
             if item is not False
         ]
+
+    def _parse_constrained_type_union(self, name: str, obj: JsonSchemaObject, path: list[str]) -> DataType | None:
+        """Localize union branches that need annotated aliases instead of constrained scalar types."""
+        if (
+            not isinstance(obj.type, list)
+            or not self._should_skip_root_field_constraints_for_multiple_types(obj)
+            or obj.is_array
+            or obj.properties
+        ):
+            return None
+        if obj.anyOf or obj.oneOf or obj.allOf or obj.enum or obj.extras.get("x-python-type"):
+            return None
+        if not self._output_model_context.supports_internal_annotated_constraints or not (
+            self._get_inherited_constraint_fields(obj) or obj.propertyNames is not None
+        ):
+            return None
+        if self.data_type_manager.CONSTRAINED_TYPE_CONSUMED_KEYS:
+            if "array" not in obj.type and "object" not in obj.type:
+                return None
+        elif not self._output_model_context.supports_annotated_constraints:
+            return None
+        data_types = []
+        for type_ in obj.type:
+            if type_ == "null":
+                continue
+            if type_ == "object" and obj.propertyNames is not None:
+                branch_schema = self._get_array_union_branch_schema(obj, type_)
+                branch_path = get_special_path("type-union-object", path)
+                data_type = self._parse_root_type_with_context(
+                    f"{name}Object",
+                    branch_schema,
+                    branch_path,
+                    data_model_root_type=self._nested_constrained_model_type,
+                    preserve_constraints=True,
+                    use_annotated=True,
+                )
+            else:
+                data_type = self._parse_array_union_constrained_branch(name, obj, path, type_)
+            data_types.append(data_type)
+        return self.data_type(data_types=data_types, is_optional=obj.type_has_null)
 
     def _get_array_union_non_array_types(  # noqa: PLR6301
         self,
@@ -10047,6 +10087,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 _validate_schema_python_import_path(obj.custom_type_path, "customTypePath"),
                 is_custom_type=True,
             )  # pragma: no cover
+        elif (union_type := self._parse_constrained_type_union(name, obj, path)) is not None:
+            data_type = union_type
         elif obj.is_array:
             array_field = self.parse_array_fields(
                 name,
@@ -10192,9 +10234,32 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     def _should_skip_root_field_constraints_for_multiple_types(self, obj: JsonSchemaObject) -> bool:
         """Avoid applying type-specific Field constraints to heterogeneous root unions."""
-        if not self.field_constraints or not obj.has_multiple_types or not isinstance(obj.type, list):
+        if not self.field_constraints or not isinstance(obj.type, list) or not obj.has_multiple_types:
             return False
         return len({type_ for type_ in obj.type if type_ != "null"}) > 1
+
+    def _iter_non_object_union_types(
+        self, name: str, obj: JsonSchemaObject, type_list: list[str], path: list[str]
+    ) -> Iterator[DataType]:
+        """Retain scalar sibling constraints while preserving the existing object-first union order."""
+        localize_constraints = (
+            self.field_constraints
+            and self._output_model_context.supports_internal_annotated_constraints
+            and (
+                self.data_type_manager.CONSTRAINED_TYPE_CONSUMED_KEYS
+                or self._output_model_context.supports_annotated_constraints
+            )
+            and self._get_inherited_constraint_fields(obj)
+        )
+        for type_ in type_list:
+            if type_ not in {"object", "null"}:
+                yield (
+                    self._parse_array_union_constrained_branch(name, obj, path, type_)
+                    if localize_constraints
+                    else self.data_type_manager.get_data_type(
+                        self._get_type_with_mappings(type_, obj.format or "default")
+                    )
+                )
 
     def _parse_multiple_types_with_properties(
         self,
@@ -10210,13 +10275,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         object_data_type = self.parse_object(name, obj, object_path)
         data_types.append(object_data_type)
 
-        data_types.extend(
-            self.data_type_manager.get_data_type(
-                self._get_type_with_mappings(t, obj.format or "default"),
-            )
-            for t in type_list
-            if t not in {"object", "null"}
-        )
+        data_types.extend(self._iter_non_object_union_types(name, obj, type_list, path))
 
         is_nullable = obj.nullable or obj.type_has_null
         reference = self.model_resolver.add(path, name, loaded=True, class_name=True)

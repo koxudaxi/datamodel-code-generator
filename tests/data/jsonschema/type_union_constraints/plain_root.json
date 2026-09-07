@@ -1,0 +1,7 @@
+{
+  "title": "Root",
+  "type": [
+    "string",
+    "integer"
+  ]
+}

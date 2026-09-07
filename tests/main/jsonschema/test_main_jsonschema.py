@@ -4377,7 +4377,7 @@ def test_main_hostname_multiple_types_pydantic_v2(output_file: Path) -> None:
 
 
 def test_main_root_multiple_primitive_constraints_pydantic_v2(output_file: Path) -> None:
-    """Test root constraints are skipped when multiple primitive types are allowed."""
+    """Keep each primitive constraint on its corresponding root union branch."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "root_multiple_primitive_constraints.json",
         output_path=output_file,
@@ -7097,6 +7097,14 @@ def test_main_jsonschema_additional_properties_value_constraints_annotated(
             module_name = f"additional_properties_constraints_{output_model_type.name}"
             assert_generated_model_json_validation(
                 output_file,
+                module_name="heterogeneous_mapping_constraints",
+                model_name="Payload",
+                valid_json=(DATA_PATH / "payloads/type_union_constraints/legacy_mapping_valid.json").read_text(),
+                invalid_json=(DATA_PATH / "payloads/type_union_constraints/legacy_mapping_invalid.json").read_text(),
+                expected_error_type="greater_than_equal",
+            )
+            assert_generated_model_json_validation(
+                output_file,
                 module_name=module_name,
                 model_name="Payload",
                 valid_json=_ADDITIONAL_PROPERTIES_CONSTRAINTS_VALID_JSON,
@@ -7221,6 +7229,11 @@ def test_main_jsonschema_additional_properties_value_constraints_annotated(
 
             with _generated_model(output_file, "additional_properties_constraints_msgspec", "Payload") as model:
                 instance = msgspec.json.decode(_ADDITIONAL_PROPERTIES_CONSTRAINTS_VALID_JSON.encode(), type=model)
+                with pytest.raises(msgspec.ValidationError):
+                    msgspec.json.decode(
+                        (DATA_PATH / "payloads/type_union_constraints/legacy_mapping_invalid.json").read_bytes(),
+                        type=model,
+                    )
                 if (actual := instance.nestedMap["ok"]) != 1:  # pragma: no cover
                     pytest.fail(f"Expected nestedMap value to remain int 1, got {actual!r}")
                 invalid_fragments = (
@@ -7306,6 +7319,14 @@ def test_main_jsonschema_additional_properties_value_constraints_schema_validato
             "--disable-timestamp",
         ],
         force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="heterogeneous_mapping_schema_validators",
+        model_name="Payload",
+        valid_json=(DATA_PATH / "payloads/type_union_constraints/legacy_mapping_valid.json").read_text(),
+        invalid_json=(DATA_PATH / "payloads/type_union_constraints/legacy_mapping_invalid.json").read_text(),
+        expected_error_type="greater_than_equal",
     )
     valid_json = _ADDITIONAL_PROPERTIES_CONSTRAINTS_VALID_JSON.replace('"extra":3', '"pattern_value":0,"extra":3')
     assert_generated_model_json_validation(

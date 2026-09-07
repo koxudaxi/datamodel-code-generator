@@ -1,0 +1,10 @@
+{
+  "title": "Root",
+  "type": [
+    "array",
+    "object"
+  ],
+  "propertyNames": {
+    "pattern": "^a"
+  }
+}

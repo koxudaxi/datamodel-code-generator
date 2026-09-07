@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Dict
 
-from pydantic import BaseModel, ConfigDict, Field, RootModel, constr
+from pydantic import BaseModel, ConfigDict, Field, RootModel, conint, constr
 from typing_extensions import TypeAliasType
 
 NestedMapAdditionalProperty = TypeAliasType(
@@ -141,5 +141,5 @@ class Payload(BaseModel):
     titledValueMap: dict[str, NamedValue]
     modeledIrrelevantConstraintMap: dict[str, ModeledIrrelevantConstraintMap]
     arrayIrrelevantConstraintMap: dict[str, list[int]]
-    heterogeneousValueMap: dict[str, int | str]
+    heterogeneousValueMap: dict[str, conint(ge=1) | str]
     booleanIrrelevantConstraintMap: dict[str, bool]

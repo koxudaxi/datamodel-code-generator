@@ -1,0 +1,10 @@
+{
+  "title": "Root",
+  "type": [
+    "null",
+    "string",
+    "integer"
+  ],
+  "pattern": "^a",
+  "maximum": 3
+}
