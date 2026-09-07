@@ -10,11 +10,23 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
+from datamodel_code_generator.model.pydantic_v2.base_model import has_lookaround_pattern
 from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_ROOT_MODEL
 from datamodel_code_generator.model.pydantic_v2.root_model import RootModel
 
 if TYPE_CHECKING:
     from datamodel_code_generator.imports import Import
+    from datamodel_code_generator.model.base import DataModelFieldBase
+
+
+def _root_model_constraints_fallback(fields: list[DataModelFieldBase]) -> type[RootModel] | None:
+    """Keep constraints omitted by the alias template on an executable root class."""
+    if any(
+        field.constraints and field.constraints.model_dump(exclude={"unique_items"}, exclude_none=True)
+        for field in fields
+    ) or has_lookaround_pattern(fields):
+        return RootModel
+    return None
 
 
 class RootModelTypeAlias(RootModel):
@@ -28,6 +40,7 @@ class RootModelTypeAlias(RootModel):
 
     TEMPLATE_FILE_PATH: ClassVar[str] = "pydantic_v2/RootModelTypeAlias.jinja2"
     IS_ALIAS: ClassVar[bool] = True
+    ROOT_MODEL_CONSTRAINTS_FALLBACK = staticmethod(_root_model_constraints_fallback)
     DOCSTRING_INDENT: ClassVar[int] = 0
     FIELD_DOCSTRING_INDENT: ClassVar[int] = 0
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_ROOT_MODEL,)
