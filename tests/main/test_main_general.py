@@ -1726,17 +1726,22 @@ def test_mcp_tools_schema_value_references_isolated() -> None:
     )
 
 
-def test_mcp_tools_schema_value_references_cli(output_file: Path) -> None:
+@pytest.mark.parametrize("input_name", ["schema_value_references", "schema_value_references_compact"])
+def test_mcp_tools_schema_value_references_cli(output_file: Path, input_name: str) -> None:
     """Keep MCP schema-instance values in strict CLI-generated model defaults."""
     run_main_and_assert(
-        input_path=DATA_PATH / "mcp_tools" / "schema_value_references.json",
+        input_path=DATA_PATH / "mcp_tools" / f"{input_name}.json",
         output_path=output_file,
         input_file_type="mcp-tools",
         assert_func=assert_file_content,
-        expected_file="mcp_tools/schema_value_references.py",
-        extra_args=["--strict-refs", "--disable-timestamp"],
+        expected_file=f"mcp_tools/{input_name}.py",
+        extra_args=[
+            "--strict-refs",
+            "--disable-timestamp",
+            *(["--formatters", "black", "isort"] if input_name == "schema_value_references" else []),
+        ],
     )
-    source = json.loads((DATA_PATH / "mcp_tools" / "schema_value_references.json").read_text())
+    source = json.loads((DATA_PATH / "mcp_tools" / f"{input_name}.json").read_text())
     for model_name, field_name in (
         ("SchemaValuesInput", "item"),
         ("SchemaValuesInput", "sequence"),
@@ -1755,18 +1760,20 @@ def test_mcp_tools_schema_value_references_cli(output_file: Path) -> None:
         )
 
 
-def test_mcp_tools_schema_value_references_api(output_file: Path) -> None:
+@pytest.mark.parametrize("input_name", ["schema_value_references", "schema_value_references_compact"])
+def test_mcp_tools_schema_value_references_api(output_file: Path, input_name: str) -> None:
     """Keep MCP schema-instance values in strict API-generated model defaults."""
     run_generate_file_and_assert(
-        input_path=DATA_PATH / "mcp_tools" / "schema_value_references.json",
+        input_path=DATA_PATH / "mcp_tools" / f"{input_name}.json",
         output_path=output_file,
         input_file_type=InputFileType.MCPTools,
         assert_func=assert_file_content,
-        expected_file="mcp_tools/schema_value_references.py",
+        expected_file=f"mcp_tools/{input_name}.py",
         strict_refs=True,
         disable_timestamp=True,
+        **({"formatters": [Formatter.BLACK, Formatter.ISORT]} if input_name == "schema_value_references" else {}),
     )
-    source = json.loads((DATA_PATH / "mcp_tools" / "schema_value_references.json").read_text())
+    source = json.loads((DATA_PATH / "mcp_tools" / f"{input_name}.json").read_text())
     for model_name, field_name in (
         ("SchemaValuesInput", "item"),
         ("SchemaValuesInput", "sequence"),
