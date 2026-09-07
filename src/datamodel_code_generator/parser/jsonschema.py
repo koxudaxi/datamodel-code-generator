@@ -6989,12 +6989,16 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self,
         obj: JsonSchemaObject,
         visited_refs: frozenset[str] = frozenset(),
+        *,
+        include_references: bool = True,
     ) -> Iterator[JsonSchemaObject]:
         yield obj
         for item in obj.allOf:
             if not isinstance(item, JsonSchemaObject):
                 continue
             if item.ref:
+                if not include_references:
+                    continue
                 resolved_ref = self.model_resolver.resolve_ref(item.ref)
                 if resolved_ref in visited_refs:
                     continue
@@ -7003,7 +7007,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     visited_refs | {resolved_ref},
                 )
                 continue
-            yield from self._iter_schema_validation_sources(item, visited_refs)
+            yield from self._iter_schema_validation_sources(item, visited_refs, include_references=include_references)
 
     def _schema_item_may_accept_container(
         self,
@@ -7739,27 +7743,36 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             base_classes,
             is_root_model=False,
         )
-        runtime_validation = self.extra_template_data[reference_path].get("schema_runtime_validation")
-        if not _is_internal_schema_runtime_validation(runtime_validation) or not self._has_core_schema_runtime_rules(
-            runtime_validation
-        ):
+        if not obj.allOf:
             return
-        for source in self._iter_schema_validation_sources(obj):
-            if source is obj:
+        # Inline rules belong to this model even when it has no other runtime rules.
+        # Once it defines core rules, also merge those shadowed on referenced bases.
+        for include_references in (False, True):
+            runtime_validation = self.extra_template_data[reference_path].get("schema_runtime_validation")
+            has_core_rules = _is_internal_schema_runtime_validation(
+                runtime_validation
+            ) and self._has_core_schema_runtime_rules(runtime_validation)
+            if include_references:
+                if not has_core_rules:
+                    return
+            elif has_core_rules:
                 continue
-            self._add_required_groups_validator(
-                reference_path,
-                "oneOf",
-                self._get_required_groups(source.oneOf),
-                names_by_property,
-            )
-            self._add_required_groups_validator(
-                reference_path,
-                "anyOf",
-                self._get_required_groups(source.anyOf),
-                names_by_property,
-            )
-            self._add_conditional_validator(reference_path, source, names_by_property)
+            for source in self._iter_schema_validation_sources(obj, include_references=include_references):
+                if source is obj:
+                    continue
+                self._add_required_groups_validator(
+                    reference_path,
+                    "oneOf",
+                    self._get_required_groups(source.oneOf),
+                    names_by_property,
+                )
+                self._add_required_groups_validator(
+                    reference_path,
+                    "anyOf",
+                    self._get_required_groups(source.anyOf),
+                    names_by_property,
+                )
+                self._add_conditional_validator(reference_path, source, names_by_property)
 
     def _parse_object_common_part(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         self,
