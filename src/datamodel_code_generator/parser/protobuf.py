@@ -24,13 +24,16 @@ from datamodel_code_generator.python_literal import _safe_non_finite_float
 from datamodel_code_generator.util import record_watch_dependency
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Sequence
+    from collections.abc import Iterable, Iterator, Sequence
     from urllib.parse import ParseResult
 
     from datamodel_code_generator._types import ProtobufParserConfigDict
     from datamodel_code_generator.config import ProtobufParserConfig
 
-CUSTOM_OPTION_STATEMENT_PATTERN = re.compile(r"(?ms)^[ \t]*option\s+\([^)]+\)\s*=\s*.*?;")
+PROTO_TOKEN_PATTERN = re.compile(
+    r"(?P<comment>//[^\n]*|/\*[\s\S]*?(?:\*/|\Z))"
+    r"|\"(?:\\[\s\S]|[^\"\\])*\"|'(?:\\[\s\S]|[^'\\])*'|[a-zA-Z_][a-zA-Z_0-9]*|[^\s]"
+)
 WEAK_IMPORT_PATTERN = re.compile(r'^\s*import\s+weak\s+"([^"]+)"\s*;', re.MULTILINE)
 IMPORT_PATTERN = re.compile(r'^\s*import\s+(?:public\s+|weak\s+)?"([^"]+)"\s*;', re.MULTILINE)
 
@@ -191,58 +194,75 @@ def _clean_comment(comment: str) -> str:
 
 
 def _sanitize_proto_source(text: str) -> str:
-    """Drop custom option uses that do not affect model generation."""
-    text = CUSTOM_OPTION_STATEMENT_PATTERN.sub("", text)
-    return _replace_field_options(text)
-
-
-def _replace_field_options(text: str) -> str:
+    """Drop custom options while preserving comments and both string delimiters."""
+    if "(" not in text:
+        return text
+    tokens = (token for token in PROTO_TOKEN_PATTERN.finditer(text) if token.lastgroup != "comment")
     result: list[str] = []
-    index = 0
-    while index < len(text):
-        char = text[index]
-        if char != "[":
-            result.append(char)
-            index += 1
-            continue
-
-        end = _find_option_end(text, index + 1)
-        if end is None:  # pragma: no cover
-            result.append(char)
-            index += 1
-            continue
-
-        options = text[index + 1 : end]
-        if "(" not in options:
-            result.append(text[index : end + 1])
-        else:
-            default_value = _extract_default_option(options)
-            if default_value is not None:
-                result.append(f"[default = {default_value}]")
-        index = end + 1
-
+    copied = 0
+    previous = None
+    before_previous = ""
+    for token in tokens:
+        match token[0]:
+            case "[":
+                end, replacement = _replace_field_options(text, tokens, token.end())
+                if replacement is not None:
+                    result.extend((text[copied : token.start()], replacement))
+                    copied = end
+            case "(" if previous is not None and previous[0] == "option" and before_previous != "rpc":
+                depth = 0
+                for end_token in tokens:
+                    match end_token[0]:
+                        case "{" | "[":
+                            depth += 1
+                        case "}" | "]":
+                            depth -= 1
+                        case ";" if depth == 0:
+                            result.append(text[copied : previous.start()])
+                            copied = end_token.end()
+                            break
+        before_previous = previous[0] if previous is not None else ""
+        previous = token
+    if not result:
+        return text
+    result.append(text[copied:])
     return "".join(result)
 
 
-def _find_option_end(text: str, start: int) -> int | None:
-    in_quote = False
-    escaped = False
-
-    for index in range(start, len(text)):
-        char = text[index]
-        if escaped:
-            escaped = False
-            continue
-        if char == "\\" and in_quote:
-            escaped = True
-            continue
-        if char == '"':
-            in_quote = not in_quote
-            continue
-        if char == "]" and not in_quote:
-            return index
-
-    return None  # pragma: no cover
+def _replace_field_options(text: str, tokens: Iterator[re.Match[str]], start: int) -> tuple[int, str | None]:
+    """Consume a field option list, retaining its default when custom options occur."""
+    depth = 0
+    custom = False
+    name = ""
+    value_start = value_end = start
+    default = None
+    for token in tokens:
+        value = token[0]
+        if depth == 0 and value in {",", "]"}:
+            if name == "default":
+                default = (value_start, value_end)
+            if value == "]":
+                if not custom:
+                    return token.end(), None
+                replacement = f"[default = {text[default[0] : default[1]]}]" if default is not None else ""
+                return token.end(), replacement
+            name = ""
+        else:
+            if not name:
+                name = value
+                custom |= value == "("
+            elif name == "default" and value == "=":
+                value_start = value_end = token.end()
+            elif name == "default":
+                if value_start == value_end:
+                    value_start = token.start()
+                value_end = token.end()
+            match value:
+                case "(" | "{" | "[":
+                    depth += 1
+                case ")" | "}" | "]":
+                    depth -= 1
+    return start, None
 
 
 def convert_protobuf_schema_data(
@@ -285,39 +305,6 @@ def _convert_protobuf_schema_data(  # noqa: PLR0913
         encoding=encoding,
     )
     return parser._convert_to_json_schema_data(source_safe_non_finite=source_safe_non_finite)  # noqa: SLF001
-
-
-def _extract_default_option(options: str) -> str | None:
-    current: list[str] = []
-    parts: list[str] = []
-    in_quote = False
-    escaped = False
-
-    for char in options:
-        if escaped:
-            current.append(char)
-            escaped = False
-            continue
-        if char == "\\":
-            current.append(char)
-            escaped = in_quote
-            continue
-        if char == '"':
-            current.append(char)
-            in_quote = not in_quote
-            continue
-        if char == "," and not in_quote:
-            parts.append("".join(current))
-            current.clear()
-            continue
-        current.append(char)
-    parts.append("".join(current))
-
-    for part in parts:
-        name, separator, value = part.partition("=")
-        if separator and name.strip() == "default":
-            return value.strip()
-    return None
 
 
 def _comment_map(file_descriptor: Any) -> dict[tuple[int, ...], str]:
