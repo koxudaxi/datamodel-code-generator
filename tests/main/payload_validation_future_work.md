@@ -284,3 +284,34 @@ Future work:
   class names, exported types, annotations, and user imports.
 - Consider limiting any new behavior to a schema-faithful or strict nullable mode
   if preserving existing class-based output is more important for default usage.
+
+## Exact JSON Numeric Oracle and Native Float Contract
+
+The payload oracle interprets the canonical JSON serialization of the original
+schema and payload as exact decimal numbers. Fractions stay inside this oracle;
+actual generated models receive the original Python values. This avoids binary
+`multipleOf` false positives and false negatives in jsonschema without changing
+source constraints, annotations, instance values, or the example budget.
+
+Only `MultipleOfBase.decimal_multiple_field` has a native float contract. Its
+original source fragment must exactly match the external contract fixture. The
+intersection of multiples of 0.2 and 0.3 is independently specified as multiples
+of 0.6. A minimal native Pydantic float validator supplies expected runtime
+errors, and the generated model must match the complete error records, including
+location and constraint context. Source-valid values accepted by the native
+validator must be accepted and retain source validity after JSON-mode dumping.
+Deterministic external witnesses detect weaker, stronger, missing, wrong-type,
+wrong-path, and wrong-context generated constraints. No native or generated
+acceptance result filters sampled payloads. The registered case unions fresh
+copies of external source-valid witnesses with its existing strategy, so the
+ordinary acceptance and round-trip tests also exercise native rejections.
+
+Root numeric `const` and wholly numeric `enum` strategies sample their original
+immutable declared values before exact source filtering. In particular, `1e100`
+must remain a float: converting it to either its binary integer expansion or the
+canonical decimal integer changes native enum lookup behavior. Other shapes keep
+the existing hypothesis-jsonschema strategy. This does not establish general
+sampling completeness: bounded singleton decimal-multiple intervals such as
+10066330.8 can still be unsatisfiable in hypothesis-jsonschema despite exact
+source validity. Deterministic conformance witnesses cover these values directly;
+no additional fixture exclusion or generalized structural normalization is added.
