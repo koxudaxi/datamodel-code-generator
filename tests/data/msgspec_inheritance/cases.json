@@ -577,5 +577,50 @@
       "seed": 1,
       "other": 2
     }
+  },
+  {
+    "name": "jsonschema_dry_nested",
+    "schema": "jsonschema_dry_nested.json",
+    "format": "jsonschema",
+    "error": true,
+    "options": {},
+    "cli": [],
+    "payload": {}
+  },
+  {
+    "name": "jsonschema_dry_reverse",
+    "schema": "jsonschema_dry_reverse.json",
+    "format": "jsonschema",
+    "error": true,
+    "options": {},
+    "cli": [],
+    "payload": {}
+  },
+  {
+    "name": "jsonschema_dry_empty",
+    "schema": "jsonschema_dry_empty.json",
+    "format": "jsonschema",
+    "error": true,
+    "options": {},
+    "cli": [],
+    "payload": {}
+  },
+  {
+    "name": "jsonschema_dry_redundant",
+    "schema": "jsonschema_dry_redundant.json",
+    "format": "jsonschema",
+    "error": true,
+    "options": {},
+    "cli": [],
+    "payload": {}
+  },
+  {
+    "name": "jsonschema_dry_shared",
+    "schema": "jsonschema_dry_shared.json",
+    "format": "jsonschema",
+    "error": true,
+    "options": {},
+    "cli": [],
+    "payload": {}
   }
 ]

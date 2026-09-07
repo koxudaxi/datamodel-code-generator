@@ -14,6 +14,7 @@ from tests.conftest import assert_output, create_assert_file_content
 from tests.main.conftest import (
     DATA_PATH,
     EXPECTED_MAIN_PATH,
+    _assert_python_module_importable,
     _generated_model,
     assert_generated_model_json_validation,
     run_generate_file_and_assert,
@@ -173,3 +174,30 @@ def test_msgspec_inheritance_preserve_other_backends(
         expected_attribute_path=("c",),
         expected_attribute_value=3,
     )
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+def test_msgspec_inheritance_preserve_mixed_opaque_layout(output_file: Path, entrypoint: str) -> None:
+    """Keep opaque ancestry conservative even after a known compact conflict."""
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=DATA / "dry_opaque.json",
+            output_path=output_file,
+            input_file_type="jsonschema",
+            extra_args=["--output-model-type", "msgspec.Struct", "--disable-timestamp"],
+            assert_func=assert_file_content,
+            expected_file="dry_opaque.py",
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=DATA / "dry_opaque.json",
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            output_model_type=DataModelType.MsgspecStruct,
+            disable_timestamp=True,
+            assert_func=assert_file_content,
+            expected_file="dry_opaque.py",
+        )
+    with pytest.raises(TypeError) as error:
+        _assert_python_module_importable(output_file, "generated_mixed_opaque", "Payload")
+    assert_output(f"{error.value}\n", EXPECTED / "dry_opaque.txt")
