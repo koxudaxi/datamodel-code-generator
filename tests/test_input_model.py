@@ -2125,3 +2125,110 @@ def test_input_model_inherited_overrides(model_name: str, entrypoint: str, tmp_p
                         observations[name] = result.model_dump(mode="json", by_alias=True)
             records.append(observations)
     assert_output(json.dumps(records, indent=2), INPUT_OVERRIDE_EXPECTED / f"{model_name}_runtime.txt")
+
+
+@pytest.mark.parametrize("formatter", ["builtin", "external"])
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("reverse", [False, True])
+@pytest.mark.parametrize("strategy", ["regenerate-all", "reuse-all", "reuse-foreign"])
+@pytest.mark.parametrize(
+    "case", ["nested", "roots", "shared", "plain", "identical", "metadata", "recursive", "generic"]
+)
+def test_input_model_definition_collisions(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    entrypoint: str,
+    reverse: bool,
+    strategy: str,
+    case: str,
+    formatter: str,
+) -> None:
+    """Keep colliding and shared runtime types attached to their own definitions."""
+    from datamodel_code_generator import GenerateConfig, InputFileType, generate
+    from datamodel_code_generator.enums import InputModelRefStrategy
+    from datamodel_code_generator.format import Formatter
+    from datamodel_code_generator.input_model import load_model_schema
+
+    roots = {
+        "nested": ("RootA", "RootB"),
+        "roots": ("Root", "Root"),
+        "shared": ("RootA", "SharedRoot"),
+        "plain": ("PlainA", "PlainB"),
+        "identical": ("SameRootA", "SameRootB"),
+        "metadata": ("ExtraDefinitions", "EmptyDefinitions"),
+        "recursive": ("Recursive", "Recursive"),
+        "generic": ("GenericRootA", "GenericRootB"),
+    }[case]
+    paths = [f"tests.data.python.input_model.collision_{side}:{root}" for side, root in zip("ab", roots, strict=True)]
+    if reverse:
+        paths.reverse()
+    settings = Path(__file__).parent / "data/python/input_model/collision_settings"
+    (tmp_path / "pyproject.toml").write_text((settings / "pyproject.toml").read_text())
+    formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
+    output = tmp_path / "output.py"
+    if entrypoint == "cli":
+        run_main_with_args(
+            _input_model_args(
+                paths,
+                output_path=output,
+                extra_args=[
+                    "--disable-timestamp",
+                    "--input-model-ref-strategy",
+                    strategy,
+                    "--formatters",
+                    *formatters,
+                ],
+            ),
+        )
+        code = output.read_text()
+    else:
+        config = GenerateConfig(
+            input_file_type=InputFileType.JsonSchema,
+            disable_timestamp=True,
+            input_filename="<stdin>",
+            output=output,
+            settings_path=tmp_path,
+            formatters=[Formatter(value) for value in formatters],
+        )
+        schema = load_model_schema(paths, InputFileType.JsonSchema, InputModelRefStrategy(strategy))
+        generate(schema, config=config)
+        code = output.read_text()
+    expected_strategy = "regenerate-all" if strategy == "regenerate-all" else "reuse-all"
+    expected = EXPECTED_INPUT_MODEL_PATH / f"collisions_{case}_{'ba' if reverse else 'ab'}_{expected_strategy}.py"
+    assert_output(code, expected)
+    module = types.ModuleType("collision_output")
+    monkeypatch.setitem(sys.modules, module.__name__, module)
+    exec(code, module.__dict__)
+    payloads = {
+        "nested": [
+            {"first": 1, "data": {"id": 2, "child": {"id": 3}}},
+            {
+                "second": "b",
+                "data": {"name": "b", "child": {"name": "c"}},
+                "shared": {"id": 4},
+                "reserved": {"reserved": True},
+            },
+        ],
+        "roots": [{"data": {"id": 1, "child": {"id": 2}}}, {"data": {"name": "b", "child": {"name": "c"}}}],
+        "shared": [{"first": 1, "data": {"id": 2}}, {"first": 3, "shared": {"id": 4}}],
+        "plain": [
+            {"data": {"id": 1}, "kind": "a", "mode": "mode-a"},
+            {"data": {"name": "b"}, "kind": "b", "mode": "mode-b"},
+        ],
+        "identical": [{"data": {"value": "a"}}, {"data": {"value": "b"}}],
+        "metadata": [{"first": 1}, {"second": "b"}],
+        "generic": [{"data": {"value": 1}}, {"data": {"value": "b"}}],
+        "recursive": [
+            {"first": 1, "id": 2, "child": {"first": 3, "id": 4}},
+            {"second": "a", "name": "b", "child": {"second": "c", "name": "d"}},
+        ],
+    }[case]
+    for side, root, payload in zip("ab", roots, payloads, strict=True):
+        source_model = getattr(importlib.import_module(f"tests.data.python.input_model.collision_{side}"), root)
+        assert source_model.model_validate(payload).model_dump(mode="json", exclude_unset=True) == payload
+        result = module.Model.model_validate(payload).root.model_dump(mode="json", exclude_unset=True)
+        assert result == payload
+    if case == "identical":
+        assert module.SameRootA.model_fields["data"].annotation is not module.SameRootB.model_fields["data"].annotation
+    elif case == "shared":
+        assert module.RootA.model_fields["data"].annotation is module.SharedRoot.model_fields["shared"].annotation
