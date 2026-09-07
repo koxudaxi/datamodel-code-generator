@@ -14208,6 +14208,56 @@ def test_main_allof_root_model_constraints_none(output_file: Path) -> None:
     )
 
 
+@pytest.mark.parametrize("entry_point", ["api", "cli"])
+@pytest.mark.parametrize("fixture", ["large", "ordinary"])
+def test_allof_integer_bound_comparisons(output_file: Path, entry_point: str, fixture: str) -> None:
+    """Intersect integer and floating bounds without rounding the comparison operands."""
+    input_path = JSON_SCHEMA_DATA_PATH / "integer_bound_comparisons" / f"{fixture}.json"
+    if entry_point == "api":
+        run_generate_and_assert(
+            input_=json.loads(input_path.read_text(encoding="utf-8")),
+            expected_file=EXPECTED_JSON_SCHEMA_PATH / "integer_bound_comparisons" / f"{fixture}_api.py",
+            assert_input_unchanged=True,
+            input_file_type=InputFileType.JsonSchema,
+            field_constraints=True,
+            disable_timestamp=True,
+            formatters=[Formatter.BUILTIN],
+        )
+        run_generate_file_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            assert_func=assert_file_content,
+            expected_file=f"integer_bound_comparisons/{fixture}.py",
+            field_constraints=True,
+            disable_timestamp=True,
+            formatters=[Formatter.BUILTIN],
+        )
+    else:
+        run_main_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file=f"integer_bound_comparisons/{fixture}.py",
+            extra_args=["--field-constraints", "--disable-timestamp", "--formatters", "builtin"],
+            force_exec_validation=True,
+        )
+
+    payloads = json.loads(input_path.with_name(f"{fixture}_payloads.json").read_text(encoding="utf-8"))
+    for model_name, payload in payloads.items():
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="integer_bound_comparisons",
+            model_name=model_name,
+            valid_json=json.dumps(payload["valid"]),
+            invalid_json=json.dumps(payload["invalid"]),
+            expected_error_type=payload["error_type"],
+            expected_attribute_path=("root",),
+            expected_attribute_value=payload["valid"],
+        )
+
+
 @pytest.mark.benchmark
 def test_main_allof_root_model_constraints_merge_pydantic_v2(output_file: Path) -> None:
     """Test allOf with root model constraints in Pydantic v2 (issue #2232).

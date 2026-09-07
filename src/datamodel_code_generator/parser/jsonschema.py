@@ -3962,11 +3962,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     @staticmethod
     def _intersect_constraint(field: str, val1: Any, val2: Any) -> Any:  # noqa: PLR0911
         """Compute the intersection of two constraint values."""
-        v1: float | None = None
-        v2: float | None = None
-        with suppress(TypeError, ValueError):
-            v1 = float(val1) if val1 is not None else None
-            v2 = float(val2) if val2 is not None else None
+        v1 = val1.value if isinstance(val1, UnionIntFloat) else val1
+        v2 = val2.value if isinstance(val2, UnionIntFloat) else val2
 
         match field:
             case "minLength" | "minimum" | "exclusiveMinimum" | "minItems":
