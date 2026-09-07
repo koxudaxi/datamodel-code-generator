@@ -472,7 +472,7 @@
     },
     "custom_template": true,
     "runtime": null,
-    "error": false
+    "error": true
   },
   {
     "name": "inherited_override_PydanticV2BaseModel",

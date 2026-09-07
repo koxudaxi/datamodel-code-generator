@@ -1,0 +1,50 @@
+[
+  {
+    "mode": "default",
+    "frozen": false
+  },
+  {
+    "mode": "default",
+    "frozen": true
+  },
+  {
+    "mode": "builtin",
+    "frozen": false
+  },
+  {
+    "mode": "builtin",
+    "frozen": true
+  },
+  {
+    "mode": "builtin_symlink",
+    "frozen": false
+  },
+  {
+    "mode": "builtin_symlink",
+    "frozen": true
+  },
+  {
+    "mode": "partial",
+    "frozen": false
+  },
+  {
+    "mode": "partial",
+    "frozen": true
+  },
+  {
+    "mode": "missing",
+    "frozen": false
+  },
+  {
+    "mode": "missing",
+    "frozen": true
+  },
+  {
+    "mode": "custom",
+    "frozen": true
+  },
+  {
+    "mode": "custom_symlink",
+    "frozen": true
+  }
+]

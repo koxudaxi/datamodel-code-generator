@@ -5,11 +5,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from datamodel_code_generator import Error
-from datamodel_code_generator.model.base import DataModel, get_effective_fields
+from datamodel_code_generator.model.base import TEMPLATE_DIR, DataModel, get_effective_fields
 from datamodel_code_generator.model.enum import Enum
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from pathlib import Path
 
     from datamodel_code_generator._python_type_binding import BoundPythonType
     from datamodel_code_generator.types import DataType
@@ -18,7 +19,10 @@ if TYPE_CHECKING:
 class SetItemValidator:
     """Inspect reachable generated fields without importing external Python types."""
 
-    def __init__(self) -> None:
+    def __init__(self, custom_template_dir: Path | None = None) -> None:
+        self._uses_builtin_template_dir = (
+            custom_template_dir is not None and custom_template_dir.resolve() == TEMPLATE_DIR.resolve()
+        )
         self.safe_models: set[str] = set()
         self.frozen_models: dict[str, bool] = {}
         self.safe_fields: set[str] = set()
@@ -44,7 +48,7 @@ class SetItemValidator:
                     continue
                 if (
                     model.custom_base_class
-                    or model._uses_custom_root_template  # noqa: SLF001
+                    or (model._uses_custom_root_template and not self._uses_builtin_template_dir)  # noqa: SLF001
                     or not type(model).__module__.startswith("datamodel_code_generator.model.")
                 ):
                     continue

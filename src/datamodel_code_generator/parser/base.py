@@ -3607,7 +3607,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         if self.use_unique_items_as_set:
             from datamodel_code_generator.model._set_item import SetItemValidator  # noqa: PLC0415
 
-            validator = SetItemValidator()
+            validator = SetItemValidator(self.custom_template_dir)
             for model in models:
                 for field in model.fields:
                     for data_type in field.data_type.all_data_types:
