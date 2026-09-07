@@ -145,12 +145,13 @@ def test_allof_empty_enum_intersection(
 
 @pytest.mark.parametrize("mode", ["partial", "equal"])
 @pytest.mark.parametrize("scalar_kind", ["inherited", "unhashable", "custom_hash", "custom_equality"])
-def test_allof_enum_scalar_subclasses(output_file: Path, mode: str, scalar_kind: str) -> None:
+@pytest.mark.parametrize("subclass_side", ["both", "parent"])
+def test_allof_enum_scalar_subclasses(output_file: Path, mode: str, scalar_kind: str, subclass_side: str) -> None:
     """Accept public Mapping inputs with scalar subclasses and retain enum aliases in declaration order."""
     schema = json.loads(
         (JSON_SCHEMA_DATA_PATH / "allof_constraint_intersections" / f"scalars_{mode}.json").read_text(encoding="utf-8")
     )
-    for item in schema["allOf"]:
+    for item in schema["allOf"] if subclass_side == "both" else schema["allOf"][:1]:
         for field in item["properties"].values():
             base = type(field["enum"][0])
             attributes = {}
@@ -163,7 +164,8 @@ def test_allof_enum_scalar_subclasses(output_file: Path, mode: str, scalar_kind:
                 attributes["__hash__"] = base.__hash__
             scalar = type("Scalar", (base,), attributes)
             field["enum"] = [scalar(value) for value in field["enum"]]
-    expected = EXPECTED_JSON_SCHEMA_PATH / "allof_constraint_intersections" / f"scalars_{mode}_api.py"
+    suffix = "_parent" if mode == "equal" and subclass_side == "parent" else ""
+    expected = EXPECTED_JSON_SCHEMA_PATH / "allof_constraint_intersections" / f"scalars_{mode}_api{suffix}.py"
     run_generate_and_assert(
         input_=schema,
         expected_file=expected,
