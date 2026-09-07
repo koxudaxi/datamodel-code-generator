@@ -41532,6 +41532,11 @@ datamodel-codegen --allof-merge-mode all ...
 datamodel-codegen --allof-merge-mode none ...
 ```
 
+When primitive `allOf` branches are merged, combining `number` and `integer`
+produces `integer` in every merge mode. Numeric type arrays may also include
+`null`; only types shared by every branch are retained, in their original order.
+An empty numeric/null intersection raises a schema error.
+
 See [CLI Reference: `--allof-merge-mode`](cli-reference/typing-customization.md#allof-merge-mode) for details.
 
 📎 Related: [#399](https://github.com/datamodel-code-generator/datamodel-code-generator/issues/399)
