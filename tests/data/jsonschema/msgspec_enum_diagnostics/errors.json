@@ -110,5 +110,11 @@
     "schema": "float_first_alias",
     "options": {},
     "cli": []
+  },
+  {
+    "name": "string_alias_before_boolean",
+    "schema": "string_alias_before_boolean",
+    "options": {},
+    "cli": []
   }
 ]

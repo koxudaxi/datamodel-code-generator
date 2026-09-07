@@ -9921,6 +9921,20 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             is_optional=has_null,
         )
 
+    @staticmethod
+    def _get_unsupported_msgspec_enum_member(enum_values: list[Any]) -> str | None:
+        """Find bool/float members that do not alias an earlier integer in linear time."""
+        seen_ints: set[int] | None = None
+        for index, value in enumerate(enum_values):
+            if isinstance(value, (bool, float)):
+                if seen_ints is None:
+                    seen_ints = {previous for i in range(index) if type(previous := enum_values[i]) is int}
+                if value not in seen_ints:
+                    return type(value).__name__
+            elif seen_ints is not None and type(value) is int:
+                seen_ints.add(value)
+        return None
+
     def _get_enum_model_class(self, type_: Types | None, enum_values: list[Any]) -> tuple[type[Enum], Types | None]:
         """Return the enum model class and remaining subtype for schema enum generation."""
         if not (self.use_specialized_enum and type_ and (specialized_type := SPECIALIZED_ENUM_TYPE_MATCH.get(type_))):
@@ -10086,14 +10100,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 and (
                     unsupported := "float"
                     if self.use_subclass_enum and type_ and SUBCLASS_BASE_CLASSES.get(type_) == "float"
-                    else next(
-                        (
-                            type(value).__name__
-                            for index, value in enumerate(enum_times)
-                            if isinstance(value, (bool, float)) and enum_times.index(value) == index
-                        ),
-                        None,
-                    )
+                    else self._get_unsupported_msgspec_enum_member(enum_times)
                 )
             ):
                 msg = f"msgspec.Struct does not support {unsupported} Enum members in {reference_.name!r}."

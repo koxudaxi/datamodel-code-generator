@@ -131,5 +131,12 @@
     "options": {},
     "cli": [],
     "python": "3.10"
+  },
+  {
+    "name": "large_aliases",
+    "schema": "large_aliases",
+    "options": {},
+    "cli": [],
+    "python": "3.10"
   }
 ]
