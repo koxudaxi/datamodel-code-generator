@@ -1,0 +1,159 @@
+{
+  "Both": {
+    "valid": {
+      "left": {
+        "value": "a"
+      },
+      "right": {
+        "value": "b"
+      }
+    },
+    "fields": [
+      "left",
+      "right"
+    ],
+    "invalid": {
+      "left": {
+        "value": "b"
+      },
+      "right": {
+        "value": "a"
+      }
+    }
+  },
+  "Reversed": {
+    "valid": {
+      "left": {
+        "value": "a"
+      },
+      "right": {
+        "value": "b"
+      }
+    },
+    "fields": [
+      "right",
+      "left"
+    ],
+    "invalid": {
+      "left": {
+        "value": "b"
+      },
+      "right": {
+        "value": "a"
+      }
+    }
+  },
+  "Shared": {
+    "valid": {
+      "left": {
+        "value": "a"
+      },
+      "right": {
+        "value": "a"
+      }
+    },
+    "fields": [
+      "left",
+      "right"
+    ],
+    "invalid": {
+      "left": {
+        "value": "b"
+      },
+      "right": {
+        "value": "a"
+      }
+    }
+  },
+  "Child": {
+    "valid": {
+      "left": {
+        "value": "a"
+      },
+      "right": {
+        "value": "b"
+      }
+    },
+    "fields": [
+      "left",
+      "right"
+    ],
+    "invalid": {
+      "left": {
+        "value": "b"
+      },
+      "right": {
+        "value": "a"
+      }
+    }
+  },
+  "UnionRoot": {
+    "valid": {
+      "item": {
+        "value": "a"
+      }
+    },
+    "fields": [
+      "item"
+    ],
+    "invalid": {
+      "item": {
+        "value": "z"
+      }
+    }
+  },
+  "RecursiveRoot": {
+    "valid": {
+      "left": {
+        "value": "a"
+      },
+      "right": {
+        "value": "b"
+      }
+    },
+    "fields": [
+      "left",
+      "right"
+    ],
+    "invalid": {
+      "left": {
+        "value": "b"
+      },
+      "right": {
+        "value": "a"
+      }
+    }
+  },
+  "EnumRoot": {
+    "valid": {
+      "left": "ok",
+      "right": "ok"
+    },
+    "fields": [
+      "left",
+      "right"
+    ]
+  },
+  "AliasRoot": {
+    "valid": {
+      "left": {
+        "value": "a"
+      },
+      "right": {
+        "value": "b"
+      }
+    },
+    "fields": [
+      "left",
+      "right"
+    ],
+    "invalid": {
+      "left": {
+        "value": "b"
+      },
+      "right": {
+        "value": "a"
+      }
+    }
+  }
+}

@@ -2242,3 +2242,86 @@ def test_input_model_definition_collisions(
         assert module.SameRootA.model_fields["data"].annotation is not module.SameRootB.model_fields["data"].annotation
     elif case == "shared":
         assert module.RootA.model_fields["data"].annotation is module.SharedRoot.model_fields["shared"].annotation
+
+
+@pytest.mark.parametrize(
+    "case", ["Both", "Reversed", "Shared", "Child", "UnionRoot", "RecursiveRoot", "EnumRoot", "AliasRoot"]
+)
+@pytest.mark.parametrize("multiple", [False, True])
+@pytest.mark.parametrize("strategy", ["regenerate-all", "reuse-all"])
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("formatter", ["external", "builtin"])
+def test_input_model_equal_schema_identity(
+    tmp_path: Path, case: str, multiple: bool, strategy: str, entrypoint: str, formatter: str
+) -> None:
+    """Equal schemas retain distinct reused types and their native validators."""
+    import importlib
+    import json
+
+    from pydantic import ValidationError
+
+    from datamodel_code_generator import GenerateConfig, InputFileType, generate
+    from datamodel_code_generator.enums import InputModelRefStrategy
+    from datamodel_code_generator.format import Formatter
+    from datamodel_code_generator.input_model import load_model_schema
+    from tests.main.conftest import _generated_model
+
+    source = "tests.data.python.input_model.same_schema_roots"
+    paths = [f"{source}:{case}", f"{source}:Shared"] if multiple else [f"{source}:{case}"]
+    settings = Path(__file__).parent / "data/python/input_model/collision_settings"
+    (tmp_path / "pyproject.toml").write_text((settings / "pyproject.toml").read_text())
+    output = tmp_path / "model.py"
+    formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
+    if entrypoint == "cli":
+        run_main_with_args(
+            _input_model_args(
+                paths,
+                output_path=output,
+                extra_args=["--disable-timestamp", "--input-model-ref-strategy", strategy, "--formatters", *formatters],
+            )
+        )
+    else:
+        config = GenerateConfig(
+            input_file_type=InputFileType.JsonSchema,
+            disable_timestamp=True,
+            input_filename="<stdin>",
+            output=output,
+            settings_path=tmp_path,
+            formatters=[Formatter(value) for value in formatters],
+        )
+        generate(load_model_schema(paths, InputFileType.JsonSchema, InputModelRefStrategy(strategy)), config=config)
+    suffix = f"{case.lower()}_{'multiple' if multiple else 'single'}_{strategy}"
+    assert_output(output.read_text(), EXPECTED_INPUT_MODEL_PATH / f"equal_identity_{suffix}.py")
+    settings = json.loads((EXPECTED_INPUT_MODEL_PATH.parents[2] / "python/input_model/equal_identity.json").read_text())
+    options = settings[case]
+    native = getattr(importlib.import_module(source), case)
+    with _generated_model(output, f"generated_equal_identity_{case}", case) as model:
+        original = native.model_validate(options["valid"])
+        generated = model.model_validate(options["valid"])
+        observed = {
+            "values": generated.model_dump(mode="json"),
+            "identities": {
+                name: type(getattr(generated, name)) is type(getattr(original, name)) for name in options["fields"]
+            },
+        }
+        assert_output(
+            json.dumps(observed, indent=2), EXPECTED_INPUT_MODEL_PATH / f"equal_identity_{case.lower()}_{strategy}.txt"
+        )
+        if strategy == "reuse-all" and "invalid" in options:
+            for candidate in (native, model):
+                with pytest.raises(ValidationError):
+                    candidate.model_validate(options["invalid"])
+
+
+def test_input_model_equal_native_schemas() -> None:
+    """The distinct native types expose equal schemas before input-model conversion."""
+    import json
+
+    from pydantic import TypeAdapter
+
+    from tests.data.python.input_model.same_schema_roots import TYPE_PAIRS
+
+    assert_output(
+        json.dumps([TypeAdapter(left).json_schema() == TypeAdapter(right).json_schema() for left, right in TYPE_PAIRS]),
+        EXPECTED_INPUT_MODEL_PATH / "equal_identity_native_schemas.txt",
+    )

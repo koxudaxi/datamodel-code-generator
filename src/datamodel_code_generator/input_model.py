@@ -46,7 +46,7 @@ from datamodel_code_generator._python_type_annotation import (
 from datamodel_code_generator.enums import InputModelRefStrategy, _get_output_model_family
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Iterable, Iterator
 
     from pydantic.json_schema import GenerateJsonSchema
 
@@ -315,6 +315,8 @@ def _serialize_python_type_full(
 def _get_input_model_json_schema_class(
     definition_types: dict[str, type | str] | None = None,
     model_classes: list[type[BaseModel]] | None = None,
+    *,
+    preserve_type_identity: bool = False,
 ) -> type[GenerateJsonSchema]:
     """Get the InputModelJsonSchema class lazily."""
     from pydantic.json_schema import GenerateJsonSchema  # noqa: PLC0415
@@ -374,6 +376,33 @@ def _get_input_model_json_schema_class(
             return super().generate_inner(schema)
 
         def _build_definitions_remapping(self) -> Any:
+            collision_names = (
+                _colliding_type_names(
+                    core_types.get(self.defs_to_core_refs[defs_ref][0], "") for defs_ref in self.definitions
+                )
+                if preserve_type_identity and len(self.definitions) > 1
+                else None
+            )
+            if collision_names:
+                owners: dict[str, type] = {}
+                collisions: set[str] = set()
+                for defs_ref in self.definitions:
+                    core_ref, _mode = self.defs_to_core_refs[defs_ref]
+                    if (model := core_types.get(core_ref)) is None or model.__name__ not in collision_names:
+                        continue
+                    for choice in self._prioritized_defsref_choices[defs_ref]:
+                        if choice in owners and owners[choice] is not model:
+                            collisions.add(choice)
+                        else:
+                            owners[choice] = model
+                if collisions:
+                    # Equal JSON schemas can still belong to different runtime
+                    # types. Reuse needs separate refs before native deduplication.
+                    for defs_ref, choices in self._prioritized_defsref_choices.items():
+                        if not collisions.isdisjoint(choices):
+                            self._prioritized_defsref_choices[defs_ref] = [
+                                choice for choice in choices if choice not in collisions
+                            ]
             remapping = super()._build_definitions_remapping()
             definition_types.clear()
             for defs_ref in self.definitions:
@@ -395,15 +424,58 @@ def _get_input_model_json_schema_class(
             for name in self.definitions:
                 core_ref, _mode = self.defs_to_core_refs[name]
                 if core_ref not in core_types and not legacy_types_loaded:
-                    for model in model_classes or ():
-                        for nested in _collect_nested_models(model).values():
-                            core_types[f"{nested.__module__}.{nested.__qualname__}:{id(nested)}"] = nested
+                    if preserve_type_identity:
+                        _collect_core_type_identities(model_classes or (), core_types)
+                    else:
+                        for model in model_classes or ():
+                            for nested in _collect_nested_models(model).values():
+                                core_types[f"{nested.__module__}.{nested.__qualname__}:{id(nested)}"] = nested
                     legacy_types_loaded = True
                 definition_types[name] = core_types.get(core_ref, core_ref)
             return result
 
     legacy_types_loaded = False
     return LegacyIdentifiedInputModelJsonSchema
+
+
+def _collect_core_type_identities(models: Iterable[type], core_types: dict[str, type]) -> None:
+    """Recover legacy core-ref identities without discarding same-name types."""
+    pending: list[Any] = list(models)
+    visited: set[type] = set()
+    while pending:
+        annotation = pending.pop()
+        if get_origin(annotation) is None and isinstance(annotation, type):
+            if annotation in visited:
+                continue
+            visited.add(annotation)
+            core_types[f"{annotation.__module__}.{annotation.__qualname__}:{id(annotation)}"] = annotation
+            if fields := getattr(annotation, "model_fields", None):
+                pending.extend(field.annotation for field in fields.values())
+        pending.extend(get_args(annotation))
+
+
+def _colliding_type_names(definition_types: Iterable[type | str]) -> set[str]:
+    """Find distinct runtime types sharing a short name in this schema only."""
+    names: dict[str, type] = {}
+    collisions: set[str] = set()
+    for model in definition_types:
+        if isinstance(model, type):
+            if model.__name__ in names and names[model.__name__] is not model:
+                collisions.add(model.__name__)
+            else:
+                names[model.__name__] = model
+    return collisions
+
+
+def _colliding_definition_types(definition_types: ABCMapping[str, type | str]) -> dict[str, type] | None:
+    """Retain only identity corrections needed by a single root's reuse lookup."""
+    if len(definition_types) <= 1 or not (collisions := _colliding_type_names(definition_types.values())):
+        return None
+    return {
+        name: model
+        for name, model in definition_types.items()
+        if isinstance(model, type) and model.__name__ in collisions
+    }
 
 
 def _is_type_origin(annotation: type) -> bool:
@@ -1174,7 +1246,11 @@ def _load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
         for model_class in model_classes:
             _try_rebuild_model(model_class)
         definitions = _InputModelDefinitions(model_classes)
-        schema_generator = _get_input_model_json_schema_class(definitions.current_types, model_classes)
+        schema_generator = _get_input_model_json_schema_class(
+            definitions.current_types,
+            model_classes,
+            preserve_type_identity=ref_strategy is InputModelRefStrategy.ReuseAll,
+        )
         merged_defs: dict[str, object] = {}
         root_refs: list[dict[str, str]] = []
         processed_parents: dict[type[BaseModel], _ParentSchema] = {}
@@ -1280,8 +1356,15 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0915
                 )
                 raise Error(msg)
             _try_rebuild_model(obj)
-            schema_generator = _get_input_model_json_schema_class()
+            nested_models = _collect_nested_models(obj) if ref_strategy is InputModelRefStrategy.ReuseAll else None
+            definition_types: dict[str, type | str] | None = {} if nested_models else None
+            schema_generator = (
+                _get_input_model_json_schema_class(definition_types, [obj], preserve_type_identity=True)
+                if definition_types is not None
+                else _get_input_model_json_schema_class()
+            )
             schema = obj.model_json_schema(schema_generator=schema_generator)
+            identified_types = _colliding_definition_types(definition_types) if definition_types else None
             schema = _add_python_type_for_unserializable(
                 schema,
                 obj,
@@ -1297,10 +1380,12 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0915
             )
 
             if ref_strategy and ref_strategy != InputModelRefStrategy.RegenerateAll:
-                nested_models = _collect_nested_models(obj)
+                if nested_models is None:
+                    nested_models = _collect_nested_models(obj)
+                if identified_types:
+                    nested_models.update(identified_types)
                 model_name = getattr(obj, "__name__", None)
-                schema_defs = cast("dict[str, object]", schema.get("$defs", {}))
-                if model_name and model_name in schema_defs:  # pragma: no cover
+                if model_name and model_name in cast("dict[str, object]", schema.get("$defs", {})):  # pragma: no cover
                     nested_models[model_name] = obj
                 schema = _filter_defs_by_strategy(schema, nested_models, output_family, ref_strategy)
 
