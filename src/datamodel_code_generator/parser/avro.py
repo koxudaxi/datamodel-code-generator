@@ -550,8 +550,7 @@ class _AvroSchemaConverter:
         return _Name(fullname=fullname, namespace=resolved_namespace, name=name)
 
     def _resolve_fullname(self, name: str, namespace: str | None) -> str:
-        if name in self.named_schemas:
-            return name
+        """Prefer the current namespace when resolving an unqualified name."""
         if "." in name:
             return name
         if namespace and (namespaced := f"{namespace}.{name}") in self.named_schemas:
