@@ -2662,3 +2662,63 @@ def test_input_model_nested_reuse_type_binding(
     assert generated.model_dump(mode="json", exclude_unset=True) == native.model_dump(mode="json", exclude_unset=True)
     with pytest.raises(ValidationError):
         module.ContainerRoot.model_validate({"items": [{"value": "bad"}]})
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("formatter", ["builtin", "external"])
+@pytest.mark.parametrize("strategy", ["regenerate-all", "reuse-all", "reuse-foreign"])
+@pytest.mark.parametrize("case", ["Deleted", "Scalar", "Changed", "Descriptor", "Live", "Lazy"])
+def test_input_model_dynamic_nested_exports(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, entrypoint: str, formatter: str, strategy: str, case: str
+) -> None:
+    """Check static owner identity without executing export or descriptor hooks."""
+    from datamodel_code_generator import DataModelType, GenerateConfig, InputFileType, generate
+    from datamodel_code_generator.enums import InputModelRefStrategy
+    from datamodel_code_generator.format import Formatter
+    from datamodel_code_generator.input_model import load_model_schema
+    from tests.data.python.input_model import nested_dynamic_exports
+
+    output = tmp_path / "output.py"
+    (tmp_path / "pyproject.toml").write_text(
+        (Path(__file__).parent / "data/python/input_model/collision_settings/pyproject.toml").read_text()
+    )
+    paths = [f"tests.data.python.input_model.nested_dynamic_exports:{case}Root"]
+    formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
+    nested_dynamic_exports.calls.clear()
+    if entrypoint == "cli":
+        run_main_with_args(
+            _input_model_args(
+                paths,
+                output_path=output,
+                extra_args=["--disable-timestamp", "--input-model-ref-strategy", strategy, "--formatters", *formatters],
+            )
+        )
+    else:
+        config = GenerateConfig(
+            input_file_type=InputFileType.JsonSchema,
+            disable_timestamp=True,
+            input_filename="<stdin>",
+            output=output,
+            settings_path=tmp_path,
+            formatters=[Formatter(value) for value in formatters],
+        )
+        schema = load_model_schema(
+            paths, InputFileType.JsonSchema, InputModelRefStrategy(strategy), DataModelType.PydanticV2BaseModel
+        )
+        if case == "Deleted":
+            assert schema["x-caller-root"] == "kept"
+        generate(schema, config=config)
+    assert nested_dynamic_exports.calls == []
+    assert_output(output.read_text(), EXPECTED_INPUT_MODEL_PATH / f"dynamic_nested_{case}_{strategy}.py")
+    module = types.ModuleType("dynamic_nested_output")
+    monkeypatch.setitem(sys.modules, module.__name__, module)
+    exec(output.read_text(), module.__dict__)
+    native = getattr(nested_dynamic_exports, f"{case}Root")(child={"value": 1})
+    generated = getattr(module, f"{case}Root")(child={"value": 1})
+    assert generated.model_dump() == native.model_dump() == {"child": {"value": 1}}
+    assert list(type(generated).model_fields) == ["child"]
+    if strategy != "regenerate-all":
+        assert type(generated.child) is type(native.child) is nested_dynamic_exports.exports[case]
+    assert nested_dynamic_exports.calls == (
+        ["__path__", case] if strategy != "regenerate-all" and case not in {"Live", "Lazy"} else []
+    )

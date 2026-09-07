@@ -3261,9 +3261,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             raise Error(msg)
         return _validate_schema_python_import_path(f"{module}.{type_name}", "x-python-import")
 
-    @staticmethod
-    def _get_x_python_runtime_symbol(x_python_import: dict[str, Any]) -> PythonTypeRuntimeSymbol | None:
-        """Retain the runtime module boundary for nested reused attributes."""
+    def _get_x_python_runtime_symbol(  # noqa: PLR6301
+        self, x_python_import: dict[str, Any]
+    ) -> PythonTypeRuntimeSymbol | None:
+        """Retain nested runtime module boundaries; snooper requires an instance method."""
         if (qualname := x_python_import.get("qualname")) is None:
             return None
         from datamodel_code_generator._python_type_annotation import PythonTypeRuntimeSymbol  # noqa: PLC0415
