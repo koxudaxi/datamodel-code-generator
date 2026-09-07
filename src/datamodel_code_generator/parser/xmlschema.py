@@ -1323,6 +1323,8 @@ class _XMLSchemaConverter:
     def _property_identity(self, declaration: ET.Element) -> tuple[str, QNameKey]:
         kind = _local_name(declaration.tag)
         if ref := declaration.get("ref"):
+            if ":" not in ref and (namespace := self._namespaces_for(declaration).get("")):
+                return kind, (namespace, ref)
             return kind, self._resolve_key(
                 ref, self.elements if kind == "element" else self.attributes, element=declaration
             )

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING
 
 import msgspec
@@ -32,6 +33,8 @@ COLLISIONS = (
     "namespaced_attributes",
     "local_forms",
     "simple_content_collision",
+    "default_namespace_distinct",
+    "default_namespace_attributes",
 )
 CONTROLS = (
     "ordinary",
@@ -44,6 +47,9 @@ CONTROLS = (
     "global_elements",
     "global_local_reuse",
     "chameleon_reuse",
+    "default_namespace_reuse",
+    "default_namespace_alias_reuse",
+    "empty_namespace_reuse",
 )
 BACKENDS = (
     DataModelType.PydanticV2BaseModel,
@@ -94,7 +100,7 @@ def test_xsd_property_collision(
                 assert_func=assert_file_content,
             )
         assert_output(str(exc_info.value), expected)
-        assert not output_file.exists()
+        assert_output(f"{output_file.exists()}\n", EXPECTED_XML_SCHEMA_PATH / "field_name_collisions/absent.txt")
 
 
 @pytest.mark.parametrize("name", CONTROLS)
@@ -153,15 +159,20 @@ def test_xsd_ordinary_fields_runtime(backend: DataModelType, entrypoint: str, ou
     valid_json = (payloads / "ordinary.json").read_text(encoding="utf-8")
     invalid_json = (payloads / "ordinary_invalid.json").read_text(encoding="utf-8")
     with _generated_model(output_file, f"b65_{backend.name}_{entrypoint}", "Root") as model:
-        assert list(model.__annotations__) == ["item", "code"]
+        fields = list(model.__annotations__)
         if backend == DataModelType.MsgspecStruct:
             value = msgspec.json.decode(valid_json, type=model)
-            assert value.item == 1
+            item = value.item
             with pytest.raises(msgspec.ValidationError):
                 msgspec.json.decode(invalid_json, type=model)
         else:
             validate = _model_json_validator(model)
             value = validate(valid_json)
-            assert (value["item"] if isinstance(value, dict) else value.item) == 1
+            item = value["item"] if isinstance(value, dict) else value.item
             with pytest.raises(ValidationError):
                 validate(invalid_json)
+
+    assert_output(
+        json.dumps({"fields": fields, "item": item}, indent=2) + "\n",
+        EXPECTED_XML_SCHEMA_PATH / "field_name_collisions/ordinary_runtime.txt",
+    )
