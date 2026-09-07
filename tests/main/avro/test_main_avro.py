@@ -515,6 +515,154 @@ def test_main_avro_unrepresentable_decimal_default(
     )
 
 
+@pytest.mark.parametrize(
+    ("output_model_type", "backend"),
+    [
+        (DataModelType.PydanticV2BaseModel, "pydantic_v2"),
+        (DataModelType.PydanticV2Dataclass, "pydantic_dataclass"),
+        (DataModelType.DataclassesDataclass, "dataclass"),
+        (DataModelType.MsgspecStruct, "msgspec"),
+        (DataModelType.TypingTypedDict, "typed_dict"),
+    ],
+)
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("fixture", ["duration_defaults", "duration_defaults_simple"])
+@pytest.mark.parametrize("deserialize", [False, True])
+def test_avro_duration_defaults(
+    output_file: Path,
+    output_model_type: DataModelType,
+    backend: str,
+    entrypoint: str,
+    fixture: str,
+    deserialize: bool,
+) -> None:
+    """Preserve fixed milliseconds, named/container defaults and backend policies."""
+    input_path = AVRO_DATA_PATH / f"{fixture}.avsc"
+    expected_file = f"{fixture}_{backend}.py"
+    builtin = fixture == "duration_defaults"
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type="avro",
+            assert_func=assert_file_content,
+            expected_file=expected_file,
+            extra_args=[
+                "--target-python-version",
+                "3.10",
+                "--disable-timestamp",
+                "--output-model-type",
+                output_model_type.value,
+                *(["--formatters", "builtin"] if builtin else []),
+                *(["--deserialize-default-values", "decimal"] if deserialize else []),
+            ],
+            force_exec_validation=True,
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type=InputFileType.Avro,
+            assert_func=assert_file_content,
+            expected_file=expected_file,
+            output_model_type=output_model_type,
+            target_python_version=PythonVersion.PY_310,
+            disable_timestamp=True,
+            **({"formatters": [Formatter.BUILTIN]} if builtin else {}),
+            deserialize_default_values=[DefaultValueType.Decimal] if deserialize else [],
+            use_annotated=output_model_type == DataModelType.MsgspecStruct,
+            field_constraints=output_model_type == DataModelType.MsgspecStruct,
+        )
+    if output_model_type == DataModelType.TypingTypedDict:
+        return
+    with _generated_model(output_file, f"generated_{fixture}_{backend}_{entrypoint}", "DurationDefaults") as model:
+        assert_output(f"{model()!r}\n", AVRO_DATA_PATH.parent / f"expected/main/avro/{fixture}_{backend}.txt")
+        if output_model_type == DataModelType.PydanticV2BaseModel:
+            model.model_config["validate_default"] = True
+            model.model_rebuild(force=True)
+            assert_output(f"{model()!r}\n", AVRO_DATA_PATH.parent / f"expected/main/avro/{fixture}_{backend}.txt")
+
+
+@pytest.mark.parametrize("fixture", ["duration_defaults.avsc", "duration_defaults_raw.yaml"])
+def test_avro_duration_defaults_preserve_raw_input(output_file: Path, fixture: str) -> None:
+    """Normalize JSON strings and raw YAML bytes without changing their input objects."""
+    raw_schema = load_data((AVRO_DATA_PATH / fixture).read_text(encoding="utf-8"))
+    with assert_inputs_not_mutated({"schema": raw_schema}):
+        generate(
+            raw_schema,
+            output=output_file,
+            input_file_type=InputFileType.Avro,
+            input_filename=fixture,
+            disable_timestamp=True,
+            target_python_version=PythonVersion.PY_310,
+            formatters=[Formatter.BUILTIN],
+        )
+        converted = convert_avro_schema_data(raw_schema)
+    assert_file_content(
+        output_file, "duration_defaults_pydantic_v2.py" if fixture.endswith("avsc") else "duration_defaults_raw.py"
+    )
+    rendered = "\n".join(f"{name}: {field['default']!r}" for name, field in converted["properties"].items())
+    assert_output(f"{rendered}\n", AVRO_DATA_PATH.parent / f"expected/main/avro/{Path(fixture).stem}_converted.txt")
+
+
+def test_main_avro_duration_default_controls(output_file: Path) -> None:
+    """Keep ordinary bytes, unsupported metadata and default-free logical schemas unchanged."""
+    run_main_and_assert(
+        input_path=AVRO_DATA_PATH / "duration_default_controls.avsc",
+        output_path=output_file,
+        input_file_type="avro",
+        assert_func=assert_file_content,
+        expected_file="duration_default_controls.py",
+        extra_args=["--target-python-version", "3.10", "--disable-timestamp", "--formatters", "builtin"],
+        force_exec_validation=True,
+    )
+
+
+def test_main_avro_duration_defaults_unused_by_typed_dict(output_file: Path) -> None:
+    """Skip unused duration defaults, including unsupported calendar components."""
+    run_main_and_assert(
+        input_path=AVRO_DATA_PATH / "invalid_duration_default_months.avsc",
+        output_path=output_file,
+        input_file_type="avro",
+        assert_func=assert_file_content,
+        expected_file="invalid_duration_default_months.py",
+        extra_args=[
+            "--target-python-version",
+            "3.10",
+            "--disable-timestamp",
+            "--output-model-type",
+            DataModelType.TypingTypedDict.value,
+        ],
+        force_exec_validation=True,
+    )
+
+
+@pytest.mark.parametrize(
+    ("fixture", "message"),
+    [
+        ("months", "months=1, days=0"),
+        ("days", "months=0, days=1"),
+        ("calendar_maximum", "months=4294967295, days=4294967295"),
+        ("short", "Avro duration default requires a fixed size of 12 and exactly 12 encoded bytes"),
+        ("long", "Avro duration default requires a fixed size of 12 and exactly 12 encoded bytes"),
+        ("size", "Avro duration default requires a fixed size of 12 and exactly 12 encoded bytes"),
+        ("unicode", "Avro bytes and fixed defaults must contain only code points from 0 through 255"),
+    ],
+)
+def test_main_avro_unrepresentable_duration_default(
+    output_file: Path, capsys: pytest.CaptureFixture[str], fixture: str, message: str
+) -> None:
+    """Report invalid encodings and unsupported calendar components through the real CLI."""
+    run_main_and_assert(
+        input_path=AVRO_DATA_PATH / f"invalid_duration_default_{fixture}.avsc",
+        output_path=output_file,
+        input_file_type="avro",
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains=message,
+    )
+
+
 @pytest.mark.parametrize(("output_model_type", "expected_name"), BACKEND_GOLDEN_CASES)
 def test_main_avro_output_model_types(
     output_file: Path,
