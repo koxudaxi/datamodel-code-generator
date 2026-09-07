@@ -14,6 +14,7 @@ from pydantic import TypeAdapter
 
 from datamodel_code_generator import DataModelType, InputFileType
 from datamodel_code_generator.__main__ import Exit
+from datamodel_code_generator.format import Formatter
 from tests.conftest import assert_output
 from tests.main.conftest import (
     DATA_PATH,
@@ -55,6 +56,10 @@ def test_protobuf_option_generation(
         "field_constraints": True,
         "use_annotated": True,
     }
+    formatter_args = []
+    if schema == "comments" and backend == DataModelType.MsgspecStruct:
+        options.update(formatters=[Formatter.BUILTIN], builtin_format_line_length=88)
+        formatter_args = ["--formatters", "builtin"]
     match entry:
         case "cli":
             run_main_and_assert(
@@ -69,7 +74,11 @@ def test_protobuf_option_generation(
                     "--use-field-description",
                     "--field-constraints",
                     "--use-annotated",
+                    *formatter_args,
                 ],
+                copy_files=[(SOURCE_PATH / "builtin_formatter.toml", output_file.parent / "pyproject.toml")]
+                if formatter_args
+                else None,
                 assert_func=assert_file_content,
                 expected_file=expected,
             )
