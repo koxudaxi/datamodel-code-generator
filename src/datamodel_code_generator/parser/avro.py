@@ -93,7 +93,7 @@ def _is_valid_namespace(namespace: str) -> bool:
 def _temporal_default_expression(kind: str, iso_value: str) -> Any:
     """Build a temporal constructor with an import identity that can be aliased."""
     from datamodel_code_generator.imports import Import  # ruff: ignore[import-outside-top-level]
-    from datamodel_code_generator.python_literal import (
+    from datamodel_code_generator.python_literal import (  # ruff: ignore[import-outside-top-level]
         PythonRuntimeExpression,
     )
 
@@ -678,7 +678,7 @@ class AvroParser(JsonSchemaParser):
             )
         )
         if self._has_runtime_expressions:
-            from datamodel_code_generator.python_literal import (
+            from datamodel_code_generator.python_literal import (  # ruff: ignore[import-outside-top-level]
                 runtime_expression_imports,
             )
 
