@@ -455,8 +455,9 @@ readOnly/writeOnly resolution works with local and file reference types:
 | Feature | Generation behavior |
 |---------|---------------------|
 | `components.schemas` | Default model generation scope |
-| `components.parameters` | Generated with `--openapi-scopes parameters` |
+| `components.parameters` | Resolved when referenced by selected operations; no standalone models for unreferenced entries |
 | `paths` operation schemas | Generated with `--openapi-scopes paths` |
+| Operation query parameters | Included with `--openapi-scopes paths parameters`; add `--include-path-parameters` for URL path parameters |
 | `readOnly` / `writeOnly` | Request/response variants with `--read-only-write-only-model-type` |
 | Discriminators and combined schemas | Converted into Python unions and inheritance-aware models where possible |
 | Local and file `$ref` | Resolved before model generation |
