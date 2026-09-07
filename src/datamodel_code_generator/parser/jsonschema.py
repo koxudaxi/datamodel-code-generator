@@ -7707,6 +7707,40 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             )
             self._add_conditional_validator(reference_path, source, names_by_property)
 
+    def _apply_final_class_field_aliases(
+        self, fields: list[DataModelFieldBase], class_name: str, original_class_name: str
+    ) -> None:
+        """Apply final allOf scopes after class allocation, retaining already resolved fallback aliases."""
+        if class_name == original_class_name or not (aliases := self.config.aliases):
+            return
+        prefix = f"{class_name}."
+        if not any(key.startswith(prefix) for key in aliases):
+            return
+        scoped_aliases = {
+            field.original_name
+            for field in fields
+            if field.original_name is not None
+            and (isinstance(alias_value := aliases.get(f"{class_name}.{field.original_name}"), str) or alias_value)
+        }
+        if not scoped_aliases:
+            return
+        reserved_names = {field.name for field in fields if field.original_name not in scoped_aliases and field.name}
+        resolved_aliases: dict[str, tuple[str, str | None, list[str] | None]] = {}
+        for field in fields:
+            if (original_name := field.original_name) is None or original_name not in scoped_aliases:
+                continue
+            if original_name not in resolved_aliases:
+                field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
+                    original_name,
+                    excludes=reserved_names,
+                    model_type=self.field_name_model_type,
+                    class_name=class_name,
+                )
+                resolved_aliases[original_name] = field_name, *self._split_field_alias(alias)
+                reserved_names.add(field_name)
+            field.name, field.alias, field.validation_aliases = resolved_aliases[original_name]
+            field.__dict__["_alias_resolution_class_name"] = class_name
+
     def _parse_object_common_part(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         self,
         name: str,
@@ -7801,6 +7835,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 if self.model_resolver.default_value_overrides:
                     field.__dict__[_DEFERRED_INHERITED_CLASS_KEY] = name
                 self.generation_store.replace_field_type(field, self.data_type())
+        original_class_name = name
         name = self._apply_title_as_name(name, obj)  # pragma: no cover
         reference = self.model_resolver.add(path, name, class_name=True, loaded=True)
         extra_field = self._get_typed_additional_properties_field(reference.name, obj, path)
@@ -7836,6 +7871,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 field_name_to_field[required_name] = field
         for field in fields:
             self._finalize_required_inherited_field(field)
+        self._apply_final_class_field_aliases(fields, reference.name, original_class_name)
         if extra_field is not None:
             fields.insert(0, extra_field)
         self._set_schema_metadata(reference.path, obj)
