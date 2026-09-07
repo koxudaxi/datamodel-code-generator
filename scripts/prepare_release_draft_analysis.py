@@ -10,12 +10,13 @@ from pathlib import Path
 FILE_CHANGE_KEYS = frozenset({"path", "previous_path"})
 SAFE_EXACT_PATHS = frozenset({
     ".github/workflows/codeql.yaml",
+    ".github/workflows/codspeed.yaml",
     ".github/workflows/release-draft.yaml",
     "scripts/prepare_release_draft_analysis.py",
     "tox.ini",
 })
 SAFE_ROOTS = frozenset({"tests"})
-SAFE_REASONING = "Only release automation or tests changed, so generated output and public interfaces are unaffected."
+SAFE_REASONING = "Only CI, release automation, or tests changed; generated output and public interfaces are unaffected."
 CHANGELOG_SAFE_EXACT_PATHS = frozenset({
     ".coderabbit.yaml",
     ".github/dependabot.yaml",

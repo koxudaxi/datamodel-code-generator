@@ -16,6 +16,11 @@ DATA_PATH = Path(__file__).parent / "data" / "prepare_release_draft_analysis"
 REPOSITORY_ROOT = Path(__file__).parents[1]
 ROUTING_CASES = (
     ("blank_record", 1, "requires_claude"),
+    ("codspeed", 1, "safe"),
+    ("codspeed", 2, "requires_claude"),
+    ("codspeed_mixed_runtime", 2, "requires_claude"),
+    ("codspeed_rename_from_runtime", 1, "requires_claude"),
+    ("codspeed_rename_to_runtime", 1, "requires_claude"),
     ("empty", 0, "requires_claude"),
     ("empty", 1, "requires_claude"),
     ("empty_path", 1, "requires_claude"),
