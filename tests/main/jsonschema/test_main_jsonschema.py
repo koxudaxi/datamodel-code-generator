@@ -19662,3 +19662,92 @@ def test_msgspec_enum_diagnostics_preserve_other_backends(
         expected_attribute_path=("enabled",) if backend is DataModelType.TypingTypedDict else ("enabled", "value"),
         expected_attribute_value=False,
     )
+
+
+@pytest.mark.parametrize(
+    "integer_type", ["IntValue", "UnhashableInt", "CustomHashInt", "CustomEqualInt", "HashRaisesInt"]
+)
+@pytest.mark.parametrize(
+    "case",
+    json.loads((JSON_SCHEMA_DATA_PATH / "msgspec_enum_diagnostics/subclass_cases.json").read_text()),
+    ids=itemgetter("name"),
+)
+def test_msgspec_enum_diagnostics_integer_subclasses(
+    output_file: Path, capsys: pytest.CaptureFixture[str], integer_type: str, case: dict
+) -> None:
+    """Keep mapping integer aliases equivalent to canonical JSON and usable by msgspec."""
+    import msgspec
+
+    from tests.data.python import msgspec_enum_int_values
+
+    data = JSON_SCHEMA_DATA_PATH / "msgspec_enum_diagnostics"
+    schema_path = data / f"{case['name']}.json"
+    schema = json.loads(schema_path.read_text())
+    values = schema["properties"]["value"]["enum"]
+    for index in case["indices"]:
+        values[index] = getattr(msgspec_enum_int_values, integer_type)(values[index])
+    options = {
+        "input_file_type": InputFileType.JsonSchema,
+        "output_model_type": DataModelType.MsgspecStruct,
+        "target_python_version": PythonVersion.PY_310,
+        "custom_file_header": "# Integer subclass control",
+        "formatters": [Formatter.BLACK, Formatter.ISORT]
+        if _uses_external_test_default_formatter()
+        else [Formatter.BUILTIN],
+    }
+    cli = [
+        "--output-model-type",
+        "msgspec.Struct",
+        "--target-python-version",
+        "3.10",
+        "--custom-file-header",
+        "# Integer subclass control",
+    ]
+    if case["error"]:
+        message = "msgspec.Struct does not support float Enum members in 'Value'."
+        with pytest.raises(Error, match="does not support float Enum") as error:
+            generate(schema, output=output_file, **options)
+        assert_output(f"{error.value}\n", data / "subclass_error.txt")
+        run_main_and_assert(
+            input_path=schema_path,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            extra_args=cli,
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr=f"{message}\n",
+            output_should_not_exist=True,
+        )
+        return
+    expected = f"msgspec_enum_diagnostics/{case['name']}.py"
+    generate(schema, output=output_file, **options)
+    assert_file_content(output_file, expected)
+    with _generated_model(output_file, "generated_integer_subclass", "Payload") as model:
+        assert msgspec.to_builtins(msgspec.convert(case["payload"], type=model)) == case["payload"]
+        assert msgspec.to_builtins(msgspec.json.decode(json.dumps(case["payload"]), type=model)) == case["payload"]
+    run_main_and_assert(
+        input_path=schema_path,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=cli,
+        assert_func=assert_file_content,
+        expected_file=expected,
+        force_exec_validation=True,
+    )
+
+
+def test_msgspec_enum_diagnostics_preserve_integer_comparison_error(output_file: Path) -> None:
+    """Retain the original first-equal lookup exception for custom API comparisons."""
+    from tests.data.python.msgspec_enum_int_values import EqualityRaisesInt
+
+    data = JSON_SCHEMA_DATA_PATH / "msgspec_enum_diagnostics"
+    schema = json.loads((data / "subclass_float.json").read_text())
+    schema["properties"]["value"]["enum"][0] = EqualityRaisesInt(1)
+    with pytest.raises(TypeError, match="integer comparison was called"):
+        generate(
+            schema,
+            output=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            output_model_type=DataModelType.MsgspecStruct,
+        )
+    assert_output(f"{output_file.exists()}\n", EXPECTED_JSON_SCHEMA_PATH / "msgspec_enum_diagnostics/absent.txt")

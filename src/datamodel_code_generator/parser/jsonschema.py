@@ -9923,16 +9923,29 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     @staticmethod
     def _get_unsupported_msgspec_enum_member(enum_values: list[Any]) -> str | None:
-        """Find bool/float members that do not alias an earlier integer in linear time."""
+        """Find unsupported bool/float members, using a linear ordinary-integer fast path."""
         seen_ints: set[int] | None = None
         for index, value in enumerate(enum_values):
             if isinstance(value, (bool, float)):
                 if seen_ints is None:
-                    seen_ints = {previous for i in range(index) if type(previous := enum_values[i]) is int}
+                    seen_ints = {previous for i in range(index) if isinstance(previous := enum_values[i], int)}
                 if value not in seen_ints:
                     return type(value).__name__
-            elif seen_ints is not None and type(value) is int:
-                seen_ints.add(value)
+            elif isinstance(value, int):
+                if type(value) is not int and (
+                    type(value).__eq__ is not int.__eq__ or type(value).__hash__ is not int.__hash__
+                ):
+                    # Preserve first-equal aliases for public API values with custom equality or hashing.
+                    return next(
+                        (
+                            type(member).__name__
+                            for position, member in enumerate(enum_values)
+                            if isinstance(member, (bool, float)) and enum_values.index(member) == position
+                        ),
+                        None,
+                    )
+                if seen_ints is not None:
+                    seen_ints.add(value)
         return None
 
     def _get_enum_model_class(self, type_: Types | None, enum_values: list[Any]) -> tuple[type[Enum], Types | None]:
