@@ -31,6 +31,9 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
+LEGACY_API_OUTPUTS = {("plain_1_1_0.py", True): "plain_1_1_0_black23.py"}
+
+
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
 @pytest.mark.parametrize("case", json.loads((DATA_PATH / "python/root_alias_constraints/cases.json").read_text()))
 @pytest.mark.parametrize(("field_constraints", "use_annotated"), [(False, False), (True, False), (True, True)])
@@ -70,12 +73,10 @@ def test_root_alias_constraints(
                     **options,
                 }),
             )
-        if (
-            filename == "plain_1_1_0.py"
-            and int(black.__version__.split(".")[0]) < 24
-            and not _uses_builtin_test_default_formatter()
-        ):
-            filename = "plain_1_1_0_black23.py"
+        filename = LEGACY_API_OUTPUTS.get(
+            (filename, int(black.__version__.split(".")[0]) < 24 and not _uses_builtin_test_default_formatter()),
+            filename,
+        )
         assert_output(output_file.read_text(encoding="utf-8"), expected / filename)
     if case == "lookaround":
         try:
@@ -180,7 +181,7 @@ def test_root_alias_custom_template_constraints(
         capture_output=True,
         text=True,
     )
-    assert_output(result.stdout, expected / "integer_runtime.txt")
+    assert_output(result.stdout, expected / f"{case}_runtime.txt")
 
 
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
