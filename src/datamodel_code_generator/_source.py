@@ -26,6 +26,13 @@ YamlValue = TypeAliasType(
 )
 
 _IGNORED_TEXT_PREFIX_CHARS: frozenset[str] = frozenset({"\ufeff", " ", "\t", "\r", "\n"})
+_PROTOBUF_TRIVIA = r"(?:\s|//[^\r\n]*(?=[\r\n]|$)|/\*[^*]*(?:\*(?!/)[^*]*)*\*/)*"
+_PROTOBUF_DECLARATION_PATTERN = (
+    rf"{_PROTOBUF_TRIVIA}(?:syntax{_PROTOBUF_TRIVIA}={_PROTOBUF_TRIVIA}"
+    rf"(?P<syntax_quote>['\"])proto[23](?P=syntax_quote)|"
+    rf"edition{_PROTOBUF_TRIVIA}={_PROTOBUF_TRIVIA}"
+    rf"(?P<edition_quote>['\"])2023(?P=edition_quote)){_PROTOBUF_TRIVIA};(?![ \t]*[:,])"
+)
 _PARSER_SOURCE_DATA_CACHE_MAX_SIZE = 128
 _ParserSourceDataCacheKey: TypeAlias = tuple[Path, str, str, str]
 _ParserSourceDataSeenKey: TypeAlias = tuple[Path, str]
@@ -130,6 +137,15 @@ def _is_json_text(text: str) -> bool:
 def _is_xml_text(text: str) -> bool:
     """Return whether text starts like XML after whitespace and BOM."""
     return _first_significant_text_char(text) == "<"
+
+
+def _has_protobuf_declaration(text: str) -> bool:
+    """Recognize an explicit Protobuf declaration before attempting YAML decoding."""
+    if _first_significant_text_char(text) not in {"s", "e", "/"}:
+        return False
+    import re  # noqa: PLC0415
+
+    return re.match(_PROTOBUF_DECLARATION_PATTERN, text) is not None
 
 
 def _is_protobuf_text(text: str) -> bool:

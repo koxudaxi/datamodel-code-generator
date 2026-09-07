@@ -37,6 +37,7 @@ from datamodel_code_generator._source import (
     _clear_parser_source_data_cache as _clear_parser_source_data_cache,
 )
 from datamodel_code_generator._source import (
+    _has_protobuf_declaration,
     _is_json_text,
     _is_protobuf_text,
     _is_xml_text,
@@ -2463,6 +2464,9 @@ def infer_input_type(text: str) -> InputFileType:  # noqa: PLR0911, PLR0912
 
         if is_xml_schema_text(text):
             return InputFileType.XMLSchema
+
+    if _has_protobuf_declaration(text):
+        return InputFileType.Protobuf
 
     try:
         data = load_yaml(text)
