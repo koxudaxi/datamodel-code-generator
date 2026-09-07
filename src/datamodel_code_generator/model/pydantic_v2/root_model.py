@@ -19,6 +19,8 @@ from datamodel_code_generator.model.pydantic_v2.base_model import (
 from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_CONFIG_DICT
 from datamodel_code_generator.python_literal import represent_untrusted_python_value
 
+_SEQUENCE_ROOT_WRAPPED_KEY = "_sequence_root_wrapped"
+
 IMPORT_ABC_ITERATOR = Import.from_full_path("collections.abc.Iterator")
 IMPORT_ABC_SEQUENCE = Import.from_full_path("collections.abc.Sequence")
 IMPORT_OVERLOAD = Import.from_full_path("typing.overload")
@@ -243,8 +245,46 @@ class RootModel(BaseModel):
             self._set_internal_template_data(key, value)
         self.clear_imports_cache()
 
+    def _sync_sequence_interface(self) -> None:
+        """Refresh helper annotations and discard helpers after a non-sequence conversion."""
+        field_type = self.fields[0].data_type
+        root_type = field_type.data_types[0] if self.__dict__[_SEQUENCE_ROOT_WRAPPED_KEY] else field_type
+        if root_type.is_set:
+            imports = [IMPORT_ABC_ITERATOR, IMPORT_ABC_SEQUENCE, IMPORT_OVERLOAD, IMPORT_SUPPORTS_INDEX]
+            if self._internal_template_data[_SEQUENCE_ITEM_TYPE_TEMPLATE_DATA_KEY] == "Any":
+                imports.append(IMPORT_ANY)
+            for import_ in imports:
+                self._additional_imports.remove(import_)
+            for key in (
+                _SEQUENCE_BASE_CLASS_TEMPLATE_DATA_KEY,
+                _SEQUENCE_ITEM_TYPE_TEMPLATE_DATA_KEY,
+                _SEQUENCE_SLICE_TYPE_TEMPLATE_DATA_KEY,
+            ):
+                self._pop_internal_template_data(key)
+            self.__dict__.pop(_SEQUENCE_ROOT_WRAPPED_KEY)
+            self.invalidate_render_caches()
+            return
+        # The eligible root is non-optional, so its outer container encloses the
+        # exact item hint, including final reference aliases and union syntax.
+        slice_type = root_type.type_hint
+        _, bracket, item_hint = slice_type.partition("[")
+        item_type = item_hint[:-1] if bracket else "Any"
+        slice_type = slice_type if bracket else f"{slice_type}[{item_type}]"
+        self._set_internal_template_data(_SEQUENCE_BASE_CLASS_TEMPLATE_DATA_KEY, f"Sequence[{item_type}]")
+        self._set_internal_template_data(_SEQUENCE_ITEM_TYPE_TEMPLATE_DATA_KEY, item_type)
+        self._set_internal_template_data(_SEQUENCE_SLICE_TYPE_TEMPLATE_DATA_KEY, slice_type)
+
+    @property
+    def imports(self) -> tuple[Import, ...]:
+        """Resolve final helper availability before module imports are collected."""
+        if _SEQUENCE_ROOT_WRAPPED_KEY in self.__dict__:
+            self._sync_sequence_interface()
+        return super().imports
+
     def render(self, *, class_name: str | None = None) -> str:
         """Render the RootModel and validate custom sequence templates when needed."""
+        if _SEQUENCE_ROOT_WRAPPED_KEY in self.__dict__:
+            self._sync_sequence_interface()
         use_custom_template = self._uses_custom_root_template
         fields = self._template_fields(use_custom_template=use_custom_template)
         if fields:

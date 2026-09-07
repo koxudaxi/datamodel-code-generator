@@ -1,0 +1,6 @@
+{
+  "title": "Values",
+  "type": "array",
+  "uniqueItems": true,
+  "items": {}
+}

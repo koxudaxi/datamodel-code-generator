@@ -8448,6 +8448,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if "[" not in slice_type:
             slice_type = f"{slice_type}[{item_type}]"
         add_sequence_interface(item_type, slice_type)
+        from datamodel_code_generator.model.pydantic_v2.root_model import _SEQUENCE_ROOT_WRAPPED_KEY  # noqa: PLC0415
+
+        data_model_root.__dict__[_SEQUENCE_ROOT_WRAPPED_KEY] = root_field.data_type is not root_type
 
     def _get_root_model_sequence_type(self, data_type: DataType) -> DataType | None:  # noqa: PLR6301
         """Return a sequence data type for RootModel helpers.

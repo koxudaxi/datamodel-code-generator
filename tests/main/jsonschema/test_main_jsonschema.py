@@ -124,6 +124,8 @@ from tests.main.conftest import (
 from tests.main.jsonschema.conftest import EXPECTED_JSON_SCHEMA_PATH, assert_file_content
 
 if TYPE_CHECKING:
+    from typing import Any
+
     from datamodel_code_generator.parser.base import Result
 
 FixtureRequest = pytest.FixtureRequest
@@ -22502,3 +22504,84 @@ def test_optional_nested_factory_decoding(output_file: Path, case: dict[str, Any
             value = instance.item
             values = [None if value is None else type(value).__name__]
             assert_output(json.dumps(values, indent=2) + "\n", NESTED_FACTORY_EXPECTED / case["expected_values"])
+
+
+@pytest.mark.parametrize("custom_template", [False, True], ids=["builtin-template", "custom-template"])
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize(
+    "case",
+    json.loads((JSON_SCHEMA_DATA_PATH / "root_sequence_final/cases.json").read_text()),
+    ids=operator.itemgetter("name"),
+)
+def test_main_root_sequence_final_types(
+    case: dict[str, Any], entrypoint: str, custom_template: bool, tmp_path: Path
+) -> None:
+    """Resolve helper references after imports and retain native set semantics."""
+    source = JSON_SCHEMA_DATA_PATH / "root_sequence_final" / case["schema"]
+    package = source.is_dir()
+    output = tmp_path / ("models" if package else "model.py")
+    expected = EXPECTED_JSON_SCHEMA_PATH / "root_sequence_final" / (case["name"] if package else f"{case['name']}.py")
+    options = case["options"]
+    if entrypoint == "cli":
+        arguments = ["--disable-timestamp", *(["--custom-template-dir", str(TEMPLATE_DIR)] if custom_template else [])]
+        for key, value in options.items():
+            if value:
+                arguments.append(f"--{key.replace('_', '-')}")
+            elif key == "use_standard_collections":
+                arguments.append("--no-use-standard-collections")
+        run_main_and_assert(
+            input_path=source,
+            output_path=output,
+            input_file_type="jsonschema",
+            extra_args=arguments,
+            assert_func=assert_file_content,
+            expected_file=expected if not package else None,
+            output_to_expected=tuple((path.name, path) for path in sorted(expected.glob("*.py"))) if package else None,
+            force_exec_validation=True,
+        )
+    else:
+        generate(
+            source,
+            input_file_type=InputFileType.JsonSchema,
+            output=output,
+            disable_timestamp=True,
+            formatters=[Formatter.BLACK, Formatter.ISORT]
+            if _uses_external_test_default_formatter()
+            else [Formatter.BUILTIN],
+            builtin_format_line_length=88,
+            custom_template_dir=TEMPLATE_DIR if custom_template else None,
+            **options,
+        )
+        if package:
+            assert_directory_content(output, expected)
+        else:
+            assert_file_content(output, expected)
+    context = (
+        _generated_package_module(output, "root") if package else _generated_model(output, "sequence_final", "Values")
+    )
+    with context as loaded:
+        model = loaded.Items if package else loaded
+        if package:
+            instance = model.model_validate_json('[{"value":2},{"value":1}]')
+            values = [item.value for item in instance.root]
+        elif case["schema"] == "nested.json":
+            instance = model.model_validate_json("[]")
+            values = []
+        else:
+            instance = model.model_validate_json("[2,1,2]")
+            values = sorted(instance.root) if isinstance(instance.root, set) else instance.root
+        runtime = {
+            "root_type": type(instance.root).__name__,
+            "sequence": isinstance(instance, Sequence),
+            "values": values,
+        }
+        if isinstance(instance, Sequence):
+            runtime["length"] = len(instance)
+            runtime["slice_type"] = type(instance[:1]).__name__
+            runtime["iteration_matches_root"] = list(instance) == list(instance.root)
+            runtime["first_matches_root"] = not instance.root or instance[0] == instance.root[0]
+            runtime["count"] = instance.count(instance[0]) if instance.root else 0
+        assert_output(json.dumps(runtime, indent=2) + "\n", expected.parent / f"{case['name']}.runtime.txt")
+        if case["schema"] == "integers.json":
+            with pytest.raises(ValidationError, match="int_parsing"):
+                model.model_validate_json('["invalid"]')

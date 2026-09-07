@@ -1,0 +1,15 @@
+{
+  "title": "Values",
+  "type": "array",
+  "uniqueItems": true,
+  "items": {
+    "anyOf": [
+      {
+        "type": "integer"
+      },
+      {
+        "type": "string"
+      }
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "title": "Values",
+  "type": "array",
+  "uniqueItems": true,
+  "items": {
+    "type": "array",
+    "items": {
+      "type": "integer"
+    }
+  }
+}
