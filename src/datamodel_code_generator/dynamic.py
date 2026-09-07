@@ -67,7 +67,7 @@ def _execute_single_module(
         namespace["__package__"] = module_name.rpartition(".")[0]
     exec(code, namespace)  # noqa: S102
 
-    models = _extract_models(namespace, include_private=include_private_models)
+    models = _extract_models(namespace, code=code, include_private=include_private_models)
 
     for obj in models.values():
         if issubclass(obj, BaseModel) and hasattr(obj, "__pydantic_generic_metadata__"):
@@ -182,9 +182,9 @@ def _execute_multi_module(
 
         models: dict[str, type] = {}
         combined_namespace: dict[str, Any] = {}
-        for ns in all_namespaces.values():
+        for path_tuple, ns in zip(sorted_paths, all_namespaces.values(), strict=True):
             combined_namespace.update(ns)
-            models.update(_extract_models(ns, include_private=include_private_models))
+            models.update(_extract_models(ns, code=modules[path_tuple], include_private=include_private_models))
 
         for obj in models.values():
             if issubclass(obj, BaseModel) and hasattr(obj, "__pydantic_generic_metadata__"):
@@ -206,7 +206,7 @@ def _should_extract_model_name(name: str, *, include_private: bool = False) -> b
     return not name.startswith("_")
 
 
-def _extract_models(namespace: dict[str, Any], *, include_private: bool = False) -> dict[str, type]:
+def _extract_models(namespace: dict[str, Any], *, code: str = "", include_private: bool = False) -> dict[str, type]:
     """Extract model and enum classes from namespace."""
     match namespace.get("__name__"):
         case str() as module_name:
@@ -214,14 +214,34 @@ def _extract_models(namespace: dict[str, Any], *, include_private: bool = False)
         case _:
             module_name = "builtins"
 
-    return {
-        k: v
-        for k, v in namespace.items()
-        if isinstance(v, type)
-        and v.__module__ == module_name
-        and _should_extract_model_name(k, include_private=include_private)
-        and ((issubclass(v, BaseModel) and v is not BaseModel) or (issubclass(v, Enum) and v is not Enum))
-    }
+    models: dict[str, type] = {}
+    assigned_names: set[str] | None = None
+    for name, obj in namespace.items():
+        if not isinstance(obj, type):
+            continue
+        if obj.__module__ != module_name:
+            if not (
+                issubclass(obj, BaseModel)
+                and obj.__pydantic_root_model__
+                and obj.__pydantic_generic_metadata__["origin"] is not None
+            ):
+                continue
+            # Specialized RootModel classes belong to Pydantic; admit only generated assignments, not imports.
+            if assigned_names is None:
+                assigned_names = {
+                    target.id
+                    for statement in ast.parse(code).body
+                    if isinstance(statement, ast.Assign)
+                    for target in statement.targets
+                    if isinstance(target, ast.Name)
+                }
+            if name not in assigned_names:
+                continue
+        if _should_extract_model_name(name, include_private=include_private) and (
+            (issubclass(obj, BaseModel) and obj is not BaseModel) or (issubclass(obj, Enum) and obj is not Enum)
+        ):
+            models[name] = obj
+    return models
 
 
 def _make_cache_key(schema: Mapping[str, Any], config: GenerateConfig, module_name: str | None = None) -> str | None:

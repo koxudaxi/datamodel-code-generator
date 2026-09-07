@@ -28,6 +28,7 @@ from datamodel_code_generator import (
 )
 from datamodel_code_generator.config import GenerateConfig
 from datamodel_code_generator.enums import ModuleSplitMode
+from datamodel_code_generator.format import Formatter
 from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.types import StrictTypes
 from tests.conftest import (
@@ -36,7 +37,12 @@ from tests.conftest import (
     assert_inputs_not_mutated,
     assert_output,
 )
-from tests.main.conftest import JSON_SCHEMA_DATA_PATH, OPEN_API_DATA_PATH
+from tests.main.conftest import (
+    JSON_SCHEMA_DATA_PATH,
+    OPEN_API_DATA_PATH,
+    assert_generated_model_json_validation,
+    run_main_with_args,
+)
 
 if TYPE_CHECKING:
     from typing import Any
@@ -186,6 +192,196 @@ def test_imported_model_classes_are_not_returned() -> None:
         f"{json.dumps(actual, indent=2, sort_keys=True)}\n",
         EXPECTED_PATH / "imported_model_classes.txt",
     )
+
+
+@pytest.mark.parametrize("cache_size", [0, 128])
+@pytest.mark.parametrize("module_name", [None, "dynamic_root_aliases"])
+@pytest.mark.parametrize("module_split_mode", [None, ModuleSplitMode.Single])
+@pytest.mark.parametrize("use_aliases", [False, True], ids=["classes", "aliases"])
+def test_generated_root_model_aliases(
+    cache_size: int, module_name: str | None, module_split_mode: ModuleSplitMode | None, use_aliases: bool
+) -> None:
+    """Return declared RootModel aliases in order without publishing imported dependencies."""
+    from tests.data.dynamic_models.root_model_alias_imports import ImportedIntegerRoot
+
+    schema = json.loads((DATA_PATH / "root_model_aliases.json").read_text(encoding="utf-8"))
+    payloads = json.loads((DATA_PATH / "root_model_alias_payloads.json").read_text(encoding="utf-8"))
+    expected = EXPECTED_PATH / "root_model_aliases" / ("aliases" if use_aliases else "classes")
+    config = GenerateConfig(
+        input_file_type=InputFileType.JsonSchema,
+        use_root_model_type_alias=use_aliases,
+        module_split_mode=module_split_mode,
+        additional_imports=[
+            "pydantic.RootModel",
+            "datamodel_code_generator.enums.DataModelType",
+            "tests.data.dynamic_models.root_model_alias_imports.ImportedIntegerRoot",
+            "tests.data.dynamic_models.root_model_alias_imports.ImportedObject",
+        ],
+        disable_timestamp=True,
+        formatters=[Formatter.BUILTIN],
+    )
+    generated = generate(schema, config=config)
+    if module_split_mode is None:
+        assert_output(generated, expected / "code.py")
+    else:
+        assert_generated_modules_output(generated, expected / "modules")
+
+    original_module = ImportedIntegerRoot.__module__
+    with assert_inputs_not_mutated({"schema": schema, "config": config}):
+        models = generate_dynamic_models(schema, config=config, cache_size=cache_size, module_name=module_name)
+        repeated = generate_dynamic_models(schema, config=config, cache_size=cache_size, module_name=module_name)
+        targeted = generate_dynamic_models(
+            schema,
+            config=config,
+            cache_size=cache_size,
+            module_name=module_name,
+            target_model_names=["TwinNumber", "ZNumber"],
+        )
+    values = {
+        name: model.model_validate(payloads[name]).model_dump(mode="json")
+        if issubclass(model, pydantic.BaseModel)
+        else model(payloads[name]).value
+        for name, model in models.items()
+    }
+    with pytest.raises(pydantic.ValidationError):
+        models["ZNumber"].model_validate("not an integer")
+    with pytest.raises(Error) as error:
+        generate_dynamic_models(
+            schema,
+            config=config,
+            cache_size=cache_size,
+            module_name=module_name,
+            target_model_names=["ImportedIntegerRoot"],
+        )
+    actual = {
+        "values": values,
+        "cache_identity_matches": (models is repeated) == (cache_size > 0),
+        "target_order": list(targeted),
+        "shared_root_identity_matches": (models["ZNumber"] is ImportedIntegerRoot) == use_aliases,
+        "shared_root_module_unchanged": ImportedIntegerRoot.__module__ == original_module,
+        "regular_module_matches": models["PlainObject"].__module__
+        == (f"{module_name}.plain_object" if module_split_mode and module_name else module_name or "builtins")
+        if module_split_mode is None or module_name
+        else models["PlainObject"].__module__.startswith("_dcg_dynamic_"),
+        "imported_target_error": str(error.value),
+    }
+    assert_output(
+        f"{json.dumps(actual, indent=2)}\n",
+        expected / ("runtime_single.txt" if module_split_mode is None else "runtime_modules.txt"),
+    )
+
+
+@pytest.mark.parametrize("include_private", [False, True])
+def test_private_root_model_aliases(include_private: bool) -> None:
+    """Keep private alias naming consistent with ordinary dynamic models."""
+    schema = json.loads((DATA_PATH / "private_root_model_alias.json").read_text(encoding="utf-8"))
+    models = generate_dynamic_models(
+        schema,
+        config=GenerateConfig(
+            use_root_model_type_alias=True,
+            allow_leading_underscore_class_name=include_private,
+            class_name="__ParsedModel",
+            formatters=[Formatter.BUILTIN],
+            disable_timestamp=True,
+        ),
+        cache_size=0,
+    )
+    assert_output(
+        f"{json.dumps({name: model.model_validate(3).root for name, model in models.items()}, indent=2)}\n",
+        EXPECTED_PATH / "root_model_aliases" / ("private.txt" if include_private else "normalized_private.txt"),
+    )
+
+
+@pytest.mark.parametrize("include_private", [False, True])
+def test_root_model_alias_assignments_ignore_nested_and_attribute_targets(include_private: bool) -> None:
+    """Extract top-level aliases while preserving private and non-model exclusions."""
+    schema = json.loads((DATA_PATH / "private_root_model_alias.json").read_text(encoding="utf-8"))
+    config = GenerateConfig(
+        input_file_type=InputFileType.JsonSchema,
+        use_root_model_type_alias=True,
+        class_name="GeneratedRoot",
+        allow_leading_underscore_class_name=include_private,
+        disable_future_imports=True,
+        custom_file_header_path=DATA_PATH / "root_model_alias_header.py",
+        additional_imports=["tests.data.dynamic_models.root_model_alias_imports.ImportedIntegerRoot"],
+        formatters=[Formatter.BUILTIN],
+        disable_timestamp=True,
+    )
+    assert_output(generate(schema, config=config), EXPECTED_PATH / "root_model_aliases" / "header_code.py")
+    models = generate_dynamic_models(schema, config=config, cache_size=0)
+    actual = {
+        "models": list(models),
+        "header_root": models["HeaderRoot"].model_validate("header").root,
+        "generated_root": models["GeneratedRoot"].model_validate(3).root,
+    }
+    assert_output(
+        f"{json.dumps(actual, indent=2)}\n",
+        EXPECTED_PATH / "root_model_aliases" / ("header_private.txt" if include_private else "header_public.txt"),
+    )
+
+
+def test_ordinary_type_alias_extraction_is_unchanged() -> None:
+    """Plain typing aliases remain outside the dynamic model-class result."""
+    schema = json.loads((DATA_PATH / "root_model_aliases.json").read_text(encoding="utf-8"))
+    payloads = json.loads((DATA_PATH / "root_model_alias_payloads.json").read_text(encoding="utf-8"))
+    config = GenerateConfig(
+        input_file_type=InputFileType.JsonSchema,
+        use_type_alias=True,
+        formatters=[Formatter.BUILTIN],
+        disable_timestamp=True,
+    )
+    assert_output(generate(schema, config=config), EXPECTED_PATH / "root_model_aliases" / "type_alias_code.py")
+    models = generate_dynamic_models(schema, config=config, cache_size=0)
+    actual = {
+        "models": list(models),
+        "validated": models["AliasModels"].model_validate(payloads["AliasModels"]).model_dump(mode="json"),
+    }
+    assert_output(f"{json.dumps(actual, indent=2)}\n", EXPECTED_PATH / "root_model_aliases" / "type_alias.txt")
+
+
+@pytest.mark.parametrize("use_aliases", [False, True], ids=["classes", "aliases"])
+@pytest.mark.parametrize("split_modules", [False, True])
+def test_root_model_alias_cli_output_is_unchanged(tmp_path: Path, use_aliases: bool, split_modules: bool) -> None:
+    """CLI code matches baseline Python bytes and validates through the same RootModel fields."""
+    expected = EXPECTED_PATH / "root_model_aliases" / ("aliases" if use_aliases else "classes")
+    output = tmp_path / ("models" if split_modules else "models.py")
+    args = [
+        "--input",
+        str(DATA_PATH / "root_model_aliases.json"),
+        "--input-file-type",
+        "jsonschema",
+        "--output",
+        str(output),
+        "--disable-timestamp",
+        "--formatters",
+        "builtin",
+        "--additional-imports",
+        (
+            "pydantic.RootModel,datamodel_code_generator.enums.DataModelType,"
+            "tests.data.dynamic_models.root_model_alias_imports.ImportedIntegerRoot,"
+            "tests.data.dynamic_models.root_model_alias_imports.ImportedObject"
+        ),
+    ]
+    if use_aliases:
+        args.append("--use-root-model-type-alias")
+    if split_modules:
+        args.extend(["--module-split-mode", "single"])
+    run_main_with_args(args)
+    if split_modules:
+        assert_directory_content(output, expected / "cli_modules")
+    else:
+        assert_output(output.read_text(encoding="utf-8"), expected / "cli_code.py")
+        payloads = json.loads((DATA_PATH / "root_model_alias_payloads.json").read_text(encoding="utf-8"))
+        assert_generated_model_json_validation(
+            output,
+            module_name="cli_root_model_aliases",
+            model_name="AliasModels",
+            valid_json=json.dumps(payloads["AliasModels"]),
+            invalid_json="{}",
+            expected_error_type="missing",
+            expected_attribute_path=("number", "root"),
+            expected_attribute_value=7,
+        )
 
 
 def test_circular_reference() -> None:
