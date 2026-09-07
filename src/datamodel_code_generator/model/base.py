@@ -2402,9 +2402,14 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         """Render the model to a string using the template."""
         use_custom_template = self._uses_custom_root_template
         extra_template_data = self._custom_template_data() if use_custom_template else self._builtin_template_data()
+        fields = self._template_fields(use_custom_template=use_custom_template)
+        if bindings := self.__dict__.get("_field_name_bindings"):
+            from datamodel_code_generator.model._field_name_bindings import bind_field_views  # noqa: PLC0415
+
+            fields = bind_field_views(fields, bindings)
         return self._render(
             class_name=class_name or self.class_name,
-            fields=self._template_fields(use_custom_template=use_custom_template),
+            fields=fields,
             decorators=self.decorators,
             base_class=self.base_class,
             methods=self.methods,

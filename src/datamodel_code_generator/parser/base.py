@@ -2446,6 +2446,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.custom_template_dir = config.custom_template_dir
         self.extra_template_data: defaultdict[str, Any] = config.extra_template_data or defaultdict(dict)
         self.validators = config.validators
+        self._has_field_name_binding_candidates = False
         self.generate_schema_validators: bool = config.generate_schema_validators
         self._set_typed_extra_annotation_mode(use_deferred_annotations=True)
 
@@ -5980,6 +5981,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         can_retain_cache: bool,
     ) -> bool:
         """Prepare aliases, imports, and inherited enums before default processing."""
+        if not all_module_fields.isdisjoint(("list", "Optional", "Field")):
+            self._has_field_name_binding_candidates = True
         if "Decimal" in all_module_fields:
             self._constrained_decimal_alias_model_ids.update(map(id, models))
         self.__alias_shadowed_imports(models, all_module_fields, can_retain_cache=can_retain_cache)
@@ -6163,6 +6166,12 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
         for ctx in contexts:
             self.data_model_type.resolve_module_import_conflicts(ctx.models, model_imports, ctx.imports)
+
+        if self._has_field_name_binding_candidates:
+            from datamodel_code_generator.model._field_name_bindings import bind_module_field_names  # noqa: PLC0415
+
+            for ctx in contexts:
+                bind_module_field_names(ctx.models, ctx.imports)
 
         renamed_models = False
         for ctx in contexts:
