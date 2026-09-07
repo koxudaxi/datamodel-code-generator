@@ -1880,13 +1880,14 @@ def _negative_boolean_options() -> dict[str, str]:
     """Index parser-defined negative flags only when command generation needs them."""
     from argparse import BooleanOptionalAction  # noqa: PLC0415
 
-    return {
-        action.dest: option
-        for action in arg_parser._actions  # noqa: SLF001
-        if isinstance(action, BooleanOptionalAction)
-        for option in action.option_strings
-        if option.startswith("--no-")
-    }
+    negative_options: dict[str, str] = {}
+    for action in arg_parser._actions:  # noqa: SLF001
+        if not isinstance(action, BooleanOptionalAction):
+            continue
+        for option in action.option_strings:
+            if option.startswith("--no-"):
+                negative_options[action.dest] = option
+    return negative_options
 
 
 def generate_cli_command(config: dict[str, TomlValue]) -> str:
