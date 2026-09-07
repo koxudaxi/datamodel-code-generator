@@ -32,7 +32,7 @@ def test_recipe_discovers_split_nodeids(tmp_path: Path) -> None:
     recipe_path = tmp_path / "recipe.json"
     _run_script("--write-recipe", str(recipe_path))
 
-    recipe = json.loads(recipe_path.read_text())
+    recipe = json.loads(recipe_path.read_text(encoding="utf-8"))
     nodeids = {item["nodeid"] for item in recipe["items"]}
     payload_nodeids = {nodeid for nodeid in nodeids if nodeid.startswith(f"{PAYLOAD_VALIDATION_FILE}::")}
 
@@ -63,7 +63,7 @@ def test_recipe_round_trip_selects_disjoint_shards(tmp_path: Path, shard_total: 
     recipe_path = tmp_path / "recipe.json"
     _run_script("--write-recipe", str(recipe_path))
 
-    recipe = json.loads(recipe_path.read_text())
+    recipe = json.loads(recipe_path.read_text(encoding="utf-8"))
     expected_nodeids = {item["nodeid"] for item in recipe["items"]}
     selected_nodeids: list[str] = []
 
@@ -84,13 +84,15 @@ def test_recipe_round_trip_selects_disjoint_shards(tmp_path: Path, shard_total: 
     )
 
 
-@pytest.mark.parametrize("case", json.loads((Path(__file__).parent / "data/ci_shards/cases.json").read_text()))
+@pytest.mark.parametrize(
+    "case", json.loads((Path(__file__).parent / "data/ci_shards/cases.json").read_text(encoding="utf-8"))
+)
 def test_recipe_cli_validates_external_cases(case: str, tmp_path: Path) -> None:
     """Validate real recipes through the same entry point as CI."""
     from contextlib import redirect_stdout
     from io import StringIO
 
-    data = json.loads((Path(__file__).parent / "data/ci_shards/cases.json").read_text())[case]
+    data = json.loads((Path(__file__).parent / "data/ci_shards/cases.json").read_text(encoding="utf-8"))[case]
     recipe = tmp_path / "recipe.json"
     recipe.write_text(json.dumps({"version": data.get("version", 1), "items": data["items"]}), encoding="utf-8")
     output = StringIO()
