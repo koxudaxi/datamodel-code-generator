@@ -45,7 +45,6 @@ class PatternPropertiesRule:
     rejected_patterns: tuple[str, ...] = ()
     additional_property_type: DataType | None = None
     allow_unmatched: bool = True
-    requires_independent_validation: Literal["declared", "models"] | None = None
 
     @property
     def data_types(self) -> tuple[DataType, ...]:
@@ -54,6 +53,14 @@ class PatternPropertiesRule:
         if self.additional_property_type is None:
             return data_types
         return (*data_types, self.additional_property_type)
+
+
+class IndependentDeclaredPatternPropertiesRule(PatternPropertiesRule):
+    """Pattern validation must preserve the input for a declared field."""
+
+
+class IndependentModelPatternPropertiesRule(PatternPropertiesRule):
+    """Distinct pattern models must validate the same original input."""
 
 
 @dataclass(frozen=True)

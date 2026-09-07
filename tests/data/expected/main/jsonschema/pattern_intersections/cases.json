@@ -741,5 +741,9 @@
     ],
     "base_class": "tests.data.python.pattern_intersection_base.AttributeBase",
     "normal": true
+  },
+  "single_custom": {
+    "source": "single",
+    "custom_template": "pattern_intersection_context"
   }
 }

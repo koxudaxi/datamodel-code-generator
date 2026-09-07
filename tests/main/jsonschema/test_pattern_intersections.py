@@ -30,7 +30,13 @@ def test_pattern_property_intersections(
     tmp_path: Path, case: str, enabled: bool, entrypoint: str, formatter: str
 ) -> None:
     """Validate raw values independently while preserving ordinary generated code."""
-    source = JSON_SCHEMA_DATA_PATH / "pattern_intersections" / f"{case}.json"
+    source_case = CASES[case].get("source", case)
+    source = JSON_SCHEMA_DATA_PATH / "pattern_intersections" / f"{source_case}.json"
+    custom_template_dir = (
+        JSON_SCHEMA_DATA_PATH.parent / "templates" / template
+        if (template := CASES[case].get("custom_template"))
+        else None
+    )
     output = tmp_path / "output.py"
     formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
     if entrypoint == "cli":
@@ -47,6 +53,7 @@ def test_pattern_property_intersections(
             "--formatters",
             *formatters,
             *(["--generate-schema-validators"] if enabled else []),
+            *(["--custom-template-dir", str(custom_template_dir)] if custom_template_dir else []),
             *(["--base-class", CASES[case]["base_class"]] if "base_class" in CASES[case] else []),
         ])
     else:
@@ -58,6 +65,7 @@ def test_pattern_property_intersections(
                 output=output,
                 disable_timestamp=True,
                 generate_schema_validators=enabled,
+                custom_template_dir=custom_template_dir,
                 base_class=CASES[case].get("base_class", ""),
                 formatters=[Formatter(value) for value in formatters],
             ),
@@ -65,7 +73,16 @@ def test_pattern_property_intersections(
     suffix = case if enabled else f"{case}_disabled"
     golden_suffix = (
         f"{suffix}_builtin"
-        if formatter == "builtin" and suffix in {"complex_disabled", "rejected", "custom_base", "custom_base_disabled"}
+        if formatter == "builtin"
+        and suffix
+        in {
+            "complex_disabled",
+            "rejected",
+            "custom_base",
+            "custom_base_disabled",
+            "single_custom",
+            "single_custom_disabled",
+        }
         else suffix
     )
     assert_output(output.read_text(), EXPECTED / f"{golden_suffix}.py")
@@ -74,7 +91,7 @@ def test_pattern_property_intersections(
     validator = Draft202012Validator(schema)
     records = []
     with _generated_model(output, "generated_pattern_intersection", "Root") as model:
-        for payload in CASES[case]["payloads"]:
+        for payload in CASES[source_case]["payloads"]:
             record = {"schema_valid": validator.is_valid(payload)}
             with assert_inputs_not_mutated(payload):
                 try:
@@ -84,7 +101,8 @@ def test_pattern_property_intersections(
                 else:
                     record["generated"] = value.model_dump(mode="json", by_alias=True)
             records.append(record)
-    assert_output(json.dumps(records, indent=2), EXPECTED / f"{suffix}_runtime.txt")
+    runtime_suffix = source_case if enabled else f"{source_case}_disabled"
+    assert_output(json.dumps(records, indent=2), EXPECTED / f"{runtime_suffix}_runtime.txt")
 
 
 @pytest.mark.parametrize("formatter", ["external", "builtin"])

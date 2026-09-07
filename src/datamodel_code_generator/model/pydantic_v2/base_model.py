@@ -73,6 +73,8 @@ from datamodel_code_generator.model.pydantic_v2.version import (
     _get_dict_key_reference_classes_capability,
 )
 from datamodel_code_generator.model.runtime_validation import (
+    IndependentDeclaredPatternPropertiesRule,
+    IndependentModelPatternPropertiesRule,
     SchemaRuntimeValidation,
     _is_internal_schema_runtime_validation,
     conditional_value_uses_json_equality,
@@ -1536,18 +1538,6 @@ class BaseModel(BaseModelBase):
         )
         context = {
             "schema_runtime_validation_base_class_name": base_class_name,
-            "has_pattern_property_intersections": any(
-                rule.requires_independent_validation == "declared"
-                or (
-                    rule.requires_independent_validation == "models"
-                    and len({
-                        data_type.reference.path for _, data_type in rule.pattern_properties if data_type.reference
-                    })
-                    > 1
-                )
-                for validation in runtime_validations
-                for rule in validation.pattern_properties
-            ),
             "has_pattern_properties": any(
                 runtime_validation.pattern_properties for runtime_validation in runtime_validations
             ),
@@ -1571,6 +1561,17 @@ class BaseModel(BaseModelBase):
                 for rule in runtime_validation.unique_items
             ),
         }
+        if any(
+            isinstance(rule, IndependentDeclaredPatternPropertiesRule)
+            or (
+                isinstance(rule, IndependentModelPatternPropertiesRule)
+                and len({data_type.reference.path for _, data_type in rule.pattern_properties if data_type.reference})
+                > 1
+            )
+            for validation in runtime_validations
+            for rule in validation.pattern_properties
+        ):
+            context["has_pattern_property_intersections"] = True
         if custom_template_dir is None and cls.__module__.startswith("datamodel_code_generator.model."):
             from datamodel_code_generator.model._compiled_templates import get_builtin_renderer  # noqa: PLC0415
 

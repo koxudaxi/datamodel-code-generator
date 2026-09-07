@@ -75,6 +75,8 @@ from datamodel_code_generator.model.runtime_validation import (
     UNIQUE_ITEMS_MAPPING_PATTERN_VALUES_PATH_STEP,
     UNIQUE_ITEMS_MAPPING_VALUES_PATH_STEP,
     ConditionalRequiredRule,
+    IndependentDeclaredPatternPropertiesRule,
+    IndependentModelPatternPropertiesRule,
     PatternPropertiesRule,
     PropertyCountRule,
     RequiredGroupsRule,
@@ -2877,13 +2879,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if copied_additional_type is not None:
                 self._update_data_type_ref_for_variant(copied_additional_type, suffix)
             pattern_properties.append(
-                PatternPropertiesRule(
+                type(rule)(
                     declared_properties=tuple(name for name in rule.declared_properties if name in available_names),
                     pattern_properties=tuple(copied_patterns),
                     rejected_patterns=rule.rejected_patterns,
                     additional_property_type=copied_additional_type,
                     allow_unmatched=rule.allow_unmatched,
-                    requires_independent_validation=rule.requires_independent_validation,
                 )
             )
 
@@ -7946,18 +7947,20 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         names_by_property = self._get_input_names_by_property(fields, base_classes)
         declared_names = tuple(sorted({name for names in names_by_property.values() for name in names}))
+        rule_type = PatternPropertiesRule
+        if obj is self._pattern_validation_document_root:
+            match self._pattern_validation_loses_raw_value(obj, pattern_value_types):
+                case "declared":
+                    rule_type = IndependentDeclaredPatternPropertiesRule
+                case "models":
+                    rule_type = IndependentModelPatternPropertiesRule
         self._schema_runtime_validation(reference_path).pattern_properties.append(
-            PatternPropertiesRule(
+            rule_type(
                 declared_properties=declared_names,
                 pattern_properties=tuple(pattern_value_types),
                 rejected_patterns=tuple(rejected_patterns),
                 additional_property_type=additional_property_type,
                 allow_unmatched=allow_unmatched,
-                requires_independent_validation=(
-                    self._pattern_validation_loses_raw_value(obj, pattern_value_types)
-                    if obj is self._pattern_validation_document_root
-                    else None
-                ),
             )
         )
         if obj is self._pattern_validation_document_root:
