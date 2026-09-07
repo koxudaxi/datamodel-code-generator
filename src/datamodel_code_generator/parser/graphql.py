@@ -124,6 +124,9 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
 
     def _resolve_types(self, paths: list[str], schema: graphql.GraphQLSchema) -> None:
         root_types = {schema.query_type, schema.mutation_type, schema.subscription_type}
+        for type_ in schema.type_map.values():
+            if isinstance(type_, graphql.GraphQLUnionType):
+                root_types.difference_update(type_.types)
         for type_name, type_ in schema.type_map.items():
             if type_name.startswith("__"):
                 continue
