@@ -757,7 +757,13 @@ class DataModelField(DataModelFieldBase):
                         f"lambda: {self._PARSE_METHOD}({represent_python_value(self.default)},  "
                         f"type=list[{data_type_child.alias or data_type_child.reference.source.class_name}])"
                     )
-            elif data_type.reference and isinstance(data_type.reference.source, Struct):
+            elif data_type.reference and (
+                isinstance(data_type.reference.source, Struct)
+                or (
+                    isinstance(data_type.reference.source, TypeAliasBase)
+                    and self._type_alias_needs_struct_conversion(data_type.reference.source)
+                )
+            ):
                 if self.data_type.is_union:
                     if not isinstance(self.default, (dict, list)):
                         continue
@@ -768,6 +774,38 @@ class DataModelField(DataModelFieldBase):
                     f"type={data_type.alias or data_type.reference.source.class_name})"
                 )
         return None
+
+    def _type_alias_needs_struct_conversion(self, source: TypeAliasBase) -> bool:
+        """Follow alias targets without changing direct defaults or empty factories."""
+        if (
+            not source.fields
+            or not isinstance(self.default, (dict, list))
+            or (isinstance(self.default, list) and not self.default)
+        ):
+            return False
+
+        pending = [source.fields[0].data_type]
+        visited = {id(source)}
+        has_struct = False
+        while pending:
+            data_type = pending.pop()
+            if data_type.is_dict:
+                # Mapping defaults remain outside the existing Struct conversion support.
+                return False
+            if data_type.reference:
+                referenced_model = data_type.reference.source
+                if isinstance(referenced_model, Struct):
+                    has_struct = True
+                elif (
+                    isinstance(referenced_model, TypeAliasBase)
+                    and referenced_model.fields
+                    and id(referenced_model) not in visited
+                ):
+                    visited.add(id(referenced_model))
+                    pending.append(referenced_model.fields[0].data_type)
+            else:
+                pending.extend(data_type.data_types)
+        return has_struct
 
     def _uses_empty_builtin_container_factory(self) -> bool:
         """Return whether an empty collection can use its zero-cost builtin factory."""
