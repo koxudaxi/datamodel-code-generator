@@ -28,7 +28,7 @@ YamlValue = TypeAliasType(
 _IGNORED_TEXT_PREFIX_CHARS: frozenset[str] = frozenset({"\ufeff", " ", "\t", "\r", "\n"})
 _PROTOBUF_TRIVIA = r"(?:\s|//[^\r\n]*(?=[\r\n]|$)|/\*[^*]*(?:\*(?!/)[^*]*)*\*/)*"
 _PROTOBUF_DECLARATION_PATTERN = (
-    rf"{_PROTOBUF_TRIVIA}(?:syntax{_PROTOBUF_TRIVIA}={_PROTOBUF_TRIVIA}"
+    rf"\ufeff?{_PROTOBUF_TRIVIA}(?:syntax{_PROTOBUF_TRIVIA}={_PROTOBUF_TRIVIA}"
     rf"(?P<syntax_quote>['\"])proto[23](?P=syntax_quote)|"
     rf"edition{_PROTOBUF_TRIVIA}={_PROTOBUF_TRIVIA}"
     rf"(?P<edition_quote>['\"])2023(?P=edition_quote)){_PROTOBUF_TRIVIA};"
