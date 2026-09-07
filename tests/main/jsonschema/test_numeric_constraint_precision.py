@@ -12,6 +12,7 @@ from datamodel_code_generator.enums import StrictTypes
 from datamodel_code_generator.model._constraints import Constraints
 from datamodel_code_generator.parser.jsonschema import JsonSchemaObject
 from tests.main.conftest import (
+    JSON_DATA_PATH,
     JSON_SCHEMA_DATA_PATH,
     assert_generated_model_json_validation,
     run_generate_and_assert,
@@ -80,7 +81,9 @@ def test_numeric_constraint_precision(
             force_exec_validation=True,
         )
 
-    payloads = json.loads(input_path.with_name(f"{fixture}_payloads.json").read_text(encoding="utf-8"))
+    payloads = json.loads(
+        (JSON_DATA_PATH / "numeric_constraint_precision" / f"{fixture}_payloads.json").read_text(encoding="utf-8")
+    )
     valid_payload = {name: payload["valid"] for name, payload in payloads.items()}
     for name, payload in payloads.items():
         assert_generated_model_json_validation(
