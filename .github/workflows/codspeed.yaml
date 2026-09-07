@@ -18,6 +18,9 @@ permissions:
 
 jobs:
   benchmarks:
+    permissions:
+      contents: read
+      id-token: write
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -35,6 +38,5 @@ jobs:
       - name: Run benchmarks
         uses: CodSpeedHQ/action@373d6868929f444bc08d901fd0eb0ad52a8875ea # v4
         with:
-          token: ${{ secrets.CODSPEED_TOKEN }}
           run: .venv/bin/pytest tests/main/test_performance.py --codspeed
           mode: "walltime"
