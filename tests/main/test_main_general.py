@@ -298,7 +298,7 @@ def test_parser_run_context_preserves_subclass_lifecycle_hooks(tmp_path: Path) -
     )
 
 
-def test_parser_retains_builtin_import_cache_and_invalidates_custom_cache() -> None:
+def test_parser_retains_builtin_import_cache_and_invalidates_custom_cache(output_file: Path) -> None:
     """Retain built-in caches while keeping the legacy custom-model invalidation contract."""
     from datamodel_code_generator.model import DataModel, get_data_model_types
     from datamodel_code_generator.model.pydantic_v2 import BaseModel
@@ -367,7 +367,7 @@ def test_parser_retains_builtin_import_cache_and_invalidates_custom_cache() -> N
         EXPECTED_MAIN_PATH / "builtin_import_cache_retention.txt",
     )
 
-    input_path = JSON_SCHEMA_DATA_PATH / "unique_items_unhashable_default.json"
+    input_path = JSON_SCHEMA_DATA_PATH / "unique_items_frozen_model_default.json"
     unhashable_default_parser = CacheProbeJsonSchemaParser(
         input_path,
         **{
@@ -375,11 +375,22 @@ def test_parser_retains_builtin_import_cache_and_invalidates_custom_cache() -> N
             "collapse_reuse_models": True,
             "reuse_model": True,
             "use_unique_items_as_set": True,
+            "enable_faux_immutability": True,
         },
     )
-    assert_output(
-        unhashable_default_parser.parse(),
-        EXPECTED_MAIN_PATH / "builtin_import_cache_unique_items_unhashable.py",
+    code = cast("str", unhashable_default_parser.parse())
+    assert_output(code, EXPECTED_MAIN_PATH / "builtin_import_cache_unique_items_frozen_default.py")
+    output_file.write_text(code, encoding="utf-8")
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="frozen_cache_defaults",
+        model_name="Model",
+        valid_json=(DATA_PATH / "payloads/unique_model_sets/cache_default_valid.json").read_text(),
+        invalid_json=(DATA_PATH / "payloads/unique_model_sets/cache_default_invalid.json").read_text(),
+        expected_error_type="int_parsing",
+        expected_repr=(EXPECTED_MAIN_PATH / "builtin_import_cache_unique_items_frozen_default_repr.txt")
+        .read_text()
+        .strip(),
     )
     assert_output(
         f"{unhashable_default_parser.module_processing_calls}\n",
@@ -387,7 +398,7 @@ def test_parser_retains_builtin_import_cache_and_invalidates_custom_cache() -> N
     )
     assert_output(
         "\n".join(unhashable_default_parser.cache_reuse_manifest) + "\n",
-        EXPECTED_MAIN_PATH / "builtin_import_cache_unique_items_unhashable.txt",
+        EXPECTED_MAIN_PATH / "builtin_import_cache_unique_items_frozen_default.txt",
     )
 
     input_path = DATA_PATH / "performance" / "large_models.json"
