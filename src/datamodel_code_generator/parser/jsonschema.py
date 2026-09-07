@@ -128,7 +128,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeIs
 
-    from datamodel_code_generator._python_type_annotation import PythonTypeExpr
+    from datamodel_code_generator._python_type_annotation import PythonTypeExpr, PythonTypeRuntimeSymbol
     from datamodel_code_generator._python_type_binding import BoundPythonType
     from datamodel_code_generator._types import JSONSchemaParserConfigDict
     from datamodel_code_generator.config import JSONSchemaParserConfig
@@ -3261,6 +3261,16 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             raise Error(msg)
         return _validate_schema_python_import_path(f"{module}.{type_name}", "x-python-import")
 
+    @staticmethod
+    def _get_x_python_runtime_symbol(x_python_import: dict[str, Any]) -> PythonTypeRuntimeSymbol | None:
+        """Retain the runtime module boundary for nested reused attributes."""
+        if (qualname := x_python_import.get("qualname")) is None:
+            return None
+        from datamodel_code_generator._python_type_annotation import PythonTypeRuntimeSymbol  # noqa: PLC0415
+
+        qualname = _validate_schema_python_import_path(qualname, "x-python-import qualname")
+        return PythonTypeRuntimeSymbol(x_python_import["module"], tuple(qualname.split(".")))
+
     def _get_x_python_import(self, full_path: str) -> Import:
         """Disambiguate imports of distinct runtime types sharing a class name."""
         if self._python_imports is None:
@@ -3323,6 +3333,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             )
         x_python_import, is_optional = facts
         if isinstance(x_python_import, dict) and (full_path := self._get_x_python_import_path(x_python_import)):
+            if runtime_symbol := self._get_x_python_runtime_symbol(x_python_import):
+                from datamodel_code_generator._python_type_annotation import render_python_type_expr  # noqa: PLC0415
+
+                bound_type = self._bind_python_type(runtime_symbol)
+                return self.data_type(type=render_python_type_expr(bound_type.expression), python_type=bound_type)
             import_ = self._get_x_python_import(full_path)
             self.imports.append(import_)
             return self.data_type(type=import_.import_, import_=import_, alias=import_.alias)
@@ -3570,13 +3585,13 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             raise Error(msg) from exc
         return _qualified_python_type_import(import_path)
 
-    def _resolve_type_import_from_defs(self, type_name: str) -> Import | None:
+    def _resolve_type_import_from_defs(self, type_name: str) -> Import | PythonTypeRuntimeSymbol | None:
         """Resolve import for a type name from $defs with x-python-import."""
         try:
             ref_schema = self._load_ref_schema_object(f"#/$defs/{type_name}")
             x_python_import = ref_schema.extras.get("x-python-import")
             if isinstance(x_python_import, dict) and (full_path := self._get_x_python_import_path(x_python_import)):
-                return self._get_x_python_import(full_path)
+                return self._get_x_python_runtime_symbol(x_python_import) or self._get_x_python_import(full_path)
         except Error:
             raise
         except Exception:  # noqa: BLE001, S110
@@ -3607,7 +3622,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         imports: dict[Import, None] = {}
         bound_imports: dict[tuple[str | None, str], Import] = {}
-        resolved_name_imports: dict[str, Import | None] = {}
+        resolved_name_imports: dict[str, Import | PythonTypeRuntimeSymbol | None] = {}
 
         def bind_import(import_: Import) -> tuple[Import, str]:
             key = python_type_import_key(import_)
@@ -3641,8 +3656,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                             resolved_name_imports[name] = (
                                 None if is_builtin else import_ or self._resolve_type_import_from_defs(name)
                             )
-                    if import_ := resolved_name_imports[name]:
-                        import_, bound_name = bind_import(import_)
+                    if isinstance(resolved := resolved_name_imports[name], PythonTypeRuntimeSymbol):
+                        return bind_leaf(resolved)
+                    if resolved:
+                        import_, bound_name = bind_import(resolved)
                         return PythonTypeBoundName(bound_name, import_.from_, import_.import_)
             return item
 

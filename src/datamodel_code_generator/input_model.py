@@ -1047,6 +1047,11 @@ def _filter_defs_by_strategy(
                     "name": nested_type.__name__,
                 },
             }
+            if "." in (qualname := nested_type.__qualname__) and (
+                (module := sys.modules.get(nested_type.__module__)) is None
+                or vars(module).get(nested_type.__name__) is not nested_type
+            ):
+                new_defs[def_name]["x-python-import"]["qualname"] = qualname
         else:
             new_defs[def_name] = def_schema
 
