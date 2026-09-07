@@ -19569,6 +19569,11 @@ def test_msgspec_enum_diagnostics_preserve_supported_representations(
     data = JSON_SCHEMA_DATA_PATH / "msgspec_enum_diagnostics"
     expected = f"msgspec_enum_diagnostics/{case['name']}.py"
     can_execute = sys.version_info[:2] >= tuple(map(int, case["python"].split(".")))
+    formatter_options = (
+        {"formatters": [Formatter.BUILTIN]}
+        if _uses_external_test_default_formatter() and not is_supported_in_black(PythonVersion(case["python"]))
+        else {}
+    )
     if entrypoint == "cli":
         run_main_and_assert(
             input_path=data / f"{case['schema']}.json",
@@ -19581,6 +19586,7 @@ def test_msgspec_enum_diagnostics_preserve_supported_representations(
                 case["python"],
                 "--disable-timestamp",
                 *case["cli"],
+                *(["--formatters", "builtin"] if formatter_options else []),
             ],
             assert_func=assert_file_content,
             expected_file=expected,
@@ -19598,6 +19604,7 @@ def test_msgspec_enum_diagnostics_preserve_supported_representations(
             expected_file=expected,
             unchanged_inputs={"options": case["options"]},
             **case["options"],
+            **formatter_options,
         )
     if not can_execute:
         return
