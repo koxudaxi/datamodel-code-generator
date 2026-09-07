@@ -20,6 +20,7 @@ from tests.main.conftest import (
     CURRENT_PYTHON_VERSION,
     LEGACY_BLACK_SKIP,
     _generated_model,
+    assert_generated_model_json_validation,
     get_current_version_args,
     run_generate_file_and_assert,
     run_main_and_assert,
@@ -241,6 +242,54 @@ def test_main_avro_namespace_collisions(output_file: Path) -> None:
         expected_file=_expected_file("namespace_collisions.py"),
         extra_args=get_current_version_args(),
         force_exec_validation=True,
+    )
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+def test_avro_namespace_reference_precedence(output_file: Path, entrypoint: str) -> None:
+    """Resolve local record, enum, fixed and recursive references before names in the null namespace."""
+    input_path = AVRO_DATA_PATH / "namespace_reference_precedence.avsc"
+    expected_file = "namespace_reference_precedence.py"
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type="avro",
+            assert_func=assert_file_content,
+            expected_file=expected_file,
+            extra_args=[
+                "--target-python-version",
+                "3.10",
+                "--disable-timestamp",
+                "--formatters",
+                "builtin",
+            ],
+            force_exec_validation=True,
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type=InputFileType.Avro,
+            assert_func=assert_file_content,
+            expected_file=expected_file,
+            output_model_type=DataModelType.PydanticV2BaseModel,
+            target_python_version=PythonVersion.PY_310,
+            disable_timestamp=True,
+            formatters=[Formatter.BUILTIN],
+        )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name=f"generated_namespace_references_{entrypoint}",
+        model_name="Container",
+        valid_json=(AVRO_DATA_PATH / "namespace_reference_precedence.valid.json").read_text(encoding="utf-8"),
+        invalid_json=(AVRO_DATA_PATH / "namespace_reference_precedence.invalid.json").read_text(encoding="utf-8"),
+        expected_error_type="missing",
+        expected_attribute_path=("chosen", "local_value"),
+        expected_attribute_value=3,
+        expected_repr=(AVRO_DATA_PATH.parent / "expected/main/avro/namespace_reference_precedence.txt")
+        .read_text(encoding="utf-8")
+        .strip(),
     )
 
 
