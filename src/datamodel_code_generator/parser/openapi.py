@@ -1089,7 +1089,8 @@ class OpenAPIParser(JsonSchemaParser):
                     if ref_in_allof.startswith("#")
                     else self.model_resolver.resolve_ref(ref_in_allof)
                 )
-                if resolved_ref in self._discriminator_schemas:
+                # External parents may be registered after this child document is read.
+                if resolved_ref in self._discriminator_schemas or resolved_ref.partition("#")[0] != document[:-1]:
                     subtype_ref = self.model_resolver.resolve_ref(f"#/components/schemas/{schema_name}")
                     self._discriminator_subtypes[resolved_ref].append(subtype_ref)
 

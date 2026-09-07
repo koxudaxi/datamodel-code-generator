@@ -10071,3 +10071,52 @@ def test_external_discriminator_multiple_inputs(
                 json.dumps(module.Wrapper.model_validate(payload).model_dump(exclude_none=True), sort_keys=True) + "\n",
                 DATA_PATH / "payloads" / "external_discriminator_outputs" / f"local_{tag}.txt",
             )
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("case", ["child_first", "parent_first"])
+def test_external_discriminator_parent_load_order(output_file: Path, entrypoint: str, case: str) -> None:
+    """Keep external child fields when their discriminator parent is loaded later."""
+    source = OPEN_API_DATA_PATH / "external_discriminator_base" / f"{case}.json"
+    expected = EXPECTED_OPENAPI_PATH / "external_discriminator_base" / f"{case}.py"
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=source,
+            output_path=output_file,
+            input_file_type="openapi",
+            expected_file=expected,
+            extra_args=["--disable-timestamp"],
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=source,
+            output_path=output_file,
+            input_file_type=InputFileType.OpenAPI,
+            assert_func=assert_file_content,
+            expected_file=expected,
+            disable_timestamp=True,
+        )
+    payloads = json.loads((DATA_PATH / "payloads/external_discriminator_pending.json").read_text())
+    for model_file in (DATA_PATH / "python/discriminator_pending/native.py", output_file):
+        for tag in ("cat", "dog"):
+            assert_generated_model_json_validation(
+                model_file,
+                module_name="discriminator_pending_validation",
+                model_name="Wrapper",
+                valid_json=json.dumps(payloads[tag]),
+                invalid_json=json.dumps(payloads["unknown"]),
+                expected_error_type="union_tag_invalid",
+            )
+            assert_generated_model_json_validation(
+                model_file,
+                module_name="discriminator_pending_required",
+                model_name="Wrapper",
+                valid_json=json.dumps(payloads[tag]),
+                invalid_json=json.dumps(payloads["missing"]),
+                expected_error_type="missing",
+            )
+            with _generated_model(model_file, "discriminator_pending_dump", "Wrapper") as model:
+                assert_output(
+                    json.dumps(model.model_validate(payloads[tag]).model_dump(), sort_keys=True) + "\n",
+                    DATA_PATH / "payloads/external_discriminator_outputs" / f"local_{tag}.txt",
+                )
