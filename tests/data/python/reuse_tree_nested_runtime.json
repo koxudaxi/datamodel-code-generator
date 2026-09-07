@@ -1,0 +1,4 @@
+{
+  "nested": {"inner": {"text": "ok", "number": 3, "wire-name": "on-wire", "next": {"text": "child", "wire-name": "child-wire"}}},
+  "empty": {}
+}

@@ -3609,6 +3609,14 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             if to_remove:
                 models[:] = [m for m in models if m not in to_remove]
 
+        if reference_models is not None:
+            # Relocation can introduce forward references after the initial sort.
+            later_shared_paths: set[str] = set()
+            for model in reversed(shared_models):
+                if self.generation_store.index.reference_classes_for_model(model) & later_shared_paths:
+                    add_model_path_to_list(require_update_action_models, model)
+                later_shared_paths.add(model.path)
+
         return (shared_module,), shared_models
 
     def __reuse_model_tree_scope(
