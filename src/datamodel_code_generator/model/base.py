@@ -1390,7 +1390,7 @@ def _apply_custom_template_adapter(
     template: Template, adapter: Callable[[Template], Template], custom_template_dir: Path | None
 ) -> Template:
     """Use the full-root fallback for adapters with unobserved dependencies."""
-    if not getattr(adapter, _ORIGINAL_TEMPLATE_LOADER_MARKER, False):
+    if custom_template_dir is not None and not getattr(adapter, _ORIGINAL_TEMPLATE_LOADER_MARKER, False):
         with _missing_custom_template_state.lock:
             if dependencies := _missing_custom_template_state.dependencies.get(custom_template_dir):
                 dependencies.require_full_scan()

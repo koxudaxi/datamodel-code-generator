@@ -19270,6 +19270,7 @@ def test_custom_template_dependencies_bound_and_refresh_overflow(tmp_path: Path,
         ),
         ("DefaultDirectoryModel", False),
         ("AbsoluteTemplateModel", False),
+        ("AbsoluteAdaptedTemplateModel", False),
     ],
 )
 def test_custom_template_dependencies_support_parser_extensions(
