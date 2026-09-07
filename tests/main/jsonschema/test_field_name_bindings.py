@@ -10,7 +10,9 @@ import pytest
 
 from datamodel_code_generator import DataModelType, InputFileType, PythonVersion
 from datamodel_code_generator.format import Formatter
+from tests.conftest import assert_output
 from tests.main.conftest import (
+    DATA_PATH,
     JSON_SCHEMA_DATA_PATH,
     _generated_model,
     _model_json_validator,
@@ -92,21 +94,23 @@ def test_field_name_bindings(
     properties = json.loads(schema_path.read_text())["properties"]
     with _generated_model(output_file, "field_name_binding_model", "Record") as model:
         hints = get_type_hints(model)
-        assert list(hints) == [aliases.get(name, name) for name in properties]
+        observations = {"fields": list(hints)}
         data = dict.fromkeys(properties, "list")
         if "items" in properties:
             data.update(items=[1, 2], count=3, child={"value": 4})
-            assert list[int] in get_args(hints["items"])
-            assert get_args(next(arg for arg in get_args(hints["choice"]) if get_args(arg))) == (
-                "list",
-                "Optional",
-                "Field",
-            )
+            observations["items_annotation"] = list[int] in get_args(hints["items"])
+            observations["choice_literals"] = get_args(next(arg for arg in get_args(hints["choice"]) if get_args(arg)))
         elif "count" in properties:
             data["count"] = 3
         if backend == DataModelType.MsgspecStruct:
             parsed = msgspec.convert(data, type=model)
-            assert msgspec.json.decode(json.dumps(data), type=model) == parsed
+            assert_output(
+                json.dumps(
+                    {"decode_matches_convert": msgspec.json.decode(json.dumps(data), type=model) == parsed}, indent=2
+                )
+                + "\n",
+                DATA_PATH / "payloads/field_name_bindings_runtime/decode.txt",
+            )
         else:
             payload = (
                 {aliases.get(name, name): value for name, value in data.items()}
@@ -114,21 +118,29 @@ def test_field_name_bindings(
                 else data
             )
             parsed = _model_json_validator(model)(json.dumps(payload))
-        for name in properties:
-            if name not in {"child", "items"}:
-                assert getattr(parsed, aliases.get(name, name)) == data[name]
+        observations["values"] = {
+            aliases.get(name, name): getattr(parsed, aliases.get(name, name))
+            for name in properties
+            if name not in {"child", "items"}
+        }
         if "items" in properties:
-            assert parsed.items == [1, 2]
-            assert parsed.child.value == 4
+            observations["items"] = parsed.items
+            observations["child_value"] = parsed.child.value
         if case == "forward":
-            assert "Field Optional list metadata" in model.__doc__
+            observations["docstring_preserved"] = "Field Optional list metadata" in model.__doc__
             defaulted = (
                 msgspec.convert({}, type=model)
                 if backend == DataModelType.MsgspecStruct
                 else _model_json_validator(model)("{}")
             )
-            assert defaulted.list == "Field Optional list — 名前"
-            assert get_args(get_type_hints(type(parsed.child))["sibling"])[0] is type(parsed.child)
+            observations["default_value"] = defaulted.list
+            observations["forward_identity"] = get_args(get_type_hints(type(parsed.child))["sibling"])[0] is type(
+                parsed.child
+            )
+        assert_output(
+            json.dumps(observations, ensure_ascii=False, indent=2) + "\n",
+            DATA_PATH / "payloads/field_name_bindings_runtime" / f"{case}.txt",
+        )
 
 
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
@@ -181,12 +193,13 @@ def test_field_name_factory_template(output_file: Path, entrypoint: str, templat
         )
     with _generated_model(output_file, "field_name_factory", "Record") as model:
         hints = get_type_hints(model)
-        assert list(hints) == ["items", "Optional", "choice"]
-        assert dict[str, list[int]] in get_args(hints["items"])
+        observations = {"fields": list(hints), "items_annotation": dict[str, list[int]] in get_args(hints["items"])}
         result = _model_json_validator(model)('{"items": {"first": [1, 2]}}')
-        assert result.items == {"first": [1, 2]}
-        assert result.Optional == "Optional Field list — 名前"
-        assert result.choice == "Optional"
+        observations.update(items=result.items, Optional=result.Optional, choice=result.choice)
+        assert_output(
+            json.dumps(observations, ensure_ascii=False, indent=2) + "\n",
+            DATA_PATH / "payloads/field_name_bindings_runtime/factory.txt",
+        )
 
 
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
@@ -235,12 +248,19 @@ def test_field_name_template_helper(output_file: Path, entrypoint: str, formatte
             formatters=[Formatter(value) for value in formatters],
         )
     with _generated_model(output_file, "field_name_helper", "Record") as model:
-        assert list(get_type_hints(model)) == ["Optional", "items"]
-        assert list[int] in get_args(get_type_hints(model)["items"])
+        hints = get_type_hints(model)
+        observations = {"fields": list(hints), "items_annotation": list[int] in get_args(hints["items"])}
         result = _model_json_validator(model)('{"Optional": "ok", "items": [1, 2]}')
-        assert result.Optional == "ok"
-        assert result.items == [1, 2]
+        observations.update(Optional=result.Optional, items=result.items)
+        assert_output(
+            json.dumps(observations, indent=2) + "\n",
+            DATA_PATH / "payloads/field_name_bindings_runtime/helper_model.txt",
+        )
     with _generated_model(output_file, "field_name_helper", "Helper") as helper:
-        assert helper().value == 1
+        observations = {"value": helper().value}
         if case == "helper_normal":
-            assert get_type_hints(helper)["value"] == int | None
+            observations["annotation_preserved"] = get_type_hints(helper)["value"] == int | None
+        assert_output(
+            json.dumps(observations, indent=2) + "\n",
+            DATA_PATH / "payloads/field_name_bindings_runtime" / f"{case}.txt",
+        )
