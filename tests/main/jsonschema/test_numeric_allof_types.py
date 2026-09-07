@@ -19,7 +19,6 @@ from tests.main.conftest import (
     JSON_SCHEMA_DATA_PATH,
     _default_formatter_generate_options,
     _generated_model,
-    run_main_and_assert,
     run_main_with_args,
 )
 from tests.main.jsonschema.conftest import EXPECTED_JSON_SCHEMA_PATH
@@ -46,13 +45,15 @@ def test_numeric_allof_types(
             args = ["--disable-timestamp", "--allof-merge-mode", merge_mode.value]
             if field_constraints:
                 args.append("--field-constraints")
-            run_main_and_assert(
-                input_path=source,
-                output_path=output_file,
-                input_file_type="jsonschema",
-                expected_file=expected / filename,
-                extra_args=args,
-            )
+            run_main_with_args([
+                "--input",
+                str(source),
+                "--output",
+                str(output_file),
+                "--input-file-type",
+                "jsonschema",
+                *args,
+            ])
         else:
             with assert_inputs_not_mutated({"schema": schema}):
                 generate(
@@ -66,7 +67,7 @@ def test_numeric_allof_types(
                         "field_constraints": field_constraints,
                     }),
                 )
-            assert_output(output_file.read_text(encoding="utf-8"), expected / filename)
+        assert_output(output_file.read_text(encoding="utf-8"), expected / filename)
     assert_output(
         json.dumps([str(item.message) for item in captured], indent=2) + "\n", expected / f"{case}_warnings.txt"
     )
