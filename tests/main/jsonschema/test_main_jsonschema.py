@@ -21112,3 +21112,66 @@ def test_allof_final_serialization_aliases(
                 (SCOPED_ALIAS_PAYLOADS / "allof_scoped_aliases_invalid.json").read_text(),
                 "missing",
             )
+
+
+@pytest.mark.parametrize("config_source", ["validators", "extra_template_data"])
+@pytest.mark.parametrize("case", ["collisions", "single"])
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+def test_validator_collisions(output_file: Path, entrypoint: str, case: str, config_source: str) -> None:
+    """Keep repeated, inherited and independently imported validators active."""
+    shutil.copyfile(
+        DATA_PATH / "python" / "validator_formatters" / "pyproject.toml", output_file.parent / "pyproject.toml"
+    )
+    schema = JSON_SCHEMA_DATA_PATH / f"validator_{case}.json"
+    config_path = JSON_SCHEMA_DATA_PATH / f"validator_{case}_config.json"
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=schema,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file=f"validator_{case}.py",
+            extra_args=[
+                f"--{config_source.replace('_', '-')}",
+                str(config_path),
+                "--output-model-type",
+                "pydantic_v2.BaseModel",
+                "--disable-timestamp",
+            ],
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=schema,
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            assert_func=assert_file_content,
+            expected_file=f"validator_{case}.py",
+            output_model_type=DataModelType.PydanticV2BaseModel,
+            **{config_source: json.loads(config_path.read_text())},
+            disable_timestamp=True,
+        )
+    if case == "single":
+        with _generated_model(output_file, "validator_single", "Single") as model:
+            assert model(value="V").value == "V:private"
+        return
+    with _generated_model(output_file, "validator_collisions", "Collision") as model:
+        data = {
+            "x": "X",
+            "y": "Y",
+            "validate_validator": "required",
+            "validate_validator_1": "also required",
+            "other": {"value": "O"},
+            "child": {"value": "C"},
+        }
+        assert model.model_validate(data).model_dump() == {
+            **data,
+            "x": "X:first:first:second:any:other",
+            "y": "Y:plain:wrap",
+            "other": {"value": "O:second"},
+            "child": {"value": "C:first:second"},
+        }
+        assert list(model.model_fields) == list(data)
+        for field in ("validate_validator", "validate_validator_1"):
+            _assert_model_json_invalid(
+                model.model_validate, {key: value for key, value in data.items() if key != field}, "missing"
+            )

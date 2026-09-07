@@ -79,13 +79,16 @@ from datamodel_code_generator.python_literal import (
     _normalize_string,
     represent_untrusted_python_value,
 )
-from datamodel_code_generator.reference import FieldNameResolver, ModelResolver, ModelType
+from datamodel_code_generator.reference import FieldNameResolver, ModelType
 from datamodel_code_generator.types import chain_as_tuple
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Mapping
+
     from jinja2 import Template
     from typing_extensions import TypedDict, Unpack
 
+    from datamodel_code_generator.imports import Imports
     from datamodel_code_generator.model.pydantic_v2._schema_runtime_validation import (
         SchemaRuntimeValidationModulePlan,
     )
@@ -1596,7 +1599,11 @@ class BaseModel(BaseModelBase):
         if not validators:
             return
 
-        from datamodel_code_generator.validators import format_validation_error, normalize_validators  # noqa: PLC0415
+        from datamodel_code_generator.validators import (  # noqa: PLC0415
+            _reserve_validator_name,
+            format_validation_error,
+            normalize_validators,
+        )
 
         try:
             validators = normalize_validators(validators)
@@ -1605,7 +1612,22 @@ class BaseModel(BaseModelBase):
             raise Error(msg) from e
 
         prepared_validators: list[dict[str, Any]] = []
-        scoped_resolver = ModelResolver(custom_class_name_generator=lambda name: name)
+        reserved_names: set[str] = set()
+        ancestors: list[DataModel] = [self]
+        seen: set[str] = set()
+        while ancestors:
+            ancestor = ancestors.pop()
+            if ancestor.path in seen:
+                continue
+            seen.add(ancestor.path)
+            reserved_names.update(field.name for field in ancestor.fields)
+            reserved_names.update(re.findall(r"\bdef\s+(\w+)\s*\(", "\n".join(ancestor.methods)))
+            reserved_names.update(
+                validator["method_name"]
+                for validator in ancestor._internal_template_data.get("prepared_validators", ())  # noqa: SLF001
+            )
+            ancestors.extend(self._get_schema_runtime_validation_base_models(ancestor))
+        next_suffixes: dict[str, int] = {}
         for validator in validators:
             fields = validator.get("fields") or [validator.get("field")]
             fields = [f for f in fields if f]
@@ -1616,18 +1638,14 @@ class BaseModel(BaseModelBase):
             function_name = function_path.rsplit(".", 1)[-1]
             mode = validator.get("mode", "after")
 
-            fields_str = ", ".join(repr(f) for f in fields)
-
-            base_method_name = f"{function_name}_validator"
-            method_name = scoped_resolver.add([base_method_name], base_method_name, unique=True, class_name=True).name
-
-            mode_str = f"mode={mode!r}"
+            method_name = _reserve_validator_name(f"{function_name}_validator", reserved_names, next_suffixes)
 
             prepared_validators.append({
-                "fields_str": fields_str,
-                "mode_str": mode_str,
+                "fields_str": ", ".join(repr(f) for f in fields),
+                "mode_str": f"mode={mode!r}",
                 "method_name": method_name,
                 "function_name": function_name,
+                "function_import": Import.from_full_path(function_path),
                 "mode": mode,
             })
 
@@ -1643,6 +1661,47 @@ class BaseModel(BaseModelBase):
                 self._additional_imports.append(IMPORT_VALIDATION_INFO)
             if "wrap" in modes:
                 self._additional_imports.append(IMPORT_VALIDATOR_FUNCTION_WRAP_HANDLER)
+
+    @classmethod
+    def resolve_module_import_conflicts(
+        cls,
+        models: Iterable[DataModel],
+        model_imports: Mapping[DataModel, tuple[Import, ...]],
+        imports: Imports,
+    ) -> None:
+        """Bind external validators consistently across every model in a module."""
+        if IMPORT_FIELD_VALIDATOR.import_ not in imports.get(IMPORT_FIELD_VALIDATOR.from_, ()):
+            return
+        models = tuple(models)
+        validator_models = [
+            (model, validators)
+            for model in models
+            if (validators := model._internal_template_data.get("prepared_validators"))  # noqa: SLF001
+        ]
+        validator_imports = {
+            validator["function_import"] for _, validators in validator_models for validator in validators
+        }
+        reserved_names = {model.class_name for model in models}
+        reserved_names.update(
+            import_.binding_name
+            for model in models
+            for import_ in model_imports[model]
+            if import_ not in validator_imports
+        )
+        from datamodel_code_generator.validators import _reserve_validator_name  # noqa: PLC0415
+
+        names: dict[Import, str] = {}
+        next_suffixes: dict[str, int] = {}
+        for model, validators in validator_models:
+            for validator in validators:
+                import_ = validator["function_import"]
+                if (name := names.get(import_)) is None:
+                    name = names[import_] = _reserve_validator_name(import_.import_, reserved_names, next_suffixes)
+                if name == validator["function_name"]:
+                    continue
+                validator["function_name"] = name
+                imports.apply_alias(Import(from_=import_.from_, import_=import_.import_, alias=name))
+                model.invalidate_render_caches()
 
     @classmethod
     def create_base_class_model(
