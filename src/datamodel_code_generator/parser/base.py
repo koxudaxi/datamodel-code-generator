@@ -3157,6 +3157,34 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         discriminator_field.nullable = False
         _clear_model_imports_cache_if_retained(model, can_retain_cache=can_retain_cache)
 
+    def _get_discriminator_field_name(
+        self, data_types: Iterable[DataType], property_name: str, default_name: str
+    ) -> str:
+        """Resolve the shared Python field name without changing wire aliases."""
+        common_name: str | None = None
+        for data_type, _, _ in _iter_discriminator_data_types(data_types):
+            if not data_type.reference:
+                continue
+            variant = cast("DataModel", data_type.reference.source)
+            for variant_field in chain(variant.fields, variant.iter_all_fields()):
+                if property_name == variant_field.original_name or (
+                    variant_field.original_name is None and default_name == variant_field.name
+                ):
+                    variant_name = variant_field.name
+                    break
+            else:
+                variant_name, _ = self.model_resolver.get_valid_field_name_and_alias(
+                    property_name, model_type=self.field_name_model_type, class_name=variant.class_name
+                )
+            if common_name is not None and common_name != variant_name:
+                msg = (
+                    f"Discriminator {property_name!r} resolves to different field names "
+                    f"{common_name!r} and {variant_name!r}; use the same alias for all variants."
+                )
+                raise Error(msg)
+            common_name = variant_name
+        return common_name or default_name
+
     def __apply_discriminator_type(  # noqa: PLR0912, PLR0914, PLR0915
         self,
         models: list[DataModel],
@@ -3190,6 +3218,14 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     _remove_discriminator(field)
                     _clear_model_imports_cache_if_retained(model, can_retain_cache=can_retain_cache)
                     continue
+
+                if field.SUPPORTS_DISCRIMINATOR:
+                    field_name = self._get_discriminator_field_name(
+                        field.data_type.data_types, property_name, field_name
+                    )
+                    discriminator["propertyName"] = field_name
+                    if field_name != property_name and alias is None:
+                        alias = property_name
 
                 for data_type in field.data_type.data_types:
                     if not data_type.reference:  # pragma: no cover
