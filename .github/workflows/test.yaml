@@ -13,6 +13,9 @@ concurrency:
   group: test-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  PYTEST_COVERAGE_REPORT: ""
+
 permissions:
   contents: read
 
@@ -56,6 +59,11 @@ jobs:
       uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
       with:
         enable-cache: true
+        cache-local-path: .tox/uv-cache
+        cache-dependency-glob: |
+          pyproject.toml
+          tox.ini
+          uv.lock
         cache-suffix: "${{ matrix.py || matrix.tox_env }}"
     - name: Install tox
       run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
@@ -113,6 +121,11 @@ jobs:
       uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
       with:
         enable-cache: true
+        cache-local-path: .tox/uv-cache
+        cache-dependency-glob: |
+          pyproject.toml
+          tox.ini
+          uv.lock
         cache-suffix: "${{ matrix.tox_env }}"
     - name: Install tox
       run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
@@ -137,6 +150,11 @@ jobs:
             f".tox/.coverage.${{ matrix.coverage_name }}-{os.environ['OS']}",
         )
       shell: python
+    - name: Record coverage provenance
+      run: python scripts/ci_coverage.py record ".tox/$COVERAGE_NAME" --run-id "$GITHUB_RUN_ID" --sha "$GITHUB_SHA"
+      shell: bash
+      env:
+        COVERAGE_NAME: .coverage.${{ matrix.coverage_name }}-ubuntu-24.04
     - name: Upload coverage data
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
@@ -154,9 +172,11 @@ jobs:
           - tox_env: py312-blacklatest-parallel
             name: py312-black-latest
             coverage_name: py312-black-latest
+            pytest_workers: 0
           - tox_env: py312-black22-parallel
             name: py312-black22
             coverage_name: py312-black22
+            pytest_workers: auto
     runs-on: ubuntu-24.04
     env:
       OS: ubuntu-24.04
@@ -170,6 +190,11 @@ jobs:
       uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
       with:
         enable-cache: true
+        cache-local-path: .tox/uv-cache
+        cache-dependency-glob: |
+          pyproject.toml
+          tox.ini
+          uv.lock
         cache-suffix: "${{ matrix.tox_env }}-coverage"
     - name: Install tox
       run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
@@ -214,7 +239,7 @@ jobs:
       run: |
         mapfile -t test_paths < .tox/formatter-coverage-tests.txt
         tox run --skip-uv-sync --skip-pkg-install -e "$TOX_ENV" -- \
-          -n auto \
+          -n "${{ matrix.pytest_workers }}" \
           --dist=worksteal \
           --color=yes \
           -m "not perf" \
@@ -223,7 +248,7 @@ jobs:
           --cov-config=pyproject.toml \
           --cov-fail-under=0 \
           --no-cov-on-fail \
-          --cov-report term-missing:skip-covered \
+          --cov-report= \
           "${test_paths[@]}"
       shell: bash
       env:
@@ -237,6 +262,11 @@ jobs:
             f".tox/.coverage.${{ matrix.coverage_name }}-{os.environ['OS']}",
         )
       shell: python
+    - name: Record coverage provenance
+      run: python scripts/ci_coverage.py record ".tox/$COVERAGE_NAME" --run-id "$GITHUB_RUN_ID" --sha "$GITHUB_SHA"
+      shell: bash
+      env:
+        COVERAGE_NAME: .coverage.${{ matrix.coverage_name }}-ubuntu-24.04
     - name: Upload coverage data
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
@@ -261,19 +291,11 @@ jobs:
             name: HTTPX2 minimum HTTP(S) e2e
             os: ubuntu-24.04
             coverage: true
-          - tox_env: httpx2-max-nocov-e2e
-            name: HTTPX2 latest HTTP(S) e2e
-            os: windows-latest
-            coverage: false
-          - tox_env: httpx-both-nocov-e2e
-            name: HTTPX + HTTPX2 HTTP(S) e2e
-            os: macos-latest
-            coverage: false
     runs-on: ${{ matrix.os }}
-    env:
+    env: &test-http-backends-env
       OS: ${{ matrix.os }}
       TOX_ENV: ${{ matrix.tox_env }}
-    steps:
+    steps: &test-http-backends-steps
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         fetch-depth: 1
@@ -282,6 +304,11 @@ jobs:
       uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
       with:
         enable-cache: true
+        cache-local-path: .tox/uv-cache
+        cache-dependency-glob: |
+          pyproject.toml
+          tox.ini
+          uv.lock
         cache-suffix: "${{ matrix.tox_env }}-${{ matrix.os }}"
     - name: Install tox
       run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
@@ -305,6 +332,12 @@ jobs:
             f".tox/.coverage.{os.environ['TOX_ENV']}-{os.environ['OS']}",
         )
       shell: python
+    - name: Record coverage provenance
+      if: matrix.coverage == true
+      run: python scripts/ci_coverage.py record ".tox/$COVERAGE_NAME" --run-id "$GITHUB_RUN_ID" --sha "$GITHUB_SHA"
+      shell: bash
+      env:
+        COVERAGE_NAME: .coverage.${{ matrix.tox_env }}-${{ matrix.os }}
     - name: Upload coverage data
       if: matrix.coverage == true
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -313,6 +346,26 @@ jobs:
         name: .coverage.${{ matrix.tox_env }}-${{ matrix.os }}
         path: ".tox/.coverage.*"
         retention-days: 3
+
+  test-http-backends-nocov:
+    name: >-
+      ${{ matrix.name }} on
+      ${{ matrix.os == 'windows-latest' && 'Windows' || (matrix.os == 'macos-latest' && 'macOS' || 'Ubuntu') }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - tox_env: httpx2-max-nocov-e2e
+            name: HTTPX2 latest HTTP(S) e2e
+            os: windows-latest
+            coverage: false
+          - tox_env: httpx-both-nocov-e2e
+            name: HTTPX + HTTPX2 HTTP(S) e2e
+            os: macos-latest
+            coverage: false
+    runs-on: ${{ matrix.os }}
+    env: *test-http-backends-env
+    steps: *test-http-backends-steps
 
   test-shard:
     name: >-
@@ -408,77 +461,18 @@ jobs:
             coverage: true
             shard: 3
             shard_total: 3
-          - tox_env: py314-nocov-parallel
-            name: "3.14"
-            os: windows-latest
-            coverage: false
-            shard: 1
-            shard_total: 2
-          - tox_env: py314-nocov-parallel
-            name: "3.14"
-            os: windows-latest
-            coverage: false
-            shard: 2
-            shard_total: 2
-          - tox_env: py313-nocov-parallel
-            name: "3.13"
-            os: windows-latest
-            coverage: false
-            shard: 1
-            shard_total: 2
-          - tox_env: py313-nocov-parallel
-            name: "3.13"
-            os: windows-latest
-            coverage: false
-            shard: 2
-            shard_total: 2
-          - tox_env: py312-nocov-parallel
-            name: "3.12"
-            os: windows-latest
-            coverage: false
-            shard: 1
-            shard_total: 2
-          - tox_env: py312-nocov-parallel
-            name: "3.12"
-            os: windows-latest
-            coverage: false
-            shard: 2
-            shard_total: 2
-          - tox_env: py311-nocov-parallel
-            name: "3.11"
-            os: windows-latest
-            coverage: false
-            shard: 1
-            shard_total: 2
-          - tox_env: py311-nocov-parallel
-            name: "3.11"
-            os: windows-latest
-            coverage: false
-            shard: 2
-            shard_total: 2
-          - tox_env: py310-nocov-parallel
-            name: "3.10"
-            os: windows-latest
-            coverage: false
-            shard: 1
-            shard_total: 2
-          - tox_env: py310-nocov-parallel
-            name: "3.10"
-            os: windows-latest
-            coverage: false
-            shard: 2
-            shard_total: 2
     runs-on: ${{ matrix.os }}
-    env:
+    env: &test-shard-env
       OS: ${{ matrix.os }}
       SHARD_INDEX: ${{ matrix.shard }}
       SHARD_TOTAL: ${{ matrix.shard_total }}
       TOX_ENV: ${{ matrix.tox_env }}
       EXTRA_TESTS: ${{ matrix.extra_tests }}
+      SHARD_PROFILE: ${{ matrix.name == '3.14' && 'default' || 'legacy' }}
       WINDOWS_TOX_UV_VERSION: "1.35.2"
       WINDOWS_TOX_VERSION: "4.56.1"
       WINDOWS_UV_VERSION: "0.11.26"
-    steps:
+    steps: &test-shard-steps
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         fetch-depth: 1
@@ -502,7 +496,12 @@ jobs:
       uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
       with:
         enable-cache: true
-        cache-suffix: "${{ matrix.tox_env }}-shard-${{ matrix.shard_total }}"
+        cache-local-path: .tox/uv-cache
+        cache-dependency-glob: |
+          pyproject.toml
+          tox.ini
+          uv.lock
+        cache-suffix: "${{ matrix.tox_env }}-shard"
         save-cache: ${{ matrix.shard == 1 }}
     - name: Install tox (Windows)
       if: matrix.os == 'windows-latest'
@@ -518,7 +517,7 @@ jobs:
         UV_PYTHON_PREFERENCE: "only-managed"
     - name: Select test shard
       run: |
-        python scripts/select_ci_test_shard.py --write-recipe .tox/ci-shard-recipe.json
+        python scripts/select_ci_test_shard.py --profile "$SHARD_PROFILE" --write-recipe .tox/ci-shard-recipe.json
         python scripts/select_ci_test_shard.py "$SHARD_INDEX" "$SHARD_TOTAL" \
           --recipe .tox/ci-shard-recipe.json | tee .tox/ci-shard-tests.txt
         if [ -n "$EXTRA_TESTS" ]; then
@@ -529,18 +528,20 @@ jobs:
       run: |
         mapfile -t test_paths < .tox/ci-shard-tests.txt
         if [ "${#test_paths[@]}" -eq 0 ]; then
-          echo "No tests selected for this shard; skipping."
-          exit 0
+          echo "No tests selected for this shard." >&2
+          exit 1
         fi
         coverage_args=()
         if [ "${{ matrix.coverage }}" = "true" ]; then
           coverage_args=(
             --cov datamodel_code_generator
             --cov tests
+            --cov scripts.ci_coverage
+            --cov scripts.select_ci_test_shard
             --cov-config=pyproject.toml
             --cov-fail-under=0
             --no-cov-on-fail
-            --cov-report term-missing:skip-covered
+            --cov-report=
           )
         fi
         tox run --skip-uv-sync --skip-pkg-install -e "$TOX_ENV" -- \
@@ -563,6 +564,12 @@ jobs:
             f".tox/.coverage.{os.environ['TOX_ENV']}-shard{os.environ['SHARD_INDEX']}-{os.environ['OS']}",
         )
       shell: python
+    - name: Record coverage provenance
+      if: matrix.coverage == true
+      run: python scripts/ci_coverage.py record ".tox/$COVERAGE_NAME" --run-id "$GITHUB_RUN_ID" --sha "$GITHUB_SHA"
+      shell: bash
+      env:
+        COVERAGE_NAME: .coverage.${{ matrix.tox_env }}-shard${{ matrix.shard }}-${{ matrix.os }}
     - name: Upload coverage data
       if: matrix.coverage == true
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -571,6 +578,89 @@ jobs:
         name: .coverage.${{ matrix.tox_env }}-shard${{ matrix.shard }}-${{ matrix.os }}
         path: ".tox/.coverage.*"
         retention-days: 3
+
+  test-shard-nocov:
+    name: >-
+      ${{ matrix.name }} on
+      ${{ matrix.os == 'windows-latest' && 'Windows' || (matrix.os == 'macos-latest' && 'macOS' || 'Ubuntu') }}
+      shard ${{ matrix.shard }}/${{ matrix.shard_total }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - tox_env: py314-nocov-parallel
+            name: "3.14"
+            os: windows-latest
+            coverage: false
+            extra_tests: ""
+            shard: 1
+            shard_total: 2
+          - tox_env: py314-nocov-parallel
+            name: "3.14"
+            os: windows-latest
+            coverage: false
+            extra_tests: ""
+            shard: 2
+            shard_total: 2
+          - tox_env: py313-nocov-parallel
+            name: "3.13"
+            os: windows-latest
+            coverage: false
+            extra_tests: ""
+            shard: 1
+            shard_total: 2
+          - tox_env: py313-nocov-parallel
+            name: "3.13"
+            os: windows-latest
+            coverage: false
+            extra_tests: ""
+            shard: 2
+            shard_total: 2
+          - tox_env: py312-nocov-parallel
+            name: "3.12"
+            os: windows-latest
+            coverage: false
+            extra_tests: ""
+            shard: 1
+            shard_total: 2
+          - tox_env: py312-nocov-parallel
+            name: "3.12"
+            os: windows-latest
+            coverage: false
+            extra_tests: ""
+            shard: 2
+            shard_total: 2
+          - tox_env: py311-nocov-parallel
+            name: "3.11"
+            os: windows-latest
+            coverage: false
+            extra_tests: ""
+            shard: 1
+            shard_total: 2
+          - tox_env: py311-nocov-parallel
+            name: "3.11"
+            os: windows-latest
+            coverage: false
+            extra_tests: ""
+            shard: 2
+            shard_total: 2
+          - tox_env: py310-nocov-parallel
+            name: "3.10"
+            os: windows-latest
+            coverage: false
+            extra_tests: ""
+            shard: 1
+            shard_total: 2
+          - tox_env: py310-nocov-parallel
+            name: "3.10"
+            os: windows-latest
+            coverage: false
+            extra_tests: ""
+            shard: 2
+            shard_total: 2
+    runs-on: ${{ matrix.os }}
+    env: *test-shard-env
+    steps: *test-shard-steps
 
   coverage:
     name: combine coverage
@@ -587,6 +677,14 @@ jobs:
           persist-credentials: false
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+          cache-local-path: .tox/uv-cache
+          cache-dependency-glob: |
+            pyproject.toml
+            tox.ini
+            uv.lock
+          cache-suffix: coverage
       - name: Install tox
         run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
       - name: Setup coverage tool
@@ -596,9 +694,11 @@ jobs:
       - name: Download coverage data
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          path: .tox
+          path: .tox/coverage-input
           pattern: .coverage.*
-          merge-multiple: true
+          merge-multiple: false
+      - name: Validate coverage inputs
+        run: python scripts/ci_coverage.py prepare .tox/coverage-input --run-id "$GITHUB_RUN_ID" --sha "$GITHUB_SHA"
       - name: Combine and report coverage
         id: coverage
         run: |
@@ -646,6 +746,14 @@ jobs:
           persist-credentials: false
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+          cache-local-path: .tox/uv-cache
+          cache-dependency-glob: |
+            pyproject.toml
+            tox.ini
+            uv.lock
+          cache-suffix: check
       - name: Setup docs Python
         run: uv python install 3.14.6
       - name: Install tox
@@ -707,6 +815,14 @@ jobs:
           persist-credentials: false
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+          cache-local-path: .tox/uv-cache
+          cache-dependency-glob: |
+            pyproject.toml
+            tox.ini
+            uv.lock
+          cache-suffix: e2e
       - name: Install tox
         run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
       - name: Setup e2e suites
@@ -911,36 +1027,22 @@ jobs:
       - test-coverage
       - test-formatter-coverage
       - test-http-backends
+      - test-http-backends-nocov
       - test-shard
+      - test-shard-nocov
       - coverage
       - check
       - e2e
     steps:
       - name: Fail if any test workflow job failed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
         run: |
-          test_result='${{ needs.test.result }}'
-          test_coverage_result='${{ needs.test-coverage.result }}'
-          test_formatter_coverage_result='${{ needs.test-formatter-coverage.result }}'
-          test_http_backends_result='${{ needs.test-http-backends.result }}'
-          test_shard_result='${{ needs.test-shard.result }}'
-          coverage_result='${{ needs.coverage.result }}'
-          check_result='${{ needs.check.result }}'
-          e2e_result='${{ needs.e2e.result }}'
+          import json
+          import os
+          import sys
 
-          echo "test: ${test_result}"
-          echo "test coverage: ${test_coverage_result}"
-          echo "test formatter coverage: ${test_formatter_coverage_result}"
-          echo "test HTTP backends: ${test_http_backends_result}"
-          echo "test shard: ${test_shard_result}"
-          echo "coverage: ${coverage_result}"
-          echo "check: ${check_result}"
-          echo "e2e: ${e2e_result}"
-
-          [ "${test_result}" = "success" ] || exit 1
-          [ "${test_coverage_result}" = "success" ] || exit 1
-          [ "${test_formatter_coverage_result}" = "success" ] || exit 1
-          [ "${test_http_backends_result}" = "success" ] || exit 1
-          [ "${test_shard_result}" = "success" ] || exit 1
-          [ "${coverage_result}" = "success" ] || exit 1
-          [ "${check_result}" = "success" ] || exit 1
-          [ "${e2e_result}" = "success" ] || exit 1
+          results = {name: job["result"] for name, job in json.loads(os.environ["NEEDS"]).items()}
+          print(json.dumps(results, sort_keys=True))
+          sys.exit(not results or any(result != "success" for result in results.values()))
+        shell: python

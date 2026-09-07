@@ -1,0 +1,6 @@
+{
+  "code": 1,
+  "prepared": [],
+  "stderr": "Coverage provenance mismatch: .coverage.httpx-e2e-ubuntu-24.04\n",
+  "stdout": ""
+}
