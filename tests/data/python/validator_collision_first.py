@@ -23,3 +23,7 @@ def Other(value, info):
 
 def _validate(value, info):
     return value + ":private"
+
+
+def Base(value, info):
+    return value + ":custom"

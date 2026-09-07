@@ -1600,7 +1600,6 @@ class BaseModel(BaseModelBase):
             return
 
         from datamodel_code_generator.validators import (  # noqa: PLC0415
-            _reserve_validator_name,
             format_validation_error,
             normalize_validators,
         )
@@ -1612,22 +1611,6 @@ class BaseModel(BaseModelBase):
             raise Error(msg) from e
 
         prepared_validators: list[dict[str, Any]] = []
-        reserved_names: set[str] = set()
-        ancestors: list[DataModel] = [self]
-        seen: set[str] = set()
-        while ancestors:
-            ancestor = ancestors.pop()
-            if ancestor.path in seen:
-                continue
-            seen.add(ancestor.path)
-            reserved_names.update(field.name for field in ancestor.fields)
-            reserved_names.update(re.findall(r"\bdef\s+(\w+)\s*\(", "\n".join(ancestor.methods)))
-            reserved_names.update(
-                validator["method_name"]
-                for validator in ancestor._internal_template_data.get("prepared_validators", ())  # noqa: SLF001
-            )
-            ancestors.extend(self._get_schema_runtime_validation_base_models(ancestor))
-        next_suffixes: dict[str, int] = {}
         for validator in validators:
             fields = validator.get("fields") or [validator.get("field")]
             fields = [f for f in fields if f]
@@ -1638,12 +1621,10 @@ class BaseModel(BaseModelBase):
             function_name = function_path.rsplit(".", 1)[-1]
             mode = validator.get("mode", "after")
 
-            method_name = _reserve_validator_name(f"{function_name}_validator", reserved_names, next_suffixes)
-
             prepared_validators.append({
                 "fields_str": ", ".join(repr(f) for f in fields),
                 "mode_str": f"mode={mode!r}",
-                "method_name": method_name,
+                "method_name": f"{function_name}_validator",
                 "function_name": function_name,
                 "function_import": Import.from_full_path(function_path),
                 "mode": mode,
@@ -1661,6 +1642,28 @@ class BaseModel(BaseModelBase):
                 self._additional_imports.append(IMPORT_VALIDATION_INFO)
             if "wrap" in modes:
                 self._additional_imports.append(IMPORT_VALIDATOR_FUNCTION_WRAP_HANDLER)
+            self._prepare_validator_method_names(self, {})
+
+    @classmethod
+    def _prepare_validator_method_names(cls, model: DataModel, scopes: dict[str, set[str]]) -> set[str]:
+        """Reserve inherited methods after their model references have been resolved."""
+        if (reserved_names := scopes.get(model.path)) is not None:
+            return reserved_names
+        reserved_names = scopes[model.path] = {field.name for field in model.fields if field.name is not None}
+        reserved_names.update(re.findall(r"\bdef\s+(\w+)\s*\(", "\n".join(model.methods)))
+        for ancestor in cls._get_schema_runtime_validation_base_models(model):
+            reserved_names.update(cls._prepare_validator_method_names(ancestor, scopes))
+        from datamodel_code_generator.validators import _reserve_validator_name  # noqa: PLC0415
+
+        next_suffixes: dict[str, int] = {}
+        for validator in model._internal_template_data.get("prepared_validators", ()):  # noqa: SLF001
+            name = _reserve_validator_name(
+                f"{validator['function_import'].import_}_validator", reserved_names, next_suffixes
+            )
+            if name != validator["method_name"]:
+                validator["method_name"] = name
+                model.invalidate_render_caches()
+        return reserved_names
 
     @classmethod
     def resolve_module_import_conflicts(
@@ -1678,6 +1681,9 @@ class BaseModel(BaseModelBase):
             for model in models
             if (validators := model._internal_template_data.get("prepared_validators"))  # noqa: SLF001
         ]
+        method_scopes: dict[str, set[str]] = {}
+        for model, _ in validator_models:
+            cls._prepare_validator_method_names(model, method_scopes)
         validator_imports = {
             validator["function_import"] for _, validators in validator_models for validator in validators
         }
@@ -1687,6 +1693,13 @@ class BaseModel(BaseModelBase):
             for model in models
             for import_ in model_imports[model]
             if import_ not in validator_imports
+        )
+        validator_import_keys = {(import_.from_, import_.import_) for import_ in validator_imports}
+        reserved_names.update(
+            imports.get_effective_name(from_, name)
+            for from_, import_names in imports.items()
+            for name in import_names
+            if (from_, name) not in validator_import_keys
         )
         from datamodel_code_generator.validators import _reserve_validator_name  # noqa: PLC0415
 

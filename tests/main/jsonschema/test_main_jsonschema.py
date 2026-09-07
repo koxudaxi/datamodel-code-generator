@@ -21175,3 +21175,86 @@ def test_validator_collisions(output_file: Path, entrypoint: str, case: str, con
             _assert_model_json_invalid(
                 model.model_validate, {key: value for key, value in data.items() if key != field}, "missing"
             )
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("first", ["base", "child"])
+def test_validator_inheritance_definition_order(output_file: Path, entrypoint: str, first: str) -> None:
+    """Retain base and child registrations regardless of definition declaration order."""
+    shutil.copyfile(
+        DATA_PATH / "python" / "validator_formatters" / "pyproject.toml", output_file.parent / "pyproject.toml"
+    )
+    schema = JSON_SCHEMA_DATA_PATH / f"validator_inheritance_{first}_first.json"
+    config = JSON_SCHEMA_DATA_PATH / "validator_inheritance_config.json"
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=schema,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file=f"validator_inheritance_{first}_first.py",
+            extra_args=[
+                "--validators",
+                str(config),
+                "--output-model-type",
+                "pydantic_v2.BaseModel",
+                "--disable-timestamp",
+            ],
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=schema,
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            assert_func=assert_file_content,
+            expected_file=f"validator_inheritance_{first}_first.py",
+            output_model_type=DataModelType.PydanticV2BaseModel,
+            validators=json.loads(config.read_text()),
+            disable_timestamp=True,
+        )
+    with _generated_model(output_file, "validator_inheritance_order", "Child") as model:
+        assert model(value="v").value == "v:first:first"
+        assert list(model.__pydantic_decorators__.field_validators) == ["validate_validator", "validate_validator_1"]
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("exact", [False, True])
+def test_validator_finalized_model_import(output_dir: Path, entrypoint: str, exact: bool) -> None:
+    """Reserve model imports that are finalized after per-model imports are collected."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(DATA_PATH / "python" / "validator_formatters" / "pyproject.toml", output_dir / "pyproject.toml")
+    schema = JSON_SCHEMA_DATA_PATH / "validator_import_models"
+    config = JSON_SCHEMA_DATA_PATH / "validator_import_models_config.json"
+    expected = EXPECTED_JSON_SCHEMA_PATH / "validator_import_models"
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=schema,
+            output_path=output_dir,
+            input_file_type="jsonschema",
+            expected_directory=expected,
+            extra_args=[
+                "--validators",
+                str(config),
+                "--output-model-type",
+                "pydantic_v2.BaseModel",
+                "--disable-timestamp",
+                *(["--use-exact-imports"] if exact else []),
+            ],
+        )
+    else:
+        generate(
+            schema,
+            output=output_dir,
+            input_file_type=InputFileType.JsonSchema,
+            output_model_type=DataModelType.PydanticV2BaseModel,
+            validators=json.loads(config.read_text()),
+            use_exact_imports=exact,
+            disable_timestamp=True,
+            formatters=[Formatter.BLACK, Formatter.ISORT]
+            if _uses_external_test_default_formatter()
+            else [Formatter.BUILTIN],
+        )
+        assert_directory_content(output_dir, expected)
+    with _generated_package_module(output_dir, "child") as module:
+        assert module.Child(value="v").value == "v:custom"
+        assert module.Child.__bases__[0] is module.Base
