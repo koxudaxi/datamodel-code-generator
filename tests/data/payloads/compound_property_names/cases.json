@@ -1,0 +1,14 @@
+[
+  "patterns",
+  "typed_patterns",
+  "nested",
+  "lengths",
+  "unconstrained",
+  "enum_refs",
+  "enum_oneof",
+  "unconstrained_values",
+  "boolean_true",
+  "false_patterns",
+  "nested_unrestricted",
+  "reverse_unrestricted"
+]

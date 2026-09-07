@@ -1,0 +1,1 @@
+Error at schema path 'unsupported_mixed.json/#-datamodel-code-generator-#-propertyNames/key-#-special-#': Compound propertyNames constraints cannot be represented as scalar dictionary keys
