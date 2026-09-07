@@ -20,7 +20,6 @@ from tests.data.python.validator_collision_second import validate
 
 
 class OtherModel(BaseModel):
-
     # validator keys: fields_str, mode_str, method_name, function_name, mode
     value: str
 
@@ -31,7 +30,6 @@ class OtherModel(BaseModel):
 
 
 class Base(BaseModel):
-
     # validator keys: fields_str, mode_str, method_name, function_name, mode
     value: str
 
@@ -42,17 +40,14 @@ class Base(BaseModel):
 
 
 class Left(Base):
-
     pass
 
 
 class Right(Base):
-
     pass
 
 
 class Child(Left, Right):
-
     # validator keys: fields_str, mode_str, method_name, function_name, mode
     pass
 
@@ -63,7 +58,6 @@ class Child(Left, Right):
 
 
 class Collision(BaseModel):
-
     # validator keys: fields_str, mode_str, method_name, function_name, mode
     # validator keys: fields_str, mode_str, method_name, function_name, mode
     # validator keys: fields_str, mode_str, method_name, function_name, mode

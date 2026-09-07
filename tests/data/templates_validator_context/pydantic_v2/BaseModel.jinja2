@@ -2,7 +2,7 @@
 {{ decorator }}
 {% endfor -%}
 class {{ class_name }}({%- if schema_runtime_validation_use_base -%}{{ schema_runtime_validation_base_class_name }}{% if base_class != 'BaseModel' %}, {{ base_class }}{% endif %}{%- else -%}{{ base_class }}{%- endif -%}):{% if comment is defined %}  # {{ comment }}{% endif %}
-{% for v in prepared_validators %}
+{%- for v in prepared_validators %}
     # validator keys: {{ v | list | join(", ") }}
 {%- endfor %}
 {%- if description %}

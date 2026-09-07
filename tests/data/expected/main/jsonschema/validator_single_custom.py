@@ -11,7 +11,6 @@ from tests.data.python.validator_collision_first import _validate
 
 
 class Single(BaseModel):
-
     # validator keys: fields_str, mode_str, method_name, function_name, mode
     value: str
 
