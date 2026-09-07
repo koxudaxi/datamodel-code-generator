@@ -113,12 +113,15 @@ def test_input_model_union_caller_extensions(model_name: str, entrypoint: str, f
     schema = load_model_schema([source], InputFileType.JsonSchema)
     assert_output(json.dumps(schema, indent=2), EXPECTED / f"extension_{model_name}_schema.txt")
     if model_name == "Serializable":
-        assert schema == union_extensions.Serializable.model_json_schema()
+        assert_output(
+            json.dumps(union_extensions.Serializable.model_json_schema(), indent=2),
+            EXPECTED / f"extension_{model_name}_schema.txt",
+        )
     with _generated_model(output, "_generated_union_extensions", model_name) as generated:
-        for value in (1, "text", int, None, [int]):
-            payload = {"value": value}
+        for model in (getattr(union_extensions, model_name), generated):
             observations = []
-            for model in (getattr(union_extensions, model_name), generated):
+            for value in (1, "text", int, None, [int]):
+                payload = {"value": value}
                 with assert_inputs_not_mutated(payload):
                     try:
                         result = model.model_validate(payload)
@@ -126,4 +129,4 @@ def test_input_model_union_caller_extensions(model_name: str, entrypoint: str, f
                         observations.append("rejected")
                     else:
                         observations.append(describe(result.model_dump()))
-            assert observations[0] == observations[1]
+            assert_output(json.dumps(observations, indent=2), EXPECTED / f"extension_{model_name}_runtime.txt")
