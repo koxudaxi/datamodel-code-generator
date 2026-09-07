@@ -465,6 +465,7 @@ class ParserRunContext:
     """Immutable parser settings scoped to one facade-managed run."""
 
     diagnostic_source_path: Path | None = None
+    prefetched_source: tuple[Path, bytes] | None = None
     formatter_cwd: Path | None = None
     preserve_circular_root_models: bool = False
     suppress_parse_warnings: bool = False
@@ -1732,18 +1733,26 @@ class Source(BaseModel):
         path: Path,
         base_path: Path,
         encoding: str,
+        *,
+        data: bytes | None = None,
     ) -> Source:
         """Create a Source from a file path relative to base_path."""
         record_watch_dependency(path)
         return cls(
             path=path.relative_to(base_path),
-            text=path.read_text(encoding=encoding),
+            text=(
+                path.read_text(encoding=encoding)
+                if data is None
+                else data.decode(encoding).replace("\r\n", "\n").replace("\r", "\n")
+            ),
         )
 
     @classmethod
-    def from_cached_path(cls, path: Path, base_path: Path, encoding: str, *, keep_text: bool = False) -> Source:
+    def from_cached_path(
+        cls, path: Path, base_path: Path, encoding: str, *, keep_text: bool = False, data: bytes | None = None
+    ) -> Source:
         """Create a Source from a cached parsed file path relative to base_path."""
-        data, raw_data = _read_parser_source_data_from_path(path, encoding)
+        data, raw_data = _read_parser_source_data_from_path(path, encoding, data=data)
         return cls(
             path=path.relative_to(base_path),
             text=data.decode(encoding) if keep_text else "",
@@ -2116,6 +2125,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self,
         *,
         diagnostic_source_path: Path | None = None,
+        prefetched_source: tuple[Path, bytes] | None = None,
         formatter_cwd: Path | None = None,
         preserve_circular_root_models: bool = False,
         suppress_parse_warnings: bool = False,
@@ -2123,6 +2133,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         """Configure parser run state without exposing implementation attributes."""
         if (
             diagnostic_source_path is None
+            and prefetched_source is None
             and formatter_cwd is None
             and not preserve_circular_root_models
             and not suppress_parse_warnings
@@ -2131,6 +2142,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             return
         self._run_context = ParserRunContext(
             diagnostic_source_path=diagnostic_source_path,
+            prefetched_source=prefetched_source,
             formatter_cwd=formatter_cwd,
             preserve_circular_root_models=preserve_circular_root_models,
             suppress_parse_warnings=suppress_parse_warnings,
@@ -2154,6 +2166,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             formatter_cwd=formatter_cwd,
             preserve_circular_root_models=preserve_circular_root_models,
             suppress_parse_warnings=context.suppress_parse_warnings,
+            prefetched_source=context.prefetched_source,
         )
 
     @property
@@ -2716,9 +2729,13 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
     def _source_from_path(self, path: Path) -> Source:
         try:
+            prefetched_source = self.run_context.prefetched_source
+            data = prefetched_source[1] if prefetched_source is not None and path == prefetched_source[0] else None
             if self._use_parsed_source_cache:
-                return Source.from_cached_path(path, self.base_path, self.encoding, keep_text=self.validation)
-            return Source.from_path(path, self.base_path, self.encoding)
+                return Source.from_cached_path(
+                    path, self.base_path, self.encoding, keep_text=self.validation, data=data
+                )
+            return Source.from_path(path, self.base_path, self.encoding, data=data)
         except FileNotFoundError as exc:
             msg = f"File not found: {path}"
             raise Error(msg) from exc

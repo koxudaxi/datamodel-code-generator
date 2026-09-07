@@ -171,12 +171,15 @@ def _load_parser_source_data_from_path(path: Path, encoding: str) -> YamlValue:
     return _read_parser_source_data_from_path(path, encoding)[1]
 
 
-def _read_parser_source_data_from_path(path: Path, encoding: str) -> tuple[bytes, YamlValue]:
+def _read_parser_source_data_from_path(
+    path: Path, encoding: str, *, data: bytes | None = None
+) -> tuple[bytes, YamlValue]:
     resolved_path = path.resolve()
     from datamodel_code_generator.util import record_watch_dependency  # noqa: PLC0415
 
     record_watch_dependency(resolved_path)
-    data = resolved_path.read_bytes()
+    if data is None:
+        data = resolved_path.read_bytes()
     return data, _load_parser_source_data_from_path_bytes(resolved_path, data, encoding)
 
 
