@@ -38,6 +38,10 @@ def test_python_root_model_inputs(
     """Keep root values, constraints, defaults and ordinary model inheritance."""
     from datamodel_code_generator.format import Formatter
 
+    (output_file.parent / "pyproject.toml").write_bytes(
+        (DATA_PATH / "python/input_model/root_models_format/pyproject.toml").read_bytes()
+    )
+    formatters = [Formatter.BLACK, Formatter.ISORT] if _uses_external_test_default_formatter() else [Formatter.BUILTIN]
     name = case["name"]
     strategy = case["strategy"]
     source = (
@@ -64,6 +68,8 @@ def test_python_root_model_inputs(
                 "--custom-file-header",
                 "# RootModel input control",
                 "--field-constraints",
+                "--formatters",
+                *(formatter.value for formatter in formatters),
             ],
         )
         assert_output(output_file.read_text(encoding="utf-8"), expected)
@@ -81,9 +87,7 @@ def test_python_root_model_inputs(
             target_python_version=PythonVersion.PY_310,
             field_constraints=True,
             custom_file_header="# RootModel input control",
-            formatters=[Formatter.BLACK, Formatter.ISORT]
-            if _uses_external_test_default_formatter()
-            else [Formatter.BUILTIN],
+            formatters=formatters,
             output=output_file,
         )
         assert_output(output_file.read_text(encoding="utf-8"), expected)
