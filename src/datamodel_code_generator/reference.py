@@ -1738,21 +1738,23 @@ def _import_inflect_without_typeguard_instrumentation() -> Any:
     import sys  # ruff: ignore[import-outside-top-level]
 
     with _INFLECT_IMPORT_LOCK:
-        if sys.modules.get("inflect") is not None:
-            return importlib.import_module("inflect")
-        if (inflect_module := sys.modules.get(_PRIVATE_INFLECT_MODULE)) is not None:
-            return inflect_module
+        if sys.modules.get("inflect") is None:
+            if (inflect_module := sys.modules.get(_PRIVATE_INFLECT_MODULE)) is not None:
+                return inflect_module
 
-        try:
-            inflect_module = _load_private_inflect()
-        except (AttributeError, ImportError, TypeError):
-            # Unsupported loaders or future inflect APIs retain normal import semantics.
-            for module_name in tuple(sys.modules):
-                if module_name == _PRIVATE_INFLECT_MODULE or module_name.startswith(f"{_PRIVATE_INFLECT_MODULE}."):
-                    sys.modules.pop(module_name, None)
-            return importlib.import_module("inflect")
-        else:
-            return inflect_module
+            try:
+                inflect_module = _load_private_inflect()
+            except BaseException as error:
+                # Failed imports must not leave a reusable partial private package.
+                for module_name in tuple(sys.modules):
+                    if module_name == _PRIVATE_INFLECT_MODULE or module_name.startswith(f"{_PRIVATE_INFLECT_MODULE}."):
+                        sys.modules.pop(module_name, None)
+                if not isinstance(error, (AttributeError, ImportError, TypeError)):
+                    raise
+            else:
+                return inflect_module
+    # Public import hooks may reenter generation; do not hold our lock while waiting.
+    return importlib.import_module("inflect")
 
 
 def _get_inflect_engine() -> inflect.engine:

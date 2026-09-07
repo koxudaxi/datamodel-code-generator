@@ -10,14 +10,14 @@ from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
 
 from datamodel_code_generator import DataModelType, Formatter, InputFileType, PythonVersion, generate
-from datamodel_code_generator.__main__ import main
+from datamodel_code_generator.__main__ import Exit, main
 
 scenario, entrypoint, backend, output = sys.argv[1:]
 output = Path(output)
 data = Path(__file__).parent
 formatters = ['builtin'] if os.environ.get('DATAMODEL_CODE_GENERATOR_TEST_DEFAULT_FORMATTER') == 'builtin' else ['black', 'isort']
 options = dict(input_file_type=InputFileType.JsonSchema, output_model_type=DataModelType(backend), target_python_version=PythonVersion.PY_310, disable_timestamp=True, formatters=[Formatter(value) for value in formatters])
-if scenario.startswith('failure_'):
+if scenario.startswith(('failure_', 'unexpected_')):
     from copy import copy
     from types import SimpleNamespace
     from unittest.mock import patch
@@ -34,7 +34,9 @@ if scenario.startswith('failure_'):
         if scenario == 'failure_missing_spec':
             return None
         spec = copy(original_spec)
-        if scenario == 'failure_missing_get_code':
+        if scenario.startswith('unexpected_'):
+            spec.loader = SimpleNamespace(get_code=lambda name: compile((data / 'unexpected_error.py').read_text(), str(data / 'unexpected_error.py'), 'exec'))
+        elif scenario in {'failure_missing_get_code', 'failure_reentrant'}:
             spec.loader = object()
         elif scenario == 'failure_no_code':
             spec.loader = SimpleNamespace(get_code=lambda name: None)
@@ -46,6 +48,40 @@ if scenario.startswith('failure_'):
 
     patcher = patch('importlib.util.find_spec', side_effect=failure_spec)
     patcher.start()
+
+if scenario == 'failure_reentrant':
+    import threading
+    from datamodel_code_generator.reference import _INFLECT_IMPORT_LOCK
+
+    class ReentrantLoader:
+        def create_module(self, spec):
+            results = []
+
+            def acquire_private_lock():
+                acquired = _INFLECT_IMPORT_LOCK.acquire(timeout=1)
+                results.append(acquired)
+                if acquired:
+                    _INFLECT_IMPORT_LOCK.release()
+
+            thread = threading.Thread(target=acquire_private_lock)
+            thread.start()
+            thread.join(timeout=2)
+            if results != [True]:
+                raise RuntimeError('public import held the private inflection lock')
+            return original_spec.loader.create_module(spec)
+
+        def exec_module(self, module):
+            original_spec.loader.exec_module(module)
+
+    class ReentrantFinder:
+        def find_spec(self, fullname, path=None, target=None):
+            if fullname == 'inflect':
+                spec = copy(original_spec)
+                spec.loader = ReentrantLoader()
+                return spec
+            return None
+
+    sys.meta_path.insert(0, ReentrantFinder())
 
 public_before = None
 typeguard_before = None
@@ -62,6 +98,26 @@ def generate_once():
     generate(data / 'catalog.json', output=output, **options)
     return 0
 
+
+if scenario.startswith('unexpected_'):
+    import contextlib
+    import io
+    sys.path.insert(0, str(data))
+    from failure_state import ERRORS
+
+    stderr = io.StringIO()
+    failure = ERRORS[scenario]
+    with contextlib.redirect_stderr(stderr):
+        try:
+            initial_exit = generate_once()
+        except BaseException as error:
+            initial_failure_preserved = error is failure
+        else:
+            initial_failure_preserved = initial_exit == Exit.ERROR and f'{type(failure).__name__}: {failure}' in stderr.getvalue()
+    failed_import_cleaned = not any(name.startswith('datamodel_code_generator._inflect') for name in sys.modules)
+    public_untouched = 'inflect' not in sys.modules and 'typeguard' not in sys.modules
+    patcher.stop()
+    print(json.dumps({'failure_preserved': initial_failure_preserved, 'private_cleaned': failed_import_cleaned, 'public_untouched': public_untouched}))
 
 codes = []
 if scenario in {'concurrent', 'parallel_generation'}:

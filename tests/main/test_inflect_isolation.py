@@ -30,8 +30,12 @@ assert_file_content = create_assert_file_content(EXPECTED)
             for backend in DataModelType
         ],
         *[
+            (scenario, DataModelType.PydanticV2BaseModel)
+            for scenario in ["unexpected_runtime", "unexpected_value", "unexpected_base"]
+        ],
+        *[
             (f"failure_{failure}", DataModelType.PydanticV2BaseModel)
-            for failure in ["missing_spec", "missing_get_code", "no_code", "code_error", "future_api"]
+            for failure in ["missing_spec", "missing_get_code", "no_code", "code_error", "future_api", "reentrant"]
         ],
     ],
 )
@@ -50,7 +54,13 @@ def test_inflect_independent_callers_preserve_checks_and_names(
         env={**os.environ, "PYTHONPATH": str(root / "src")},
         timeout=60,
     )
-    expected_probe = "fallback" if scenario.startswith("failure_") else scenario
+    expected_probe = (
+        "unexpected"
+        if scenario.startswith("unexpected_")
+        else "fallback"
+        if scenario.startswith("failure_")
+        else scenario
+    )
     assert_output(result.stdout, EXPECTED / f"{expected_probe}.txt")
     assert_file_content(output_file, f"{backend.value.replace('.', '_')}.py")
     with _generated_model(output_file, "generated_inflect_isolation", "Catalog") as model:
