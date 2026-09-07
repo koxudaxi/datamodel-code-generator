@@ -90,7 +90,9 @@ def test_compound_property_name_generation(name: str, constraints: bool, entry: 
     assert_output(json.dumps(actual, indent=2) + "\n", EXPECTED / f"{name}_runtime.txt")
 
 
-@pytest.mark.parametrize("name", ["allof", "oneof", "sibling", "nonstring", "mixed"])
+@pytest.mark.parametrize(
+    "name", ["allof", "oneof", "sibling", "nonstring", "mixed", "one_false", "one_constrained", "one_sibling"]
+)
 @pytest.mark.parametrize("constraints", [False, True])
 @pytest.mark.parametrize("entry", ["cli", "api"])
 def test_unrepresentable_compound_property_names(

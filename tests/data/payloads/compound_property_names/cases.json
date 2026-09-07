@@ -10,5 +10,13 @@
   "boolean_true",
   "false_patterns",
   "nested_unrestricted",
-  "reverse_unrestricted"
+  "reverse_unrestricted",
+  "enum_then_any",
+  "enum_then_true",
+  "ref_then_any",
+  "any_then_enum",
+  "extra_one_any_false",
+  "extra_one_true_false",
+  "extra_enum_disjoint",
+  "extra_enum_then_string"
 ]
