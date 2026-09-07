@@ -426,5 +426,100 @@
     },
     "attribute": "renamed",
     "class_name": "ApiChildSchema"
+  },
+  {
+    "name": "raw_reserved_final",
+    "schema": "allof",
+    "aliases": {
+      "x": "model_config",
+      "ApiChildSchema.x": "renamed"
+    },
+    "baseline_aliases": {
+      "Child.x": "renamed"
+    },
+    "options": {
+      "class_name_prefix": "Api",
+      "class_name_suffix": "Schema"
+    },
+    "attribute": "renamed",
+    "class_name": "ApiChildSchema"
+  },
+  {
+    "name": "raw_scoped_reserved_final",
+    "schema": "allof",
+    "aliases": {
+      "Child.x": "model_config",
+      "ApiChildSchema.x": "renamed"
+    },
+    "baseline_aliases": {
+      "Child.x": "renamed"
+    },
+    "options": {
+      "class_name_prefix": "Api",
+      "class_name_suffix": "Schema"
+    },
+    "attribute": "renamed",
+    "class_name": "ApiChildSchema"
+  },
+  {
+    "name": "raw_duplicate_final",
+    "schema": "allof",
+    "aliases": {
+      "Child.x": "same",
+      "Child.y": "same",
+      "ApiChildSchema.x": "renamed",
+      "ApiChildSchema.y": "other"
+    },
+    "baseline_aliases": {
+      "Child.x": "renamed",
+      "Child.y": "other"
+    },
+    "options": {
+      "class_name_prefix": "Api",
+      "class_name_suffix": "Schema"
+    },
+    "attribute": "renamed",
+    "class_name": "ApiChildSchema"
+  },
+  {
+    "name": "raw_reserved_choices",
+    "schema": "allof",
+    "aliases": {
+      "Child.x": "model_config",
+      "ApiChildSchema.x": [
+        "renamed",
+        "alternate"
+      ]
+    },
+    "baseline_aliases": {
+      "Child.x": [
+        "renamed",
+        "alternate"
+      ]
+    },
+    "options": {
+      "class_name_prefix": "Api",
+      "class_name_suffix": "Schema"
+    },
+    "attribute": "renamed",
+    "class_name": "ApiChildSchema"
+  },
+  {
+    "name": "raw_title_reserved_final",
+    "schema": "title",
+    "aliases": {
+      "Child.x": "model_config",
+      "ApiOtherSchema.x": "renamed"
+    },
+    "baseline_aliases": {
+      "Child.x": "renamed"
+    },
+    "options": {
+      "class_name_prefix": "Api",
+      "class_name_suffix": "Schema",
+      "use_title_as_name": true
+    },
+    "attribute": "renamed",
+    "class_name": "ApiOtherSchema"
   }
 ]

@@ -7739,7 +7739,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 resolved_aliases[original_name] = field_name, *self._split_field_alias(alias)
                 reserved_names.add(field_name)
             field.name, field.alias, field.validation_aliases = resolved_aliases[original_name]
-            field.__dict__["_alias_resolution_class_name"] = class_name
+            field.__dict__[_ALIAS_RESOLUTION_CLASS_NAME_KEY] = class_name
 
     def _parse_object_common_part(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         self,
