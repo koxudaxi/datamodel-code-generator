@@ -501,9 +501,11 @@ class OpenAPIParser(JsonSchemaParser):
             and (resolved_ref := self.model_resolver.resolve_ref(ref)) in self._discriminator_schemas
         ):
             return self._get_discriminator_union_type(resolved_ref) or super().get_ref_data_type(ref)
+        document_count = len(self._discriminator_documents)
         data_type = super().get_ref_data_type(ref)
         if (
-            self._discriminator_schemas
+            len(self._discriminator_documents) != document_count
+            and self._discriminator_schemas
             and (resolved_ref := self.model_resolver.resolve_ref(ref)) in self._discriminator_schemas
         ):
             return self._get_discriminator_union_type(resolved_ref) or data_type

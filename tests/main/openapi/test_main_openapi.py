@@ -9958,7 +9958,7 @@ def test_discriminator_field_aliases_msgspec(output_file: Path, entrypoint: str)
 
 
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
-@pytest.mark.parametrize("case", ["local", "external", "relative", "url", "scoped", "bare", "empty"])
+@pytest.mark.parametrize("case", ["local", "external", "relative", "url", "scoped", "bare", "empty", "many_ordinary"])
 def test_external_discriminator_base(output_file: Path, entrypoint: str, case: str) -> None:
     """Keep discriminator definitions, mappings and tag payloads in their source document."""
     fixture_dir = OPEN_API_DATA_PATH / "external_discriminator_base"
@@ -9996,7 +9996,11 @@ def test_external_discriminator_base(output_file: Path, entrypoint: str, case: s
             attribute = "right"
         else:
             payload = {
-                "item": {"kind": tag} if case == "empty" else inherited if case in {"local", "external"} else mapped
+                "item": {"kind": tag}
+                if case == "empty"
+                else inherited
+                if case in {"local", "external", "many_ordinary"}
+                else mapped
             }
             tag_property = "species" if case in {"relative", "url", "bare"} else "kind"
             invalid = {"item": {tag_property: [] if case == "empty" else "bird"}}
@@ -10013,6 +10017,10 @@ def test_external_discriminator_base(output_file: Path, entrypoint: str, case: s
         )
         with _generated_model(output_file, f"generated_external_discriminator_dump_{case}_{tag}", "Wrapper") as model:
             assert model.model_validate(payload).model_dump(by_alias=True, exclude_none=True) == payload
+    if case == "many_ordinary":
+        with _generated_model(output_file, "generated_discriminator_ordinary_refs", "Controls") as model:
+            payload = {"field0": {"value": "first"}, "field99": {"value": "last"}}
+            assert model.model_validate(payload).model_dump(exclude_none=True) == payload
 
 
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
