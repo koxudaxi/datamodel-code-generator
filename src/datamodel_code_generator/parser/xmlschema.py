@@ -971,18 +971,26 @@ class _XMLSchemaConverter:
     def _apply_restriction_facets(self, restriction: ET.Element, schema: JsonSchema) -> JsonSchema:  # noqa: PLR0912
         schema = _copy_schema(schema)
         enum_values: list[Any] = []
+        base_pattern = schema.get("pattern")
+        first_pattern: str | None = None
+        patterns: dict[str, None] | None = None
         for facet in restriction:
             if _namespace(facet.tag) != XML_SCHEMA_NAMESPACE:
                 continue
-            name = _local_name(facet.tag)
             value = facet.get("value")
             if value is None:
                 continue
-            match name:
+            match _local_name(facet.tag):
                 case "enumeration":
                     enum_values.append(self._parse_literal(value, schema))
                 case "pattern":
                     if _is_supported_pattern(value):
+                        if first_pattern is None:
+                            first_pattern = value
+                        elif value != first_pattern:
+                            if patterns is None:
+                                patterns = {first_pattern: None}
+                            patterns[value] = None
                         schema["pattern"] = value
                 case "length":
                     self._set_length(schema, value, same=True)
@@ -1006,6 +1014,11 @@ class _XMLSchemaConverter:
                     schema["x-xsd-totalDigits"] = _safe_int(value)
                 case "fractionDigits":
                     schema["x-xsd-fractionDigits"] = _safe_int(value)
+        if patterns is not None:
+            # Match the full XSD value; the lookahead also selects Pydantic's Python regex engine.
+            schema["pattern"] = rf"(?=\A)(?:{'|'.join(patterns)})\Z"
+        if first_pattern is not None and base_pattern is not None and base_pattern != schema["pattern"]:
+            schema["pattern"] = rf"(?=\A(?:{base_pattern})\Z)(?:{schema['pattern']})\Z"
         if enum_values:
             schema["enum"] = enum_values
         return schema
