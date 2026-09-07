@@ -106,6 +106,7 @@ def test_root_alias_constraints(
 
 
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("case", ["integer", "multiple"])
 @pytest.mark.parametrize("template_mode", ["custom", "custom_alias", "partial", "missing", "builtin", "builtin_alias"])
 @pytest.mark.parametrize(("field_constraints", "use_annotated"), [(False, False), (True, False), (True, True)])
 def test_root_alias_custom_template_constraints(
@@ -113,12 +114,13 @@ def test_root_alias_custom_template_constraints(
     output_file: Path,
     entrypoint: str,
     template_mode: str,
+    case: str,
     *,
     field_constraints: bool,
     use_annotated: bool,
 ) -> None:
     """Preserve an existing custom alias while fixing known built-in alias constraints."""
-    source = JSON_SCHEMA_DATA_PATH / "root_alias_constraints/integer.json"
+    source = JSON_SCHEMA_DATA_PATH / "root_alias_constraints" / f"{case}.json"
     expected = EXPECTED_JSON_SCHEMA_PATH / "root_alias_constraints"
     custom_template = DATA_PATH / "templates/root_alias_constraints"
     match template_mode:
@@ -137,9 +139,9 @@ def test_root_alias_custom_template_constraints(
         case _:
             template_dir = tmp_path / "missing-templates"
     filename = (
-        f"integer_custom_{int(field_constraints)}_{int(use_annotated)}.py"
+        f"{case}_custom_{int(field_constraints)}_{int(use_annotated)}.py"
         if template_mode.startswith("custom")
-        else f"integer_{int(field_constraints)}_{int(use_annotated)}_1.py"
+        else f"{case}_{int(field_constraints)}_{int(use_annotated)}_1.py"
     )
     options = {
         "field_constraints": field_constraints,
