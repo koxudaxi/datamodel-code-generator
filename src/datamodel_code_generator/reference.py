@@ -412,6 +412,12 @@ class FieldNameResolver:
             valid_name = self.get_valid_name(alias_values[0], excludes=excludes)
             return valid_name, [field_name, *alias_values]
         if isinstance(alias_value, str):
+            if not alias_value.isidentifier() or iskeyword(alias_value) or not self._validate_field_name(alias_value):
+                msg = f"Alias {alias_value!r} for field {field_name!r} is not a valid field name."
+                raise Error(msg)
+            if excludes and alias_value in excludes:
+                msg = f"Alias {alias_value!r} for field {field_name!r} conflicts with another field."
+                raise Error(msg)
             return alias_value, field_name
         return None
 

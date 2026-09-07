@@ -1,0 +1,79 @@
+{
+  "python": "/tmp/dcg-main-venv-ba75d321/bin/python",
+  "source": "/Users/koudai/work/dcg-bugfix-20260905/b38/src",
+  "module": "/Users/koudai/work/dcg-bugfix-20260905/b38/src/datamodel_code_generator/__init__.py",
+  "generate_signature_sha256": "ac8c10a7133948e4f70f4d0fb30b69af99366b23e9f5953fb3148c579756fd6d",
+  "timing_note": "Concurrent campaign load; sanity only. Run each source serially under low load for comparison.",
+  "cases": {
+    "normal": {
+      "sha256": "1de21487829b7a6b91ef8684b1bdf024bf1719453d66c9341224fd35f216771b",
+      "cli_sha256": "ff6903a848ff98166d4da5acef80aacd98114168548d5872c6d63ed60026e366",
+      "class_field_order": {
+        "AliasNames": [
+          "a",
+          "b"
+        ]
+      },
+      "api_cold_seconds": 0.08207174995914102,
+      "api_warm_median_seconds": 0.0013192289916332811,
+      "cli_median_seconds": 0.12826220801798627,
+      "warm_peak_bytes": 446987
+    },
+    "global": {
+      "sha256": "425c4248ccf24b72d309bf41c17b0266c2cc845463ad6e43a9f7b71d411149d6",
+      "cli_sha256": "a85b86bb3c907c0506ae0fb4c066d768a2061242dfe1ec65f1582e235bb777e2",
+      "class_field_order": {
+        "AliasNames": [
+          "camel_name",
+          "count"
+        ]
+      },
+      "api_cold_seconds": 0.002361082995776087,
+      "api_warm_median_seconds": 0.0013377500290516764,
+      "cli_median_seconds": 0.12646749999839813,
+      "warm_peak_bytes": 447766
+    },
+    "scoped": {
+      "sha256": "d520e4813a3f6a2b3a1bbc97b4011a5293a594e51831be72b604d8256ab2acc4",
+      "cli_sha256": "7b270810a18fe1c1ec3e097ad1cbbe1a846c15d32a7eb0998fb2a0b5c2be159b",
+      "class_field_order": {
+        "AliasNames": [
+          "value",
+          "count"
+        ]
+      },
+      "api_cold_seconds": 0.0022534170420840383,
+      "api_warm_median_seconds": 0.0013103544770274311,
+      "cli_median_seconds": 0.12775887496536598,
+      "warm_peak_bytes": 446929
+    },
+    "choices": {
+      "sha256": "b27ce888a560be3ed4a55fd4f5c48364cefab5de9f3d900c56bb0fe42d4a9fd7",
+      "cli_sha256": "302caa0b064d273456d825449c8afef0fe0cda6d8d4ca61097d8ee1e9d67bb29",
+      "class_field_order": {
+        "AliasNames": [
+          "first",
+          "count"
+        ]
+      },
+      "api_cold_seconds": 0.002396041003521532,
+      "api_warm_median_seconds": 0.0012736670032609254,
+      "cli_median_seconds": 0.13027120800688863,
+      "warm_peak_bytes": 448150
+    },
+    "neutral_reserved": {
+      "sha256": "c96c521024edddcd378246d53eedd653eede86f312151b21a9eeb4d53b79d1ca",
+      "cli_sha256": "56b24c626c9b249e160856ce35f494467222fe89e0814bb00decfe25f4c65987",
+      "class_field_order": {
+        "AliasNames": [
+          "model_config",
+          "model_validate"
+        ]
+      },
+      "api_cold_seconds": 0.0037340419949032366,
+      "api_warm_median_seconds": 0.001236750016687438,
+      "cli_median_seconds": 0.1241489159874618,
+      "warm_peak_bytes": 484619
+    }
+  }
+}

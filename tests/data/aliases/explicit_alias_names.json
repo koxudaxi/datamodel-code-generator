@@ -1,0 +1,52 @@
+{
+  "duplicate": {
+    "a": "same",
+    "b": "same"
+  },
+  "existing": {
+    "b": "a"
+  },
+  "scoped_duplicate": {
+    "AliasNames.a": "same",
+    "AliasNames.b": "same"
+  },
+  "keyword": {
+    "a": "class"
+  },
+  "invalid": {
+    "a": "not-valid"
+  },
+  "empty": {
+    "a": ""
+  },
+  "reserved_config": {
+    "a": "model_config"
+  },
+  "reserved_validate": {
+    "a": "model_validate"
+  },
+  "reserved_msgspec": {
+    "a": "field"
+  },
+  "normal": {},
+  "global": {
+    "a": "CamelName",
+    "b": "count"
+  },
+  "scoped": {
+    "a": "model_config",
+    "AliasNames.a": "value",
+    "AliasNames.b": "count"
+  },
+  "choices": {
+    "a": [
+      "first",
+      "alternate"
+    ],
+    "b": "count"
+  },
+  "neutral_reserved": {
+    "a": "model_config",
+    "b": "model_validate"
+  }
+}

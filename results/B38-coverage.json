@@ -1,0 +1,40 @@
+{
+  "command": "python -m coverage run --branch --parallel-mode -m pytest -q tests/main/jsonschema/test_explicit_alias_names.py",
+  "source": "src/datamodel_code_generator/reference.py",
+  "changed_lines": [
+    414,
+    415,
+    416,
+    417,
+    418,
+    419
+  ],
+  "executed_changed_lines": [
+    414,
+    415,
+    416,
+    417,
+    418,
+    419
+  ],
+  "missing_changed_lines": [],
+  "executed_changed_arcs": [
+    [
+      414,
+      415
+    ],
+    [
+      414,
+      417
+    ],
+    [
+      417,
+      418
+    ],
+    [
+      417,
+      420
+    ]
+  ],
+  "missing_changed_arcs": []
+}
