@@ -777,7 +777,11 @@ class DataModelField(DataModelFieldBase):
 
     def _type_alias_needs_struct_conversion(self, source: TypeAliasBase) -> bool:
         """Follow alias targets without changing direct defaults or empty factories."""
-        if not isinstance(self.default, (dict, list)) or (isinstance(self.default, list) and not self.default):
+        if (
+            not source.fields
+            or not isinstance(self.default, (dict, list))
+            or (isinstance(self.default, list) and not self.default)
+        ):
             return False
 
         pending = [source.fields[0].data_type]
@@ -792,7 +796,11 @@ class DataModelField(DataModelFieldBase):
                 referenced_model = data_type.reference.source
                 if isinstance(referenced_model, Struct):
                     has_struct = True
-                elif isinstance(referenced_model, TypeAliasBase) and id(referenced_model) not in visited:
+                elif (
+                    isinstance(referenced_model, TypeAliasBase)
+                    and referenced_model.fields
+                    and id(referenced_model) not in visited
+                ):
                     visited.add(id(referenced_model))
                     pending.append(referenced_model.fields[0].data_type)
             else:
