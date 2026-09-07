@@ -1823,12 +1823,13 @@ def _get_discriminator_field_value(discriminator_field: DataModelFieldBase) -> D
     return None
 
 
-def _find_discriminator_value(fields: Iterable[DataModelFieldBase], field_name: str) -> DiscriminatorValue | None:
+def _find_discriminator_value(
+    fields: Iterable[DataModelFieldBase], field_name: str, *, use_field_name: bool = False
+) -> DiscriminatorValue | None:
     for field in fields:
-        if (
-            field_name in {field.original_name, field.name}
-            and (value := _get_discriminator_field_value(field)) is not None
-        ):
+        if (field.name == field_name or (not use_field_name and field.original_name == field_name)) and (
+            value := _get_discriminator_field_value(field)
+        ) is not None:
             return value
     return None
 
@@ -1839,14 +1840,19 @@ def _get_discriminator_values(
     mapping: dict[str, str],
     *,
     require_literal: bool = False,
+    use_field_name: bool = False,
 ) -> list[DiscriminatorValue]:
-    if (value := _find_discriminator_value(discriminator_model.fields, field_name)) is not None:
+    if (
+        value := _find_discriminator_value(discriminator_model.fields, field_name, use_field_name=use_field_name)
+    ) is not None:
         return [value]
 
     # Reuse models are created as empty subclasses with a "/reuse" path suffix.
     # Nested choices cannot be updated later, so also accept inherited literals.
     if (require_literal or discriminator_model.path.endswith("/reuse")) and (
-        value := _find_discriminator_value(discriminator_model.iter_all_fields(), field_name)
+        value := _find_discriminator_value(
+            discriminator_model.iter_all_fields(), field_name, use_field_name=use_field_name
+        )
     ) is not None:
         return [value]
     if require_literal:
@@ -1958,7 +1964,9 @@ def _discriminator_variants_are_valid(
     return True
 
 
-def _get_enum_from_base(discriminator_model: DataModel, field_name: str) -> Enum | None:
+def _get_enum_from_base(
+    discriminator_model: DataModel, field_name: str, *, use_field_name: bool = False
+) -> Enum | None:
     for base_class in discriminator_model.base_classes:
         if not base_class.reference or not base_class.reference.source:  # pragma: no cover
             continue
@@ -1966,7 +1974,7 @@ def _get_enum_from_base(discriminator_model: DataModel, field_name: str) -> Enum
         if not isinstance(base_model, DataModel) or not base_model.SUPPORTS_INHERITED_DISCRIMINATOR_ENUM:
             continue
         for base_field in base_model.fields:  # pragma: no branch
-            if field_name not in {base_field.original_name, base_field.name}:  # pragma: no cover
+            if base_field.name != field_name and (use_field_name or base_field.original_name != field_name):
                 continue
             if enum_from_base := base_field.data_type.find_source(Enum):  # pragma: no branch
                 return enum_from_base
@@ -3238,10 +3246,15 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     ):  # pragma: no cover
                         continue
 
-                    discriminator_values = _get_discriminator_values(discriminator_model, field_name, mapping)
+                    # A resolved Python name can equal a different field's wire name.
+                    discriminator_values = _get_discriminator_values(
+                        discriminator_model, field_name, mapping, use_field_name=field.SUPPORTS_DISCRIMINATOR
+                    )
                     has_one_literal = False
                     for discriminator_field in discriminator_model.fields:
-                        if field_name not in {discriminator_field.original_name, discriminator_field.name}:
+                        if discriminator_field.name != field_name and (
+                            field.SUPPORTS_DISCRIMINATOR or discriminator_field.original_name != field_name
+                        ):
                             continue
                         const_value = discriminator_field.extras.get("const")
                         expected_value = discriminator_values[0] if discriminator_values else None
@@ -3288,7 +3301,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
                         enum_source = discriminator_field.data_type.find_source(Enum)
                         if self.use_enum_values_in_discriminator:
-                            enum_source = enum_source or _get_enum_from_base(discriminator_model, field_name)
+                            enum_source = enum_source or _get_enum_from_base(
+                                discriminator_model, field_name, use_field_name=field.SUPPORTS_DISCRIMINATOR
+                            )
 
                         for field_data_type in discriminator_field.data_type.all_data_types:
                             if field_data_type.reference:  # pragma: no cover
@@ -3324,7 +3339,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                         has_one_literal = True
                     if not has_one_literal:
                         new_data_type = self._create_discriminator_data_type(
-                            _get_enum_from_base(discriminator_model, field_name),
+                            _get_enum_from_base(
+                                discriminator_model, field_name, use_field_name=field.SUPPORTS_DISCRIMINATOR
+                            ),
                             discriminator_values,
                             discriminator_model,
                             imports,

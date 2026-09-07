@@ -9765,6 +9765,26 @@ def test_main_openapi_discriminated_oneof_allof_cycle(output_file: Path) -> None
         ("nullable", "nullable", "scoped", {}, "kind", "Pet"),
         ("collision", "collision", "collision", {}, "kind", "Pet"),
         ("serialization", "direct", "scoped", {"serialization_aliases": {"petType": "wireKind"}}, "kind", "Pet"),
+        ("wire_collision", "wire_collision", "wire_collision", {}, "kind", "Pet"),
+        ("wire_collision_enum", "wire_collision_enum", "wire_collision", {}, "kind", "Pet"),
+        ("wire_collision_const", "wire_collision_const", "wire_collision", {}, "kind", "Pet"),
+        ("wire_collision_nullable", "wire_collision_nullable", "wire_collision", {}, "kind", "Pet"),
+        (
+            "wire_collision_inherited",
+            "wire_collision_inherited",
+            "wire_collision_inherited",
+            {"use_enum_values_in_discriminator": True, "use_subclass_enum": True},
+            "kind",
+            "Pet",
+        ),
+        (
+            "wire_collision_serialization",
+            "wire_collision",
+            "wire_collision",
+            {"serialization_aliases": {"petType": "wireKind"}},
+            "kind",
+            "Pet",
+        ),
     ],
 )
 def test_discriminator_final_field_aliases(
@@ -9822,8 +9842,16 @@ def test_discriminator_final_field_aliases(
         )
         with _generated_model(output_file, f"generated_discriminator_dump_{case}_{tag}", model_name) as model:
             value = model.model_validate({"petType": tag, detail: "yes"})
-            wire_name = "wireKind" if case == "serialization" else "petType"
+            wire_name = "wireKind" if "serialization_aliases" in options else "petType"
             assert value.model_dump(by_alias=True, exclude_none=True) == {wire_name: tag, detail: "yes"}
+            if case.startswith("wire_collision"):
+                bare = model.model_validate({"petType": tag})
+                assert bare.root.other is None
+                ordinary = type(bare.root).model_validate({"petType": tag, "kind": "ordinary"})
+                assert ordinary.model_dump(mode="json", by_alias=True, exclude_none=True) == {
+                    wire_name: tag,
+                    "kind": "ordinary",
+                }
 
 
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
