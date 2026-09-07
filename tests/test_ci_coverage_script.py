@@ -74,7 +74,7 @@ def _prepare_case(case: str, tmp_path: Path) -> tuple[str, Path]:  # ruff: ignor
                     path.write_bytes(b"")
                 case "record-missing":
                     path.unlink()
-                case "record-unknown":
+                case _:
                     target = directory / "unknown"
                     target.write_bytes(payload)
     return action, target
