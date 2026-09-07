@@ -82,7 +82,11 @@ def bind_module_field_names(models: list[DataModel], imports: Imports) -> None:
         candidates = field_names.intersection(import_.import_ for import_ in shadowable_imports)
         if not candidates:
             continue
-        class_body = next(node.body for node in ast.parse(model.render()).body if isinstance(node, ast.ClassDef))
+        class_body = next(
+            (node.body for node in ast.parse(model.render()).body if isinstance(node, ast.ClassDef)), None
+        )
+        if class_body is None:
+            continue
         fields = [
             (node.target.id, node)
             for node in class_body
