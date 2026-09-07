@@ -741,7 +741,14 @@ class DataModelField(DataModelFieldBase):
         if self._uses_empty_builtin_container_factory():
             return None
 
-        for data_type in self.data_type.data_types or (self.data_type,):
+        data_types = self.data_type.data_types or (self.data_type,)
+        if self.data_type.is_list and (item_type := data_types[0]).is_list:
+            while item_type.is_list and len(item_type.data_types) == 1:
+                item_type = item_type.data_types[0]
+            if item_type.reference and isinstance(item_type.reference.source, Struct):
+                data_types = (item_type,)
+
+        for data_type in data_types:
             # TODO: Check nested data_types
             if data_type.is_dict:
                 # TODO: Parse dict model for default
@@ -769,10 +776,12 @@ class DataModelField(DataModelFieldBase):
                         continue
                     if isinstance(self.default, dict) and any(dt.is_dict for dt in self.data_type.data_types):
                         continue
-                return (
-                    f"lambda: {self._PARSE_METHOD}({represent_python_value(self.default)},  "
-                    f"type={data_type.alias or data_type.reference.source.class_name})"
+                model_type = (
+                    self.data_type.type_hint
+                    if self.data_type.is_list
+                    else data_type.alias or data_type.reference.source.class_name
                 )
+                return f"lambda: {self._PARSE_METHOD}({represent_python_value(self.default)},  type={model_type})"
         return None
 
     def _type_alias_needs_struct_conversion(self, source: TypeAliasBase) -> bool:
