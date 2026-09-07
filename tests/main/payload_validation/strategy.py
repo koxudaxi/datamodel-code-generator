@@ -2,25 +2,28 @@
 
 from __future__ import annotations
 
+import json
 import sys
 from copy import deepcopy
+from fractions import Fraction
 from typing import TYPE_CHECKING, Any
 
+from hypothesis import strategies as st
 from hypothesis_jsonschema import from_schema
 from jsonschema import validators
 
 from .conformance import _iter_schema_nodes, _schema_types
+from .native_numeric import NATIVE_FLOAT_CONTRACT
 from .schema import _schema_for_payload_generation
 
 if TYPE_CHECKING:
-    from hypothesis import strategies as st
     from jsonschema.protocols import Validator
 
     from .models import SchemaCase
 
 
 _SourceSchemaCacheKey = tuple[str, str, str]
-_source_schema_validator_cache: dict[_SourceSchemaCacheKey, Validator] = {}
+_source_schema_validator_cache: dict[_SourceSchemaCacheKey, SourceSchemaValidator] = {}
 _payload_strategy_cache: dict[_SourceSchemaCacheKey, st.SearchStrategy[Any]] = {}
 
 
@@ -28,7 +31,33 @@ def _source_schema_cache_key(case: SchemaCase) -> _SourceSchemaCacheKey:
     return case.input_file_type, case.source_path.as_posix(), case.id
 
 
-def source_schema_validator(case: SchemaCase) -> Validator:
+def _json_number(token: str) -> int | Fraction:
+    value = Fraction(token)
+    return value.numerator if value.denominator == 1 else value
+
+
+def _canonical_json_numbers(value: Any) -> Any:
+    """Interpret the canonical JSON representation without binary numeric rounding."""
+    return json.loads(json.dumps(value, allow_nan=False), parse_float=_json_number)
+
+
+class SourceSchemaValidator:
+    """Validate canonical JSON numbers while keeping runtime payloads untouched."""
+
+    def __init__(self, validator: Validator) -> None:
+        """Wrap an independently configured exact-number source validator."""
+        self.validator = validator
+
+    def validate(self, payload: Any) -> None:
+        """Validate the exact canonical JSON projection of a payload."""
+        self.validator.validate(_canonical_json_numbers(payload))
+
+    def is_valid(self, payload: Any) -> bool:
+        """Return source validity without consulting a generated or native model."""
+        return self.validator.is_valid(_canonical_json_numbers(payload))
+
+
+def source_schema_validator(case: SchemaCase) -> SourceSchemaValidator:
     """Build a JSON Schema validator for the original source schema."""
     cache_key = _source_schema_cache_key(case)
     if (validator := _source_schema_validator_cache.get(cache_key)) is not None:
@@ -36,7 +65,7 @@ def source_schema_validator(case: SchemaCase) -> Validator:
 
     validator_class = validators.validator_for(case.source_schema)
     validator_class.check_schema(case.source_schema)
-    validator = validator_class(case.source_schema)
+    validator = SourceSchemaValidator(validator_class(_canonical_json_numbers(case.source_schema)))
     _source_schema_validator_cache[cache_key] = validator
     return validator
 
@@ -96,6 +125,16 @@ def payload_strategy(case: SchemaCase) -> st.SearchStrategy[Any]:
     validator = source_schema_validator(case)
     schema = _schema_for_payload_generation(deepcopy(case.source_schema))
     _bound_float_multiples(schema)
-    strategy = from_schema(schema).filter(validator.is_valid)
+    match case.source_schema:
+        case {"const": value} if type(value) in {int, float}:
+            strategy = st.just(value)
+        case {"enum": values} if values and all(type(value) in {int, float} for value in values):
+            strategy = st.sampled_from(values)
+        case _:
+            strategy = from_schema(schema)
+    if case.id == NATIVE_FLOAT_CONTRACT["case_id"]:
+        witnesses = st.sampled_from(NATIVE_FLOAT_CONTRACT["source_valid_witnesses"]).map(deepcopy)
+        strategy = st.one_of(witnesses, strategy)
+    strategy = strategy.filter(validator.is_valid)
     _payload_strategy_cache[cache_key] = strategy
     return strategy

@@ -60,8 +60,11 @@ from .payload_validation.constants import (
     PYDANTIC_V2_FLOAT_MULTIPLE_OF_CASE_IDS,
     PYDANTIC_V2_FLOAT_MULTIPLE_OF_RUNTIME_MIN_VERSION,
 )
+from .payload_validation.native_numeric import native_float_multiple_errors, pydantic_payload_result
 from .payload_validation.schema import _schema_for_payload_generation
 from .payload_validation.strategy import _bound_float_multiples
+
+NATIVE_NUMERIC_EMPTY_ERRORS = Path(__file__).parents[1] / "data" / "payloads" / "native_numeric_empty_errors.txt"
 
 NUMERIC_SAMPLING_PATH = Path(__file__).parents[1] / "data" / "payloads" / "numeric_sampling.json"
 NUMERIC_SAMPLING_SCHEMAS = json.loads(NUMERIC_SAMPLING_PATH.read_text())
@@ -877,11 +880,20 @@ def test_generated_pydantic_v2_model_accepts_schema_derived_payloads(
     generated_model_cache: dict[str, Any],
     data: st.DataObject,
 ) -> None:
-    """Payloads accepted by the source schema should validate against generated code."""
+    """Source-valid payloads preserve acceptance or a proven native float rejection."""
     payload = data.draw(payload_strategy(case), label=case.id)
     validate_with_source_schema(case, payload)
     adapter = load_generated_payload_adapter(case, generated_model_cache)
-    adapter.validate_python(payload)
+    expected_errors = native_float_multiple_errors(case, payload)
+    validated, errors = pydantic_payload_result(adapter, payload)
+    expected = expected_errors or []
+    assert_output(
+        json.dumps([] if errors == expected else {"expected": expected, "actual": errors}, indent=2),
+        NATIVE_NUMERIC_EMPTY_ERRORS,
+    )
+    if expected_errors is not None and not errors:
+        dumped = adapter.dump_python(validated, mode="json", by_alias=True, exclude_unset=True)
+        validate_with_source_schema(case, dumped)
 
 
 @pytest.mark.parametrize("case", PYDANTIC_V2_ROUND_TRIP_CASES)
@@ -906,7 +918,14 @@ def test_generated_pydantic_v2_model_dumps_schema_valid_payloads(
     payload = data.draw(payload_strategy(case), label=f"{case.id}:round_trip")
     validate_with_source_schema(case, payload)
     adapter = load_generated_payload_adapter(case, generated_model_cache)
-    validated_payload = adapter.validate_python(payload)
+    expected_errors = native_float_multiple_errors(case, payload) or []
+    validated_payload, errors = pydantic_payload_result(adapter, payload)
+    assert_output(
+        json.dumps([] if errors == expected_errors else {"expected": expected_errors, "actual": errors}, indent=2),
+        NATIVE_NUMERIC_EMPTY_ERRORS,
+    )
+    if errors:
+        return
     dumped_payload = adapter.dump_python(validated_payload, mode="json", by_alias=True, exclude_unset=True)
     validate_with_source_schema(case, dumped_payload)
 
