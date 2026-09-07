@@ -167,6 +167,12 @@ class DataModelField(DataModelFieldBase):
         """Build constraint data with integer-safe values, merging colliding bounds."""
         assert self.constraints is not None
         dumped = self.constraints._exclude_unset_dump  # noqa: SLF001
+        if (
+            self.data_type.type == "None"
+            and not self.data_type.is_custom_type
+            and not ((parent := self.parent) and (parent.IS_ALIAS or parent._uses_custom_root_template))  # noqa: SLF001
+        ):
+            dumped = {key: value for key, value in dumped.items() if key not in self._INTEGER_CONSTRAINTS}
         has_integer_constraints = bool(self._INTEGER_CONSTRAINTS & dumped.keys())
         is_float_type = has_integer_constraints and self._has_numeric_data_type("float", "Float")
         is_int_type = has_integer_constraints and not is_float_type and self._has_numeric_data_type("int", "Int")

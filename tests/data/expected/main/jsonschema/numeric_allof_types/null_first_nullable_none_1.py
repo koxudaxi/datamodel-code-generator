@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from pydantic import Field, RootModel
+from pydantic import RootModel
 
 
 class Root(RootModel[None]):
@@ -11,4 +11,4 @@ class Root(RootModel[None]):
 
 
 class Base(RootModel[None]):
-    root: None = Field(..., ge=2)
+    root: None
