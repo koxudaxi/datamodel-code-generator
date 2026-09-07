@@ -31,6 +31,12 @@
         },
         "dynamic_unmapped": {
           "$dynamicRef": "#/$defs/Missing"
+        },
+        "encoded_external_ref": {
+          "$ref": "%23/$defs/Allowed"
+        },
+        "encoded_external_dynamic_ref": {
+          "$dynamicRef": "%23%2F%24defs%2FAllowed"
         }
       },
       "title": "BooleanReferencesInput"

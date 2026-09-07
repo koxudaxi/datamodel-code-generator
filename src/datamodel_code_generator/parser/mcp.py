@@ -187,6 +187,8 @@ def _to_definition_name(name: str) -> str:
 
 
 def _local_definition_ref_name(ref: str) -> tuple[str, str, str] | None:
+    if not ref.startswith("#"):
+        return None
     if "%" in ref:
         from urllib.parse import unquote  # noqa: PLC0415
 
