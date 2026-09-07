@@ -7,5 +7,7 @@
   "csv_comment": "csv",
   "jsonschema": "jsonschema",
   "csv_leading": "csv",
-  "yaml_key": "jsonschema"
+  "yaml_key": "jsonschema",
+  "csv_header_suffix": "csv",
+  "yaml_key_suffix": "jsonschema"
 }

@@ -31,7 +31,7 @@ _PROTOBUF_DECLARATION_PATTERN = (
     rf"{_PROTOBUF_TRIVIA}(?:syntax{_PROTOBUF_TRIVIA}={_PROTOBUF_TRIVIA}"
     rf"(?P<syntax_quote>['\"])proto[23](?P=syntax_quote)|"
     rf"edition{_PROTOBUF_TRIVIA}={_PROTOBUF_TRIVIA}"
-    rf"(?P<edition_quote>['\"])2023(?P=edition_quote)){_PROTOBUF_TRIVIA};(?![ \t]*[:,])"
+    rf"(?P<edition_quote>['\"])2023(?P=edition_quote)){_PROTOBUF_TRIVIA};"
 )
 _PARSER_SOURCE_DATA_CACHE_MAX_SIZE = 128
 _ParserSourceDataCacheKey: TypeAlias = tuple[Path, str, str, str]

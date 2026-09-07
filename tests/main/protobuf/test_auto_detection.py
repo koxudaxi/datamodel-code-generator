@@ -13,7 +13,8 @@ from google.protobuf.descriptor_pb2 import FileDescriptorSet
 from grpc_tools import protoc
 from pydantic import TypeAdapter
 
-from datamodel_code_generator import DataModelType, InputFileType, infer_input_type
+from datamodel_code_generator import DataModelType, Error, InputFileType, generate, infer_input_type
+from datamodel_code_generator.__main__ import Exit
 from tests.conftest import assert_output
 from tests.main.conftest import (
     DATA_PATH,
@@ -174,3 +175,25 @@ def test_protobuf_auto_inference_imports(schema: str) -> None:
         text=True,
     )
     assert_output(result, EXPECTED_PROTOBUF_PATH / "auto_detection" / "inference_imports.txt")
+
+
+@pytest.mark.parametrize("schema", ["invalid_yaml", "unknown_scalar"])
+@pytest.mark.parametrize("entry", ["cli", "path", "text"])
+def test_protobuf_auto_preserves_inference_errors(
+    schema: str, entry: str, output_file: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Unrecognized text still reports the existing inference error without compiling."""
+    input_path = PAYLOAD_PATH / f"{schema}.txt"
+    if entry == "cli":
+        run_main_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type="auto",
+            expected_exit=Exit.ERROR,
+            output_should_not_exist=True,
+            capsys=capsys,
+            expected_stderr_contains="Can't infer input file type",
+        )
+    else:
+        with pytest.raises(Error, match="Can't infer input file type"):
+            generate(input_path if entry == "path" else input_path.read_text(), input_file_type=InputFileType.Auto)
