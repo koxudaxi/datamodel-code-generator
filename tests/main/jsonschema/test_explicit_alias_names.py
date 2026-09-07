@@ -31,7 +31,7 @@ from tests.main.jsonschema.conftest import assert_file_content
 if TYPE_CHECKING:
     from pathlib import Path
 
-ALIASES = json.loads((ALIASES_DATA_PATH / "explicit_alias_names.json").read_text())
+ALIASES = json.loads((ALIASES_DATA_PATH / "explicit_alias_names.json").read_text(encoding="utf-8"))
 
 
 @pytest.mark.parametrize(
