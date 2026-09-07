@@ -35,6 +35,7 @@ JsonSchema = dict[str, Any]
 
 NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 MICROSECONDS_PER_DAY = 86_400_000_000
+DURATION_BYTE_LENGTH = 12
 
 STRING_SCHEMA: JsonSchema = {"type": "string"}
 NULL_SCHEMA: JsonSchema = {"type": "null"}
@@ -99,6 +100,10 @@ def _logical_default_expression(kind: str, value: str) -> Any:
 
     if kind == "decimal":
         return PythonRuntimeExpression.from_import_call(Import(from_="decimal", import_="Decimal"), repr(value))
+    if kind == "timedelta":
+        return PythonRuntimeExpression.from_import_call(
+            Import(from_="datetime", import_="timedelta"), f"milliseconds={value}"
+        )
     return PythonRuntimeExpression(
         Import(import_="datetime", alias="datetime_module"), "", f".{kind}.fromisoformat({value!r})"
     )
@@ -417,8 +422,11 @@ class _AvroSchemaConverter:
                     return converted
                 case {"type": "map" | "record"} if isinstance(value, dict):
                     return self._convert_default_mapping(value, schema, namespace)
-                case {"type": "bytes" | "fixed", "logicalType": "decimal"} if self._convert_logical_defaults:
-                    return self._convert_decimal_default(value, schema)
+                case {"type": "bytes" | "fixed", "logicalType": "decimal"} | {
+                    "type": "fixed",
+                    "logicalType": "duration",
+                } if self._convert_logical_defaults:
+                    return self._convert_logical_bytes_default(value, schema)
                 case {"type": nested_schema}:
                     schema = nested_schema
                 case _:
@@ -501,8 +509,8 @@ class _AvroSchemaConverter:
                 return self._convert_default_mapping(value, named_schema, namespace)
             if named_schema.get("type") != "fixed":
                 return value
-            if named_schema.get("logicalType") == "decimal" and self._convert_logical_defaults:
-                return self._convert_decimal_default(value, named_schema)
+            if named_schema.get("logicalType") in {"decimal", "duration"} and self._convert_logical_defaults:
+                return self._convert_logical_bytes_default(value, named_schema)
         return self._decode_bytes_default(value)
 
     @staticmethod
@@ -516,9 +524,11 @@ class _AvroSchemaConverter:
             msg = "Avro bytes and fixed defaults must contain only code points from 0 through 255"
             raise Error(msg) from exc
 
-    def _convert_decimal_default(self, value: Any, schema: JsonSchema) -> Any:
-        """Decode signed big-endian coefficients without ambient context rounding."""
+    def _convert_logical_bytes_default(self, value: Any, schema: JsonSchema) -> Any:
+        """Decode decimal and duration defaults using their distinct byte layouts."""
         value = self._decode_bytes_default(value)
+        if schema["logicalType"] == "duration":
+            return self._convert_duration_default(value, schema)
         precision = schema.get("precision")
         scale = schema.get("scale", 0)
         if (
@@ -546,6 +556,26 @@ class _AvroSchemaConverter:
         if self._logical_default is not None:
             return self._logical_default("decimal", "decimal", decimal_value)
         return _logical_default_expression("decimal", decimal_value)
+
+    def _convert_duration_default(self, value: Any, schema: JsonSchema) -> Any:
+        """Preserve fixed milliseconds without approximating calendar components."""
+        if not isinstance(value, bytes):
+            return value
+        if schema.get("size") != DURATION_BYTE_LENGTH or len(value) != DURATION_BYTE_LENGTH:
+            msg = "Avro duration default requires a fixed size of 12 and exactly 12 encoded bytes"
+            raise Error(msg)
+        months = int.from_bytes(value[:4], "little")
+        days = int.from_bytes(value[4:8], "little")
+        if months or days:
+            msg = (
+                "Avro duration default with calendar components cannot be represented by timedelta: "
+                f"months={months}, days={days}"
+            )
+            raise Error(msg)
+        milliseconds = str(int.from_bytes(value[8:], "little"))
+        if self._logical_default is not None:
+            return self._logical_default("timedelta", "duration", milliseconds)
+        return _logical_default_expression("timedelta", milliseconds)
 
     def _convert_default_mapping(self, value: dict[str, Any], schema: JsonSchema, namespace: str | None) -> Any:
         """Decode mapping leaves without changing the input values or their order."""
@@ -732,6 +762,8 @@ class AvroParser(JsonSchemaParser):
         from datamodel_code_generator.types import Types  # ruff: ignore[import-outside-top-level]
 
         match kind:
+            case "timedelta":
+                logical_type_kind = Types.timedelta
             case "decimal":
                 logical_type_kind = Types.decimal
             case "date":

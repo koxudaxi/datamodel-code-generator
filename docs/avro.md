@@ -117,6 +117,8 @@ Generated temporal defaults use Avro's day, millisecond, microsecond, or nanosec
 
 Decimal defaults decode the bytes or fixed value as a signed big-endian integer and apply the declared scale exactly. Generated `Decimal` values preserve trailing zeros and do not depend on the active decimal context's precision. A scale outside Python's Decimal range produces an error.
 
+Duration defaults with zero months and zero days preserve the milliseconds component as `timedelta`. Nonzero calendar components produce an error because their meaning depends on the calendar and cannot be represented exactly by `timedelta`. Encoded duration defaults must contain exactly 12 bytes.
+
 Avro-specific metadata is preserved in generated JSON Schema extensions such as `x-avro-fullname`, `x-avro-namespace`, `x-avro-aliases`, and `x-avro-logicalType` before model generation.
 
 ## Schema Version
