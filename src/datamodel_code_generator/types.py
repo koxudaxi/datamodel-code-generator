@@ -190,11 +190,16 @@ def _preserve_float_constraint_precision(value: Any, handler: ValidatorFunctionW
     return handler(value)
 
 
+def _serialize_float_constraint(value: Any) -> SerializeAsAny[float | None]:
+    """Preserve numeric values without embedding unhashable serialization metadata in unions."""
+    return value
+
+
 FloatConstraint = Annotated[
     float,
     WrapValidator(_preserve_float_constraint_precision),
     # Float serialization would round the integers retained by the validator.
-    PlainSerializer(lambda value: value, return_type=SerializeAsAny[float | None]),
+    PlainSerializer(_serialize_float_constraint),
 ]
 
 

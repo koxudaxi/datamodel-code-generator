@@ -3,17 +3,22 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
+from pydantic import TypeAdapter, ValidationError
+from pydantic_core import PydanticSerializationError
 
 from datamodel_code_generator import Formatter, InputFileType
 from datamodel_code_generator.enums import StrictTypes
 from datamodel_code_generator.model._constraints import Constraints
 from datamodel_code_generator.parser.jsonschema import JsonSchemaObject
+from tests.conftest import assert_output
 from tests.main.conftest import (
     JSON_DATA_PATH,
     JSON_SCHEMA_DATA_PATH,
+    _assert_model_json_invalid,
+    _generated_model,
     assert_generated_model_json_validation,
     run_generate_and_assert,
     run_generate_file_and_assert,
@@ -85,6 +90,22 @@ def test_numeric_constraint_precision(
         (JSON_DATA_PATH / "numeric_constraint_precision" / f"{fixture}_payloads.json").read_text(encoding="utf-8")
     )
     valid_payload = {name: payload["valid"] for name, payload in payloads.items()}
+    native = TypeAdapter(dict[str, Any])
+    try:
+        native.validate_json(json.dumps(valid_payload))
+    except ValidationError:
+        _assert_model_json_invalid(native.validate_json, json.dumps(valid_payload), "json_invalid")
+        with _generated_model(output_file, "numeric_constraint_precision", "NumericConstraints") as model:
+            _assert_model_json_invalid(model.model_validate_json, json.dumps(valid_payload), "json_invalid")
+            assert_output(
+                json.dumps(model.model_validate(valid_payload).model_dump(), indent=2) + "\n",
+                EXPECTED_JSON_SCHEMA_PATH / "numeric_constraint_precision/large_native_python.txt",
+            )
+            for name, payload in payloads.items():
+                _assert_model_json_invalid(
+                    model.model_validate, {**valid_payload, name: payload["invalid"]}, payload["error_type"]
+                )
+        return
     for name, payload in payloads.items():
         assert_generated_model_json_validation(
             output_file,
@@ -112,11 +133,19 @@ def test_numeric_constraint_serialization(fixture: str, serialization: str, cons
             parsed = Constraints.model_validate({"multipleOf": value["multipleOf"]})
         else:
             continue
-        serialized = (
-            json.loads(parsed.model_dump_json(exclude_unset=True, by_alias=True))
-            if serialization == "json"
-            else parsed.model_dump(exclude_unset=True, by_alias=True)
-        )
+        serialized = parsed.model_dump(exclude_unset=True, by_alias=True)
+        if serialization == "json":
+            try:
+                TypeAdapter(dict[str, Any]).dump_json(value)
+            except PydanticSerializationError as native_error:
+                with pytest.raises(PydanticSerializationError) as generated_error:
+                    parsed.model_dump_json(exclude_unset=True, by_alias=True)
+                assert_output(
+                    f"native: {native_error}\ngenerated: {generated_error.value}\n",
+                    EXPECTED_JSON_SCHEMA_PATH / "numeric_constraint_precision/native_json_overflow.txt",
+                )
+            else:
+                serialized = json.loads(parsed.model_dump_json(exclude_unset=True, by_alias=True))
         schema["properties"][name] = serialized if constraint_model == "schema" else {**value, **serialized}
     run_generate_and_assert(
         input_=schema,
