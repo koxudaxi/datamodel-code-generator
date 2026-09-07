@@ -1276,6 +1276,7 @@ EXCLUDE_FIELD_KEYS = (set(JsonSchemaObject.get_fields()) - DEFAULT_FIELD_KEYS - 
 
 
 _DEFAULT_SCHEMA_PATHS = ("#/definitions", "#/$defs")
+_REGEX_META_CHARACTERS = frozenset(r"\.^$*+?{}[]|()")
 
 
 @snooper_to_methods()  # noqa: PLR0904
@@ -4071,7 +4072,18 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     return val1 if v1 <= v2 else val2
                 return val1  # pragma: no cover
             case "pattern":
-                return f"(?={val1})(?={val2})" if val1 != val2 else val1
+                if val1 == val2:
+                    return val1
+                # Only disjoint-prefix literals are provably broken by a shared search position.
+                # Preserve existing regex expressions and already-correct literal intersections.
+                if (
+                    not val1.startswith(val2)
+                    and not val2.startswith(val1)
+                    and _REGEX_META_CHARACTERS.isdisjoint(val1)
+                    and _REGEX_META_CHARACTERS.isdisjoint(val2)
+                ):
+                    return rf"\A(?=[\s\S]*{val1})(?=[\s\S]*{val2})"
+                return f"(?={val1})(?={val2})"
             case "uniqueItems":
                 return val1 or val2
             case "multipleOf":
