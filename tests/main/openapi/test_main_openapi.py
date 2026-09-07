@@ -9785,6 +9785,19 @@ def test_main_openapi_discriminated_oneof_allof_cycle(output_file: Path) -> None
             "kind",
             "Pet",
         ),
+        (
+            "wire_collision_global_inherited",
+            "wire_collision_inherited",
+            "wire_collision_global_inherited",
+            {"use_enum_values_in_discriminator": True, "use_subclass_enum": True},
+            "kind",
+            "Pet",
+        ),
+        ("wire_collision_global", "wire_collision", "wire_collision_global", {}, "kind", "Pet"),
+        ("wire_collision_global_enum", "wire_collision_enum", "wire_collision_global", {}, "kind", "Pet"),
+        ("wire_collision_global_const", "wire_collision_const", "wire_collision_global", {}, "kind", "Pet"),
+        ("wire_collision_global_missing", "wire_collision_missing", "wire_collision_global", {}, "kind", "Pet"),
+        ("wire_collision_global_nullable", "wire_collision_nullable", "wire_collision_global", {}, "kind", "Pet"),
     ],
 )
 def test_discriminator_final_field_aliases(
@@ -9840,6 +9853,17 @@ def test_discriminator_final_field_aliases(
             expected_attribute_path=("root", field_name),
             expected_attribute_value=tag,
         )
+        if case == "wire_collision_global_missing":
+            assert_generated_model_json_validation(
+                output_file,
+                module_name=f"generated_discriminator_missing_{tag}",
+                model_name=model_name,
+                valid_json=json.dumps({"petType": tag}),
+                invalid_json="{}",
+                expected_error_type="union_tag_not_found",
+                expected_attribute_path=("root", field_name),
+                expected_attribute_value=tag,
+            )
         with _generated_model(output_file, f"generated_discriminator_dump_{case}_{tag}", model_name) as model:
             value = model.model_validate({"petType": tag, detail: "yes"})
             wire_name = "wireKind" if "serialization_aliases" in options else "petType"

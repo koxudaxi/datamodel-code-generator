@@ -1824,12 +1824,18 @@ def _get_discriminator_field_value(discriminator_field: DataModelFieldBase) -> D
 
 
 def _find_discriminator_value(
-    fields: Iterable[DataModelFieldBase], field_name: str, *, use_field_name: bool = False
+    fields: Iterable[DataModelFieldBase],
+    field_name: str,
+    *,
+    field_name_mode: Literal["original", "resolved", "either"] = "either",
 ) -> DiscriminatorValue | None:
     for field in fields:
-        if (field.name == field_name or (not use_field_name and field.original_name == field_name)) and (
-            value := _get_discriminator_field_value(field)
-        ) is not None:
+        if field_name_mode == "original":
+            source_name = field.original_name if field.original_name is not None else field.alias or field.name
+            matches = source_name == field_name
+        else:
+            matches = field.name == field_name or (field_name_mode == "either" and field.original_name == field_name)
+        if matches and (value := _get_discriminator_field_value(field)) is not None:
             return value
     return None
 
@@ -1840,10 +1846,10 @@ def _get_discriminator_values(
     mapping: dict[str, str],
     *,
     require_literal: bool = False,
-    use_field_name: bool = False,
+    field_name_mode: Literal["original", "resolved", "either"] = "either",
 ) -> list[DiscriminatorValue]:
     if (
-        value := _find_discriminator_value(discriminator_model.fields, field_name, use_field_name=use_field_name)
+        value := _find_discriminator_value(discriminator_model.fields, field_name, field_name_mode=field_name_mode)
     ) is not None:
         return [value]
 
@@ -1851,7 +1857,9 @@ def _get_discriminator_values(
     # Nested choices cannot be updated later, so also accept inherited literals.
     if (require_literal or discriminator_model.path.endswith("/reuse")) and (
         value := _find_discriminator_value(
-            discriminator_model.iter_all_fields(), field_name, use_field_name=use_field_name
+            discriminator_model.iter_all_fields(),
+            field_name,
+            field_name_mode=field_name_mode,
         )
     ) is not None:
         return [value]
@@ -1934,6 +1942,8 @@ def _discriminator_variants_are_valid(
     data_types: Iterable[DataType],
     field_name: str,
     mapping: dict[str, str],
+    *,
+    original_name: str | None = None,
 ) -> bool:
     discriminator_value_owners: dict[DiscriminatorValue, int] = {}
     for data_type, can_update_discriminator, owner in _iter_discriminator_data_types(data_types):
@@ -1951,9 +1961,10 @@ def _discriminator_variants_are_valid(
 
         discriminator_values = _get_discriminator_values(
             discriminator_model,
-            field_name,
+            original_name if original_name is not None else field_name,
             mapping,
             require_literal=not can_update_discriminator,
+            field_name_mode="original" if original_name is not None else "either",
         )
         if not discriminator_values:
             return False
@@ -3222,6 +3233,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     field.data_type.data_types,
                     field_name,
                     mapping,
+                    original_name=property_name if field.SUPPORTS_DISCRIMINATOR else None,
                 ):
                     _remove_discriminator(field)
                     _clear_model_imports_cache_if_retained(model, can_retain_cache=can_retain_cache)
@@ -3248,7 +3260,10 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
                     # A resolved Python name can equal a different field's wire name.
                     discriminator_values = _get_discriminator_values(
-                        discriminator_model, field_name, mapping, use_field_name=field.SUPPORTS_DISCRIMINATOR
+                        discriminator_model,
+                        field_name,
+                        mapping,
+                        field_name_mode="resolved" if field.SUPPORTS_DISCRIMINATOR else "either",
                     )
                     has_one_literal = False
                     for discriminator_field in discriminator_model.fields:
