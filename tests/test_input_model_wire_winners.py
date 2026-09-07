@@ -43,9 +43,10 @@ def test_input_model_validation_property_winners(tmp_path: Path, case: str, entr
         schema = load_model_schema(paths, InputFileType.JsonSchema)
         if case == "InlinedWins":
             assert_output(json.dumps(schema["examples"]), EXPECTED_INPUT_MODEL_PATH / "wire_winner_examples.txt")
-        assert "x-datamodel-code-generator-field-" not in json.dumps({
-            key: value for key, value in schema.items() if key != "examples"
-        })
+        if not options.get("user_extensions"):
+            assert "x-datamodel-code-generator-field-" not in json.dumps({
+                key: value for key, value in schema.items() if key != "examples"
+            })
         generate(
             schema,
             config=GenerateConfig(
@@ -85,3 +86,18 @@ def test_input_model_validation_property_winners(tmp_path: Path, case: str, entr
                 TypeAdapter(source_type).validate_python(payload)
             with pytest.raises(ValidationError):
                 model.model_validate(payload)
+
+
+@pytest.mark.parametrize("case", ["UserExtensions", "CollisionExtensions", "ExtensionContainer"])
+def test_validation_property_user_extensions(case: str) -> None:
+    """Internal ownership metadata preserves native schema extensions and instance data."""
+    source_type = getattr(importlib.import_module(SOURCE_MODULE), case)
+    native_schema = TypeAdapter(source_type).json_schema()
+    schema = load_model_schema([f"{SOURCE_MODULE}:{case}"], InputFileType.JsonSchema)
+    observed = schema["$defs"]["CollisionExtensions"] if case == "ExtensionContainer" else schema
+    expected = native_schema["$defs"]["CollisionExtensions"] if case == "ExtensionContainer" else native_schema
+    for key in ("x-datamodel-code-generator-field-name", "x-datamodel-code-generator-field-names", "examples"):
+        assert observed[key] == expected[key]
+    for key in ("x-datamodel-code-generator-field-name", "x-datamodel-code-generator-field-names"):
+        assert observed["properties"]["shared"][key] == expected["properties"]["shared"][key]
+    assert observed["properties"]["metadata"]["default"] == expected["properties"]["metadata"]["default"]

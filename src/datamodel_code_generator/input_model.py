@@ -24,12 +24,14 @@ from collections.abc import (
 from collections.abc import (
     Set as AbstractSet,
 )
+from copy import deepcopy
 from dataclasses import is_dataclass
 from enum import Enum as PyEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any, Union, cast, get_args, get_origin, get_type_hints
 
 from pydantic import BaseModel
+from typing_extensions import Self
 
 from datamodel_code_generator._input_model_transport import PythonTypeExpressionCollector
 from datamodel_code_generator._process_state import PROCESS_STATE_LOCK
@@ -256,7 +258,27 @@ _UNSERIALIZABLE_MARKER = "x-python-unserializable"
 _UNION_BRANCH_MARKER = "x-python-union-branch"
 _UNSERIALIZABLE_SCHEMA_KEYS = frozenset({"anyOf", "oneOf", "allOf", "items", "prefixItems", "additionalProperties"})
 _FIELD_SCHEMA_NAME = "x-datamodel-code-generator-field-name"
-_FIELD_SCHEMA_NAMES = "x-datamodel-code-generator-field-names"
+_MISSING_FIELD_SCHEMA_NAME = object()
+
+
+class _FieldSchemaOwner(int):
+    """Owned scalar metadata survives Pydantic's recursive schema remapping."""
+
+    field_name: str
+    previous: Any
+
+    def __new__(cls, field_name: str, previous: Any) -> Self:
+        owner = super().__new__(cls, 0)
+        owner.field_name = field_name
+        owner.previous = previous
+        return owner
+
+    def __deepcopy__(self, memo: dict[int, Any]) -> _FieldSchemaOwner:
+        previous = self.previous
+        if previous is not _MISSING_FIELD_SCHEMA_NAME:
+            previous = deepcopy(previous, memo)
+        return type(self)(self.field_name, previous)
+
 
 # Type family constants
 _TYPE_FAMILY_ENUM = "enum"
@@ -350,7 +372,13 @@ def _get_input_model_json_schema_class(
             field_name = field_names.get(id(schema)) if field_names is not None else None
             result = super().generate_inner(schema)
             if field_name is not None:
-                return {**result, _FIELD_SCHEMA_NAME: field_name}
+                type(self).has_field_schema_owners = True
+                return {
+                    **result,
+                    _FIELD_SCHEMA_NAME: _FieldSchemaOwner(
+                        field_name, result.get(_FIELD_SCHEMA_NAME, _MISSING_FIELD_SCHEMA_NAME)
+                    ),
+                }
             return result
 
         def _named_required_fields_schema(self, named_required_fields: Any) -> dict[str, Any]:
@@ -377,17 +405,9 @@ def _get_input_model_json_schema_class(
                 if self._get_alias_name(field, name) in duplicates
             }
             try:
-                result = super()._named_required_fields_schema(named_required_fields)
+                return super()._named_required_fields_schema(named_required_fields)
             finally:
                 self._active_field_names = previous_names
-            owners = {}
-            for name, prop in result["properties"].items():
-                if (field_name := prop.pop(_FIELD_SCHEMA_NAME, None)) is not None:
-                    owners[name] = field_name
-            if owners:
-                result[_FIELD_SCHEMA_NAMES] = owners
-                type(self).has_field_schema_owners = True
-            return result
 
         def handle_invalid_for_json_schema(
             self,
@@ -666,12 +686,12 @@ def _add_python_type_for_unserializable(
 
     if "properties" in schema:
         model_fields = getattr(model, "model_fields", {})
-        field_names = schema.get(_FIELD_SCHEMA_NAMES)
         for field_name, field_info in model_fields.items():
             schema_name = _get_model_field_schema_name(field_name, field_info)
-            if field_names is not None and field_names.get(schema_name, field_name) != field_name:
-                continue
             if (prop := schema["properties"].get(schema_name)) is not None:
+                owner = prop.get(_FIELD_SCHEMA_NAME)
+                if isinstance(owner, _FieldSchemaOwner) and owner.field_name != field_name:
+                    continue
                 _process_unserializable_property(prop, field_info.annotation, expression_collector)
 
     if "$defs" in schema:
@@ -858,14 +878,14 @@ def _add_python_type_to_properties(
     properties: dict[str, Any],
     model_fields: dict[str, Any],
     expression_collector: PythonTypeExpressionCollector | None = None,
-    field_names: dict[str, str] | None = None,
 ) -> None:
     """Add x-python-type to properties dict for given model fields."""
     for field_name, field_info in model_fields.items():
         schema_name = _get_model_field_schema_name(field_name, field_info)
-        if field_names is not None and field_names.get(schema_name, field_name) != field_name:
-            continue
         if (prop := properties.get(schema_name)) is None:
+            continue
+        owner = prop.get(_FIELD_SCHEMA_NAME)
+        if isinstance(owner, _FieldSchemaOwner) and owner.field_name != field_name:
             continue
         if serialized := _serialize_python_type(field_info.annotation, expression_collector):
             prop["x-python-type"] = serialized
@@ -879,7 +899,12 @@ def _clear_field_schema_names(schema: dict[str, Any]) -> None:
     while pending:
         node = pending.pop()
         if isinstance(node, dict):
-            node.pop(_FIELD_SCHEMA_NAMES, None)
+            owner = node.get(_FIELD_SCHEMA_NAME)
+            if isinstance(owner, _FieldSchemaOwner):
+                if owner.previous is _MISSING_FIELD_SCHEMA_NAME:
+                    del node[_FIELD_SCHEMA_NAME]
+                else:
+                    node[_FIELD_SCHEMA_NAME] = owner.previous
             for key, value in node.items():
                 if key in SCHEMA_MAP_KEYS and isinstance(value, dict):
                     pending.extend(value.values())
@@ -898,9 +923,8 @@ def _add_python_type_info(
 ) -> dict[str, Any]:
     """Add x-python-type information to JSON Schema for types lost during conversion."""
     model_fields = getattr(model, "model_fields", None)
-    field_names = schema.pop(_FIELD_SCHEMA_NAMES, None)
     if model_fields and "properties" in schema:
-        _add_python_type_to_properties(schema["properties"], model_fields, expression_collector, field_names)
+        _add_python_type_to_properties(schema["properties"], model_fields, expression_collector)
 
     if "$defs" in schema:
         nested_models = _collect_nested_models(model)
@@ -908,15 +932,12 @@ def _add_python_type_info(
         if model_name and model_name in schema["$defs"]:
             nested_models[model_name] = model
         for def_name, def_schema in schema["$defs"].items():
-            field_names = def_schema.pop(_FIELD_SCHEMA_NAMES, None)
             if def_name not in nested_models or "properties" not in def_schema:  # pragma: no cover
                 continue
             nested_model = nested_models[def_name]
             nested_fields = getattr(nested_model, "model_fields", None)
             if nested_fields:
-                _add_python_type_to_properties(
-                    def_schema["properties"], nested_fields, expression_collector, field_names
-                )
+                _add_python_type_to_properties(def_schema["properties"], nested_fields, expression_collector)
 
     if clear_field_names:
         _clear_field_schema_names(schema)

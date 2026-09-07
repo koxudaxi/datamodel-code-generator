@@ -195,5 +195,42 @@
       "last",
       "label"
     ]
+  },
+  "UserExtensions": {
+    "fields": {
+      "shared": "values"
+    },
+    "order": [
+      "first",
+      "shared",
+      "last",
+      "metadata"
+    ],
+    "user_extensions": true
+  },
+  "CollisionExtensions": {
+    "fields": {
+      "shared": "items"
+    },
+    "order": [
+      "first",
+      "shared",
+      "last",
+      "metadata"
+    ],
+    "user_extensions": true
+  },
+  "ExtensionContainer": {
+    "fields": {
+      "shared": "items"
+    },
+    "order": [
+      "first",
+      "shared",
+      "last",
+      "metadata"
+    ],
+    "user_extensions": true,
+    "nested": true
   }
 }

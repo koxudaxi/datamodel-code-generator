@@ -1,6 +1,6 @@
 """Validation-wire collisions with real Pydantic omission and alias policies."""
 from dataclasses import dataclass
-from typing import Annotated, Any, Callable, FrozenSet, List
+from typing import Annotated, Any, Callable, Dict, FrozenSet, List
 from pydantic import AliasChoices, AliasPath, BaseModel, ConfigDict, Field
 from pydantic_core import PydanticOmit
 from typing_extensions import TypedDict
@@ -126,3 +126,34 @@ class InlinedWins(BaseModel):
 
 class InheritedWins(ListWins):
     label: str = 'extra'
+
+
+class UserExtensions(BaseModel):
+    model_config = ConfigDict(json_schema_extra={
+        'x-datamodel-code-generator-field-names': ['user', 'root'],
+        'x-datamodel-code-generator-field-name': {'user': 'root'},
+        'examples': [{'x-datamodel-code-generator-field-name': 'example'}],
+    })
+    first: int
+    values: frozenset[int] = Field(alias='shared', json_schema_extra={
+        'x-datamodel-code-generator-field-name': ['user', 'property'],
+        'x-datamodel-code-generator-field-names': False,
+    })
+    last: str
+    metadata: Dict[str, str] = {'x-datamodel-code-generator-field-name': 'default'}
+
+
+class CollisionExtensions(BaseModel):
+    model_config = UserExtensions.model_config
+    first: int
+    values: FrozenSet[int] = Field(alias='shared')
+    last: str
+    metadata: Dict[str, str] = {'x-datamodel-code-generator-field-name': 'default'}
+    items: List[int] = Field(alias='shared', json_schema_extra={
+        'x-datamodel-code-generator-field-name': {'user': 'winner'},
+        'x-datamodel-code-generator-field-names': 42,
+    })
+
+
+class ExtensionContainer(BaseModel):
+    item: CollisionExtensions
