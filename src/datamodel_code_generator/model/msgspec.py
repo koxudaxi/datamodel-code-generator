@@ -10,6 +10,7 @@ from functools import wraps
 from math import isfinite
 from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, Optional, TypeVar
 
+from datamodel_code_generator import Error
 from datamodel_code_generator.imports import IMPORT_OPTIONAL, IMPORT_UNION, Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase, _rebuild_model_with_datamodel_namespace
 from datamodel_code_generator.model._constraints import PatternConstraints as _Constraints
@@ -182,6 +183,73 @@ class Struct(DataModel):
         self._set_internal_template_data("base_class_kwargs", {})
         if self.keyword_only:
             self.add_base_class_kwarg("kw_only", "True")
+
+    @classmethod
+    def render_module_code(cls, models: list[DataModel]) -> str:
+        """Reject incompatible generated Struct layouts before rendering a module."""
+        for model in models:
+            if isinstance(model, cls) and len(model.base_classes) > 1:
+                cls._validate_base_layouts(model)
+        return ""
+
+    @staticmethod
+    def _has_opaque_layout_base(model: DataModel) -> bool:
+        """Identify effective configured bases whose inherited slots are unknown."""
+        return (
+            (custom_base_class := model.custom_base_class) is not None
+            and custom_base_class not in (Struct.BASE_CLASS, [Struct.BASE_CLASS])
+            and any(not base.reference for base in model.base_classes)
+        )
+
+    def _validate_base_layouts(self) -> None:
+        """Allow empty mixins and shared layouts, but reject independent slot extensions."""
+        if self._uses_custom_root_template:
+            return
+        bases: list[DataModel] = [
+            base.reference.source
+            for base in reversed(self.base_classes)
+            if base.reference and isinstance(base.reference.source, Struct)
+        ]
+        visited: set[str] = set()
+        layouts: dict[DataModel, set[str]] = {}
+        while bases:
+            base = bases.pop()
+            if base.path in visited:
+                continue
+            visited.add(base.path)
+            if self._has_opaque_layout_base(base):
+                return
+            parents: list[DataModel] = [
+                parent.reference.source
+                for parent in base.base_classes
+                if parent.reference and isinstance(parent.reference.source, Struct)
+            ]
+            bases.extend(reversed(parents))
+            ancestor_paths: set[str] = set()
+            inherited_names: set[str | None] = set()
+            while parents:
+                parent = parents.pop()
+                if parent.path in ancestor_paths:
+                    continue
+                if self._has_opaque_layout_base(parent):
+                    return
+                ancestor_paths.add(parent.path)
+                inherited_names.update(field.name for field in parent.fields if not field.is_class_var)
+                parents.extend(
+                    ancestor.reference.source
+                    for ancestor in parent.base_classes
+                    if ancestor.reference and isinstance(ancestor.reference.source, Struct)
+                )
+            if not any(field.name not in inherited_names and not field.is_class_var for field in base.fields):
+                continue
+            for other, other_ancestors in layouts.items():
+                if base.path not in other_ancestors and other.path not in ancestor_paths:
+                    msg = (
+                        f"msgspec.Struct model {self.class_name!r} has incompatible layouts from generated bases "
+                        f"{other.class_name!r} and {base.class_name!r}."
+                    )
+                    raise Error(msg)
+            layouts[base] = ancestor_paths
 
     def add_base_class_kwarg(self, name: str, value: str) -> None:
         """Add keyword argument to base class constructor."""
