@@ -1,0 +1,18 @@
+{
+  "type": "object",
+  "properties": {
+    "species": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "species"
+  ],
+  "discriminator": {
+    "propertyName": "species",
+    "mapping": {
+      "cat": "./variants.json#/components/schemas/Cat",
+      "dog": "./variants.json#/components/schemas/Dog"
+    }
+  }
+}
