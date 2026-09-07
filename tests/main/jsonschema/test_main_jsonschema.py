@@ -14244,7 +14244,9 @@ def test_allof_integer_bound_comparisons(output_file: Path, entry_point: str, fi
             force_exec_validation=True,
         )
 
-    payloads = json.loads(input_path.with_name(f"{fixture}_payloads.json").read_text(encoding="utf-8"))
+    payloads = json.loads(
+        (JSON_DATA_PATH / "integer_bound_comparisons" / f"{fixture}_payloads.json").read_text(encoding="utf-8")
+    )
     for model_name, payload in payloads.items():
         assert_generated_model_json_validation(
             output_file,
