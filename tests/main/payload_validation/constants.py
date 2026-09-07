@@ -8,6 +8,10 @@ from datamodel_code_generator.format import PythonVersion, is_supported_in_black
 from tests.main.conftest import CURRENT_PYTHON_VERSION, DATA_PATH
 from tests.main.payload_validation.models import PayloadBackend
 
+PAYLOAD_CODEGEN_WARNING_FILES: dict[str, str] = json.loads(
+    (DATA_PATH / "payloads/numeric_allof_type_warning_files.json").read_text(encoding="utf-8")
+)
+
 PAYLOAD_CLASS_NAME = "Payload"
 PAYLOAD_CURRENT_PYTHON_VERSION = PythonVersion(CURRENT_PYTHON_VERSION)
 SCHEMA_FILE_SUFFIXES = {".json", ".yaml", ".yml"}

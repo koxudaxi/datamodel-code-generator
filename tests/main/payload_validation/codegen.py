@@ -7,6 +7,7 @@ import importlib.util
 import json
 import re
 import sys
+import warnings
 from dataclasses import dataclass, is_dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -15,8 +16,10 @@ from pydantic import TypeAdapter, ValidationError
 
 from datamodel_code_generator import enable_parsed_source_cache
 from datamodel_code_generator.__main__ import Exit, main
+from tests.conftest import assert_output
+from tests.main.conftest import EXPECTED_MAIN_PATH
 
-from .constants import PAYLOAD_CLASS_NAME, PAYLOAD_TARGET_PYTHON_VERSION
+from .constants import PAYLOAD_CLASS_NAME, PAYLOAD_CODEGEN_WARNING_FILES, PAYLOAD_TARGET_PYTHON_VERSION
 from .models import PayloadBackend
 
 if TYPE_CHECKING:
@@ -216,7 +219,17 @@ def generate_payload_runtime(
     case_dir.mkdir(parents=True, exist_ok=True)
     input_path = _write_input_schema(case, case_dir)
     output_path = case_dir / "model.py"
-    if (return_code := _run_payload_codegen(_payload_codegen_args(case, input_path, output_path, backend))) != Exit.OK:
+    warning_file = PAYLOAD_CODEGEN_WARNING_FILES.get(case.id)
+    with warnings.catch_warnings(record=True) as captured:
+        if warning_file:
+            warnings.simplefilter("always", UserWarning)
+        return_code = _run_payload_codegen(_payload_codegen_args(case, input_path, output_path, backend))
+    if warning_file:
+        assert_output(
+            json.dumps([str(warning.message) for warning in captured], indent=2) + "\n",
+            EXPECTED_MAIN_PATH / warning_file,
+        )
+    if return_code != Exit.OK:
         msg = f"Generation failed with exit code {return_code!r}"
         raise PayloadAdapterError(msg)
     module_digest = hashlib.sha256("\0".join(cache_key).encode()).hexdigest()
