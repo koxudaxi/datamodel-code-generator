@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 PROTOBUF_AUTO_PATH = DATA_PATH / "protobuf_auto_detection"
 SCHEMAS = tuple(path.stem for path in sorted(PROTOBUF_AUTO_PATH.glob("*.proto")))
 PAYLOAD_PATH = DATA_PATH / "payloads" / "protobuf_auto_detection"
-CONTROLS = json.loads((PAYLOAD_PATH / "controls.json").read_text())
+CONTROLS = json.loads((PAYLOAD_PATH / "controls.json").read_text(encoding="utf-8"))
 
 
 @pytest.mark.parametrize("schema", SCHEMAS)
@@ -77,13 +77,13 @@ def test_protobuf_auto_generation(
             )
         case _:
             run_generate_and_assert(
-                input_=input_path.read_text(),
+                input_=input_path.read_text(encoding="utf-8"),
                 input_file_type=input_type,
                 expected_file=EXPECTED_PROTOBUF_PATH / expected.replace(".py", "_text.py"),
                 **options,
             )
             return
-    payload = json.loads((PAYLOAD_PATH / "runtime.txt").read_text())
+    payload = json.loads((PAYLOAD_PATH / "runtime.txt").read_text(encoding="utf-8"))
     with _generated_model(output_file, "protobuf_auto", "M") as model:
         if backend == DataModelType.MsgspecStruct:
             result = msgspec.to_builtins(msgspec.convert(payload, type=model))
@@ -132,7 +132,7 @@ def test_protobuf_auto_other_formats(
     """Declaration-like data in JSON, YAML and CSV retains its previous format."""
     input_path = PAYLOAD_PATH / f"{control}.txt"
     expected_type = InputFileType(CONTROLS[control])
-    assert_input_file_type(infer_input_type(input_path.read_text()), expected_type)
+    assert_input_file_type(infer_input_type(input_path.read_text(encoding="utf-8")), expected_type)
     selected_type = input_type or expected_type
     expected = f"auto_detection/control_{control}.py"
     match entry:
@@ -156,7 +156,7 @@ def test_protobuf_auto_other_formats(
             )
         case _:
             run_generate_and_assert(
-                input_=input_path.read_text(),
+                input_=input_path.read_text(encoding="utf-8"),
                 input_file_type=selected_type,
                 custom_file_header="# Protobuf detection regression",
                 expected_file=EXPECTED_PROTOBUF_PATH / expected.replace(".py", "_text.py"),
@@ -196,4 +196,7 @@ def test_protobuf_auto_preserves_inference_errors(
         )
     else:
         with pytest.raises(Error, match="Can't infer input file type"):
-            generate(input_path if entry == "path" else input_path.read_text(), input_file_type=InputFileType.Auto)
+            generate(
+                input_path if entry == "path" else input_path.read_text(encoding="utf-8"),
+                input_file_type=InputFileType.Auto,
+            )
