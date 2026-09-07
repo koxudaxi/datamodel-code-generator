@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import json
+import operator
 import re
+import subprocess
+import sys
 from collections import defaultdict
 from contextlib import nullcontext
 from typing import TYPE_CHECKING
@@ -13,6 +16,7 @@ import pytest
 
 from datamodel_code_generator import DataModelType, Error, InputFileType, generate
 from datamodel_code_generator.__main__ import Exit
+from tests.conftest import assert_output
 from tests.main.conftest import (
     ALIASES_DATA_PATH,
     GRAPHQL_DATA_PATH,
@@ -380,4 +384,93 @@ def test_explicit_alias_names_custom_namespace(
             expected_error_type="missing",
             expected_attribute_path=("model_validate",),
             expected_attribute_value="A",
+        )
+
+
+@pytest.mark.parametrize(
+    "case",
+    json.loads((JSON_SCHEMA_DATA_PATH / "explicit_alias_namespace_inheritance" / "cases.json").read_text()),
+    ids=operator.itemgetter("name"),
+)
+def test_explicit_alias_names_external_namespace_precedence(
+    case: dict, output_file: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Use effective base precedence and preserve uncertainty from an external base."""
+    directory = JSON_SCHEMA_DATA_PATH / "explicit_alias_namespace_inheritance"
+    input_path = directory / f"{case['schema']}.json"
+    extra = defaultdict(dict, case["config"])
+    aliases = {"Child.a": "model_validate"}
+    base_class = "explicit_alias_base.NamespaceBase"
+    monkeypatch.syspath_prepend(str(JSON_SCHEMA_DATA_PATH.parent / "python"))
+    args = [
+        "--aliases",
+        json.dumps(aliases),
+        "--extra-template-data",
+        str(directory / f"{case['name']}_config.json"),
+        "--base-class",
+        base_class,
+        "--disable-timestamp",
+    ]
+    if not case["valid"]:
+        message = "Alias 'model_validate' for field 'a' is not a valid field name."
+        with pytest.raises(Error, match=re.escape(message)):
+            generate(
+                input_path,
+                input_file_type=InputFileType.JsonSchema,
+                output=output_file,
+                aliases=aliases,
+                extra_template_data=extra,
+                base_class=base_class,
+            )
+        run_main_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            extra_args=args,
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr_contains=message,
+            output_should_not_exist=True,
+        )
+        return
+    expected = f"explicit_alias_namespace_inheritance/{case['name']}.py"
+    run_generate_file_and_assert(
+        input_path=input_path,
+        output_path=output_file,
+        input_file_type=InputFileType.JsonSchema,
+        aliases=aliases,
+        extra_template_data=extra,
+        base_class=base_class,
+        disable_timestamp=True,
+        assert_func=assert_file_content,
+        expected_file=expected,
+    )
+    for entrypoint in ("api", "cli"):
+        if entrypoint == "cli":
+            run_main_and_assert(
+                input_path=input_path,
+                output_path=output_file,
+                input_file_type="jsonschema",
+                extra_args=args,
+                assert_func=assert_file_content,
+                expected_file=expected,
+            )
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(JSON_SCHEMA_DATA_PATH.parent / "python" / "explicit_alias_namespace_runtime.py"),
+                str(output_file),
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        assert_output(
+            result.stdout,
+            JSON_SCHEMA_DATA_PATH.parent
+            / "expected"
+            / "main"
+            / "jsonschema"
+            / "explicit_alias_namespace_inheritance"
+            / f"{case['name']}_runtime.txt",
         )

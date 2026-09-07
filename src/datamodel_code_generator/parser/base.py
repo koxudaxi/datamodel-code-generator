@@ -2286,10 +2286,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             if (configured := getattr(config, "protected_namespaces", None)) is not None:
                 namespaces = configured
                 break
-            if model.custom_base_class and model.custom_base_class != "pydantic.BaseModel":
-                # An external base may disable or replace Pydantic's default namespaces.
-                namespaces = ()
-            pending.extend(_find_base_classes(model))
+            base_classes = _find_base_classes(model)
+            if not base_classes and model.custom_base_class and model.custom_base_class != "pydantic.BaseModel":
+                # This later external base may override any earlier generated base's namespaces.
+                return False
+            pending.extend(base_classes)
         return name.startswith(namespaces)
 
     def _validate_explicit_field_aliases(self, fields: list[DataModelFieldBase], *, final: bool) -> None:
