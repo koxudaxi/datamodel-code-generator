@@ -46,7 +46,7 @@ def test_field_name_bindings(
     schema_path = JSON_SCHEMA_DATA_PATH / "field_name_bindings" / f"{case}.json"
     expected = f"field_name_bindings/{case}/{backend.name}_{target.value}_{union}.py"
     alias_path = DATA_PATH / "payloads/field_name_bindings_runtime/wire_aliases.json"
-    aliases = json.loads(alias_path.read_text()) if case == "wire" else {}
+    aliases = json.loads(alias_path.read_text(encoding="utf-8")) if case == "wire" else {}
     use_builtin = not is_supported_in_black(target)
     if entrypoint == "cli":
         run_main_and_assert(
@@ -108,7 +108,7 @@ def test_field_name_bindings(
                 DATA_PATH / "payloads/field_name_bindings_runtime/native_delayed_error.txt",
             )
             return
-    properties = json.loads(schema_path.read_text())["properties"]
+    properties = json.loads(schema_path.read_text(encoding="utf-8"))["properties"]
     with _generated_model(output_file, "field_name_binding_model", "Record") as model:
         hints = get_type_hints(model)
         observations = {"fields": list(hints)}
