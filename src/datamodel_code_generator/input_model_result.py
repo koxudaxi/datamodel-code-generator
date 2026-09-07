@@ -57,7 +57,7 @@ class PythonFieldOverrides:
 
     @property
     def fields(self) -> Mapping[str, str]:
-        """Return the child wire names and inherited bindings."""
+        """The child wire names and inherited bindings."""
         return self._fields
 
     def __deepcopy__(self, _memo: dict[int, object]) -> PythonFieldOverrides:
