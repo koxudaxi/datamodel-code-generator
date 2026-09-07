@@ -1,0 +1,8 @@
+{
+  "native_mapping": true,
+  "container_type": "set",
+  "size": 1,
+  "dates": [
+    "2026-09-05"
+  ]
+}

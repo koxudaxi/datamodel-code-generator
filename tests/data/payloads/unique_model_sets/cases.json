@@ -1,0 +1,791 @@
+[
+  {
+    "name": "object_PydanticV2BaseModel_False",
+    "schema": "object.json",
+    "options": {
+      "output_model_type": "pydantic_v2.BaseModel",
+      "use_unique_items_as_set": true
+    },
+    "runtime": "object",
+    "error": true
+  },
+  {
+    "name": "object_PydanticV2BaseModel_True",
+    "schema": "object.json",
+    "options": {
+      "output_model_type": "pydantic_v2.BaseModel",
+      "use_unique_items_as_set": true,
+      "enable_faux_immutability": true,
+      "frozen_dataclasses": true,
+      "use_generic_base_class": false
+    },
+    "runtime": "object",
+    "error": false
+  },
+  {
+    "name": "dict_PydanticV2BaseModel_False",
+    "schema": "dict.json",
+    "options": {
+      "output_model_type": "pydantic_v2.BaseModel",
+      "use_unique_items_as_set": true
+    },
+    "runtime": null,
+    "error": true
+  },
+  {
+    "name": "list_PydanticV2BaseModel_False",
+    "schema": "list.json",
+    "options": {
+      "output_model_type": "pydantic_v2.BaseModel",
+      "use_unique_items_as_set": true
+    },
+    "runtime": null,
+    "error": true
+  },
+  {
+    "name": "scalar_PydanticV2BaseModel_False",
+    "schema": "scalar.json",
+    "options": {
+      "output_model_type": "pydantic_v2.BaseModel",
+      "use_unique_items_as_set": true
+    },
+    "runtime": "scalar",
+    "error": false
+  },
+  {
+    "name": "enum_PydanticV2BaseModel_False",
+    "schema": "enum.json",
+    "options": {
+      "output_model_type": "pydantic_v2.BaseModel",
+      "use_unique_items_as_set": true
+    },
+    "runtime": "enum",
+    "error": false
+  },
+  {
+    "name": "opaque_PydanticV2BaseModel_False",
+    "schema": "opaque.json",
+    "options": {
+      "output_model_type": "pydantic_v2.BaseModel",
+      "use_unique_items_as_set": true
+    },
+    "runtime": "opaque",
+    "error": false
+  },
+  {
+    "name": "object_PydanticV2Dataclass_False",
+    "schema": "object.json",
+    "options": {
+      "output_model_type": "pydantic_v2.dataclass",
+      "use_unique_items_as_set": true
+    },
+    "runtime": "object",
+    "error": true
+  },
+  {
+    "name": "object_PydanticV2Dataclass_True",
+    "schema": "object.json",
+    "options": {
+      "output_model_type": "pydantic_v2.dataclass",
+      "use_unique_items_as_set": true,
+      "enable_faux_immutability": true,
+      "frozen_dataclasses": true,
+      "use_generic_base_class": false
+    },
+    "runtime": "object",
+    "error": false
+  },
+  {
+    "name": "dict_PydanticV2Dataclass_False",
+    "schema": "dict.json",
+    "options": {
+      "output_model_type": "pydantic_v2.dataclass",
+      "use_unique_items_as_set": true
+    },
+    "runtime": null,
+    "error": true
+  },
+  {
+    "name": "list_PydanticV2Dataclass_False",
+    "schema": "list.json",
+    "options": {
+      "output_model_type": "pydantic_v2.dataclass",
+      "use_unique_items_as_set": true
+    },
+    "runtime": null,
+    "error": true
+  },
+  {
+    "name": "scalar_PydanticV2Dataclass_False",
+    "schema": "scalar.json",
+    "options": {
+      "output_model_type": "pydantic_v2.dataclass",
+      "use_unique_items_as_set": true
+    },
+    "runtime": "scalar",
+    "error": false
+  },
+  {
+    "name": "enum_PydanticV2Dataclass_False",
+    "schema": "enum.json",
+    "options": {
+      "output_model_type": "pydantic_v2.dataclass",
+      "use_unique_items_as_set": true
+    },
+    "runtime": "enum",
+    "error": false
+  },
+  {
+    "name": "opaque_PydanticV2Dataclass_False",
+    "schema": "opaque.json",
+    "options": {
+      "output_model_type": "pydantic_v2.dataclass",
+      "use_unique_items_as_set": true
+    },
+    "runtime": "opaque",
+    "error": false
+  },
+  {
+    "name": "object_DataclassesDataclass_False",
+    "schema": "object.json",
+    "options": {
+      "output_model_type": "dataclasses.dataclass",
+      "use_unique_items_as_set": true
+    },
+    "runtime": "object",
+    "error": true
+  },
+  {
+    "name": "object_DataclassesDataclass_True",
+    "schema": "object.json",
+    "options": {
+      "output_model_type": "dataclasses.dataclass",
+      "use_unique_items_as_set": true,
+      "enable_faux_immutability": true,
+      "frozen_dataclasses": true,
+      "use_generic_base_class": false
+    },
+    "runtime": "object",
+    "error": false
+  },
+  {
+    "name": "dict_DataclassesDataclass_False",
+    "schema": "dict.json",
+    "options": {
+      "output_model_type": "dataclasses.dataclass",
+      "use_unique_items_as_set": true
+    },
+    "runtime": null,
+    "error": true
+  },
+  {
+    "name": "list_DataclassesDataclass_False",
+    "schema": "list.json",
+    "options": {
+      "output_model_type": "dataclasses.dataclass",
+      "use_unique_items_as_set": true
+    },
+    "runtime": null,
+    "error": true
+  },
+  {
+    "name": "scalar_DataclassesDataclass_False",
+    "schema": "scalar.json",
+    "options": {
+      "output_model_type": "dataclasses.dataclass",
+      "use_unique_items_as_set": true
+    },
+    "runtime": "scalar",
+    "error": false
+  },
+  {
+    "name": "enum_DataclassesDataclass_False",
+    "schema": "enum.json",
+    "options": {
+      "output_model_type": "dataclasses.dataclass",
+      "use_unique_items_as_set": true
+    },
+    "runtime": "enum",
+    "error": false
+  },
+  {
+    "name": "opaque_DataclassesDataclass_False",
+    "schema": "opaque.json",
+    "options": {
+      "output_model_type": "dataclasses.dataclass",
+      "use_unique_items_as_set": true
+    },
+    "runtime": "opaque",
+    "error": false
+  },
+  {
+    "name": "object_TypingTypedDict_False",
+    "schema": "object.json",
+    "options": {
+      "output_model_type": "typing.TypedDict",
+      "use_unique_items_as_set": true
+    },
+    "runtime": "object",
+    "error": true
+  },
+  {
+    "name": "object_TypingTypedDict_True",
+    "schema": "object.json",
+    "options": {
+      "output_model_type": "typing.TypedDict",
+      "use_unique_items_as_set": true,
+      "enable_faux_immutability": true,
+      "frozen_dataclasses": true,
+      "use_generic_base_class": false
+    },
+    "runtime": "object",
+    "error": true
+  },
+  {
+    "name": "dict_TypingTypedDict_False",
+    "schema": "dict.json",
+    "options": {
+      "output_model_type": "typing.TypedDict",
+      "use_unique_items_as_set": true
+    },
+    "runtime": null,
+    "error": true
+  },
+  {
+    "name": "list_TypingTypedDict_False",
+    "schema": "list.json",
+    "options": {
+      "output_model_type": "typing.TypedDict",
+      "use_unique_items_as_set": true
+    },
+    "runtime": null,
+    "error": true
+  },
+  {
+    "name": "scalar_TypingTypedDict_False",
+    "schema": "scalar.json",
+    "options": {
+      "output_model_type": "typing.TypedDict",
+      "use_unique_items_as_set": true
+    },
+    "runtime": "scalar",
+    "error": false
+  },
+  {
+    "name": "enum_TypingTypedDict_False",
+    "schema": "enum.json",
+    "options": {
+      "output_model_type": "typing.TypedDict",
+      "use_unique_items_as_set": true
+    },
+    "runtime": "enum",
+    "error": false
+  },
+  {
+    "name": "opaque_TypingTypedDict_False",
+    "schema": "opaque.json",
+    "options": {
+      "output_model_type": "typing.TypedDict",
+      "use_unique_items_as_set": true
+    },
+    "runtime": "opaque",
+    "error": false
+  },
+  {
+    "name": "object_MsgspecStruct_False",
+    "schema": "object.json",
+    "options": {
+      "output_model_type": "msgspec.Struct",
+      "use_unique_items_as_set": true
+    },
+    "runtime": "object",
+    "error": true
+  },
+  {
+    "name": "object_MsgspecStruct_True",
+    "schema": "object.json",
+    "options": {
+      "output_model_type": "msgspec.Struct",
+      "use_unique_items_as_set": true,
+      "enable_faux_immutability": true,
+      "frozen_dataclasses": true,
+      "use_generic_base_class": true
+    },
+    "runtime": "object",
+    "error": false
+  },
+  {
+    "name": "dict_MsgspecStruct_False",
+    "schema": "dict.json",
+    "options": {
+      "output_model_type": "msgspec.Struct",
+      "use_unique_items_as_set": true
+    },
+    "runtime": null,
+    "error": true
+  },
+  {
+    "name": "list_MsgspecStruct_False",
+    "schema": "list.json",
+    "options": {
+      "output_model_type": "msgspec.Struct",
+      "use_unique_items_as_set": true
+    },
+    "runtime": null,
+    "error": true
+  },
+  {
+    "name": "scalar_MsgspecStruct_False",
+    "schema": "scalar.json",
+    "options": {
+      "output_model_type": "msgspec.Struct",
+      "use_unique_items_as_set": true
+    },
+    "runtime": "scalar",
+    "error": false
+  },
+  {
+    "name": "enum_MsgspecStruct_False",
+    "schema": "enum.json",
+    "options": {
+      "output_model_type": "msgspec.Struct",
+      "use_unique_items_as_set": true
+    },
+    "runtime": "enum",
+    "error": false
+  },
+  {
+    "name": "opaque_MsgspecStruct_False",
+    "schema": "opaque.json",
+    "options": {
+      "output_model_type": "msgspec.Struct",
+      "use_unique_items_as_set": true
+    },
+    "runtime": "opaque",
+    "error": false
+  },
+  {
+    "name": "frozen_list",
+    "schema": "frozen_list.json",
+    "options": {
+      "use_unique_items_as_set": true,
+      "enable_faux_immutability": true
+    },
+    "runtime": "frozen_list",
+    "error": true
+  },
+  {
+    "name": "frozen_any",
+    "schema": "frozen_any.json",
+    "options": {
+      "use_unique_items_as_set": true,
+      "enable_faux_immutability": true
+    },
+    "runtime": "frozen_any",
+    "error": true
+  },
+  {
+    "name": "recursive",
+    "schema": "recursive.json",
+    "options": {
+      "use_unique_items_as_set": true,
+      "enable_faux_immutability": true
+    },
+    "runtime": "recursive",
+    "error": false
+  },
+  {
+    "name": "inherited",
+    "schema": "inherited.json",
+    "options": {
+      "use_unique_items_as_set": true,
+      "enable_faux_immutability": true
+    },
+    "runtime": "inherited",
+    "error": false
+  },
+  {
+    "name": "set",
+    "schema": "set.json",
+    "options": {
+      "use_unique_items_as_set": true,
+      "enable_faux_immutability": true
+    },
+    "runtime": "set",
+    "error": true
+  },
+  {
+    "name": "explicit",
+    "schema": "explicit.json",
+    "options": {
+      "use_unique_items_as_set": true,
+      "enable_faux_immutability": true
+    },
+    "runtime": "explicit",
+    "error": false
+  },
+  {
+    "name": "diamond_frozen",
+    "schema": "diamond.json",
+    "options": {
+      "use_unique_items_as_set": true,
+      "enable_faux_immutability": true
+    },
+    "runtime": "inherited",
+    "error": false
+  },
+  {
+    "name": "diamond_mutable",
+    "schema": "diamond.json",
+    "options": {
+      "use_unique_items_as_set": true
+    },
+    "runtime": null,
+    "error": true
+  },
+  {
+    "name": "classvar",
+    "schema": "classvar.json",
+    "options": {
+      "use_unique_items_as_set": true,
+      "enable_faux_immutability": true,
+      "field_include_all_keys": true
+    },
+    "runtime": "object",
+    "error": false
+  },
+  {
+    "name": "cached_inherited",
+    "schema": "cached_inherited.json",
+    "options": {
+      "use_unique_items_as_set": true
+    },
+    "extra": "frozen_base.json",
+    "runtime": null,
+    "error": false
+  },
+  {
+    "name": "custom_template",
+    "schema": "object.json",
+    "options": {
+      "use_unique_items_as_set": true
+    },
+    "custom_template": true,
+    "runtime": null,
+    "error": false
+  },
+  {
+    "name": "inherited_override_PydanticV2BaseModel",
+    "schema": "inherited_override.json",
+    "options": {
+      "output_model_type": "pydantic_v2.BaseModel",
+      "use_unique_items_as_set": true,
+      "enable_faux_immutability": true,
+      "frozen_dataclasses": true,
+      "use_generic_base_class": false
+    },
+    "runtime": "object",
+    "error": true
+  },
+  {
+    "name": "inherited_override_PydanticV2Dataclass",
+    "schema": "inherited_override.json",
+    "options": {
+      "output_model_type": "pydantic_v2.dataclass",
+      "use_unique_items_as_set": true,
+      "enable_faux_immutability": true,
+      "frozen_dataclasses": true,
+      "use_generic_base_class": false
+    },
+    "runtime": "object",
+    "error": true
+  },
+  {
+    "name": "inherited_override_DataclassesDataclass",
+    "schema": "inherited_override.json",
+    "options": {
+      "output_model_type": "dataclasses.dataclass",
+      "use_unique_items_as_set": true,
+      "enable_faux_immutability": true,
+      "frozen_dataclasses": true,
+      "use_generic_base_class": false
+    },
+    "runtime": "object",
+    "error": true
+  },
+  {
+    "name": "inherited_override_MsgspecStruct",
+    "schema": "inherited_override.json",
+    "options": {
+      "output_model_type": "msgspec.Struct",
+      "use_unique_items_as_set": true,
+      "enable_faux_immutability": true,
+      "frozen_dataclasses": true,
+      "use_generic_base_class": true
+    },
+    "runtime": "object",
+    "error": true
+  },
+  {
+    "name": "config_override",
+    "schema": "config_override.json",
+    "options": {
+      "use_unique_items_as_set": true
+    },
+    "extra": "conflicting_config.json",
+    "runtime": null,
+    "error": true
+  },
+  {
+    "name": "classvar_msgspec",
+    "schema": "tagged.json",
+    "options": {
+      "output_model_type": "msgspec.Struct",
+      "use_unique_items_as_set": true,
+      "enable_faux_immutability": true,
+      "use_generic_base_class": true,
+      "field_include_all_keys": true
+    },
+    "runtime": "tagged",
+    "item": "Cat",
+    "payload": {
+      "items": [
+        {
+          "kind": "cat",
+          "value": 1
+        },
+        {
+          "kind": "cat",
+          "value": 1
+        }
+      ]
+    },
+    "error": false
+  },
+  {
+    "name": "excluded_hash",
+    "schema": "excluded_hash.json",
+    "options": {
+      "output_model_type": "dataclasses.dataclass",
+      "use_unique_items_as_set": true,
+      "frozen_dataclasses": true,
+      "field_include_all_keys": true
+    },
+    "runtime": "object",
+    "error": false
+  },
+  {
+    "name": "excluded_compare",
+    "schema": "excluded_compare.json",
+    "options": {
+      "output_model_type": "dataclasses.dataclass",
+      "use_unique_items_as_set": true,
+      "frozen_dataclasses": true,
+      "field_include_all_keys": true
+    },
+    "runtime": "object",
+    "error": false
+  },
+  {
+    "name": "external_False",
+    "schema": "external",
+    "options": {
+      "use_unique_items_as_set": true,
+      "collapse_root_models": false
+    },
+    "runtime": null,
+    "error": true
+  },
+  {
+    "name": "external_True",
+    "schema": "external",
+    "options": {
+      "use_unique_items_as_set": true,
+      "collapse_root_models": true
+    },
+    "runtime": null,
+    "error": true
+  },
+  {
+    "name": "cached_inherited_reverse",
+    "schema": "cached_inherited_reverse.json",
+    "options": {
+      "use_unique_items_as_set": true
+    },
+    "extra": "frozen_base.json",
+    "runtime": null,
+    "error": false
+  },
+  {
+    "name": "diamond_frozen_msgspec",
+    "schema": "diamond.json",
+    "options": {
+      "output_model_type": "msgspec.Struct",
+      "use_unique_items_as_set": true,
+      "enable_faux_immutability": true,
+      "use_generic_base_class": true
+    },
+    "runtime": "object",
+    "error": false
+  },
+  {
+    "name": "nested_frozen",
+    "schema": "nested_frozen.json",
+    "options": {
+      "use_unique_items_as_set": true,
+      "use_generic_container_types": true
+    },
+    "runtime": "nested_frozen",
+    "error": false
+  },
+  {
+    "name": "feature_off",
+    "schema": "object.json",
+    "options": {
+      "use_unique_items_as_set": false
+    },
+    "runtime": null,
+    "error": false
+  },
+  {
+    "name": "ir_any",
+    "schema": "ir_any.json",
+    "options": {
+      "use_unique_items_as_set": true,
+      "enable_faux_immutability": true
+    },
+    "runtime": null,
+    "error": true
+  },
+  {
+    "name": "ir_tuple_any",
+    "schema": "ir_tuple_any.json",
+    "options": {
+      "use_unique_items_as_set": true,
+      "enable_faux_immutability": true
+    },
+    "runtime": null,
+    "error": true
+  },
+  {
+    "name": "ir_deque",
+    "schema": "ir_deque.json",
+    "options": {
+      "use_unique_items_as_set": true,
+      "enable_faux_immutability": true
+    },
+    "runtime": null,
+    "error": true
+  },
+  {
+    "name": "ir_optional_deque",
+    "schema": "ir_optional_deque.json",
+    "options": {
+      "use_unique_items_as_set": true,
+      "enable_faux_immutability": true
+    },
+    "runtime": null,
+    "error": true
+  },
+  {
+    "name": "ir_union_deque",
+    "schema": "ir_union_deque.json",
+    "options": {
+      "use_unique_items_as_set": true,
+      "enable_faux_immutability": true
+    },
+    "runtime": null,
+    "error": true
+  },
+  {
+    "name": "ir_tuple_deque",
+    "schema": "ir_tuple_deque.json",
+    "options": {
+      "use_unique_items_as_set": true,
+      "enable_faux_immutability": true
+    },
+    "runtime": null,
+    "error": true
+  },
+  {
+    "name": "ir_annotated_deque",
+    "schema": "ir_annotated_deque.json",
+    "options": {
+      "use_unique_items_as_set": true,
+      "enable_faux_immutability": true
+    },
+    "runtime": null,
+    "error": true
+  },
+  {
+    "name": "ir_tuple_scalar",
+    "schema": "ir_tuple_scalar.json",
+    "options": {
+      "use_unique_items_as_set": true,
+      "enable_faux_immutability": true
+    },
+    "runtime": "object",
+    "error": false
+  },
+  {
+    "name": "ir_frozen_scalar",
+    "schema": "ir_frozen_scalar.json",
+    "options": {
+      "use_unique_items_as_set": true,
+      "enable_faux_immutability": true
+    },
+    "runtime": "object",
+    "error": false
+  },
+  {
+    "name": "ir_callable",
+    "schema": "ir_callable.json",
+    "options": {
+      "use_unique_items_as_set": true,
+      "enable_faux_immutability": true
+    },
+    "runtime": "object",
+    "error": false
+  },
+  {
+    "name": "ir_literal",
+    "schema": "ir_literal.json",
+    "options": {
+      "use_unique_items_as_set": true,
+      "enable_faux_immutability": true
+    },
+    "runtime": "object",
+    "error": false
+  },
+  {
+    "name": "ir_bare_deque",
+    "schema": "ir_bare_deque.json",
+    "options": {
+      "use_unique_items_as_set": true,
+      "enable_faux_immutability": true
+    },
+    "runtime": null,
+    "error": true
+  },
+  {
+    "name": "ir_dict_ir",
+    "schema": "ir_dict_ir.json",
+    "options": {
+      "use_unique_items_as_set": true,
+      "enable_faux_immutability": true
+    },
+    "runtime": null,
+    "error": true
+  },
+  {
+    "name": "runtime_deque",
+    "schema": "object.json",
+    "input_model": "tests.data.python.input_model.unique_deque_items:Container",
+    "options": {
+      "use_unique_items_as_set": true,
+      "enable_faux_immutability": true
+    },
+    "runtime": null,
+    "error": true
+  }
+]

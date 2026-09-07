@@ -1,0 +1,1 @@
+Cannot convert uniqueItems field 'Container.items' to a set: 'tuple[Any, ...]' does not have a statically safe value hash. Disable --use-unique-items-as-set or use an explicitly frozen model with hashable fields.

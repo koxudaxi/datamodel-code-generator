@@ -1,0 +1,5 @@
+{
+  "native_mapping": true,
+  "container_type": "set",
+  "size": 2
+}

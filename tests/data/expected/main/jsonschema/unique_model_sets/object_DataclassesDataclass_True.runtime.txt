@@ -1,0 +1,8 @@
+{
+  "equal": true,
+  "equal_hash": true,
+  "deduplicated_size": 1,
+  "membership": true,
+  "container_type": "set",
+  "size": 1
+}

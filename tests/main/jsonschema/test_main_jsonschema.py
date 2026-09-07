@@ -18236,23 +18236,34 @@ def test_jsonschema_classvar_extra_annotated_pydantic_v2(output_file: Path) -> N
     )
 
 
-def test_unique_items_enum_set(output_file: Path) -> None:
-    """Test set with enum items does not add __hash__ to enum (already hashable)."""
+def test_unique_items_enum_set_rejects_mutable_models(output_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """The mixed enum/object fixture must reject its mutable object set."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "unique_items_enum_set.json",
         output_path=output_file,
         input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="unique_items_enum_set.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-            "--use-unique-items-as-set",
-            "--use-standard-collections",
-        ],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr=(
+            EXPECTED_JSON_SCHEMA_PATH / "unique_model_sets/object_PydanticV2BaseModel_False.txt"
+        ).read_text(),
+        output_should_not_exist=True,
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--use-unique-items-as-set"],
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--use-unique-items-as-set"],
+    option_description="""Generate set types for arrays with uniqueItems constraint.
+
+The `--use-unique-items-as-set` flag generates Python set types instead of
+list types for JSON Schema arrays that have the uniqueItems constraint set
+to true. Known unhashable items produce a generation error. Value models
+must be explicitly frozen and contain hashable fields to serve as set items.""",
+    input_schema="jsonschema/unique_items_typed_dict.json",
+    cli_args=["--use-unique-items-as-set", "--output-model-type", "typing.TypedDict"],
+    golden_output="jsonschema/unique_items_typed_dict.py",
+)
 def test_unique_items_set_typed_dict(output_file: Path) -> None:
     """Test uniqueItems arrays use sets in TypedDict output."""
     run_main_and_assert(
@@ -22508,7 +22519,11 @@ def test_optional_nested_factory_decoding(output_file: Path, case: dict[str, Any
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
 @pytest.mark.parametrize(
     "case",
-    json.loads((JSON_SCHEMA_DATA_PATH.parent / "payloads/root_sequence_final/cases.json").read_text()),
+    [
+        case
+        for case in json.loads((JSON_SCHEMA_DATA_PATH.parent / "payloads/root_sequence_final/cases.json").read_text())
+        if case["name"] != "nested_set"
+    ],
     ids=operator.itemgetter("name"),
 )
 def test_main_root_sequence_final_types(
@@ -22582,3 +22597,201 @@ def test_main_root_sequence_final_types(
         if case["schema"] == "integers.json":
             with pytest.raises(ValidationError, match="int_parsing"):
                 model.model_validate_json('["invalid"]')
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize(
+    "case",
+    json.loads((DATA_PATH / "payloads/unique_model_sets/cases.json").read_text()),
+    ids=operator.itemgetter("name"),
+)
+def test_unique_model_set_hash_contract(
+    case: dict[str, Any], entrypoint: str, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Reject unsafe conversions and preserve native value hashes for frozen models."""
+    from datamodel_code_generator import GenerateConfig
+
+    source = JSON_SCHEMA_DATA_PATH / "unique_model_sets" / case["schema"]
+    expected = EXPECTED_JSON_SCHEMA_PATH / "unique_model_sets" / case["name"]
+    output = tmp_path / ("models" if source.is_dir() else "model.py")
+    options = dict(case["options"])
+    extra_args: list[str] = []
+    if case.get("extra"):
+        extra_path = DATA_PATH / "payloads/unique_model_sets" / case["extra"]
+        options["extra_template_data"] = defaultdict(dict, json.loads(extra_path.read_text()))
+        extra_args.extend(["--extra-template-data", str(extra_path)])
+    if case.get("custom_template"):
+        options["custom_template_dir"] = TEMPLATE_DIR
+        extra_args.extend(["--custom-template-dir", str(TEMPLATE_DIR)])
+    if entrypoint == "cli":
+        args = [
+            "--input",
+            str(source),
+            "--input-file-type",
+            "jsonschema",
+            "--output",
+            str(output),
+            "--disable-timestamp",
+        ]
+        if case.get("input_model"):
+            args[:2] = ["--input-model", case["input_model"]]
+        args.extend(extra_args)
+        for key, value in case["options"].items():
+            if value:
+                args.append(f"--{key.replace('_', '-')}")
+                if not isinstance(value, bool):
+                    args.append(value)
+        run_main_with_args(args, expected_exit=Exit.ERROR if case["error"] else Exit.OK)
+        error = capsys.readouterr().err
+    else:
+        if case.get("input_model"):
+            from datamodel_code_generator.input_model import load_model_schema
+
+            source = load_model_schema([case["input_model"]], InputFileType.JsonSchema)
+        config = GenerateConfig(
+            input_file_type=InputFileType.JsonSchema,
+            output=output,
+            disable_timestamp=True,
+            formatters=[Formatter.BLACK, Formatter.ISORT]
+            if _uses_external_test_default_formatter()
+            else [Formatter.BUILTIN],
+            builtin_format_line_length=88,
+            **{
+                **options,
+                "output_model_type": DataModelType(options.get("output_model_type", "pydantic_v2.BaseModel")),
+            },
+        )
+        if case["error"]:
+            with pytest.raises(Error) as caught:
+                generate(source, config=config)
+            error = f"{caught.value}\n"
+        else:
+            generate(source, config=config)
+    if case["error"]:
+        assert_output(error, expected.with_suffix(".txt"))
+        assert_output(f"{output.exists()}\n", expected.parent / "missing_output.txt")
+        return
+    assert_output(output.read_text(), expected.with_suffix(".py"))
+
+
+@pytest.mark.parametrize("custom_template", [False, True])
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+def test_root_sequence_nested_set_rejected(
+    entrypoint: str, custom_template: bool, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A converted set cannot contain the nonempty lists of the original root schema."""
+    source = JSON_SCHEMA_DATA_PATH / "root_sequence_final/nested.json"
+    output = tmp_path / "model.py"
+    options = {"use_root_model_sequence_interface": True, "use_unique_items_as_set": True}
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=source,
+            output_path=output,
+            input_file_type="jsonschema",
+            extra_args=["--use-root-model-sequence-interface", "--use-unique-items-as-set"]
+            + (["--custom-template-dir", str(TEMPLATE_DIR)] if custom_template else []),
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr=(EXPECTED_JSON_SCHEMA_PATH / "unique_model_sets/nested_root.txt").read_text(),
+            output_should_not_exist=True,
+        )
+    else:
+        with pytest.raises(Error) as caught:
+            generate(
+                source,
+                input_file_type=InputFileType.JsonSchema,
+                output=output,
+                custom_template_dir=TEMPLATE_DIR if custom_template else None,
+                **options,
+            )
+        assert_output(f"{caught.value}\n", EXPECTED_JSON_SCHEMA_PATH / "unique_model_sets/nested_root.txt")
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        case
+        for case in json.loads((DATA_PATH / "payloads/unique_model_sets/cases.json").read_text())
+        if not case["error"]
+        and case["runtime"]
+        in {"object", "recursive", "inherited", "tagged", "scalar", "enum", "opaque", "nested_frozen"}
+    ],
+    ids=operator.itemgetter("name"),
+)
+def test_unique_model_set_native_contract(case: dict[str, Any], tmp_path: Path) -> None:
+    """Generated supported values preserve equality, value hashes and membership."""
+    import datetime
+
+    import msgspec
+    from pydantic import TypeAdapter
+
+    from datamodel_code_generator import GenerateConfig
+
+    output = tmp_path / "model.py"
+    options = case["options"]
+    generate(
+        JSON_SCHEMA_DATA_PATH / "unique_model_sets" / case["schema"],
+        config=GenerateConfig(
+            input_file_type=InputFileType.JsonSchema,
+            output=output,
+            disable_timestamp=True,
+            formatters=[Formatter.BLACK, Formatter.ISORT]
+            if _uses_external_test_default_formatter()
+            else [Formatter.BUILTIN],
+            builtin_format_line_length=88,
+            **{
+                **options,
+                "output_model_type": DataModelType(options.get("output_model_type", "pydantic_v2.BaseModel")),
+            },
+        ),
+    )
+    with _generated_model(output, "unique_set_contract", "Container") as model:
+        module = sys.modules[model.__module__]
+        runtime = {}
+        if case["runtime"] in {"object", "recursive", "inherited", "tagged"}:
+            item = getattr(module, case.get("item", "Item"))
+            value = {
+                "ir_tuple_scalar": (1,),
+                "ir_frozen_scalar": frozenset({1}),
+                "ir_literal": "a",
+                "ir_callable": len,
+            }.get(case["name"], 1)
+            first, second = item(value=value), item(value=value)
+            singleton = {first}
+            runtime.update(
+                equal=first == second,
+                equal_hash=hash(first) == hash(second),
+                deduplicated_size=len({first, second}),
+                membership=second in singleton,
+            )
+            payload = case.get("payload", {"items": [{"value": value}, {"value": value}]})
+        elif case["runtime"] == "scalar":
+            payload = {"items": [1, 1, None, "x"]}
+        elif case["runtime"] == "enum":
+            payload = {"items": ["a", "a", "b"]}
+        elif case["runtime"] == "opaque":
+            payload = {"items": ["2026-09-05", "2026-09-05"]}
+        else:
+            payload = {"items": [[1], [1]]}
+        if options.get("output_model_type") == "msgspec.Struct":
+            instance = msgspec.convert(payload, model)
+            values = instance.items
+        elif options.get("output_model_type") == "typing.TypedDict":
+            values = {
+                datetime.date.fromisoformat(value) if case["runtime"] == "opaque" else value
+                for value in payload["items"]
+            }
+            runtime["native_mapping"] = model(items=values) == {"items": values}
+        else:
+            instance = eval(
+                "TypeAdapter(Container).validate_python(payload)",
+                {**vars(module), "TypeAdapter": TypeAdapter, "payload": payload},
+            )
+            values = instance.items
+        runtime.update(container_type=type(values).__name__, size=len(values))
+        if case["runtime"] == "opaque":
+            runtime["dates"] = sorted(value.isoformat() for value in values)
+        assert_output(
+            json.dumps(runtime, indent=2) + "\n",
+            EXPECTED_JSON_SCHEMA_PATH / "unique_model_sets" / f"{case['name']}.runtime.txt",
+        )

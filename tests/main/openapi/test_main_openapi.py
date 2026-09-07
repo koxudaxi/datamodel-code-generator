@@ -2084,19 +2084,8 @@ def test_validation_failed(mocker: MockerFixture, output_file: Path) -> None:
         ),
     ],
 )
-@pytest.mark.cli_doc(
-    options=["--use-unique-items-as-set"],
-    option_description="""Generate set types for arrays with uniqueItems constraint.
-
-The `--use-unique-items-as-set` flag generates Python set types instead of
-list types for JSON Schema arrays that have the uniqueItems constraint set
-to true, enforcing uniqueness at the type level.""",
-    input_schema="openapi/api_constrained.yaml",
-    cli_args=["--use-unique-items-as-set", "--field-constraints"],
-    golden_output="openapi/with_field_constraints_use_unique_items_as_set.py",
-)
 def test_main_with_field_constraints(
-    output_model: str, expected_output: str, args: list[str], output_file: Path
+    output_model: str, expected_output: str, args: list[str], output_file: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """Generate set types for arrays with uniqueItems constraint.
 
@@ -2104,6 +2093,18 @@ def test_main_with_field_constraints(
     list types for JSON Schema arrays that have the uniqueItems constraint set
     to true, enforcing uniqueness at the type level.
     """
+    if "--use-unique-items-as-set" in args:
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "api_constrained.yaml",
+            output_path=output_file,
+            input_file_type="openapi",
+            extra_args=["--field-constraints", "--output-model-type", output_model, *args],
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr=(EXPECTED_OPENAPI_PATH.parent / "jsonschema/unique_model_sets/openapi_pet.txt").read_text(),
+            output_should_not_exist=True,
+        )
+        return
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "api_constrained.yaml",
         output_path=output_file,

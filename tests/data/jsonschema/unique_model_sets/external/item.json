@@ -1,0 +1,12 @@
+{
+  "title": "Item",
+  "type": "object",
+  "properties": {
+    "value": {
+      "type": "integer"
+    }
+  },
+  "required": [
+    "value"
+  ]
+}

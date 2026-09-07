@@ -1,0 +1,17 @@
+{
+  "title": "Container",
+  "type": "object",
+  "properties": {
+    "items": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "x-python-type": "frozenset[int]"
+      }
+    }
+  },
+  "required": [
+    "items"
+  ]
+}

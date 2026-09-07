@@ -1,0 +1,9 @@
+{
+  "title": "Container",
+  "type": "object",
+  "properties": {
+    "items": {
+      "$ref": "values.json"
+    }
+  }
+}

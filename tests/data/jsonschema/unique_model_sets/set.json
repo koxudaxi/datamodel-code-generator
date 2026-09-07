@@ -1,0 +1,20 @@
+{
+  "title": "Container",
+  "type": "object",
+  "properties": {
+    "items": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "array",
+        "uniqueItems": true,
+        "items": {
+          "type": "integer"
+        }
+      }
+    }
+  },
+  "required": [
+    "items"
+  ]
+}

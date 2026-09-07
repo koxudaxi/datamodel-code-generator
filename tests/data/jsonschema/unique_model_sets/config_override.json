@@ -1,0 +1,42 @@
+{
+  "title": "Container",
+  "type": "object",
+  "properties": {
+    "items": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/Item"
+      }
+    }
+  },
+  "required": [
+    "items"
+  ],
+  "$defs": {
+    "Left": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "value"
+      ]
+    },
+    "Right": {
+      "type": "object"
+    },
+    "Item": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/Left"
+        },
+        {
+          "$ref": "#/$defs/Right"
+        }
+      ]
+    }
+  }
+}

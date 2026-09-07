@@ -1,0 +1,58 @@
+{
+  "title": "Container",
+  "type": "object",
+  "properties": {
+    "items": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "oneOf": [
+          {
+            "$ref": "#/$defs/Cat"
+          },
+          {
+            "$ref": "#/$defs/Dog"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "kind"
+        }
+      }
+    }
+  },
+  "required": [
+    "items"
+  ],
+  "$defs": {
+    "Cat": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "cat"
+        },
+        "value": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "value"
+      ]
+    },
+    "Dog": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "dog"
+        },
+        "value": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "value"
+      ]
+    }
+  }
+}

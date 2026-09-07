@@ -3546,6 +3546,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             new_data_type = data_type.model_copy()
             new_data_type.is_list = False
             new_data_type.is_set = True
+            new_data_type.__dict__["_unique_items_set"] = True
             for data_type_ in new_data_type.data_types:
                 data_type_.parent = new_data_type
             return new_data_type
@@ -3600,10 +3601,21 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                             )
         return references
 
-    @classmethod
-    def __mark_set_item_models_hashable(cls, models: list[DataModel]) -> None:
+    def __mark_set_item_models_hashable(self, models: list[DataModel]) -> None:
         """Mark models used as set/frozenset items with hash flag for __hash__ generation."""
-        set_item_references = cls.__collect_set_item_references(models)
+        set_item_references = self.__collect_set_item_references(models)
+        if self.use_unique_items_as_set:
+            from datamodel_code_generator.model._set_item import SetItemValidator  # noqa: PLC0415
+
+            validator = SetItemValidator()
+            for model in models:
+                for field in model.fields:
+                    for data_type in field.data_type.all_data_types:
+                        if not data_type.__dict__.get("_unique_items_set"):
+                            continue
+                        for item_type in data_type.data_types:
+                            validator.validate(item_type, f"{model.name}.{field.name}")
+            set_item_references.difference_update(validator.safe_models)
 
         for model in models:
             if model.reference.path in set_item_references:
@@ -6213,8 +6225,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
     ) -> None:
         """Finalize module processing: apply generic base class and remove unused imports."""
         all_models = [model for ctx in contexts for model in ctx.models]
-        self.__mark_set_item_models_hashable(all_models)
+        if not self.use_unique_items_as_set:
+            self.__mark_set_item_models_hashable(all_models)
         self.__apply_generic_base_class(contexts)
+        if self.use_unique_items_as_set:
+            self.__mark_set_item_models_hashable(all_models)
         self._finalize_structured_imports(contexts)
         if self.use_default_factory_for_optional_nested_models:
             # Inherited defaults may have changed since a consumer first queried its factory imports.

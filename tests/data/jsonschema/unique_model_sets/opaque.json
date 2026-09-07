@@ -1,0 +1,26 @@
+{
+  "title": "Container",
+  "type": "object",
+  "properties": {
+    "items": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/Date"
+      }
+    }
+  },
+  "required": [
+    "items"
+  ],
+  "$defs": {
+    "Date": {
+      "type": "string",
+      "format": "date",
+      "x-python-import": {
+        "module": "datetime",
+        "name": "date"
+      }
+    }
+  }
+}

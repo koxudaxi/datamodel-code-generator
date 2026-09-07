@@ -1,0 +1,25 @@
+{
+  "title": "Container",
+  "type": "object",
+  "properties": {
+    "items": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/Status"
+      }
+    }
+  },
+  "required": [
+    "items"
+  ],
+  "$defs": {
+    "Status": {
+      "type": "string",
+      "enum": [
+        "a",
+        "b"
+      ]
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "Left": {
+    "config": {
+      "frozen": true
+    }
+  },
+  "Right": {
+    "config": {
+      "frozen": false
+    }
+  }
+}
