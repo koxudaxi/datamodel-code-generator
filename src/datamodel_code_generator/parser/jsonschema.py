@@ -9921,9 +9921,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             is_optional=has_null,
         )
 
-    @staticmethod
-    def _get_unsupported_msgspec_enum_member(enum_values: list[Any]) -> str | None:
-        """Find unsupported bool/float members, using a linear ordinary-integer fast path."""
+    def _get_unsupported_msgspec_enum_member(self, enum_values: list[Any]) -> str | None:  # noqa: PLR6301
+        """Find unsupported bool/float members, using a linear ordinary-integer fast path.
+
+        This is an instance method because snooper_to_methods does not preserve
+        staticmethod descriptors.
+        """
         seen_ints: set[int] | None = None
         for index, value in enumerate(enum_values):
             if isinstance(value, (bool, float)):

@@ -19568,6 +19568,7 @@ def test_msgspec_enum_diagnostics_preserve_supported_representations(
 
     data = JSON_SCHEMA_DATA_PATH / "msgspec_enum_diagnostics"
     expected = f"msgspec_enum_diagnostics/{case['name']}.py"
+    can_execute = sys.version_info[:2] >= tuple(map(int, case["python"].split(".")))
     if entrypoint == "cli":
         run_main_and_assert(
             input_path=data / f"{case['schema']}.json",
@@ -19583,7 +19584,7 @@ def test_msgspec_enum_diagnostics_preserve_supported_representations(
             ],
             assert_func=assert_file_content,
             expected_file=expected,
-            force_exec_validation=True,
+            force_exec_validation=can_execute,
         )
     else:
         run_generate_file_and_assert(
@@ -19598,6 +19599,8 @@ def test_msgspec_enum_diagnostics_preserve_supported_representations(
             unchanged_inputs={"options": case["options"]},
             **case["options"],
         )
+    if not can_execute:
+        return
     results = []
     with _generated_model(output_file, "generated_msgspec_enum_controls", "Payload") as model:
         for payload in json.loads(
@@ -19656,6 +19659,8 @@ def test_msgspec_enum_diagnostics_preserve_other_backends(
             assert_func=assert_file_content,
             expected_file=expected,
         )
+    if backend is DataModelType.TypingTypedDict and sys.version_info[:2] < (3, 12):
+        return
     assert_generated_model_json_validation(
         output_file,
         module_name="generated_other_backend_enums",
