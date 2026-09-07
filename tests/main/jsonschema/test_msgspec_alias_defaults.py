@@ -11,6 +11,7 @@ import pytest
 from typing_extensions import TypeAliasType
 
 from datamodel_code_generator import DataModelType, InputFileType, PythonVersion
+from datamodel_code_generator.format import Formatter
 from tests.conftest import assert_output
 from tests.main.conftest import (
     DATA_PATH,
@@ -44,6 +45,7 @@ def test_msgspec_alias_structured_defaults(
 ) -> None:
     """Construct real Struct defaults through aliases and preserve explicit validation."""
     input_path = JSON_SCHEMA_DATA_PATH / "msgspec_alias_defaults.json"
+    # Black 22 cannot format PEP 695 type statements; keep their native runtime coverage.
     suffix = "_type" if use_alias_type and target == PythonVersion.PY_310 else ""
     expected = f"msgspec_alias_defaults_{target.value.replace('.', '_')}{suffix}.py"
     if entrypoint == "cli":
@@ -60,6 +62,7 @@ def test_msgspec_alias_structured_defaults(
                 "--target-python-version",
                 target.value,
                 "--disable-timestamp",
+                *(["--formatters", "builtin"] if target == PythonVersion.PY_312 else []),
                 *(["--use-type-alias-type"] if use_alias_type else []),
             ],
         )
@@ -75,6 +78,7 @@ def test_msgspec_alias_structured_defaults(
             use_type_alias_type=use_alias_type,
             target_python_version=target,
             disable_timestamp=True,
+            **({"formatters": [Formatter.BUILTIN]} if target == PythonVersion.PY_312 else {}),
         )
 
     payloads = json.loads((DATA_PATH / "payloads" / "msgspec_alias_defaults_runtime.json").read_text())
