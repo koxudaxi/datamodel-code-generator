@@ -51,8 +51,8 @@ class MultiRefAllOf(BaseModel):
     pass
 
 
-class NoConstraintAllOf(BaseModel):
-    pass
+class NoConstraintAllOf(RootModel[StringDatatype]):
+    root: StringDatatype = Field(..., description='No constraints added.')
 
 
 class IncompatibleTypeAllOf(BaseModel):

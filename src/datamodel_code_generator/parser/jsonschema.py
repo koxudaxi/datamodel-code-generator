@@ -6229,19 +6229,35 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         merged_schema.pop("allOf", None)
         return self.SCHEMA_OBJECT_TYPE.model_validate(merged_schema)
 
-    def _merge_all_of_mapping(self, obj: JsonSchemaObject) -> JsonSchemaObject | None:
-        """Merge mapping-shaped allOf items into one typed dict root schema."""
+    def _merge_all_of_root_schema(self, obj: JsonSchemaObject) -> JsonSchemaObject | None:
+        """Unwrap one value schema or merge mapping-shaped allOf items into a root schema."""
         if obj.properties or obj.patternProperties or obj.propertyNames is not None:
             return None
 
+        single_value = len(obj.allOf) == 1 and not self._schema_requires_model_type(obj)
         mapping_schemas: list[JsonSchemaObject] = []
         for item in obj.allOf:
             match item:
                 case JsonSchemaObject() as schema:
-                    if schema.ref:
-                        schema = self._load_ref_schema_object(schema.ref)
+                    if ref := schema.ref:
+                        schema = self._load_ref_schema_object(ref)
                 case _:
                     return None
+            if (
+                single_value
+                and schema.type
+                and schema.type != "object"
+                and not (schema.enum or schema.allOf or schema.anyOf or schema.oneOf)
+                and not self._schema_requires_model_type(schema)
+            ):
+                return (
+                    obj.model_copy(update={"ref": ref, "allOf": []})
+                    if ref
+                    else self.SCHEMA_OBJECT_TYPE.model_validate({
+                        **schema.model_dump(exclude_unset=True, by_alias=True),
+                        **obj.model_dump(exclude={"allOf"}, exclude_unset=True, by_alias=True),
+                    })
+                )
             if (
                 schema.properties
                 or schema.patternProperties
@@ -7960,8 +7976,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if single_ref_result is not None:
             return single_ref_result
 
-        if merged_mapping := self._merge_all_of_mapping(obj):
-            return self.parse_root_type(name, merged_mapping, path)
+        if merged_root := self._merge_all_of_root_schema(obj):
+            return (
+                self.parse_array(name, merged_root, path)
+                if merged_root.is_array
+                else self.parse_root_type(name, merged_root, path)
+            )
 
         merged_all_of_obj = self._merge_all_of_object(obj)
         if merged_all_of_obj:
