@@ -23,7 +23,7 @@ from datamodel_code_generator.model import ConstraintsBase as _ConstraintsBase
 from datamodel_code_generator.model._constraints import Constraints
 from datamodel_code_generator.model._constraints import PatternConstraints as _PatternConstraints
 from datamodel_code_generator.model._pydantic_imports import IMPORT_ANYURL, IMPORT_FIELD
-from datamodel_code_generator.model.base import _nested_model_default_factory
+from datamodel_code_generator.model.base import _nested_model_default_factory, _remember_custom_template_dependency
 from datamodel_code_generator.python_literal import represent_python_value
 from datamodel_code_generator.types import UnionIntFloat as _UnionIntFloat
 from datamodel_code_generator.types import (
@@ -455,6 +455,7 @@ class BaseModelBase(DataModel, ABC):
         # But, Future version will support only '{custom_template_dir}/pydantic/BaseModel.jinja'
         if self._custom_template_dir is not None:
             custom_template_file_path = self._custom_template_dir / Path(self.TEMPLATE_FILE_PATH).name
+            _remember_custom_template_dependency(self._custom_template_dir, custom_template_file_path)
             if cached_path_exists(custom_template_file_path):
                 return custom_template_file_path.resolve()
         return super().template_file_path

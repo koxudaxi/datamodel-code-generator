@@ -68,6 +68,8 @@ _MODULE_NAME_INVALID_CHAR_PATTERN = re.compile(r"[^0-9a-zA-Z_]")
 _MODULE_NAME_INVALID_CHAR_WITH_DOTS_PATTERN = re.compile(r"[^0-9a-zA-Z_.]")
 _MAX_MISSING_CUSTOM_TEMPLATE_SUBDIRS = 128
 _MAX_CUSTOM_TEMPLATE_SIGNATURES = 128
+_MAX_CUSTOM_TEMPLATE_DEPENDENCIES = 128
+_ORIGINAL_TEMPLATE_LOADER_MARKER = "__datamodel_code_generator_original_template_loader__"
 _NESTED_MODEL_DEFAULT_FACTORY_ORDER_KEY = "_nested_model_default_factory_order"
 _NESTED_MODEL_DEFAULT_FACTORY_RECURSIVE_PATHS_KEY = "_nested_model_default_factory_recursive_paths"
 _REQUIRED_INHERITED_DEFAULT_FACTORY_KEY = "_required_inherited_default_factory"
@@ -141,14 +143,32 @@ def get_resolve_reference_action_capabilities(action: object) -> ResolveReferenc
     )
 
 
+class _CustomTemplateDependencies:
+    """Bounded file metadata observed by one custom-template loader tree."""
+
+    __slots__ = ("directories", "incomplete", "overflow", "paths")
+
+    def __init__(self) -> None:
+        self.paths: dict[Path, tuple[int, ...] | None] = {}
+        self.directories: dict[Path, _CustomTemplateSignature] = {}
+        self.overflow = False
+        self.incomplete = False
+
+    @property
+    def needs_full_scan(self) -> bool:
+        """Check the complete root when no bounded file inventory is available."""
+        return self.overflow or not self.paths
+
+
 class _MissingCustomTemplateState:
     """Bounded bookkeeping for mutable custom-template directories."""
 
-    __slots__ = ("count", "lock", "overflow", "paths", "signatures")
+    __slots__ = ("count", "dependencies", "lock", "overflow", "paths", "signatures")
 
     def __init__(self) -> None:
         self.paths: dict[Path, tuple[Path, ...]] = {}
         self.signatures: OrderedDict[Path, _CustomTemplateSignature] = OrderedDict()
+        self.dependencies: dict[Path, _CustomTemplateDependencies] = {}
         self.count = 0
         self.overflow = False
         self.lock = RLock()
@@ -1316,7 +1336,7 @@ def _get_environment(template_subdir: Path, custom_template_dir: Path | None) ->
     if custom_template_dir is not None:
         custom_dir = custom_template_dir / template_subdir
         if cached_path_exists(custom_dir):
-            loaders.append(FileSystemLoader(str(custom_dir)))
+            loaders.append(_custom_template_loader(custom_template_dir, custom_dir))
             has_custom_loader = True
         else:
             _remember_missing_custom_template_subdir(custom_template_dir, custom_dir)
@@ -1345,7 +1365,28 @@ def _get_template_with_custom_dir(
     template_subdir = template_file_path.parent
     environment = _get_environment(template_subdir, custom_template_dir)
     template = environment.get_template(template_file_path.name)
-    return template_adapter(template) if template_adapter is not None else template
+    return (
+        _apply_custom_template_adapter(template, template_adapter, custom_template_dir)
+        if template_adapter is not None
+        else template
+    )
+
+
+def _uses_original_template_loader(adapter: Callable[[Template], Template]) -> Callable[[Template], Template]:
+    """Declare that an internal adapter preserves the observed Jinja loader."""
+    adapter.__dict__[_ORIGINAL_TEMPLATE_LOADER_MARKER] = True
+    return adapter
+
+
+def _apply_custom_template_adapter(
+    template: Template, adapter: Callable[[Template], Template], custom_template_dir: Path | None
+) -> Template:
+    """Use the full-root fallback for adapters with unobserved dependencies."""
+    if not getattr(adapter, _ORIGINAL_TEMPLATE_LOADER_MARKER, False):
+        with _missing_custom_template_state.lock:
+            if dependencies := _missing_custom_template_state.dependencies.get(custom_template_dir):
+                dependencies.overflow = True
+    return adapter(template)
 
 
 def _clear_custom_template_render_caches() -> None:
@@ -1363,12 +1404,14 @@ def _clear_custom_template_caches() -> None:
         _clear_custom_template_render_caches()
         _missing_custom_template_state.paths.clear()
         _missing_custom_template_state.signatures.clear()
+        _missing_custom_template_state.dependencies.clear()
         _missing_custom_template_state.count = 0
         _missing_custom_template_state.overflow = False
 
 
 def _remember_missing_custom_template_subdir(custom_template_dir: Path, custom_subdir: Path) -> None:
     """Track a missing custom subdirectory while keeping retained state bounded."""
+    _remember_custom_template_dependency(custom_template_dir, custom_subdir)
     with _missing_custom_template_state.lock:
         if _missing_custom_template_state.overflow:
             return
@@ -1472,29 +1515,100 @@ def _get_custom_template_signature(custom_template_dir: Path) -> _CustomTemplate
     return digest.digest()
 
 
+def _custom_template_path_signature(path: Path) -> tuple[int, ...] | None:
+    """Check file identity as well as timestamps, including resolved symlink targets."""
+    try:
+        stat = path.stat()
+    except OSError:
+        return None
+    return stat.st_dev, stat.st_ino, stat.st_mtime_ns, stat.st_ctime_ns, stat.st_size
+
+
+def _remember_custom_template_dependency(custom_template_dir: Path, path: Path) -> None:
+    """Record successful and failed lookups without growing with unused files."""
+    with _missing_custom_template_state.lock:
+        dependencies = _missing_custom_template_state.dependencies.get(custom_template_dir)
+        if dependencies is None or dependencies.overflow or path in dependencies.paths:
+            return
+        if len(dependencies.paths) >= _MAX_CUSTOM_TEMPLATE_DEPENDENCIES:
+            dependencies.overflow = True
+            return
+        dependencies.paths[path] = _custom_template_path_signature(path)
+
+
+def _remember_custom_template_directory(custom_template_dir: Path, directory: Path) -> None:
+    """Include resolved legacy loader roots in the bounded full-scan fallback."""
+    with _missing_custom_template_state.lock:
+        dependencies = _missing_custom_template_state.dependencies.get(custom_template_dir)
+        if dependencies is None or dependencies.incomplete or directory in dependencies.directories:
+            return
+        if directory.resolve().is_relative_to(custom_template_dir.resolve()):
+            return
+        if len(dependencies.directories) >= _MAX_CUSTOM_TEMPLATE_DEPENDENCIES:
+            dependencies.incomplete = True
+            return
+        dependencies.directories[directory] = _get_custom_template_signature(directory)
+
+
+def _custom_template_loader(custom_template_dir: Path, directory: Path) -> Any:
+    from datamodel_code_generator.model._template_dependencies import DependencyTrackingLoader  # noqa: PLC0415
+
+    _remember_custom_template_directory(custom_template_dir, directory)
+    return DependencyTrackingLoader(
+        directory, lambda path: _remember_custom_template_dependency(custom_template_dir, path)
+    )
+
+
 def _refresh_custom_template_paths(custom_template_dir: Path) -> None:
-    """Detect custom-template changes once per generation without polling each model."""
-    signature = _get_custom_template_signature(custom_template_dir)
+    """Check observed dependencies, retaining the full scan when tracking is incomplete."""
     with _missing_custom_template_state.lock:
         if _missing_custom_template_state.overflow:
             _clear_custom_template_caches()
-        elif _missing_custom_template_state.signatures.get(custom_template_dir) == signature:
+        dependencies = _missing_custom_template_state.dependencies.get(custom_template_dir)
+        if dependencies is not None and dependencies.incomplete:
+            # Re-read untracked loaders without repeatedly rebuilding an unusable inventory.
+            _clear_custom_template_render_caches()
             _missing_custom_template_state.signatures.move_to_end(custom_template_dir)
             return
-        else:
-            if len(_missing_custom_template_state.signatures) >= _MAX_CUSTOM_TEMPLATE_SIGNATURES:
-                _missing_custom_template_state.signatures.popitem(last=False)
-            _clear_custom_template_render_caches()
+        if (
+            dependencies is not None
+            and not dependencies.needs_full_scan
+            and all(_custom_template_path_signature(path) == value for path, value in dependencies.paths.items())
+        ):
+            _missing_custom_template_state.signatures.move_to_end(custom_template_dir)
+            return
+        signature = _get_custom_template_signature(custom_template_dir)
+        if (
+            dependencies is not None
+            and dependencies.needs_full_scan
+            and _missing_custom_template_state.signatures.get(custom_template_dir) == signature
+            and all(_get_custom_template_signature(path) == value for path, value in dependencies.directories.items())
+        ):
+            _missing_custom_template_state.signatures.move_to_end(custom_template_dir)
+            return
+        if (
+            custom_template_dir not in _missing_custom_template_state.signatures
+            and len(_missing_custom_template_state.signatures) >= _MAX_CUSTOM_TEMPLATE_SIGNATURES
+        ):
+            evicted, _ = _missing_custom_template_state.signatures.popitem(last=False)
+            _missing_custom_template_state.dependencies.pop(evicted, None)
+        _clear_custom_template_render_caches()
         _missing_custom_template_state.signatures[custom_template_dir] = signature
+        _missing_custom_template_state.signatures.move_to_end(custom_template_dir)
+        _missing_custom_template_state.dependencies[custom_template_dir] = _CustomTemplateDependencies()
 
 
 @lru_cache(maxsize=16)
-def _get_environment_with_absolute_path(absolute_template_dir: Path, builtin_subdir: Path) -> Environment:
+def _get_environment_with_absolute_path(
+    absolute_template_dir: Path, builtin_subdir: Path, custom_template_dir: Path | None = None
+) -> Environment:
     """Get or create a cached Jinja2 Environment for absolute path templates."""
     from jinja2 import ChoiceLoader, FileSystemLoader  # noqa: PLC0415
 
     loaders: list[FileSystemLoader] = [
-        FileSystemLoader(str(absolute_template_dir)),
+        _custom_template_loader(custom_template_dir, absolute_template_dir)
+        if custom_template_dir is not None
+        else FileSystemLoader(str(absolute_template_dir)),
         FileSystemLoader(str(TEMPLATE_DIR / builtin_subdir)),
     ]
     return _build_environment(ChoiceLoader(loaders))
@@ -1505,6 +1619,7 @@ def _get_template_with_absolute_path(
     absolute_template_path: Path,
     builtin_subdir: Path,
     template_adapter: Callable[[Template], Template] | None = None,
+    custom_template_dir: Path | None = None,
 ) -> Template:
     """Load a Jinja2 template from an absolute path with fallback to built-in directory.
 
@@ -1513,9 +1628,15 @@ def _get_template_with_absolute_path(
     1. The directory containing the absolute template path
     2. TEMPLATE_DIR/<builtin_subdir>/ (fallback for includes not in custom dir)
     """
-    environment = _get_environment_with_absolute_path(absolute_template_path.parent, builtin_subdir)
+    environment = _get_environment_with_absolute_path(
+        absolute_template_path.parent, builtin_subdir, custom_template_dir
+    )
     template = environment.get_template(absolute_template_path.name)
-    return template_adapter(template) if template_adapter is not None else template
+    return (
+        _apply_custom_template_adapter(template, template_adapter, custom_template_dir)
+        if template_adapter is not None
+        else template
+    )
 
 
 @lru_cache
@@ -2034,6 +2155,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         template_file_path = Path(self.TEMPLATE_FILE_PATH)
         if self._custom_template_dir is not None:
             custom_template_file_path = self._custom_template_dir / template_file_path
+            _remember_custom_template_dependency(self._custom_template_dir, custom_template_file_path)
             if cached_path_exists(custom_template_file_path):
                 return custom_template_file_path
         return template_file_path
@@ -2072,11 +2194,16 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         if self._uses_custom_root_template:
             absolute_template_path = resolved_path.absolute()
             if template_adapter is None:
-                return _get_template_with_absolute_path(absolute_template_path, Path(self.TEMPLATE_FILE_PATH).parent)
+                return _get_template_with_absolute_path(
+                    absolute_template_path,
+                    Path(self.TEMPLATE_FILE_PATH).parent,
+                    custom_template_dir=self._custom_template_dir,
+                )
             return _get_template_with_absolute_path(
                 absolute_template_path,
                 Path(self.TEMPLATE_FILE_PATH).parent,
                 template_adapter,
+                self._custom_template_dir,
             )
         if template_adapter is None:
             return _get_template_with_custom_dir(Path(self.TEMPLATE_FILE_PATH), self._custom_template_dir)
