@@ -4710,7 +4710,10 @@ def test_generate_auto_path_list_reuses_detected_first_file(
                 modules,
                 EXPECTED_MAIN_PATH / "jsonschema" / "path_list_inputs_api",
             )
-            assert reads == dict.fromkeys(source_names, 1)
+            assert_output(
+                f"{json.dumps(reads, indent=2)}\n",
+                EXPECTED_MAIN_PATH / "jsonschema" / "path_list_input_reads.txt",
+            )
 
 
 def test_generate_modular_stdout_and_directory_match_fixture(output_dir: Path) -> None:
