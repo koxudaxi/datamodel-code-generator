@@ -1,0 +1,45 @@
+{
+  "$defs": {
+    "SharedAliasParent": {
+      "properties": {
+        "shared": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Shared",
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "shared"
+      ],
+      "title": "SharedAliasParent",
+      "type": "object",
+      "x-is-base-class": true
+    }
+  },
+  "allOf": [
+    {
+      "$ref": "#/$defs/SharedAliasParent"
+    }
+  ],
+  "properties": {
+    "shared": {
+      "items": {
+        "type": "integer"
+      },
+      "title": "Shared",
+      "type": "array"
+    }
+  },
+  "required": [
+    "shared",
+    "shared"
+  ],
+  "title": "SharedAliasChild",
+  "type": "object",
+  "x-python-field-overrides": {
+    "shared": "shared"
+  }
+}

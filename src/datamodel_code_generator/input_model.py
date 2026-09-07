@@ -48,6 +48,8 @@ from datamodel_code_generator.enums import InputModelRefStrategy, _get_output_mo
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
+    from pydantic.json_schema import GenerateJsonSchema
+
     from datamodel_code_generator import DataModelType, InputFileType
     from datamodel_code_generator.enums import _OutputModelFamily
     from datamodel_code_generator.input_model_result import LoadedInputModelSchema
@@ -59,6 +61,7 @@ class Error(Exception):
 
 _MISSING_MODULE = object()
 _ModuleRestoreState = tuple[str, object]
+_ParentSchema = tuple[dict[str, object], dict[str, object], frozenset[str]]
 
 
 def _path_is_within(path: str | Path, directory: Path) -> bool:
@@ -309,7 +312,7 @@ def _serialize_python_type_full(
         raise Error(str(exc)) from None
 
 
-def _get_input_model_json_schema_class() -> type:
+def _get_input_model_json_schema_class() -> type[GenerateJsonSchema]:
     """Get the InputModelJsonSchema class lazily."""
     from pydantic.json_schema import GenerateJsonSchema  # noqa: PLC0415
 
@@ -837,16 +840,61 @@ def _try_rebuild_model(obj: type) -> None:
         obj.model_rebuild()  # ty: ignore[unresolved-attribute]
 
 
-def _get_base_model_parents(model_class: type) -> list[type]:
+def _get_base_model_parents(model_class: type) -> list[type[BaseModel]]:
     """Get parent classes that are BaseModel subclasses (excluding BaseModel itself)."""
     return [p for p in model_class.__bases__ if isinstance(p, type) and issubclass(p, BaseModel) and p is not BaseModel]
 
 
+def _input_model_field_wire_name(field_name: str, field: Any) -> str:
+    """Match the validation schema's first usable simple alias."""
+    alias = field.validation_alias
+    if isinstance(alias, str):
+        return alias
+    for choice in getattr(alias, "choices", ()):
+        if isinstance(choice, str):
+            return choice
+        if len(path := choice.path) == 1:
+            return path[0]
+    return field_name
+
+
+def _partition_inherited_fields(
+    schema: dict[str, object],
+    model_class: type[BaseModel],
+    parent_fields: dict[str, Any],
+    parent_properties: dict[str, object],
+    parent_required: frozenset[str],
+) -> tuple[dict[str, object], list[str], dict[str, str]]:
+    """Keep effective replacements separate from unchanged inherited properties."""
+    original_props = cast("dict[str, object]", schema.get("properties", {}))
+    original_required = cast("list[str]", schema.get("required", []))
+    required_names = frozenset(original_required)
+    inherited_names: set[str] = set()
+    overrides: dict[str, str] = {}
+    for field_name, parent_field in parent_fields.items():
+        child_field = model_class.model_fields[field_name]
+        parent_wire = _input_model_field_wire_name(field_name, parent_field)
+        child_wire = _input_model_field_wire_name(field_name, child_field)
+        if child_wire in original_props and (
+            parent_wire != child_wire
+            or original_props[child_wire] != parent_properties.get(parent_wire)
+            or (child_wire in required_names) != (parent_wire in parent_required)
+        ):
+            overrides[child_wire] = parent_wire
+        elif child_wire in parent_fields:
+            inherited_names.add(child_wire)
+    return (
+        {k: v for k, v in original_props.items() if k not in inherited_names},
+        [name for name in original_required if name not in inherited_names],
+        overrides,
+    )
+
+
 def _transform_single_model_to_inheritance(
     schema: dict[str, object],
-    model_class: type,
-    schema_generator: type,
-    processed_parents: dict[str, dict[str, object]] | None = None,
+    model_class: type[BaseModel],
+    schema_generator: type[GenerateJsonSchema],
+    processed_parents: dict[str, _ParentSchema] | None = None,
     expression_collector: PythonTypeExpressionCollector | None = None,
 ) -> dict[str, object]:
     """Transform a single model's schema to use allOf inheritance structure."""
@@ -860,7 +908,6 @@ def _transform_single_model_to_inheritance(
 
     parent = direct_parents[0]
     parent_name = parent.__name__
-    parent_fields = set(parent.model_fields.keys())
 
     defs = dict(cast("dict[str, object]", schema.get("$defs", {})))
 
@@ -873,6 +920,8 @@ def _transform_single_model_to_inheritance(
             expression_collector=expression_collector,
         )
         parent_schema = _add_python_type_info(parent_schema, parent, expression_collector)
+        parent_properties = cast("dict[str, object]", parent_schema.get("properties", {}))
+        parent_required = frozenset(cast("list[str]", parent_schema.get("required", [])))
         parent_schema = _transform_single_model_to_inheritance(
             parent_schema,
             parent,
@@ -880,8 +929,8 @@ def _transform_single_model_to_inheritance(
             processed_parents,
             expression_collector,
         )
-        processed_parents[parent_name] = parent_schema
-    parent_schema = processed_parents[parent_name]
+        processed_parents[parent_name] = parent_schema, parent_properties, parent_required
+    parent_schema, parent_properties, parent_required = processed_parents[parent_name]
 
     if "$defs" in parent_schema:
         parent_defs = cast("dict[str, object]", parent_schema["$defs"])
@@ -891,18 +940,19 @@ def _transform_single_model_to_inheritance(
     parent_def["x-is-base-class"] = True
     defs[parent_name] = parent_def
 
-    original_props = cast("dict[str, object]", schema.get("properties", {}))
-    child_props = {k: v for k, v in original_props.items() if k not in parent_fields}
+    child_props, child_required, overrides = _partition_inherited_fields(
+        schema, model_class, parent.model_fields, parent_properties, parent_required
+    )
 
     new_schema: dict[str, object] = {"$defs": defs, "allOf": [{"$ref": f"#/$defs/{parent_name}"}]}
     if child_props:
         new_schema["properties"] = child_props
-    original_required = cast("list[str]", schema.get("required", []))
-    child_required = [r for r in original_required if r not in parent_fields]
     if child_required:
         new_schema["required"] = child_required
     new_schema["title"] = schema.get("title")
     new_schema["type"] = "object"
+    if overrides:
+        new_schema["x-python-field-overrides"] = overrides
 
     new_schema.update({
         key: value
@@ -973,7 +1023,7 @@ def _load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
             expression_collector,
         )
 
-    model_classes: list[type] = []
+    model_classes: list[type[BaseModel]] = []
     loaded_modules: dict[str, types.ModuleType] = {}
     path_module_states: list[_ModuleRestoreState] = []
 
@@ -1012,13 +1062,13 @@ def _load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
         schema_generator = _get_input_model_json_schema_class()
         merged_defs: dict[str, object] = {}
         root_refs: list[dict[str, str]] = []
-        processed_parents: dict[str, dict[str, object]] = {}
+        processed_parents: dict[str, _ParentSchema] = {}
 
         for model_class in model_classes:
             model_name = model_class.__name__
             _try_rebuild_model(model_class)
 
-            schema = model_class.model_json_schema(schema_generator=schema_generator)  # ty: ignore[unresolved-attribute]
+            schema = model_class.model_json_schema(schema_generator=schema_generator)
             schema = _add_python_type_for_unserializable(
                 schema,
                 model_class,
