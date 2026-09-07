@@ -16,6 +16,7 @@ from tests.main.conftest import (
     EXPECTED_MAIN_PATH,
     JSON_SCHEMA_DATA_PATH,
     _default_formatter_generate_options,
+    _uses_builtin_test_default_formatter,
     run_main_and_assert,
 )
 
@@ -109,7 +110,11 @@ def test_dotted_module_exports(
         expected += "_py314"
     output_dir = output_dir.with_name(f"{expected}_{target_version.name.lower()}_{entrypoint}_{validation}")
     expected_directory = EXPECTED_MAIN_PATH / "jsonschema" / f"dotted_module_exports_{expected}"
-    formatter_options = {} if is_supported_in_black(target_version) else {"formatters": [Formatter.BUILTIN]}
+    formatters = (
+        [Formatter.BUILTIN]
+        if _uses_builtin_test_default_formatter() or not is_supported_in_black(target_version)
+        else [Formatter.BLACK, Formatter.ISORT]
+    )
     if entrypoint == "cli":
         extra_args = [
             "--target-python-version",
@@ -121,9 +126,9 @@ def test_dotted_module_exports(
             "pydantic_v2.BaseModel",
             "--use-exact-imports",
             "--disable-timestamp",
+            "--formatters",
+            *(formatter.value for formatter in formatters),
         ]
-        if formatter_options:
-            extra_args.extend(["--formatters", "builtin"])
         if split:
             extra_args.extend(["--module-split-mode", split])
         if strategy:
@@ -153,7 +158,7 @@ def test_dotted_module_exports(
                 "output_model_type": "pydantic_v2.BaseModel",
                 "use_exact_imports": True,
                 "disable_timestamp": True,
-                **formatter_options,
+                "formatters": formatters,
             }),
         )
         assert_directory_content(output_dir, expected_directory)
