@@ -410,7 +410,11 @@ def test_explicit_alias_names_external_namespace_precedence(
         "--aliases",
         json.dumps(aliases),
         "--extra-template-data",
-        str(directory / f"{case['name']}_config.json"),
+        str(
+            JSON_SCHEMA_DATA_PATH.parent
+            / "payloads/explicit_alias_namespace_inheritance"
+            / f"{case['name']}_config.json"
+        ),
         "--base-class",
         base_class,
         "--disable-timestamp",

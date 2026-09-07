@@ -2119,6 +2119,28 @@ def _remap_imports(imports: Imports, overrides: Mapping[str, str]) -> None:
         raise Error(str(e)) from e
 
 
+def _explicit_alias_conflicts_with_pydantic(field: DataModelFieldBase, name: str) -> bool:
+    """Respect generated namespace configuration without importing custom bases."""
+    if name == "model_config" or name.startswith("_"):
+        return True
+    if not hasattr(BaseModel, name):
+        return False
+    namespaces = ("model_validate", "model_dump")
+    pending = [cast("DataModel", field.parent)]
+    while pending:
+        model = pending.pop()
+        config = model.extra_template_data.get("config")
+        if (configured := getattr(config, "protected_namespaces", None)) is not None:
+            namespaces = configured
+            break
+        base_classes = _find_base_classes(model)
+        if not base_classes and model.custom_base_class and model.custom_base_class != "pydantic.BaseModel":
+            # This later external base may override any earlier generated base's namespaces.
+            return False
+        pending.extend(base_classes)
+    return name.startswith(namespaces)
+
+
 class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
     """Abstract base class for schema parsers.
 
@@ -2271,28 +2293,6 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 field.__dict__.pop(_EXPLICIT_FIELD_ALIAS_KEY, None)
         self._validate_explicit_field_aliases(fields, final=False)
 
-    @staticmethod
-    def _explicit_alias_conflicts_with_pydantic(field: DataModelFieldBase, name: str) -> bool:
-        """Respect generated namespace configuration without importing custom bases."""
-        if name == "model_config" or name.startswith("_"):
-            return True
-        if not hasattr(BaseModel, name):
-            return False
-        namespaces = ("model_validate", "model_dump")
-        pending = [cast("DataModel", field.parent)]
-        while pending:
-            model = pending.pop()
-            config = model.extra_template_data.get("config")
-            if (configured := getattr(config, "protected_namespaces", None)) is not None:
-                namespaces = configured
-                break
-            base_classes = _find_base_classes(model)
-            if not base_classes and model.custom_base_class and model.custom_base_class != "pydantic.BaseModel":
-                # This later external base may override any earlier generated base's namespaces.
-                return False
-            pending.extend(base_classes)
-        return name.startswith(namespaces)
-
     def _validate_explicit_field_aliases(self, fields: list[DataModelFieldBase], *, final: bool) -> None:
         """Diagnose collisions without applying automatic naming policy to user choices."""
         if not any(_EXPLICIT_FIELD_ALIAS_KEY in field.__dict__ for field in fields):
@@ -2321,7 +2321,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 continue
             invalid = explicit and (not cast("str", field.name).isidentifier() or iskeyword(cast("str", field.name)))
             if explicit and self.field_name_model_type == ModelType.PYDANTIC:
-                invalid |= self._explicit_alias_conflicts_with_pydantic(field, name)
+                invalid |= _explicit_alias_conflicts_with_pydantic(field, name)
             if field_helper is not None and str(field).startswith("field("):
                 field = field_helper  # noqa: PLW2901
                 invalid = True
