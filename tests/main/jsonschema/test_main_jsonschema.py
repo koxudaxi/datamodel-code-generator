@@ -21117,26 +21117,32 @@ def test_allof_final_serialization_aliases(
 @pytest.mark.parametrize("config_source", ["validators", "extra_template_data"])
 @pytest.mark.parametrize("case", ["collisions", "single"])
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
-def test_validator_collisions(output_file: Path, entrypoint: str, case: str, config_source: str) -> None:
+@pytest.mark.parametrize("custom_template", [False, True])
+def test_validator_collisions(
+    output_file: Path, entrypoint: str, case: str, config_source: str, custom_template: bool
+) -> None:
     """Keep repeated, inherited and independently imported validators active."""
     shutil.copyfile(
         DATA_PATH / "python" / "validator_formatters" / "pyproject.toml", output_file.parent / "pyproject.toml"
     )
     schema = JSON_SCHEMA_DATA_PATH / f"validator_{case}.json"
-    config_path = JSON_SCHEMA_DATA_PATH / f"validator_{case}_config.json"
+    config_path = DATA_PATH / "payloads/validator_runtime" / f"validator_{case}_config.json"
+    template = DATA_PATH / "templates_validator_context" if custom_template else None
+    expected = f"validator_{case}{'_custom' if custom_template else ''}.py"
     if entrypoint == "cli":
         run_main_and_assert(
             input_path=schema,
             output_path=output_file,
             input_file_type="jsonschema",
             assert_func=assert_file_content,
-            expected_file=f"validator_{case}.py",
+            expected_file=expected,
             extra_args=[
                 f"--{config_source.replace('_', '-')}",
                 str(config_path),
                 "--output-model-type",
                 "pydantic_v2.BaseModel",
                 "--disable-timestamp",
+                *(["--custom-template-dir", str(template)] if template else []),
             ],
         )
     else:
@@ -21145,9 +21151,10 @@ def test_validator_collisions(output_file: Path, entrypoint: str, case: str, con
             output_path=output_file,
             input_file_type=InputFileType.JsonSchema,
             assert_func=assert_file_content,
-            expected_file=f"validator_{case}.py",
+            expected_file=expected,
             output_model_type=DataModelType.PydanticV2BaseModel,
             **{config_source: json.loads(config_path.read_text())},
+            custom_template_dir=template,
             disable_timestamp=True,
         )
     if case == "single":
@@ -21187,7 +21194,7 @@ def test_validator_inheritance_definition_order(output_file: Path, entrypoint: s
         DATA_PATH / "python" / "validator_formatters" / "pyproject.toml", output_file.parent / "pyproject.toml"
     )
     schema = JSON_SCHEMA_DATA_PATH / f"validator_inheritance_{first}_first.json"
-    config = JSON_SCHEMA_DATA_PATH / "validator_inheritance_config.json"
+    config = DATA_PATH / "payloads/validator_runtime/validator_inheritance_config.json"
     if entrypoint == "cli":
         run_main_and_assert(
             input_path=schema,
@@ -21232,7 +21239,7 @@ def test_validator_finalized_model_import(output_dir: Path, entrypoint: str, exa
     output_dir.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(DATA_PATH / "python" / "validator_formatters" / "pyproject.toml", output_dir / "pyproject.toml")
     schema = JSON_SCHEMA_DATA_PATH / "validator_import_models"
-    config = JSON_SCHEMA_DATA_PATH / "validator_import_models_config.json"
+    config = DATA_PATH / "payloads/validator_runtime/validator_import_models_config.json"
     expected = EXPECTED_JSON_SCHEMA_PATH / "validator_import_models"
     if entrypoint == "cli":
         run_main_and_assert(

@@ -1611,6 +1611,7 @@ class BaseModel(BaseModelBase):
             raise Error(msg) from e
 
         prepared_validators: list[dict[str, Any]] = []
+        validator_bindings: list[tuple[dict[str, Any], Import]] = []
         for validator in validators:
             fields = validator.get("fields") or [validator.get("field")]
             fields = [f for f in fields if f]
@@ -1621,18 +1622,20 @@ class BaseModel(BaseModelBase):
             function_name = function_path.rsplit(".", 1)[-1]
             mode = validator.get("mode", "after")
 
-            prepared_validators.append({
+            prepared = {
                 "fields_str": ", ".join(repr(f) for f in fields),
                 "mode_str": f"mode={mode!r}",
                 "method_name": f"{function_name}_validator",
                 "function_name": function_name,
-                "function_import": Import.from_full_path(function_path),
                 "mode": mode,
-            })
+            }
+            prepared_validators.append(prepared)
+            validator_bindings.append((prepared, import_ := Import.from_full_path(function_path)))
 
-            self._additional_imports.append(Import.from_full_path(function_path))
+            self._additional_imports.append(import_)
 
         if prepared_validators:
+            self._validator_bindings = validator_bindings
             self._set_internal_template_data("prepared_validators", prepared_validators)
             self._additional_imports.append(IMPORT_FIELD_VALIDATOR)
             self._additional_imports.append(IMPORT_ANY)
@@ -1656,10 +1659,8 @@ class BaseModel(BaseModelBase):
         from datamodel_code_generator.validators import _reserve_validator_name  # noqa: PLC0415
 
         next_suffixes: dict[str, int] = {}
-        for validator in model._internal_template_data.get("prepared_validators", ()):  # noqa: SLF001
-            name = _reserve_validator_name(
-                f"{validator['function_import'].import_}_validator", reserved_names, next_suffixes
-            )
+        for validator, import_ in getattr(model, "_validator_bindings", ()):
+            name = _reserve_validator_name(f"{import_.import_}_validator", reserved_names, next_suffixes)
             if name != validator["method_name"]:
                 validator["method_name"] = name
                 model.invalidate_render_caches()
@@ -1677,16 +1678,12 @@ class BaseModel(BaseModelBase):
             return
         models = tuple(models)
         validator_models = [
-            (model, validators)
-            for model in models
-            if (validators := model._internal_template_data.get("prepared_validators"))  # noqa: SLF001
+            (model, validators) for model in models if (validators := getattr(model, "_validator_bindings", None))
         ]
         method_scopes: dict[str, set[str]] = {}
         for model, _ in validator_models:
             cls._prepare_validator_method_names(model, method_scopes)
-        validator_imports = {
-            validator["function_import"] for _, validators in validator_models for validator in validators
-        }
+        validator_imports = {import_ for _, validators in validator_models for _, import_ in validators}
         reserved_names = {model.class_name for model in models}
         reserved_names.update(
             import_.binding_name
@@ -1706,8 +1703,7 @@ class BaseModel(BaseModelBase):
         names: dict[Import, str] = {}
         next_suffixes: dict[str, int] = {}
         for model, validators in validator_models:
-            for validator in validators:
-                import_ = validator["function_import"]
+            for validator, import_ in validators:
                 if (name := names.get(import_)) is None:
                     name = names[import_] = _reserve_validator_name(import_.import_, reserved_names, next_suffixes)
                 if name == validator["function_name"]:
