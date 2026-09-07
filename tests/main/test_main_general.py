@@ -1738,7 +1738,7 @@ def test_mcp_tools_schema_value_references_cli(output_file: Path, input_name: st
         extra_args=[
             "--strict-refs",
             "--disable-timestamp",
-            *(["--formatters", "black", "isort"] if input_name == "schema_value_references" else []),
+            *(["--formatters", "builtin"] if input_name == "schema_value_references" else []),
         ],
     )
     source = json.loads((DATA_PATH / "mcp_tools" / f"{input_name}.json").read_text())
@@ -1771,7 +1771,7 @@ def test_mcp_tools_schema_value_references_api(output_file: Path, input_name: st
         expected_file=f"mcp_tools/{input_name}.py",
         strict_refs=True,
         disable_timestamp=True,
-        **({"formatters": [Formatter.BLACK, Formatter.ISORT]} if input_name == "schema_value_references" else {}),
+        **({"formatters": [Formatter.BUILTIN]} if input_name == "schema_value_references" else {}),
     )
     source = json.loads((DATA_PATH / "mcp_tools" / f"{input_name}.json").read_text())
     for model_name, field_name in (
