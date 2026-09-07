@@ -13,6 +13,7 @@ from datamodel_code_generator import (
     DatetimeClassType,
     DefaultValueType,
     DefaultValueTypeWarning,
+    Error,
     InputFileType,
     generate,
     load_data,
@@ -487,14 +488,25 @@ def test_main_avro_decimal_defaults_unused_by_typed_dict(output_file: Path) -> N
     [
         ("scale", "Avro decimal default scale is outside the Python Decimal range"),
         ("unicode", "Avro bytes and fixed defaults must contain only code points from 0 through 255"),
+        ("fixed_short", "Avro fixed decimal default must contain exactly 2 bytes: 1"),
+        ("fixed_long", "Avro fixed decimal default must contain exactly 2 bytes: 3"),
+        ("fixed_reference", "Avro fixed decimal default must contain exactly 2 bytes: 1"),
+        ("precision", "Avro decimal default exceeds precision 2: 300"),
+        ("negative_precision", "Avro decimal default exceeds precision 2: -300"),
     ],
 )
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
 def test_main_avro_unrepresentable_decimal_default(
-    output_file: Path, capsys: pytest.CaptureFixture[str], fixture: str, message: str
+    output_file: Path, capsys: pytest.CaptureFixture[str], fixture: str, message: str, entrypoint: str
 ) -> None:
-    """Report invalid encoded defaults and unrepresentable scales through the real CLI."""
+    """Report invalid encoded defaults and unrepresentable scales through CLI/API."""
+    input_path = AVRO_DATA_PATH / f"invalid_decimal_default_{fixture}.avsc"
+    if entrypoint == "api":
+        with pytest.raises(Error, match=message):
+            generate(input_path, input_file_type=InputFileType.Avro, output=output_file)
+        return
     run_main_and_assert(
-        input_path=AVRO_DATA_PATH / f"invalid_decimal_default_{fixture}.avsc",
+        input_path=input_path,
         output_path=output_file,
         input_file_type="avro",
         expected_exit=Exit.ERROR,

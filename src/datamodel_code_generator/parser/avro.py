@@ -535,7 +535,13 @@ class _AvroSchemaConverter:
         if scale > -MIN_ETINY:
             msg = f"Avro decimal default scale is outside the Python Decimal range: {scale}"
             raise Error(msg)
+        if schema.get("type") == "fixed" and len(value) != schema["size"]:
+            msg = f"Avro fixed decimal default must contain exactly {schema['size']} bytes: {len(value)}"
+            raise Error(msg)
         coefficient = Decimal(int.from_bytes(value, "big", signed=True))
+        if coefficient.adjusted() >= precision:
+            msg = f"Avro decimal default exceeds precision {precision}: {coefficient}"
+            raise Error(msg)
         decimal_value = f"{coefficient}E-{scale}"
         if self._logical_default is not None:
             return self._logical_default("decimal", "decimal", decimal_value)
