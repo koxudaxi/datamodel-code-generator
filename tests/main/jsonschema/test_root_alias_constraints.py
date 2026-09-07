@@ -22,6 +22,7 @@ from tests.main.conftest import (
     _default_formatter_generate_options,
     _generated_model,
     _uses_builtin_test_default_formatter,
+    assert_generated_model_json_validation,
     run_main_and_assert,
 )
 from tests.main.jsonschema.conftest import EXPECTED_JSON_SCHEMA_PATH
@@ -180,3 +181,64 @@ def test_root_alias_custom_template_constraints(
         text=True,
     )
     assert_output(result.stdout, expected / "integer_runtime.txt")
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("case", ["null_numeric", "null_pattern"])
+@pytest.mark.parametrize(("field_constraints", "use_annotated"), [(False, False), (True, False), (True, True)])
+def test_root_alias_null_constraints(
+    output_file: Path, entrypoint: str, case: str, *, field_constraints: bool, use_annotated: bool
+) -> None:
+    """Keep already-correct null aliases when unrelated type-specific keywords are present."""
+    source = JSON_SCHEMA_DATA_PATH / "root_alias_constraints" / f"{case}.json"
+    expected = EXPECTED_JSON_SCHEMA_PATH / "root_alias_constraints"
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=source,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            expected_file=expected / f"{case}.py",
+            extra_args=[
+                "--disable-timestamp",
+                "--use-root-model-type-alias",
+                *(["--field-constraints"] if field_constraints else []),
+                *(["--use-annotated"] if use_annotated else []),
+            ],
+        )
+    else:
+        generate(
+            source,
+            **_default_formatter_generate_options({
+                "input_file_type": InputFileType.JsonSchema,
+                "output": output_file,
+                "disable_timestamp": True,
+                "use_root_model_type_alias": True,
+                "field_constraints": field_constraints,
+                "use_annotated": use_annotated,
+            }),
+        )
+        assert_output(
+            output_file.read_text(encoding="utf-8"),
+            expected / (f"{case}_annotated_api.py" if use_annotated else f"{case}.py"),
+        )
+    payloads = json.loads((DATA_PATH / "payloads/root_alias_null_values.json").read_text())
+    validator = Draft7Validator(json.loads(source.read_text()))
+    assert_output(json.dumps([validator.is_valid(value) for value in payloads]) + "\n", expected / "null_runtime.txt")
+    try:
+        with _generated_model(DATA_PATH / "python/root_alias_constraints/native_null.py", "native_null", "NativeNull"):
+            pass
+    except AssertionError as native_error:
+        assert_output(str(native_error) + "\n", expected / "null_native_error.txt")
+        with ExitStack() as stack, pytest.raises(AssertionError) as generated_error:
+            stack.enter_context(_generated_model(output_file, "generated_null_alias", "Root"))
+        assert_output(str(generated_error.value) + "\n", expected / "null_native_error.txt")
+        return
+    for value in payloads[1:]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="generated_null_alias",
+            model_name="Root",
+            valid_json=json.dumps(payloads[0]),
+            invalid_json=json.dumps(value),
+            expected_error_type="none_required",
+        )
