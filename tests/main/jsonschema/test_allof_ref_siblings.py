@@ -13,6 +13,7 @@ from referencing import Registry, Resource
 
 from datamodel_code_generator import InputFileType
 from tests.main.conftest import (
+    DATA_PATH,
     JSON_SCHEMA_DATA_PATH,
     _generated_model,
     run_generate_file_and_assert,
@@ -29,7 +30,7 @@ if TYPE_CHECKING:
 @pytest.mark.parametrize("merge_mode", ["all", "constraints", "none"])
 @pytest.mark.parametrize("schema_validators", [False, True])
 @pytest.mark.parametrize(
-    "case", json.loads((JSON_SCHEMA_DATA_PATH / "allof_ref_siblings/cases.json").read_text()), ids=itemgetter("name")
+    "case", json.loads((DATA_PATH / "payloads/allof_ref_siblings.json").read_text()), ids=itemgetter("name")
 )
 def test_allof_ref_siblings(
     output_file: Path, entrypoint: str, field_constraints: bool, schema_validators: bool, merge_mode: str, case: dict
