@@ -1,0 +1,129 @@
+{
+  "schema_errors": [],
+  "graphql_errors": [],
+  "graphql_data": {
+    "item": {
+      "__typename": "Item",
+      "camelValue": 3,
+      "typename__": "item",
+      "typename___1": 13
+    },
+    "choice": {
+      "__typename": "Second",
+      "camelValue": 4,
+      "typename__": "second",
+      "typename___1": 14
+    },
+    "cross": {
+      "__typename": "Cross",
+      "value": 6,
+      "typename__": "cross"
+    },
+    "solo": {
+      "__typename": "Solo",
+      "typename__": "solo"
+    }
+  },
+  "models": {
+    "ZNode": {
+      "fields": [
+        "typename__",
+        "camel_value",
+        "typename___1"
+      ],
+      "values": {
+        "typename__": "node",
+        "camelValue": 1,
+        "__typename": "ZNode"
+      }
+    },
+    "ANode": {
+      "fields": [
+        "typename__",
+        "camel_value",
+        "typename___1",
+        "typename___2"
+      ],
+      "values": {
+        "typename__": "child",
+        "camelValue": 2,
+        "typename___1": 12,
+        "__typename": "ANode"
+      }
+    },
+    "Item": {
+      "fields": [
+        "typename__",
+        "camel_value",
+        "typename___1",
+        "typename___2"
+      ],
+      "values": {
+        "typename__": "item",
+        "camelValue": 3,
+        "typename___1": 13,
+        "__typename": "Item"
+      }
+    },
+    "Second": {
+      "fields": [
+        "typename__",
+        "camel_value",
+        "typename___1",
+        "typename___2"
+      ],
+      "values": {
+        "typename__": "second",
+        "camelValue": 4,
+        "typename___1": 14,
+        "__typename": "Second"
+      }
+    },
+    "Base": {
+      "fields": [
+        "value",
+        "typename__"
+      ],
+      "values": {
+        "value": 5,
+        "__typename": "Base"
+      }
+    },
+    "Cross": {
+      "fields": [
+        "value",
+        "typename__",
+        "typename___1"
+      ],
+      "values": {
+        "value": 6,
+        "typename__": "cross",
+        "__typename": "Cross"
+      }
+    },
+    "Solo": {
+      "fields": [
+        "typename__",
+        "typename___1"
+      ],
+      "values": {
+        "typename__": "solo",
+        "__typename": "Solo"
+      }
+    },
+    "ItemInput": {
+      "fields": [
+        "typename__",
+        "typename___1",
+        "camel_value",
+        "typename___2"
+      ],
+      "values": {
+        "typename__": "input",
+        "typename___1": 17,
+        "camelValue": 7,
+        "__typename": "ItemInput"
+      }
+    }
+  }
+}

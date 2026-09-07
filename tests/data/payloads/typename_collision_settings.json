@@ -1,0 +1,27 @@
+{
+  "collision": {
+    "schema": "typename_collision.graphql"
+  },
+  "normal": {
+    "schema": "typename_collision_control.graphql"
+  },
+  "aliases": {
+    "schema": "typename_collision_control.graphql",
+    "aliases": {
+      "label": "typename__",
+      "spare": "typename___1",
+      "ItemInput.spare": "extra"
+    }
+  },
+  "snake": {
+    "schema": "typename_collision.graphql",
+    "snake_case_field": true
+  },
+  "serialization": {
+    "schema": "typename_collision.graphql",
+    "serialization_aliases": {
+      "Item.typename___2": "__typename",
+      "Item.typename__": "custom_name"
+    }
+  }
+}
