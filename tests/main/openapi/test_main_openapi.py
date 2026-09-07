@@ -10016,11 +10016,18 @@ def test_external_discriminator_base(output_file: Path, entrypoint: str, case: s
             expected_attribute_value=tag,
         )
         with _generated_model(output_file, f"generated_external_discriminator_dump_{case}_{tag}", "Wrapper") as model:
-            assert model.model_validate(payload).model_dump(by_alias=True, exclude_none=True) == payload
+            assert_output(
+                json.dumps(model.model_validate(payload).model_dump(by_alias=True, exclude_none=True), sort_keys=True)
+                + "\n",
+                DATA_PATH / "payloads" / "external_discriminator_outputs" / f"{case}_{tag}.txt",
+            )
     if case == "many_ordinary":
         with _generated_model(output_file, "generated_discriminator_ordinary_refs", "Controls") as model:
             payload = {"field0": {"value": "first"}, "field99": {"value": "last"}}
-            assert model.model_validate(payload).model_dump(exclude_none=True) == payload
+            assert_output(
+                json.dumps(model.model_validate(payload).model_dump(exclude_none=True), sort_keys=True) + "\n",
+                DATA_PATH / "payloads" / "external_discriminator_outputs" / "ordinary.txt",
+            )
 
 
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
@@ -10056,4 +10063,7 @@ def test_external_discriminator_multiple_inputs(
     with _generated_package_module(output_dir, "a") as module:
         for tag, detail in [("cat", "meow"), ("dog", "bark")]:
             payload = {"item": {"kind": tag, detail: "yes"}}
-            assert module.Wrapper.model_validate(payload).model_dump(exclude_none=True) == payload
+            assert_output(
+                json.dumps(module.Wrapper.model_validate(payload).model_dump(exclude_none=True), sort_keys=True) + "\n",
+                DATA_PATH / "payloads" / "external_discriminator_outputs" / f"local_{tag}.txt",
+            )
