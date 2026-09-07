@@ -47,6 +47,7 @@ def test_pattern_property_intersections(
             "--formatters",
             *formatters,
             *(["--generate-schema-validators"] if enabled else []),
+            *(["--base-class", CASES[case]["base_class"]] if "base_class" in CASES[case] else []),
         ])
     else:
         generate(
@@ -57,12 +58,15 @@ def test_pattern_property_intersections(
                 output=output,
                 disable_timestamp=True,
                 generate_schema_validators=enabled,
+                base_class=CASES[case].get("base_class", ""),
                 formatters=[Formatter(value) for value in formatters],
             ),
         )
     suffix = case if enabled else f"{case}_disabled"
     golden_suffix = (
-        f"{suffix}_builtin" if formatter == "builtin" and suffix in {"complex_disabled", "rejected"} else suffix
+        f"{suffix}_builtin"
+        if formatter == "builtin" and suffix in {"complex_disabled", "rejected", "custom_base", "custom_base_disabled"}
+        else suffix
     )
     assert_output(output.read_text(), EXPECTED / f"{golden_suffix}.py")
     schema = json.loads(source.read_text())

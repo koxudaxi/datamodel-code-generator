@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import enum as _enum
 import json
+import math
 import re
 from collections import defaultdict
 from contextlib import contextmanager, suppress
@@ -1404,6 +1405,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self._all_of_root_value_ref_stack: set[tuple[str, ...]] | None = None
         self._root_pattern_string_constraints: JsonSchemaObject | None = None
         self._init_schema_resources()
+        self._pattern_validation_document_root: JsonSchemaObject | None = None
         self._root_id: Optional[str] = None  # noqa: UP045
         self._root_id_base_path: Optional[str] = None  # noqa: UP045
         self._output_model_context = OutputModelContext.from_generation_types(
@@ -2881,6 +2883,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     rejected_patterns=rule.rejected_patterns,
                     additional_property_type=copied_additional_type,
                     allow_unmatched=rule.allow_unmatched,
+                    requires_independent_validation=rule.requires_independent_validation,
                 )
             )
 
@@ -7806,6 +7809,126 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         )
         return pattern_value_types, rejected_patterns, additional_property_type, allow_unmatched
 
+    @staticmethod
+    def _plain_pattern_value_type(schema: object) -> str | None:
+        """Identify inhabited primitive schemas without validation or conversion modifiers."""
+        if (
+            isinstance(schema, JsonSchemaObject)
+            and not schema.extras
+            and schema.model_fields_set <= {"type", "default", "title", "description"}
+            and isinstance(schema.type, str)
+            and schema.type in {"string", "integer", "boolean"}
+        ):
+            return schema.type
+        return None
+
+    @classmethod
+    def _plain_pattern_object(cls, schema: object) -> dict[str, str] | None:
+        """Recognize open objects whose primitive properties have a common JSON witness."""
+        if not isinstance(schema, JsonSchemaObject):
+            return None
+        if (
+            schema.type != "object"
+            or schema.additionalProperties is not True
+            or schema.extras
+            or not schema.model_fields_set <= {"type", "properties", "required", "additionalProperties"}
+            or not schema.properties
+        ):
+            return None
+        if not set(schema.required or ()) <= schema.properties.keys():
+            return None
+        properties = {}
+        for name, field in schema.properties.items():
+            if (field_type := cls._plain_pattern_value_type(field)) is None:
+                return None
+            properties[name] = field_type
+        return properties
+
+    @classmethod
+    def _declared_pattern_rejects_value(cls, declared: object, pattern: object) -> bool:
+        """Prove a skipped pattern rejects some value accepted by a simple declared field."""
+        declared_type = cls._plain_pattern_value_type(declared)
+        if declared_type is not None:
+            if pattern is False:
+                return True
+            return (
+                declared_type == "integer"
+                and isinstance(pattern, JsonSchemaObject)
+                and pattern.type == "integer"
+                and not pattern.extras
+                and pattern.model_fields_set == {"type", "minimum"}
+                and pattern.minimum is not None
+                and (isinstance(pattern.minimum, int) or math.isfinite(pattern.minimum))
+            )
+        declared_properties = cls._plain_pattern_object(declared)
+        pattern_properties = cls._plain_pattern_object(pattern)
+        return (
+            declared_properties is not None
+            and pattern_properties is not None
+            and bool(
+                set(cast("JsonSchemaObject", pattern).required or ())
+                - set(cast("JsonSchemaObject", declared).required or ())
+            )
+        )
+
+    @classmethod
+    def _pattern_validation_loses_raw_value(
+        cls, obj: JsonSchemaObject, pattern_value_types: list[tuple[str, DataType]]
+    ) -> Literal["declared", "models"] | None:
+        """Limit changed helpers to proven skipped constraints or incompatible model instances."""
+        if (
+            obj.type != "object"
+            or not obj.extras.keys() <= {"title", "description"}
+            or not obj.model_fields_set
+            <= {
+                "type",
+                "properties",
+                "required",
+                "patternProperties",
+                "additionalProperties",
+                "title",
+                "description",
+                "extras",
+            }
+            or not obj.patternProperties
+        ):
+            return None
+        declared_properties = obj.properties or {}
+        if not set(obj.required or ()) <= declared_properties.keys() or any(
+            cls._plain_pattern_value_type(field) is None and cls._plain_pattern_object(field) is None
+            for field in declared_properties.values()
+        ):
+            return None
+        for pattern, schema in obj.patternProperties.items():
+            for name, declared in (obj.properties or {}).items():
+                try:
+                    matches = re.search(pattern, name)
+                except re.error:
+                    continue
+                if matches and cls._declared_pattern_rejects_value(declared, schema):
+                    return "declared"
+        pair_size = 2
+        if len(obj.patternProperties) != pair_size or len(pattern_value_types) != pair_size:
+            return None
+        literal_models: dict[str, list[tuple[str, dict[str, str]]]] = {}
+        for pattern, data_type in pattern_value_types:
+            if (
+                data_type.reference is None
+                or (match := re.fullmatch(r"\^?([A-Za-z0-9_ -]+)\$?", pattern)) is None
+                or match[1] in declared_properties
+                or (properties := cls._plain_pattern_object(obj.patternProperties.get(pattern, False))) is None
+            ):
+                continue
+            previous = literal_models.setdefault(match[1], [])
+            if any(
+                reference != data_type.reference.path
+                and all(properties[name] == field_type for name, field_type in fields.items() if name in properties)
+                for reference, fields in previous
+            ):
+                return "models"
+            previous.append((data_type.reference.path, properties))
+        return None
+
     def _add_pattern_properties_validator(  # noqa: PLR0913, PLR0917
         self,
         reference_path: str,
@@ -7830,8 +7953,15 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 rejected_patterns=tuple(rejected_patterns),
                 additional_property_type=additional_property_type,
                 allow_unmatched=allow_unmatched,
+                requires_independent_validation=(
+                    self._pattern_validation_loses_raw_value(obj, pattern_value_types)
+                    if obj is self._pattern_validation_document_root
+                    else None
+                ),
             )
         )
+        if obj is self._pattern_validation_document_root:
+            self._pattern_validation_document_root = None
 
     def _add_required_groups_validator(
         self,
@@ -11700,6 +11830,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             with self.root_id_context(raw):
                 # parse $id before parsing $ref
                 root_obj = self._validate_schema_object(raw, path_parts or ["#"])
+                if (
+                    self.config.generate_schema_validators
+                    and raw is self.raw_obj
+                    and root_obj.patternProperties
+                    and not any((self.config.base_class, self.config.base_class_map, self.config.custom_template_dir))
+                    and self.config.extra_template_data is None
+                ):
+                    self._pattern_validation_document_root = root_obj
                 self._cache_ref_data_type_facts(self.model_resolver.join_path(tuple(path_parts or ["#"])), root_obj)
                 self.parse_id(root_obj, [*path_parts, "#"] if path_parts else ["#"])
                 root_key = tuple(path_parts)

@@ -45,6 +45,7 @@ class PatternPropertiesRule:
     rejected_patterns: tuple[str, ...] = ()
     additional_property_type: DataType | None = None
     allow_unmatched: bool = True
+    requires_independent_validation: Literal["declared", "models"] | None = None
 
     @property
     def data_types(self) -> tuple[DataType, ...]:
