@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import os
 from collections.abc import Mapping, Sequence
+from copy import deepcopy
 from pathlib import Path
 from typing import Any, Literal, TypeAlias
 
@@ -15,6 +17,7 @@ from pydantic import VERSION as PYDANTIC_VERSION
 from pydantic import ValidationError
 
 from datamodel_code_generator.format import PythonVersion
+from tests.conftest import assert_inputs_not_mutated, assert_output
 
 from .payload_validation import (
     BACKEND_ACCEPTANCE_EXCLUDED_CASES,
@@ -56,6 +59,14 @@ from .payload_validation.constants import (
     PAYLOAD_TARGET_PYTHON_VERSION,
     PYDANTIC_V2_FLOAT_MULTIPLE_OF_CASE_IDS,
     PYDANTIC_V2_FLOAT_MULTIPLE_OF_RUNTIME_MIN_VERSION,
+)
+from .payload_validation.schema import _schema_for_payload_generation
+from .payload_validation.strategy import _bound_float_multiples
+
+NUMERIC_SAMPLING_PATH = Path(__file__).parents[1] / "data" / "payloads" / "numeric_sampling.json"
+NUMERIC_SAMPLING_SCHEMAS = json.loads(NUMERIC_SAMPLING_PATH.read_text())
+NUMERIC_SAMPLING_OUTSIDE_SCHEMAS = json.loads(
+    NUMERIC_SAMPLING_PATH.with_name("numeric_sampling_outside_domain.json").read_text()
 )
 
 
@@ -272,6 +283,72 @@ BACKEND_REJECTION_CASES = [
 def generated_model_cache(tmp_path_factory: pytest.TempPathFactory) -> GeneratedModelCache:
     """Cache generated Payload adapters across Hypothesis examples."""
     return GeneratedModelCache({"base": tmp_path_factory.mktemp("payload_validation"), "adapters": {}})
+
+
+def test_numeric_payload_sampling_preserves_source_schemas() -> None:
+    """Only actual numeric schemas receive sampling bounds; literals retain their bytes and order."""
+    with assert_inputs_not_mutated({"schemas": NUMERIC_SAMPLING_SCHEMAS}):
+        normalized = {}
+        for name, original in NUMERIC_SAMPLING_SCHEMAS.items():
+            schema = _schema_for_payload_generation(deepcopy(original))
+            _bound_float_multiples(schema)
+            normalized[name] = schema
+        assert_output(
+            json.dumps(normalized, indent=2) + "\n",
+            NUMERIC_SAMPLING_PATH.parents[1] / "expected" / "payloads" / "numeric_sampling.txt",
+        )
+
+
+@pytest.mark.parametrize(("name", "schema"), NUMERIC_SAMPLING_SCHEMAS.items())
+@settings(
+    database=None,
+    deadline=None,
+    derandomize=True,
+    max_examples=100,
+    suppress_health_check=[HealthCheck.filter_too_much, HealthCheck.too_slow],
+)
+@given(data=st.data())
+def test_numeric_payload_sampling_validates_generated_models(
+    name: str,
+    schema: dict[str, Any],
+    generated_model_cache: GeneratedModelCache,
+    data: st.DataObject,
+) -> None:
+    """Finite float multiples remain source-valid before and after generated-model validation."""
+    case = SchemaCase(
+        id=f"numeric_sampling/{name}",
+        input_file_type="jsonschema",
+        source_path=NUMERIC_SAMPLING_PATH,
+        source_schema=schema,
+        codegen_schema=schema,
+        temp_input_suffix=".json",
+    )
+    with assert_inputs_not_mutated({"source": schema, "codegen": case.codegen_schema}):
+        payload = data.draw(payload_strategy(case), label=name)
+        validate_with_source_schema(case, payload)
+        adapter = load_generated_payload_adapter(case, generated_model_cache)
+        validated = adapter.validate_python(payload)
+        dumped = adapter.dump_python(validated, mode="json", by_alias=True, exclude_unset=True)
+        validate_with_source_schema(case, dumped)
+
+
+@pytest.mark.parametrize(("name", "schema"), NUMERIC_SAMPLING_OUTSIDE_SCHEMAS.items())
+def test_numeric_payload_sampling_reports_unrepresentable_interval(name: str, schema: dict[str, Any]) -> None:
+    """An unsupported sampling interval is diagnosed without claiming the source schema is empty."""
+    case = SchemaCase(
+        id=f"numeric_sampling/{name}",
+        input_file_type="jsonschema",
+        source_path=NUMERIC_SAMPLING_PATH.with_name("numeric_sampling_outside_domain.json"),
+        source_schema=schema,
+        codegen_schema=schema,
+        temp_input_suffix=".json",
+    )
+    validate_with_source_schema(case, schema["examples"][0])
+    with (
+        assert_inputs_not_mutated({"source": schema}),
+        pytest.raises(ValueError, match="Numeric interval lies outside the finite multipleOf sampling domain"),
+    ):
+        payload_strategy(case)
 
 
 def test_payload_validation_cases_cover_discovered_schema_files() -> None:
