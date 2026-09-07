@@ -196,7 +196,7 @@ The tables below are generated from the input type enum, parser routing code, sc
 | Definitions key | `definitions` | `definitions` | `definitions` | `$defs`* | `$defs` |
 | **Type Features** |
 | Boolean schemas | - | Yes | Yes | Yes | Yes |
-| Null in type array | - | - | - | - | Yes |
+| Null in type array | Yes | Yes | Yes | Yes | Yes |
 | const | - | Yes | Yes | Yes | Yes |
 | **Numeric Constraints** |
 | exclusiveMinimum (number) | - (boolean) | Yes | Yes | Yes | Yes |
