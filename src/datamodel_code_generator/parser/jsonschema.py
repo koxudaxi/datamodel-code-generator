@@ -85,6 +85,7 @@ from datamodel_code_generator.model.runtime_validation import (
     _make_internal_schema_runtime_validation,
 )
 from datamodel_code_generator.parser.base import (
+    _ALIAS_RESOLUTION_CLASS_NAME_KEY,
     _DEFERRED_INHERITED_CLASS_KEY,
     _DEFERRED_INHERITED_FIELD_KEY,
     _DEFERRED_INHERITED_TYPE_KEY,
@@ -8527,6 +8528,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     class_name=class_name,
                 )
             )
+        if self.config.aliases:
+            for field in fields:
+                field.__dict__[_ALIAS_RESOLUTION_CLASS_NAME_KEY] = class_name
         return fields
 
     def _get_typed_additional_properties_field(

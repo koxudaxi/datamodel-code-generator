@@ -26,7 +26,8 @@
     "a": "model_validate"
   },
   "reserved_msgspec": {
-    "a": "field"
+    "a": "field",
+    "b": "other"
   },
   "normal": {},
   "global": {
@@ -48,5 +49,50 @@
   "neutral_reserved": {
     "a": "model_config",
     "b": "model_validate"
+  },
+  "snake_duplicate": {
+    "a": "FooBar",
+    "b": "foo_bar"
+  },
+  "nfkc_duplicate": {
+    "a": "K",
+    "b": "K"
+  },
+  "snake_config": {
+    "a": "ModelConfig"
+  },
+  "msgspec_field": {
+    "a": "field"
+  },
+  "shadow_dict": {
+    "a": "dict"
+  },
+  "shadow_json": {
+    "a": "json"
+  },
+  "shadow_copy": {
+    "a": "copy"
+  },
+  "shadow_schema": {
+    "a": "schema"
+  },
+  "shadow_validate": {
+    "a": "validate"
+  },
+  "shadow_model_fields": {
+    "a": "model_fields"
+  },
+  "unicode": {
+    "a": "café"
+  },
+  "snake_existing": {
+    "a": "B"
+  },
+  "namespace_warning": {
+    "a": "model_validate_custom"
+  },
+  "scoped_empty_choices": {
+    "a": "value",
+    "AliasNames.a": []
   }
 }

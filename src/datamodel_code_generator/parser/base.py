@@ -19,6 +19,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from functools import cache
 from itertools import chain, groupby
+from keyword import iskeyword
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
@@ -142,6 +143,9 @@ _MODEL_MODULE_PREFIX: Final = "datamodel_code_generator.model."
 _CLASS_NAME_SEPARATOR_PATTERN: Final = re.compile(r"[^A-Za-z0-9]+")
 _TOP_LEVEL_FUTURE_IMPORT_PATTERN: Final = re.compile(r"(?m)^from __future__ import ")
 _TOP_LEVEL_RELATIVE_IMPORT_PATTERN: Final = re.compile(r"(?m)^from \.")
+_ALIAS_RESOLUTION_CLASS_NAME_KEY: Final = "_alias_resolution_class_name"
+_EXPLICIT_FIELD_ALIAS_KEY: Final = "_explicit_field_alias"
+
 _DEFERRED_INHERITED_CLASS_KEY: Final = "_deferred_inherited_class"
 _DEFERRED_INHERITED_FIELD_KEY: Final = "_deferred_inherited_field"
 _DEFERRED_INHERITED_TYPE_KEY: Final = "_deferred_inherited_type"
@@ -2251,8 +2255,86 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         )
         return config_class.model_validate(options)  # ty: ignore[invalid-return-type]
 
+    def _prepare_explicit_field_aliases(self, fields: list[DataModelFieldBase], reference: Reference) -> None:
+        """Retain selected explicit aliases until all emitted field names are finalized."""
+        aliases = cast("dict[str, str | list[str]]", self.config.aliases)
+        for field in fields:
+            if (original_name := field.alias if field.alias is not None else field.original_name) is None:
+                continue
+            class_name = field.__dict__.get(_ALIAS_RESOLUTION_CLASS_NAME_KEY, reference.original_name)
+            alias = aliases.get(f"{class_name}.{original_name}")
+            if not isinstance(alias, str) and not alias:
+                alias = aliases.get(original_name)
+            if isinstance(alias, str):
+                field.__dict__[_EXPLICIT_FIELD_ALIAS_KEY] = (alias, original_name)
+            else:
+                field.__dict__.pop(_EXPLICIT_FIELD_ALIAS_KEY, None)
+        self._validate_explicit_field_aliases(fields, final=False)
+
+    @staticmethod
+    def _explicit_alias_conflicts_with_pydantic(field: DataModelFieldBase, name: str) -> bool:
+        """Respect generated namespace configuration without importing custom bases."""
+        if name == "model_config" or name.startswith("_"):
+            return True
+        if not hasattr(BaseModel, name):
+            return False
+        namespaces = ("model_validate", "model_dump")
+        pending = [cast("DataModel", field.parent)]
+        while pending:
+            model = pending.pop()
+            config = model.extra_template_data.get("config")
+            if (configured := getattr(config, "protected_namespaces", None)) is not None:
+                namespaces = configured
+                break
+            if model.custom_base_class and model.custom_base_class != "pydantic.BaseModel":
+                # An external base may disable or replace Pydantic's default namespaces.
+                namespaces = ()
+            pending.extend(_find_base_classes(model))
+        return name.startswith(namespaces)
+
+    def _validate_explicit_field_aliases(self, fields: list[DataModelFieldBase], *, final: bool) -> None:
+        """Diagnose collisions without applying automatic naming policy to user choices."""
+        if not any(_EXPLICIT_FIELD_ALIAS_KEY in field.__dict__ for field in fields):
+            return
+        names: dict[str, DataModelFieldBase] = {}
+        field_helper: DataModelFieldBase | None = None
+        for field in fields:
+            name = cast("str", field.name)
+            if final and not name.isascii():
+                from unicodedata import normalize  # noqa: PLC0415
+
+                name = normalize("NFKC", name)
+            original_name = field.alias if field.alias is not None else field.original_name
+            explicit = _EXPLICIT_FIELD_ALIAS_KEY in field.__dict__
+            if (
+                (previous := names.get(name)) is not None
+                and (previous.alias if previous.alias is not None else previous.original_name) != original_name
+                and (explicit or _EXPLICIT_FIELD_ALIAS_KEY in previous.__dict__)
+            ):
+                conflict = field if explicit else previous
+                alias, original_name = conflict.__dict__[_EXPLICIT_FIELD_ALIAS_KEY]
+                msg = f"Alias {alias!r} for field {original_name!r} conflicts with another field."
+                raise Error(msg)
+            names[name] = field
+            if not final:
+                continue
+            invalid = explicit and (not cast("str", field.name).isidentifier() or iskeyword(cast("str", field.name)))
+            if explicit and self.field_name_model_type == ModelType.PYDANTIC:
+                invalid |= self._explicit_alias_conflicts_with_pydantic(field, name)
+            if field_helper is not None and str(field).startswith("field("):
+                field = field_helper  # noqa: PLW2901
+                invalid = True
+            if explicit and self.field_name_model_type == ModelType.MSGSPEC and name == "field":
+                field_helper = field
+            if invalid:
+                alias, original_name = field.__dict__[_EXPLICIT_FIELD_ALIAS_KEY]
+                msg = f"Alias {alias!r} for field {original_name!r} is not a valid field name."
+                raise Error(msg)
+
     def _create_data_model(self, model_type: type[DataModel] | None = None, **kwargs: Any) -> DataModel:
         """Create data model instance with dataclass_arguments support for DataClass."""
+        if self.config.aliases and (fields := kwargs.get("fields")):
+            self._prepare_explicit_field_aliases(fields, kwargs["reference"])
         # Add class decorators if not already provided
         if "decorators" not in kwargs and self.class_decorators:
             kwargs["decorators"] = list(self.class_decorators)
@@ -5973,6 +6055,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.__apply_discriminator_type(models, imports, can_retain_cache=can_retain_cache)
         self.__set_one_literal_on_default(models, can_retain_cache=can_retain_cache)
         self.__fix_constructor_field_ordering(models)
+        if self.config.aliases:
+            for model in models:
+                self._validate_explicit_field_aliases(model.fields, final=True)
 
         return self.__remove_overridden_models(models)
 

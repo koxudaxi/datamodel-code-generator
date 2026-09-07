@@ -1,0 +1,84 @@
+{
+  "python": "/tmp/dcg-main-venv-ba75d321/bin/python",
+  "source": "/private/tmp/b44-baseline/src",
+  "module": "/tmp/b44-baseline/src/datamodel_code_generator/__init__.py",
+  "source_sha256": {
+    "parser/base.py": "b3c5d999769ee1fd7f618f9be62c6114c9b94915419f247ecb1caa999f1e7f31",
+    "parser/jsonschema.py": "484f2a9e8eb8be0fd6303ec364688fed3ecc339cad1cebc362bce0a15b23a608",
+    "reference.py": "84dc37429b473b43c5d23d6dd6e86773c9fd97d9505d859299c043e86af317cc"
+  },
+  "generate_signature_sha256": "ac8c10a7133948e4f70f4d0fb30b69af99366b23e9f5953fb3148c579756fd6d",
+  "timing_note": "Concurrent campaign load; sanity only. Run each source serially under low load for comparison.",
+  "cases": {
+    "normal": {
+      "sha256": "1de21487829b7a6b91ef8684b1bdf024bf1719453d66c9341224fd35f216771b",
+      "cli_sha256": "ff6903a848ff98166d4da5acef80aacd98114168548d5872c6d63ed60026e366",
+      "class_field_order": {
+        "AliasNames": [
+          "a",
+          "b"
+        ]
+      },
+      "api_cold_seconds": 0.07932099996833131,
+      "api_warm_median_seconds": 0.0012403334840200841,
+      "cli_median_seconds": 0.11830720899160951,
+      "warm_peak_bytes": 446987
+    },
+    "global": {
+      "sha256": "425c4248ccf24b72d309bf41c17b0266c2cc845463ad6e43a9f7b71d411149d6",
+      "cli_sha256": "a85b86bb3c907c0506ae0fb4c066d768a2061242dfe1ec65f1582e235bb777e2",
+      "class_field_order": {
+        "AliasNames": [
+          "camel_name",
+          "count"
+        ]
+      },
+      "api_cold_seconds": 0.002388999972026795,
+      "api_warm_median_seconds": 0.0012332919868640602,
+      "cli_median_seconds": 0.11655995802721009,
+      "warm_peak_bytes": 447707
+    },
+    "scoped": {
+      "sha256": "d520e4813a3f6a2b3a1bbc97b4011a5293a594e51831be72b604d8256ab2acc4",
+      "cli_sha256": "7b270810a18fe1c1ec3e097ad1cbbe1a846c15d32a7eb0998fb2a0b5c2be159b",
+      "class_field_order": {
+        "AliasNames": [
+          "value",
+          "count"
+        ]
+      },
+      "api_cold_seconds": 0.0028307500178925693,
+      "api_warm_median_seconds": 0.001229812012752518,
+      "cli_median_seconds": 0.11497162497835234,
+      "warm_peak_bytes": 446929
+    },
+    "choices": {
+      "sha256": "b27ce888a560be3ed4a55fd4f5c48364cefab5de9f3d900c56bb0fe42d4a9fd7",
+      "cli_sha256": "302caa0b064d273456d825449c8afef0fe0cda6d8d4ca61097d8ee1e9d67bb29",
+      "class_field_order": {
+        "AliasNames": [
+          "first",
+          "count"
+        ]
+      },
+      "api_cold_seconds": 0.0026984590222127736,
+      "api_warm_median_seconds": 0.0012591455015353858,
+      "cli_median_seconds": 0.11376537499018013,
+      "warm_peak_bytes": 448150
+    },
+    "neutral_reserved": {
+      "sha256": "c96c521024edddcd378246d53eedd653eede86f312151b21a9eeb4d53b79d1ca",
+      "cli_sha256": "56b24c626c9b249e160856ce35f494467222fe89e0814bb00decfe25f4c65987",
+      "class_field_order": {
+        "AliasNames": [
+          "model_config",
+          "model_validate"
+        ]
+      },
+      "api_cold_seconds": 0.0046678329817950726,
+      "api_warm_median_seconds": 0.0011337294999975711,
+      "cli_median_seconds": 0.10774124995805323,
+      "warm_peak_bytes": 484619
+    }
+  }
+}
