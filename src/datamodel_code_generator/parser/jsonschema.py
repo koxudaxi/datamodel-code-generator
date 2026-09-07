@@ -315,6 +315,44 @@ def _json_literal_values_equal(left: object, right: object) -> bool:  # noqa: PL
     return False
 
 
+_HASH_SAFE_JSON_SCALAR_TYPES = frozenset({str, int, float, bool, type(None)})
+
+
+def _is_hash_safe_json_scalar(value: object) -> bool:
+    """Keep scalar subclasses with custom equality or hashing on the equality fallback."""
+    value_type = type(value)
+    return any(
+        isinstance(value, scalar_type)
+        and value_type.__eq__ is scalar_type.__eq__
+        and value_type.__hash__ is scalar_type.__hash__
+        for scalar_type in (str, int, float)
+    )
+
+
+def _intersect_all_of_enum(parent: list[Any], child: list[Any]) -> list[Any]:
+    """Intersect JSON enum values while retaining order and already-correct enum aliases."""
+    if all(
+        type(item) in _HASH_SAFE_JSON_SCALAR_TYPES or _is_hash_safe_json_scalar(item) for item in chain(parent, child)
+    ):
+        # JSON booleans are distinct from numbers; integral floats equal their integer values.
+        parent_keys = {(isinstance(item, bool), item) for item in parent}
+        child_keys = {(isinstance(item, bool), item) for item in child}
+        if parent_keys == child_keys and parent:
+            return parent + child
+        intersection = [item for item in parent if (isinstance(item, bool), item) in child_keys]
+    else:
+        intersection = [
+            item for item in parent if any(_json_literal_values_equal(item, candidate) for candidate in child)
+        ]
+        if len(intersection) == len(parent) and all(
+            any(_json_literal_values_equal(item, candidate) for candidate in parent) for item in child
+        ):
+            return parent + child
+    if not intersection:
+        raise SchemaParseError(message="allOf enum intersection is empty and cannot be represented")
+    return intersection
+
+
 def _is_rw_model_variant_path(path: str) -> bool:
     """Return whether a path belongs to an internal Request/Response variant."""
     return any(marker in path for marker in _RW_MODEL_VARIANT_SPECIAL_MARKERS)
@@ -6200,28 +6238,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         return self.parse_root_type(name, merged_schema, path)
 
-    @staticmethod
-    def _intersect_all_of_enum(parent: list[Any], child: list[Any]) -> list[Any]:
-        """Intersect JSON enum values while retaining order and already-correct enum aliases."""
-        if all(item is None or isinstance(item, (str, int, float)) for item in chain(parent, child)):
-            # JSON booleans are distinct from numbers; integral floats equal their integer values.
-            parent_keys = {(isinstance(item, bool), item) for item in parent}
-            child_keys = {(isinstance(item, bool), item) for item in child}
-            if parent_keys == child_keys and parent:
-                return parent + child
-            intersection = [item for item in parent if (isinstance(item, bool), item) in child_keys]
-        else:
-            intersection = [
-                item for item in parent if any(_json_literal_values_equal(item, candidate) for candidate in child)
-            ]
-            if len(intersection) == len(parent) and all(
-                any(_json_literal_values_equal(item, candidate) for candidate in parent) for item in child
-            ):
-                return parent + child
-        if not intersection:
-            raise SchemaParseError(message="allOf enum intersection is empty and cannot be represented")
-        return intersection
-
     def _merge_all_of_schema(
         self,
         parent: dict[str, Any],
@@ -6249,10 +6265,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 not schema_map and key in _ALLOF_BOUND_CONSTRAINT_FIELDS and previous is not None and value is not None
             ):
                 # Preserve the legacy child representation when two bounds are equal.
-                result[key] = self._intersect_constraint(key, value, previous)
+                result[key] = JsonSchemaParser._intersect_constraint(key, value, previous)
             elif isinstance(previous, list) and isinstance(value, list):
                 if not schema_map and key == "enum":
-                    result[key] = self._intersect_all_of_enum(previous, value)
+                    result[key] = _intersect_all_of_enum(previous, value)
                 else:
                     result[key] = previous + value
             else:

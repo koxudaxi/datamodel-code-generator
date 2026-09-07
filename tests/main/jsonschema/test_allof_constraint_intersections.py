@@ -141,3 +141,61 @@ def test_allof_empty_enum_intersection(
             expected_stderr=expected_error.read_text(encoding="utf-8"),
             output_should_not_exist=True,
         )
+
+
+@pytest.mark.parametrize("mode", ["partial", "equal"])
+@pytest.mark.parametrize("scalar_kind", ["inherited", "unhashable", "custom_hash", "custom_equality"])
+def test_allof_enum_scalar_subclasses(output_file: Path, mode: str, scalar_kind: str) -> None:
+    """Accept public Mapping inputs with scalar subclasses and retain enum aliases in declaration order."""
+    schema = json.loads(
+        (JSON_SCHEMA_DATA_PATH / "allof_constraint_intersections" / f"scalars_{mode}.json").read_text(encoding="utf-8")
+    )
+    for item in schema["allOf"]:
+        for field in item["properties"].values():
+            base = type(field["enum"][0])
+            attributes = {}
+            if scalar_kind == "unhashable":
+                attributes["__hash__"] = None
+            elif scalar_kind == "custom_hash":
+                attributes["__hash__"] = lambda _self: 7
+            elif scalar_kind == "custom_equality":
+                attributes["__eq__"] = lambda self, other: type(self).__mro__[1](self) == other
+                attributes["__hash__"] = base.__hash__
+            scalar = type("Scalar", (base,), attributes)
+            field["enum"] = [scalar(value) for value in field["enum"]]
+    expected = EXPECTED_JSON_SCHEMA_PATH / "allof_constraint_intersections" / f"scalars_{mode}_api.py"
+    run_generate_and_assert(
+        input_=schema,
+        expected_file=expected,
+        assert_input_unchanged=True,
+        input_file_type=InputFileType.JsonSchema,
+        disable_timestamp=True,
+    )
+    generate(schema, input_file_type=InputFileType.JsonSchema, output=output_file, disable_timestamp=True)
+    payloads = json.loads(
+        (DATA_PATH / "payloads/allof_constraint_intersection_scalars.json").read_text(encoding="utf-8")
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_enum_scalar_subclasses",
+        model_name="Root",
+        valid_json=json.dumps(payloads["valid"]),
+        invalid_json=json.dumps(payloads["invalid"]),
+        expected_error_type="enum",
+        expected_attribute_path=("integer", "value"),
+        expected_attribute_value=1,
+    )
+
+
+@pytest.mark.parametrize("mode", ["partial", "equal"])
+def test_allof_enum_scalar_cli_control(output_file: Path, mode: str) -> None:
+    """Keep the canonical JSON CLI representation alongside public subclass inputs."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_constraint_intersections" / f"scalars_{mode}.json",
+        input_file_type="jsonschema",
+        output_path=output_file,
+        extra_args=["--disable-timestamp"],
+        assert_func=assert_file_content,
+        expected_file=f"allof_constraint_intersections/scalars_{mode}.py",
+        force_exec_validation=True,
+    )
