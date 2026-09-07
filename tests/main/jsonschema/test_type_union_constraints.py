@@ -94,7 +94,8 @@ def test_type_union_constraints(name: str, constraints: bool, entry: str, output
 
 
 @pytest.mark.parametrize(
-    "name", ["string_length_field", "both_root", "array_minimum_field", "plain_field", "modeled_field"]
+    "name",
+    ["string_length_field", "both_root", "array_minimum_field", "plain_field", "modeled_field", "numeric_min_field"],
 )
 @pytest.mark.parametrize(
     "mode", ["annotated", "legacy_union", "strict", "msgspec", "pydantic_dataclass", "msgspec_plain"]

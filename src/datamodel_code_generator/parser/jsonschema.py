@@ -3078,9 +3078,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         )
         default_value = effective_default if effective_has_default is not None else field.default
         has_default = effective_has_default if effective_has_default is not None else field.has_default
-        skip_constraints = self._should_skip_root_field_constraints_for_multiple_types(field) or (
-            isinstance(field.type, list) and bool(self._get_array_union_non_array_types(field))
-        )
+        skip_constraints = (
+            self._should_skip_root_field_constraints_for_multiple_types(field)
+            and not self._has_shared_numeric_union_constraints(field)
+        ) or (isinstance(field.type, list) and bool(self._get_array_union_non_array_types(field)))
         constraints = None
         if not skip_constraints and self.is_constraints_field(field):
             constraints = self._get_constraint_values(field)
@@ -3150,6 +3151,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     def get_data_type(self, obj: JsonSchemaObject) -> DataType:
         """Get the data type for a JSON Schema object."""
+        return self._get_data_type(
+            obj, localize_constraints=self._should_skip_root_field_constraints_for_multiple_types(obj)
+        )
+
+    def _get_data_type(self, obj: JsonSchemaObject, *, localize_constraints: bool) -> DataType:
+        """Build scalar types while retaining constraints owned by their actual context."""
         python_type_override = self._get_python_type_override(obj)
         if python_type_override:  # pragma: no cover
             return python_type_override
@@ -3161,8 +3168,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return self.data_type_manager.get_data_type(
                 Types.any,
             )
-
-        localize_constraints = self._should_skip_root_field_constraints_for_multiple_types(obj)
 
         def _get_data_type(type_: str, format__: str) -> DataType:
             types = self._get_type_with_mappings(type_, format__)
@@ -9590,7 +9595,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 _validate_schema_python_import_path(item.custom_type_path, "customTypePath"),
                 is_custom_type=True,
             )
-        if (union_type := self._parse_constrained_type_union(name, item, path)) is not None:
+        shared_numeric_constraints = self._has_shared_numeric_union_constraints(item)
+        if (
+            not shared_numeric_constraints
+            and (union_type := self._parse_constrained_type_union(name, item, path)) is not None
+        ):
             return union_type
         if item.is_array:
             return self.parse_array_fields(name, item, get_special_path("array", path)).data_type
@@ -9681,7 +9690,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if self.should_parse_enum_as_literal(item, property_name=name):
                 return self.parse_enum_as_literal(item)
             return self.parse_enum(name, item, get_special_path("enum", path), singular_name=singular_name)
-        return self.get_data_type(item)
+        return (
+            self._get_data_type(item, localize_constraints=False)
+            if shared_numeric_constraints
+            else self.get_data_type(item)
+        )
 
     def parse_list_item(
         self,
@@ -9705,6 +9718,16 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             for index, item in enumerate(target_items)
             if item is not False
         ]
+
+    def _has_shared_numeric_union_constraints(self, obj: JsonSchemaObject) -> bool:
+        """Keep shared numeric bounds on fields whose branches all support those bounds."""
+        return (
+            self.field_constraints
+            and bool(self.data_type_manager.CONSTRAINED_TYPE_CONSUMED_KEYS)
+            and isinstance(obj.type, list)
+            and all(type_ in {"integer", "number", "null"} for type_ in obj.type)
+            and all(getattr(obj, key) is None for key in ("minItems", "maxItems", *_VALUE_STRING_CONSTRAINT_KEYS))
+        )
 
     def _parse_constrained_type_union(self, name: str, obj: JsonSchemaObject, path: list[str]) -> DataType | None:
         """Localize union branches that need annotated aliases instead of constrained scalar types."""

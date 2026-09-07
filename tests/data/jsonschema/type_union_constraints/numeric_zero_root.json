@@ -1,0 +1,8 @@
+{
+  "title": "Root",
+  "type": [
+    "integer",
+    "number"
+  ],
+  "minimum": 0
+}

@@ -27,5 +27,17 @@
   "modeled_root",
   "modeled_field",
   "modeled_plain_root",
-  "modeled_plain_field"
+  "modeled_plain_field",
+  "numeric_min_root",
+  "numeric_min_field",
+  "numeric_max_root",
+  "numeric_max_field",
+  "numeric_zero_root",
+  "numeric_zero_field",
+  "numeric_nullable_root",
+  "numeric_nullable_field",
+  "numeric_inapplicable_root",
+  "numeric_inapplicable_field",
+  "numeric_metadata_root",
+  "numeric_metadata_field"
 ]

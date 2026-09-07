@@ -1,0 +1,8 @@
+{
+  "title": "Root",
+  "type": [
+    "number",
+    "integer"
+  ],
+  "maximum": 5
+}
