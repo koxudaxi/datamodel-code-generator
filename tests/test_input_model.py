@@ -2287,3 +2287,78 @@ def test_input_model_equal_native_schemas() -> None:
         json.dumps([TypeAdapter(left).json_schema() == TypeAdapter(right).json_schema() for left, right in TYPE_PAIRS]),
         EXPECTED_INPUT_MODEL_PATH / "equal_identity_native_schemas.txt",
     )
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("formatter", ["external", "builtin"])
+@pytest.mark.parametrize(
+    "case", ["Plain", "Aliased", "Validation", "Choices", "Paths", "Serialization", "Swapped", "Nested", "Hidden"]
+)
+def test_input_model_wire_types(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, entrypoint: str, formatter: str, case: str
+) -> None:
+    """Restore source types using the validation schema's actual property names."""
+    from pydantic import ValidationError
+
+    from datamodel_code_generator import GenerateConfig, InputFileType, generate
+    from datamodel_code_generator.format import Formatter
+    from datamodel_code_generator.input_model import load_model_schema
+
+    paths = [f"tests.data.python.input_model.wire_types:{case}"]
+    (tmp_path / "pyproject.toml").write_text(
+        (Path(__file__).parent / "data/python/input_model/collision_settings/pyproject.toml").read_text()
+    )
+    formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
+    output = tmp_path / "output.py"
+    if entrypoint == "cli":
+        run_main_with_args(
+            _input_model_args(
+                paths, output_path=output, extra_args=["--disable-timestamp", "--formatters", *formatters]
+            )
+        )
+    else:
+        config = GenerateConfig(
+            input_file_type=InputFileType.JsonSchema,
+            disable_timestamp=True,
+            input_filename="<stdin>",
+            output=output,
+            settings_path=tmp_path,
+            formatters=[Formatter(value) for value in formatters],
+        )
+        schema = load_model_schema(paths, InputFileType.JsonSchema)
+        generate(schema, config=config)
+    code = output.read_text()
+    assert_output(code, EXPECTED_INPUT_MODEL_PATH / f"wire_types_{case.lower()}.py")
+    module = types.ModuleType("wire_types_output")
+    monkeypatch.setitem(sys.modules, module.__name__, module)
+    exec(code, module.__dict__)
+    model = getattr(module, case)
+    values_name, callback_name = (
+        ("wire_values", "wire_callback")
+        if case in {"Aliased", "Validation", "Choices", "Nested"}
+        else ("callback", "values")
+        if case == "Swapped"
+        else ("values", "callback")
+    )
+    payload = {"first": 1, values_name: 1 if case == "Nested" else [1, 2, 1], callback_name: int, "last": "end"}
+    source_payload = dict(payload)
+    if case == "Paths":
+        source_payload["data"] = {"values": source_payload.pop("values")}
+    source_model = getattr(importlib.import_module("tests.data.python.input_model.wire_types"), case)
+    source = source_model.model_validate({"item": source_payload} if case == "Nested" else source_payload)
+    result = model.model_validate({"item": payload} if case == "Nested" else payload)
+    if case == "Nested":
+        source, result = source.item, result.item
+    assert getattr(result, values_name) == source.values
+    assert type(getattr(result, values_name)) is type(source.values)
+    if case != "Nested":
+        assert source.values == frozenset({1, 2})
+    assert getattr(result, callback_name) is source.callback is int
+    assert list(type(result).model_fields) == ["first", values_name, callback_name, "last"]
+    for invalid in ("not callable", 3):
+        payload[callback_name] = invalid
+        source_payload[callback_name] = invalid
+        with pytest.raises(ValidationError):
+            model.model_validate({"item": payload} if case == "Nested" else payload)
+        with pytest.raises(ValidationError):
+            source_model.model_validate({"item": source_payload} if case == "Nested" else source_payload)

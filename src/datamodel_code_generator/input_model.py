@@ -594,6 +594,18 @@ def _set_python_type_for_unserializable(
     item.pop(_UNSERIALIZABLE_MARKER, None)
 
 
+def _get_model_field_schema_name(field_name: str, field_info: Any) -> str:
+    """Resolve the property name emitted by Pydantic's validation schema."""
+    if (alias := field_info.validation_alias) is None:
+        return field_name
+    if isinstance(alias, str):
+        return alias
+    for path in alias.convert_to_aliases():
+        if isinstance(path, list) and len(path) == 1 and isinstance(path[0], str):
+            return path[0]
+    return field_name
+
+
 def _add_python_type_for_unserializable(
     schema: dict[str, Any],
     model: type,
@@ -606,10 +618,10 @@ def _add_python_type_for_unserializable(
 
     if "properties" in schema:
         model_fields = getattr(model, "model_fields", {})
-        for field_name, prop in schema["properties"].items():
-            if field_name in model_fields:  # pragma: no branch
-                annotation = model_fields[field_name].annotation
-                _process_unserializable_property(prop, annotation, expression_collector)
+        for field_name, field_info in model_fields.items():
+            schema_name = _get_model_field_schema_name(field_name, field_info)
+            if (prop := schema["properties"].get(schema_name)) is not None:
+                _process_unserializable_property(prop, field_info.annotation, expression_collector)
 
     if "$defs" in schema:
         nested_models = _collect_nested_models(model)
@@ -798,11 +810,11 @@ def _add_python_type_to_properties(
 ) -> None:
     """Add x-python-type to properties dict for given model fields."""
     for field_name, field_info in model_fields.items():
-        if field_name not in properties:  # pragma: no cover
+        schema_name = _get_model_field_schema_name(field_name, field_info)
+        if (prop := properties.get(schema_name)) is None:
             continue
-        serialized = _serialize_python_type(field_info.annotation, expression_collector)
-        if serialized:
-            properties[field_name]["x-python-type"] = serialized
+        if serialized := _serialize_python_type(field_info.annotation, expression_collector):
+            prop["x-python-type"] = serialized
 
 
 def _add_python_type_info(
