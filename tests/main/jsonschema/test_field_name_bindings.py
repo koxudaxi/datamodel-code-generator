@@ -9,11 +9,12 @@ import msgspec
 import pytest
 
 from datamodel_code_generator import DataModelType, InputFileType, PythonVersion
-from datamodel_code_generator.format import Formatter
+from datamodel_code_generator.format import Formatter, is_supported_in_black
 from tests.conftest import assert_output
 from tests.main.conftest import (
     DATA_PATH,
     JSON_SCHEMA_DATA_PATH,
+    _assert_python_module_importable,
     _generated_model,
     _model_json_validator,
     run_generate_file_and_assert,
@@ -46,6 +47,7 @@ def test_field_name_bindings(
     expected = f"field_name_bindings/{case}/{backend.name}_{target.value}_{union}.py"
     alias_path = DATA_PATH / "payloads/field_name_bindings_runtime/wire_aliases.json"
     aliases = json.loads(alias_path.read_text()) if case == "wire" else {}
+    use_builtin = not is_supported_in_black(target)
     if entrypoint == "cli":
         run_main_and_assert(
             input_path=schema_path,
@@ -63,6 +65,7 @@ def test_field_name_bindings(
                 "--enum-field-as-literal",
                 "all",
                 "--disable-timestamp",
+                *(["--formatters", "builtin"] if use_builtin else []),
                 *(["--aliases", str(alias_path)] if case == "wire" else []),
                 *(
                     ["--disable-future-imports", "--use-schema-description", "--use-field-description"]
@@ -90,7 +93,21 @@ def test_field_name_bindings(
             disable_future_imports=case == "forward",
             use_schema_description=case == "forward",
             use_field_description=case == "forward",
+            **({"formatters": [Formatter.BUILTIN]} if use_builtin else {}),
         )
+    if case == "forward" and target == PythonVersion.PY_314 and backend != DataModelType.MsgspecStruct:
+        try:
+            _assert_python_module_importable(
+                DATA_PATH / "python/field_name_bindings/native_delayed_annotations.py", "native_delayed", "Child"
+            )
+        except NameError as native_error:
+            with pytest.raises(NameError) as generated_error:
+                _assert_python_module_importable(output_file, "generated_delayed", "Record")
+            assert_output(
+                f"native: {native_error}\ngenerated: {generated_error.value}\n",
+                DATA_PATH / "payloads/field_name_bindings_runtime/native_delayed_error.txt",
+            )
+            return
     properties = json.loads(schema_path.read_text())["properties"]
     with _generated_model(output_file, "field_name_binding_model", "Record") as model:
         hints = get_type_hints(model)
