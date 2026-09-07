@@ -74,6 +74,11 @@ model definitions:
 The XML Schema input type is for generating Python model definitions. It does not
 implement XML parsing, XML serialization, or runtime XML validation.
 
+Python properties use XML local names. Generation fails when distinct XML names
+would overwrite the same property, such as an element and attribute named `code`,
+or elements named `code` in different namespaces. Repeated uses of the same XML
+name remain supported.
+
 ## 📖 See Also
 
 - 🖥️ [CLI Reference](cli-reference/index.md) - Complete CLI options reference

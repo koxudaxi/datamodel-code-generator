@@ -1,0 +1,1 @@
+XML Schema cannot represent both element '{urn:local}code' and element 'code' as property 'code'.

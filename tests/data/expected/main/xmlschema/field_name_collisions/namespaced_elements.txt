@@ -1,0 +1,1 @@
+XML Schema cannot represent both element '{urn:one}code' and element '{urn:two}code' as property 'code'.
