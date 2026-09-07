@@ -4254,7 +4254,7 @@ def test_generate_resolves_relative_custom_template_dir_from_caller_cwd(
     with freeze_time(TIMESTAMP):
         run_generate_and_assert(
             input_=JSON_SCHEMA_DATA_PATH / "pet_simple.json",
-            expected_file=expected_file.with_stem("custom_template_relative_api"),
+            expected_file=expected_file.with_name("custom_template_relative_api.txt"),
             **generate_options,
         )
         run_generate_file_and_assert(
