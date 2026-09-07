@@ -22510,7 +22510,7 @@ def test_optional_nested_factory_decoding(output_file: Path, case: dict[str, Any
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
 @pytest.mark.parametrize(
     "case",
-    json.loads((JSON_SCHEMA_DATA_PATH / "root_sequence_final/cases.json").read_text()),
+    json.loads((JSON_SCHEMA_DATA_PATH.parent / "payloads/root_sequence_final/cases.json").read_text()),
     ids=operator.itemgetter("name"),
 )
 def test_main_root_sequence_final_types(

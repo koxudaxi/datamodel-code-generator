@@ -9,6 +9,7 @@ from typing import Any, ClassVar
 
 from datamodel_code_generator import Error
 from datamodel_code_generator.imports import IMPORT_ANY, Import
+from datamodel_code_generator.model.base import _SEQUENCE_ROOT_WRAPPED_KEY
 from datamodel_code_generator.model.pydantic_v2.base_model import (
     _CONFIG_ITEMS_TEMPLATE_DATA_KEY,
     _NEUTRALIZE_ROOT_MODEL_EXTRA_CONFIG_TEMPLATE_DATA_KEY,
@@ -18,8 +19,6 @@ from datamodel_code_generator.model.pydantic_v2.base_model import (
 )
 from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_CONFIG_DICT
 from datamodel_code_generator.python_literal import represent_untrusted_python_value
-
-_SEQUENCE_ROOT_WRAPPED_KEY = "_sequence_root_wrapped"
 
 IMPORT_ABC_ITERATOR = Import.from_full_path("collections.abc.Iterator")
 IMPORT_ABC_SEQUENCE = Import.from_full_path("collections.abc.Sequence")
