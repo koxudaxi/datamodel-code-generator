@@ -78,6 +78,7 @@ from tests.main.conftest import (
     DATA_PATH,
     DEFAULT_VALUES_DATA_PATH,
     EXPECTED_MAIN_PATH,
+    JSON_DATA_PATH,
     JSON_SCHEMA_DATA_PATH,
     LEGACY_BLACK_SKIP,
     MSGSPEC_LEGACY_BLACK_SKIP,
@@ -2672,7 +2673,7 @@ def test_json_pointer_decoding_api_and_cli(output_file: Path, strict_refs: bool,
             force_exec_validation=True,
         )
 
-    payloads = json.loads((input_path.parent / "payloads.json").read_text(encoding="utf-8"))
+    payloads = json.loads((JSON_DATA_PATH / "json_pointer_decoding" / "payloads.json").read_text(encoding="utf-8"))
     for invalid in payloads["invalid"]:
         assert_generated_model_json_validation(
             output_file,
