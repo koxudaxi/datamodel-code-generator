@@ -73,6 +73,7 @@
   "permissions": {
     "contents": "read"
   },
+  "shard_profile_mapping": "${{ matrix.name == '3.14' && 'default' || 'legacy' }}",
   "shared_http_steps": true,
   "shared_shard_steps": true,
   "triggers": {

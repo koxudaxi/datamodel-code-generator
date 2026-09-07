@@ -23,3 +23,7 @@ class TestNew:
 
 class Other:
     pass
+
+
+def test_generated_pydantic_v2_model_accepts_schema_derived_payloads():
+    pass

@@ -104,7 +104,8 @@ def test_recipe_cli_validates_external_cases(case: str, tmp_path: Path) -> None:
     assert_output(output.getvalue(), Path(__file__).parent / f"data/expected/ci_shards/{case}.txt")
 
 
-def test_discovery_includes_new_files_and_methods(tmp_path: Path) -> None:
+@pytest.mark.parametrize("profile", ["default", "legacy"])
+def test_discovery_includes_new_files_and_methods(tmp_path: Path, profile: str) -> None:
     """Discover unknown tests and keep deterministic recipes across enumeration order."""
     from contextlib import redirect_stdout
     from io import StringIO
@@ -116,9 +117,9 @@ def test_discovery_includes_new_files_and_methods(tmp_path: Path) -> None:
     out = StringIO()
     try:
         os.chdir(tmp_path)
-        select_ci_test_shard.main(["--write-recipe", str(recipe)])
+        select_ci_test_shard.main(["--profile", profile, "--write-recipe", str(recipe)])
         with redirect_stdout(out):
-            select_ci_test_shard.main(["1", "2", "--write-recipe", str(recipe)])
+            select_ci_test_shard.main(["1", "2", "--profile", profile, "--write-recipe", str(recipe)])
     finally:
         os.chdir(previous)
     items = json.loads(recipe.read_text(encoding="utf-8"))["items"]
@@ -126,7 +127,7 @@ def test_discovery_includes_new_files_and_methods(tmp_path: Path) -> None:
     file.write_text(file.read_text(encoding="utf-8") + "\n" * 1000, encoding="utf-8")
     try:
         os.chdir(tmp_path)
-        select_ci_test_shard.main(["--write-recipe", str(recipe)])
+        select_ci_test_shard.main(["--profile", profile, "--write-recipe", str(recipe)])
     finally:
         os.chdir(previous)
     padded_items = json.loads(recipe.read_text(encoding="utf-8"))["items"]
@@ -140,6 +141,11 @@ def test_discovery_includes_new_files_and_methods(tmp_path: Path) -> None:
             {
                 "nodeids": sorted(item["nodeid"] for item in items),
                 "positive_weights": all(item["weight"] > 0 for item in items),
+                "measured_weight": next(
+                    item["weight"]
+                    for item in items
+                    if item["nodeid"].endswith("::test_generated_pydantic_v2_model_accepts_schema_derived_payloads")
+                ),
                 "source_size_independent": items == padded_items,
                 "order_independent": out.getvalue() == reversed_out.getvalue(),
             },
@@ -147,5 +153,5 @@ def test_discovery_includes_new_files_and_methods(tmp_path: Path) -> None:
             indent=2,
         )
         + "\n",
-        Path(__file__).parent / "data/expected/ci_shards/new-tests.txt",
+        Path(__file__).parent / f"data/expected/ci_shards/new-tests-{profile}.txt",
     )

@@ -51,6 +51,7 @@ def test_workflow_matrix_and_coverage_contract() -> None:
             for entry in entries
             if entry.get("extra_tests")
         ),
+        "shard_profile_mapping": jobs["test-shard"]["env"]["SHARD_PROFILE"],
         "coverage_count": len(names),
         "coverage_unique": len(set(names)),
         "expected_names_match": set(names) == EXPECTED_NAMES,
