@@ -353,6 +353,50 @@ def _intersect_all_of_enum(parent: list[Any], child: list[Any]) -> list[Any]:
     return intersection
 
 
+def _align_all_of_enum_metadata(parent: dict[str, Any], child: dict[str, Any], result: dict[str, Any]) -> None:
+    """Keep annotations attached to their retained enum values, preferring parent annotations."""
+    metadata = [
+        key for key in ("x-enum-varnames", "x-enumNames", "x-enum-descriptions") if parent.get(key) or child.get(key)
+    ]
+    if not metadata:
+        return
+    retained_ids = {id(value) for value in result["enum"]}
+    indices = [index for index, value in enumerate(parent["enum"]) if id(value) in retained_ids]
+    child_indices: list[int] | None = None
+    for key in metadata:
+        parent_metadata = parent.get(key, [])
+        child_metadata = child.get(key, [])
+        if not child_metadata or indices[-1] < len(parent_metadata):
+            result[key] = [parent_metadata[index] if index < len(parent_metadata) else None for index in indices]
+            continue
+        if child_indices is None:
+            if all(
+                type(value) in _HASH_SAFE_JSON_SCALAR_TYPES or _is_hash_safe_json_scalar(value)
+                for value in chain(parent["enum"], child["enum"])
+            ):
+                positions: dict[tuple[bool, Any], int] = {}
+                for index, value in enumerate(child["enum"]):
+                    positions.setdefault((isinstance(value, bool), value), index)
+                child_indices = [positions[isinstance(value, bool), value] for value in result["enum"]]
+            else:
+                child_indices = [
+                    next(
+                        index
+                        for index, candidate in enumerate(child["enum"])
+                        if _json_literal_values_equal(value, candidate)
+                    )
+                    for value in result["enum"]
+                ]
+        result[key] = [
+            parent_metadata[index]
+            if index < len(parent_metadata)
+            else child_metadata[child_index]
+            if child_index < len(child_metadata)
+            else None
+            for index, child_index in zip(indices, child_indices, strict=True)
+        ]
+
+
 def _is_rw_model_variant_path(path: str) -> bool:
     """Return whether a path belongs to an internal Request/Response variant."""
     return any(marker in path for marker in _RW_MODEL_VARIANT_SPECIAL_MARKERS)
@@ -6273,6 +6317,13 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     result[key] = previous + value
             else:
                 result[key] = value
+        if (
+            not schema_map
+            and isinstance(parent_enum := parent.get("enum"), list)
+            and isinstance(child_enum := child.get("enum"), list)
+            and len(result["enum"]) < len(parent_enum) + len(child_enum)
+        ):
+            _align_all_of_enum_metadata(parent, child, result)
         return result
 
     def _merge_all_of_object(self, obj: JsonSchemaObject) -> JsonSchemaObject | None:

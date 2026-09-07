@@ -6,6 +6,7 @@ import json
 from typing import TYPE_CHECKING
 
 import pytest
+from jsonschema import Draft202012Validator
 
 from datamodel_code_generator import InputFileType, SchemaParseError, generate
 from datamodel_code_generator.__main__ import Exit
@@ -14,6 +15,7 @@ from tests.conftest import assert_output
 from tests.main.conftest import (
     DATA_PATH,
     JSON_SCHEMA_DATA_PATH,
+    _generated_model,
     assert_generated_model_json_validation,
     run_generate_and_assert,
     run_generate_file_and_assert,
@@ -201,3 +203,60 @@ def test_allof_enum_scalar_cli_control(output_file: Path, mode: str) -> None:
         expected_file=f"allof_constraint_intersections/scalars_{mode}.py",
         force_exec_validation=True,
     )
+
+
+@pytest.mark.parametrize("fixture", ["metadata", "metadata_control"])
+@pytest.mark.parametrize("entry_point", ["api", "cli"])
+def test_allof_enum_metadata(output_file: Path, fixture: str, entry_point: str) -> None:
+    """Retain enum annotation ownership and unchanged alias order through real generation."""
+    input_path = JSON_SCHEMA_DATA_PATH / "allof_constraint_intersections" / f"{fixture}.json"
+    expected = f"allof_constraint_intersections/{fixture}.py"
+    if entry_point == "api":
+        run_generate_file_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            disable_timestamp=True,
+            use_field_description=True,
+            assert_func=assert_file_content,
+            expected_file=expected,
+        )
+    else:
+        run_main_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            extra_args=["--disable-timestamp", "--use-field-description"],
+            assert_func=assert_file_content,
+            expected_file=expected,
+            force_exec_validation=True,
+        )
+    if fixture == "metadata_control":
+        return
+    payloads = json.loads((DATA_PATH / "payloads/allof_enum_metadata.json").read_text())
+    native = Draft202012Validator(json.loads(input_path.read_text()))
+    invalid = [{**payloads["valid"][0], name: value} for name, value in payloads["invalid"].items()]
+    with _generated_model(output_file, "allof_enum_metadata", "Root") as model:
+        observations = {
+            "native_valid": [native.is_valid(value) for value in payloads["valid"]],
+            "native_invalid": [native.is_valid(value) for value in invalid],
+            "members": {
+                name: list(field.annotation.__members__)
+                for name, field in model.model_fields.items()
+                if not name.endswith("_descriptions")
+            },
+        }
+        assert_output(
+            json.dumps(observations, indent=2) + "\n",
+            EXPECTED_JSON_SCHEMA_PATH / "allof_constraint_intersections/metadata_runtime.txt",
+        )
+    for valid in payloads["valid"]:
+        for value in invalid:
+            assert_generated_model_json_validation(
+                output_file,
+                module_name="allof_enum_metadata",
+                model_name="Root",
+                valid_json=json.dumps(valid),
+                invalid_json=json.dumps(value),
+                expected_error_type="enum",
+            )
