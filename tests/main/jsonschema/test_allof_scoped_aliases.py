@@ -8,11 +8,13 @@ from operator import itemgetter
 from typing import TYPE_CHECKING
 
 import pytest
+from pydantic import PydanticUserError
 
 from datamodel_code_generator import Error, Formatter, InputFileType, generate
 from datamodel_code_generator.__main__ import Exit
 from tests.conftest import assert_directory_content, assert_output
 from tests.main.conftest import (
+    DATA_PATH,
     JSON_SCHEMA_DATA_PATH,
     _assert_model_json_invalid,
     _generated_model,
@@ -90,6 +92,30 @@ def test_allof_final_scoped_aliases(output_file: Path, entrypoint: str, case: di
         valid_data = json.loads((PAYLOADS / "allof_scoped_aliases_valid.json").read_text())
         if case["options"].get("output_model_type") in {"dataclasses.dataclass", "typing.TypedDict"}:
             valid_data["child"][case["attribute"]] = valid_data["child"].pop("x")
+        if case["options"].get("output_model_type") == "typing.TypedDict":
+            try:
+                assert_generated_model_json_validation(
+                    DATA_PATH / "python/allof_scoped_aliases/native_typeddict.py",
+                    module_name="native_scoped_typeddict",
+                    model_name="NativeRoot",
+                    valid_json=json.dumps(valid_data),
+                    invalid_json=(PAYLOADS / "allof_scoped_aliases_invalid.json").read_text(),
+                    expected_error_type="missing",
+                )
+            except PydanticUserError as native_error:
+                expected_error = EXPECTED_JSON_SCHEMA_PATH / "allof_scoped_aliases/typed_dict_native_error.txt"
+                assert_output(f"{native_error.code}\n", expected_error)
+                with pytest.raises(PydanticUserError) as generated_error:
+                    assert_generated_model_json_validation(
+                        output_file,
+                        module_name="generated_scoped_typeddict",
+                        model_name="ApiRootSchema",
+                        valid_json=json.dumps(valid_data),
+                        invalid_json=(PAYLOADS / "allof_scoped_aliases_invalid.json").read_text(),
+                        expected_error_type="missing",
+                    )
+                assert_output(f"{generated_error.value.code}\n", expected_error)
+                return
         assert_generated_model_json_validation(
             output_file,
             module_name=f"allof_scoped_{case['name']}_{entrypoint}",
@@ -145,6 +171,19 @@ def test_allof_final_scoped_aliases_modular(output_dir: Path, entrypoint: str) -
             EXPECTED_JSON_SCHEMA_PATH / "allof_scoped_aliases/modular-runtime.txt",
         )
         _assert_model_json_invalid(model.model_validate, {"base": 1}, "missing")
+    with _generated_package_module(output_dir, "_internal") as module:
+        payload = json.loads((PAYLOADS / "allof_scoped_aliases_valid.json").read_text())
+        assert_output(
+            json.dumps(
+                {
+                    "data": module.ApiRootSchema.model_validate(payload).model_dump(by_alias=True),
+                    "schema": module.ApiRootSchema.model_json_schema(),
+                },
+                indent=2,
+            )
+            + "\n",
+            EXPECTED_JSON_SCHEMA_PATH / "allof_scoped_aliases/modular_root_runtime.txt",
+        )
 
 
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
@@ -186,3 +225,67 @@ def test_allof_final_scoped_aliases_invalid(
             expected_stderr=expected.read_text(),
             output_should_not_exist=True,
         )
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize(
+    ("case", "serialization_aliases"),
+    json.loads((PAYLOADS / "allof_serialization_alias_cases.json").read_text()).items(),
+)
+def test_allof_final_serialization_aliases(
+    output_file: Path, entrypoint: str, case: str, serialization_aliases: dict[str, str]
+) -> None:
+    """Resolve final serialization keys while preserving established raw/global fallbacks."""
+    source = DATA / "allof.json"
+    expected = EXPECTED_JSON_SCHEMA_PATH / "allof_scoped_aliases/serialization" / f"{case}.py"
+    aliases = {"ApiChildSchema.x": "renamed"}
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=source,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            expected_file=expected,
+            extra_args=[
+                "--disable-timestamp",
+                "--class-name-prefix",
+                "Api",
+                "--class-name-suffix",
+                "Schema",
+                "--aliases",
+                json.dumps(aliases),
+                "--serialization-aliases",
+                json.dumps(serialization_aliases),
+            ],
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=source,
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            assert_func=assert_file_content,
+            expected_file=expected,
+            disable_timestamp=True,
+            class_name_prefix="Api",
+            class_name_suffix="Schema",
+            aliases=aliases,
+            serialization_aliases=serialization_aliases,
+            unchanged_inputs={"aliases": aliases, "serialization_aliases": serialization_aliases},
+        )
+    wire_name = json.loads((PAYLOADS / "allof_serialization_wire_names.json").read_text())[case]
+    with (
+        _generated_model(
+            DATA_PATH / "python/allof_scoped_aliases/native_serialization.py", "native_serialization", "root_model"
+        ) as make_root,
+        _generated_model(output_file, "generated_serialization", "ApiRootSchema") as generated,
+    ):
+        for model in (make_root(wire_name), generated):
+            payload = json.loads((PAYLOADS / "allof_scoped_aliases_valid.json").read_text())
+            assert_output(
+                json.dumps(model.model_validate(payload).model_dump(by_alias=True), indent=2) + "\n",
+                expected.with_suffix(".txt"),
+            )
+            _assert_model_json_invalid(
+                model.model_validate_json,
+                (PAYLOADS / "allof_scoped_aliases_invalid.json").read_text(),
+                "missing",
+            )

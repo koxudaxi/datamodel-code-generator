@@ -7736,9 +7736,21 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     model_type=self.field_name_model_type,
                     class_name=class_name,
                 )
-                resolved_aliases[original_name] = field_name, *self._split_field_alias(alias)
+                field_alias, validation_aliases = self._split_field_alias(alias)
+                resolved_aliases[original_name] = field_name, field_alias, validation_aliases
                 reserved_names.add(field_name)
             field.name, field.alias, field.validation_aliases = resolved_aliases[original_name]
+            if (
+                self.serialization_aliases
+                and (
+                    field.serialization_alias is None
+                    or f"{class_name}.{original_name}" in self.serialization_aliases
+                    or f"{class_name}.{field.name}" in self.serialization_aliases
+                )
+                and (serialization_alias := self.get_serialization_alias(original_name, field.name, class_name))
+                is not None
+            ):
+                field.serialization_alias = serialization_alias
             field.__dict__[_ALIAS_RESOLUTION_CLASS_NAME_KEY] = class_name
 
     def _parse_object_common_part(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
