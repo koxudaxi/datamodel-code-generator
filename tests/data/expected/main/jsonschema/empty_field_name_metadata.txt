@@ -199,8 +199,8 @@
       "title": "EmptyFieldRoot",
       "fields": [
         {
-          "name": "field_",
-          "alias": "field_",
+          "name": "root",
+          "alias": "root",
           "original_name": null,
           "type": "RequiredEmpty",
           "required": true
