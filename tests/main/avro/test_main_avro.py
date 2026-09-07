@@ -7,7 +7,7 @@ from typing import cast
 
 import pytest
 
-from datamodel_code_generator import DataModelType, InputFileType, generate, load_data
+from datamodel_code_generator import DataModelType, DatetimeClassType, InputFileType, generate, load_data
 from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.format import Formatter, PythonVersion, is_supported_in_black
 from datamodel_code_generator.parser.avro import convert_avro_schema_data
@@ -185,6 +185,161 @@ def test_avro_bytes_defaults_raw_input_unchanged(output_file: Path, fixture_name
             formatters=[Formatter.BUILTIN],
         )
     assert_file_content(output_file, f"{input_path.stem}_pydantic_v2.py")
+
+
+@pytest.mark.parametrize(
+    ("output_model_type", "backend", "datetime_class"),
+    [
+        (DataModelType.PydanticV2BaseModel, "pydantic_v2", None),
+        (DataModelType.DataclassesDataclass, "dataclass", None),
+        (DataModelType.MsgspecStruct, "msgspec", None),
+        (DataModelType.TypingTypedDict, "typed_dict", None),
+        (DataModelType.DataclassesDataclass, "dataclass_datetime", DatetimeClassType.Datetime),
+        (DataModelType.MsgspecStruct, "msgspec_datetime", DatetimeClassType.Datetime),
+        (DataModelType.TypingTypedDict, "typed_dict_datetime", DatetimeClassType.Datetime),
+    ],
+)
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("fixture", ["temporal_defaults", "temporal_defaults_simple"])
+def test_avro_temporal_defaults(
+    output_file: Path,
+    output_model_type: DataModelType,
+    backend: str,
+    datetime_class: DatetimeClassType | None,
+    entrypoint: str,
+    fixture: str,
+) -> None:
+    """Preserve temporal units, timezone, precision, nested defaults and backend type policies."""
+    input_path = AVRO_DATA_PATH / f"{fixture}.avsc"
+    expected_file = f"{fixture}_{backend}.py"
+    # Keep the nested constructor regression independent of formatter layout differences.
+    builtin = fixture == "temporal_defaults"
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type="avro",
+            assert_func=assert_file_content,
+            expected_file=expected_file,
+            extra_args=[
+                "--target-python-version",
+                "3.10",
+                "--output-model-type",
+                output_model_type.value,
+                "--disable-timestamp",
+                *(["--formatters", "builtin"] if builtin else []),
+                *(["--output-datetime-class", datetime_class.value] if datetime_class else []),
+            ],
+            force_exec_validation=True,
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type=InputFileType.Avro,
+            assert_func=assert_file_content,
+            expected_file=expected_file,
+            output_model_type=output_model_type,
+            output_datetime_class=datetime_class,
+            target_python_version=PythonVersion.PY_310,
+            disable_timestamp=True,
+            **({"formatters": [Formatter.BUILTIN]} if builtin else {}),
+            use_annotated=output_model_type == DataModelType.MsgspecStruct,
+            field_constraints=output_model_type == DataModelType.MsgspecStruct,
+        )
+    if output_model_type == DataModelType.TypingTypedDict:
+        return
+    runtime_file = AVRO_DATA_PATH.parent / f"expected/main/avro/{fixture}_{backend}.txt"
+    with _generated_model(output_file, f"generated_{fixture}_{backend}_{entrypoint}", "TemporalDefaults") as model:
+        assert_output(f"{model()!r}\n", runtime_file)
+        if output_model_type == DataModelType.PydanticV2BaseModel:
+            model.model_config["validate_default"] = True
+            model.model_rebuild(force=True)
+            assert_output(f"{model()!r}\n", runtime_file)
+
+
+def test_avro_temporal_defaults_preserve_raw_input(output_file: Path) -> None:
+    """Keep integer defaults untouched through raw API generation and public conversion."""
+    raw_schema = load_data((AVRO_DATA_PATH / "temporal_defaults.avsc").read_text(encoding="utf-8"))
+    with assert_inputs_not_mutated({"schema": raw_schema}):
+        generate(
+            raw_schema,
+            output=output_file,
+            input_file_type=InputFileType.Avro,
+            input_filename="temporal_defaults.avsc",
+            disable_timestamp=True,
+            target_python_version=PythonVersion.PY_310,
+            formatters=[Formatter.BUILTIN],
+        )
+        converted = convert_avro_schema_data(raw_schema)
+    assert_file_content(output_file, "temporal_defaults_pydantic_v2.py")
+    rendered = "\n".join(f"{name}: {field['default']!r}" for name, field in converted["properties"].items())
+    assert_output(f"{rendered}\n", AVRO_DATA_PATH.parent / "expected/main/avro/temporal_defaults_converted.txt")
+
+
+def test_main_avro_temporal_default_controls(output_file: Path) -> None:
+    """Leave ordinary defaults, unsupported annotations and temporal fields without defaults unchanged."""
+    run_main_and_assert(
+        input_path=AVRO_DATA_PATH / "temporal_default_controls.avsc",
+        output_path=output_file,
+        input_file_type="avro",
+        assert_func=assert_file_content,
+        expected_file="temporal_default_controls.py",
+        extra_args=["--target-python-version", "3.10", "--disable-timestamp", "--formatters", "builtin"],
+        force_exec_validation=True,
+    )
+
+
+def test_main_avro_temporal_defaults_unused_by_typed_dict(output_file: Path) -> None:
+    """Do not normalize unused defaults for backends which do not emit them."""
+    run_main_and_assert(
+        input_path=AVRO_DATA_PATH / "invalid_temporal_default_nanos_precision.avsc",
+        output_path=output_file,
+        input_file_type="avro",
+        assert_func=assert_file_content,
+        expected_file="temporal_defaults_unused_typed_dict.py",
+        extra_args=[
+            "--output-model-type",
+            DataModelType.TypingTypedDict.value,
+            "--target-python-version",
+            "3.10",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+        force_exec_validation=True,
+    )
+
+
+@pytest.mark.parametrize(
+    ("fixture", "message"),
+    [
+        ("date_min", "Avro date default is outside the Python date range"),
+        ("date_max", "Avro date default is outside the Python date range"),
+        ("date_huge", "Avro date default is outside the Python date range"),
+        ("time_millis_negative", "Avro time-millis default must be within a single day"),
+        ("time_millis_next_day", "Avro time-millis default must be within a single day"),
+        ("time_micros_negative", "Avro time-micros default must be within a single day"),
+        ("time_micros_next_day", "Avro time-micros default must be within a single day"),
+        ("timestamp_min", "Avro timestamp-micros default is outside the Python datetime range"),
+        ("timestamp_max", "Avro timestamp-micros default is outside the Python datetime range"),
+        ("local_huge", "Avro local-timestamp-millis default is outside the Python datetime range"),
+        ("nanos_precision", "Avro timestamp-nanos default cannot be represented exactly at microsecond precision"),
+        ("local_nanos_precision", "Avro local-timestamp-nanos default cannot be represented exactly"),
+    ],
+)
+def test_main_avro_unrepresentable_temporal_default(
+    output_file: Path, capsys: pytest.CaptureFixture[str], fixture: str, message: str
+) -> None:
+    """Report only temporal range and exactness errors through the real CLI."""
+    run_main_and_assert(
+        input_path=AVRO_DATA_PATH / f"invalid_temporal_default_{fixture}.avsc",
+        output_path=output_file,
+        input_file_type="avro",
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains=message,
+    )
 
 
 @pytest.mark.parametrize(("output_model_type", "expected_name"), BACKEND_GOLDEN_CASES)

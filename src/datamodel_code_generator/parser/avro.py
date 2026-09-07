@@ -23,6 +23,7 @@ from datamodel_code_generator.parser._convert_common import _copy_schema, _names
 from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from pathlib import Path
     from urllib.parse import ParseResult
 
@@ -33,6 +34,7 @@ if TYPE_CHECKING:
 JsonSchema = dict[str, Any]
 
 NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+MICROSECONDS_PER_DAY = 86_400_000_000
 
 STRING_SCHEMA: JsonSchema = {"type": "string"}
 NULL_SCHEMA: JsonSchema = {"type": "null"}
@@ -88,13 +90,27 @@ def _is_valid_namespace(namespace: str) -> bool:
     return not namespace or _is_valid_fullname(namespace)
 
 
+def _temporal_default_expression(kind: str, iso_value: str) -> Any:
+    """Build a temporal constructor with an import identity that can be aliased."""
+    from datamodel_code_generator.imports import Import  # ruff: ignore[import-outside-top-level]
+    from datamodel_code_generator.python_literal import PythonRuntimeExpression  # ruff: ignore[import-outside-top-level]
+
+    return PythonRuntimeExpression(
+        Import(import_="datetime", alias="datetime_module"), "", f".{kind}.fromisoformat({iso_value!r})"
+    )
+
+
 class _AvroSchemaConverter:
-    def __init__(self) -> None:
+    def __init__(
+        self, temporal_default: Callable[[str, str, str], Any] | None = None, *, convert_temporal_defaults: bool = True
+    ) -> None:
         self.named_schemas: dict[str, JsonSchema] = {}
         self.names: dict[str, _Name] = {}
         self.definition_names: dict[str, str] = {}
         self.definitions: dict[str, JsonSchema] = {}
         self._building_definitions: set[str] = set()
+        self._temporal_default = temporal_default
+        self._convert_temporal_defaults = convert_temporal_defaults
 
     def convert_raw(self, raw_obj: YamlValue) -> dict[str, YamlValue]:
         self._collect_named_schemas(raw_obj)
@@ -376,9 +392,13 @@ class _AvroSchemaConverter:
         return converted
 
     def _convert_default(self, value: Any, schema: Any, namespace: str | None) -> Any:
-        """Convert Avro's JSON-encoded bytes and fixed defaults to Python bytes."""
+        """Decode defaults using the Avro schema's physical and logical types."""
         if not isinstance(value, str | list | dict):
-            return value
+            return (
+                self._convert_integer_default(value, schema)
+                if type(value) is int and self._convert_temporal_defaults
+                else value
+            )
         while isinstance(schema, list | dict):
             match schema:
                 case []:  # pragma: no cover - rejected while converting the union
@@ -400,6 +420,70 @@ class _AvroSchemaConverter:
                 case _:  # pragma: no cover - rejected while converting the field schema
                     return value
         return self._convert_default_type(value, schema, namespace)
+
+    def _convert_integer_default(self, value: int, schema: Any) -> Any:
+        """Inspect only integer defaults for temporal logical types."""
+        while isinstance(schema, list | dict):
+            match schema:
+                case [first, *_]:
+                    schema = first
+                case {"type": "int" | "long" as avro_type, "logicalType": str() as logical_type}:
+                    return self._convert_temporal_default(value, avro_type, logical_type)
+                case {"type": nested_schema}:
+                    schema = nested_schema
+                case _:
+                    return value
+        return value
+
+    def _convert_temporal_default(self, value: int, avro_type: str, logical_type: str) -> Any:
+        """Preserve temporal units and timezone semantics without rounding."""
+        match avro_type, logical_type:
+            case "int", "date":
+                kind = "date"
+            case ("int", "time-millis") | ("long", "time-micros"):
+                kind = "time"
+            case "long", (
+                "timestamp-millis"
+                | "timestamp-micros"
+                | "timestamp-nanos"
+                | "local-timestamp-millis"
+                | "local-timestamp-micros"
+                | "local-timestamp-nanos"
+            ):
+                kind = "datetime"
+            case _:
+                return value
+
+        from datetime import datetime, timedelta, timezone  # ruff: ignore[import-outside-top-level]
+
+        microseconds = self._temporal_microseconds(value, logical_type)
+        if kind == "time" and not 0 <= microseconds < MICROSECONDS_PER_DAY:
+            msg = f"Avro {logical_type} default must be within a single day: {value}"
+            raise Error(msg)
+        epoch = datetime(1970, 1, 1, tzinfo=timezone.utc if logical_type.startswith("timestamp-") else None)
+        try:
+            converted = epoch + (timedelta(days=value) if kind == "date" else timedelta(microseconds=microseconds))
+        except OverflowError as exc:
+            msg = f"Avro {logical_type} default is outside the Python {kind} range: {value}"
+            raise Error(msg) from exc
+
+        iso_value = (getattr(converted, kind)() if kind != "datetime" else converted).isoformat()
+        if self._temporal_default is not None:
+            return self._temporal_default(kind, logical_type, iso_value)
+        return _temporal_default_expression(kind, iso_value)
+
+    @staticmethod
+    def _temporal_microseconds(value: int, logical_type: str) -> int:
+        """Scale an integer timestamp exactly to Python's microsecond precision."""
+        if logical_type.endswith("-millis"):
+            return value * 1000
+        if logical_type.endswith("-nanos"):
+            microseconds, remainder = divmod(value, 1000)
+            if remainder:
+                msg = f"Avro {logical_type} default cannot be represented exactly at microsecond precision: {value}"
+                raise Error(msg)
+            return microseconds
+        return value
 
     def _convert_default_type(self, value: Any, schema: Any, namespace: str | None) -> Any:
         """Resolve named defaults in their record scope and decode bytes leaves."""
@@ -585,7 +669,35 @@ class AvroParser(JsonSchemaParser):
 
     def parse_raw(self) -> None:
         """Parse all Avro schema input sources into data models."""
-        self._parse_converted_sources(_AvroSchemaConverter)
+        self._parse_converted_sources(
+            lambda: _AvroSchemaConverter(
+                self._temporal_default,
+                convert_temporal_defaults=self.data_model_type.SUPPORTS_DESERIALIZED_DEFAULT_VALUES,
+            )
+        )
+        if self._has_runtime_expressions:
+            from datamodel_code_generator.python_literal import runtime_expression_imports  # ruff: ignore[import-outside-top-level]
+
+            for model in self.results:
+                for field in model.fields:
+                    if imports := runtime_expression_imports(field.default):
+                        field._set_runtime_expression_imports(imports)  # ruff: ignore[private-member-access]
+
+    def _temporal_default(self, kind: str, logical_type: str, iso_value: str) -> Any:
+        """Keep defaults compatible with the backend's existing temporal type mapping."""
+        from datamodel_code_generator.types import Types  # ruff: ignore[import-outside-top-level]
+
+        match kind:
+            case "date":
+                temporal_type = Types.date
+            case "time":
+                temporal_type = Types.time
+            case _:
+                temporal_type = Types.date_time_local if logical_type.startswith("local-") else Types.date_time
+        if self.data_type_manager.get_data_type(temporal_type).type == "str":
+            return iso_value
+        self._register_runtime_expression()
+        return _temporal_default_expression(kind, iso_value)
 
 
 def convert_avro_schema_data(data: YamlValue) -> dict[str, YamlValue]:
