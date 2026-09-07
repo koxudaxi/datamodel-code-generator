@@ -4009,6 +4009,8 @@ Avro logical types are mapped through the generator's normal type handling:
 | `local-timestamp-millis`, `local-timestamp-micros`, `local-timestamp-nanos` | local date-time format |
 | `duration` | `timedelta` |
 
+Generated temporal defaults use Avro's day, millisecond, microsecond, or nanosecond units. Timestamp defaults use UTC; local timestamp and time defaults have no timezone. Backends that map these formats to strings receive ISO strings. Defaults outside Python's date/time range, or nanosecond defaults that cannot be represented exactly at microsecond precision, produce an error.
+
 Avro-specific metadata is preserved in generated JSON Schema extensions such as `x-avro-fullname`, `x-avro-namespace`, `x-avro-aliases`, and `x-avro-logicalType` before model generation.
 
 ## Schema Version
