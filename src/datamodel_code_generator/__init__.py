@@ -37,6 +37,7 @@ from datamodel_code_generator._source import (
     _clear_parser_source_data_cache as _clear_parser_source_data_cache,
 )
 from datamodel_code_generator._source import (
+    _has_protobuf_declaration,
     _is_json_text,
     _is_protobuf_text,
     _is_xml_text,
@@ -2495,11 +2496,15 @@ def infer_input_type(text: str) -> InputFileType:  # noqa: PLR0911, PLR0912
         if is_xml_schema_text(text):
             return InputFileType.XMLSchema
 
+    protobuf_declaration = _has_protobuf_declaration(text)
+
     try:
         data = load_yaml(text)
     except get_yaml_parse_errors() as exc:
         if not _is_json_text(text) and _looks_like_csv_text(text):
             return InputFileType.CSV
+        if protobuf_declaration:
+            return InputFileType.Protobuf
         msg = _infer_input_type_error_message(parse_error=exc)
         raise Error(msg) from exc
     if isinstance(data, dict):
@@ -2524,6 +2529,8 @@ def infer_input_type(text: str) -> InputFileType:  # noqa: PLR0911, PLR0912
     if isinstance(data, str):
         if _looks_like_csv_text(text):
             return InputFileType.CSV
+        if protobuf_declaration:
+            return InputFileType.Protobuf
         from datamodel_code_generator._avro_detection import is_avro_schema_data  # noqa: PLC0415
 
         if is_avro_schema_data(data):
