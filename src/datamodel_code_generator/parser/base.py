@@ -6126,7 +6126,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 )
 
     @staticmethod
-    def _field_metadata(field: DataModelFieldBase) -> ModelFieldMetadata:
+    def _field_metadata(field: DataModelFieldBase, *, is_root_model: bool = False) -> ModelFieldMetadata:
         source_name = field.original_name
         if source_name is None:
             source_name = field.alias
@@ -6134,9 +6134,15 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             source_name = field.name
         if source_name is None:
             source_name = ""
+        if is_root_model:
+            # RootModel renderers use root rather than the IR's synthetic field name.
+            name = alias = "root"
+        else:
+            name = field.name if field.name is not None else source_name
+            alias = field.alias if field.alias is not None else source_name
         return {
-            "name": field.name if field.name is not None else source_name,
-            "alias": field.alias if field.alias is not None else source_name,
+            "name": name,
+            "alias": alias,
             "original_name": field.original_name,
             "type": field.type_hint,
             "required": field.required,
@@ -6158,7 +6164,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             "source_ref": source_ref,
             "source_path": _source_path_from_reference_path(source_ref),
             "title": title if isinstance(title, str) else None,
-            "fields": [cls._field_metadata(field) for field in model.fields],
+            "fields": [cls._field_metadata(field, is_root_model=model.IS_ROOT_MODEL) for field in model.fields],
         }
 
     @classmethod
