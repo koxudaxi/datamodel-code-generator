@@ -99,6 +99,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - tox_env: pydantic200
+            name: pydantic200
+            coverage_name: pydantic200
           - tox_env: pydantic20
             name: pydantic20
             coverage_name: pydantic20
