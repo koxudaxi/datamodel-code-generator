@@ -164,6 +164,21 @@ def test_msgspec_inheritance_preserve_other_backends(
             expected_file=expected,
             **case["options"],
         )
+    if backend == DataModelType.TypingTypedDict:
+        import msgspec
+
+        with _generated_model(output_file, "generated_other_backend_inheritance", "Payload") as model:
+            converted = msgspec.convert(case["payload"], type=model)
+            decoded = msgspec.json.decode(json.dumps(case["payload"]), type=model)
+            assert_output(
+                json.dumps({"convert": converted, "decode": decoded}, sort_keys=True) + "\n",
+                DATA_PATH / "payloads/msgspec_inheritance_typed_dict.txt",
+            )
+            with pytest.raises(msgspec.ValidationError, match="missing required field"):
+                msgspec.convert({}, type=model)
+            with pytest.raises(msgspec.ValidationError, match="missing required field"):
+                msgspec.json.decode("{}", type=model)
+        return
     assert_generated_model_json_validation(
         output_file,
         module_name="generated_other_backend_inheritance",
