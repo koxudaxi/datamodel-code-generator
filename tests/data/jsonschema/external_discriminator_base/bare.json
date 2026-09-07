@@ -11,8 +11,8 @@
   "discriminator": {
     "propertyName": "species",
     "mapping": {
-      "cat": "./variants.json#/components/schemas/Cat",
-      "dog": "./variants.json#/components/schemas/Dog"
+      "cat": "../../openapi/external_discriminator_base/right/variants.json#/components/schemas/Cat",
+      "dog": "../../openapi/external_discriminator_base/right/variants.json#/components/schemas/Dog"
     }
   }
 }

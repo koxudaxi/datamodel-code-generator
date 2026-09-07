@@ -9965,6 +9965,8 @@ def test_external_discriminator_base(output_file: Path, entrypoint: str, case: s
     expected = EXPECTED_OPENAPI_PATH / "external_discriminator_base" / f"{case}.py"
     if entrypoint == "cli":
         args = ["--disable-timestamp"]
+        if case in {"bare", "empty"}:
+            args.append("--allow-remote-refs")
         if case == "url":
             args.extend(["--http-local-ref-path", str(fixture_dir / "mirror")])
         run_main_and_assert(
@@ -9978,6 +9980,8 @@ def test_external_discriminator_base(output_file: Path, entrypoint: str, case: s
         )
     else:
         options = {"http_local_ref_path": fixture_dir / "mirror"} if case == "url" else {}
+        if case in {"bare", "empty"}:
+            options["allow_remote_refs"] = True
         run_generate_file_and_assert(
             input_path=fixture_dir / f"{case}.json",
             output_path=output_file,

@@ -11,7 +11,7 @@
         "type": "object",
         "properties": {
           "item": {
-            "$ref": "./right/bare.json#"
+            "$ref": "../../jsonschema/external_discriminator_base/bare.json#"
           }
         },
         "required": [

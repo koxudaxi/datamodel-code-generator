@@ -11,7 +11,7 @@
         "type": "object",
         "properties": {
           "item": {
-            "$ref": "./right/empty.json#"
+            "$ref": "../../jsonschema/external_discriminator_base/empty.json#"
           }
         },
         "required": [
