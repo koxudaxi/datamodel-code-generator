@@ -19,6 +19,7 @@ from tests.main.conftest import (
     JSON_SCHEMA_DATA_PATH,
     _default_formatter_generate_options,
     _generated_model,
+    assert_generated_model_json_validation,
     run_main_with_args,
 )
 from tests.main.jsonschema.conftest import EXPECTED_JSON_SCHEMA_PATH
@@ -99,6 +100,18 @@ def test_numeric_allof_types(
                 accepted = False
             results.append({"payload": payload, "native": validator.is_valid(payload), "generated": accepted})
     assert_output(json.dumps(results, indent=2) + "\n", expected / f"{case}_runtime.txt")
+    if (base_schema := schema.get("$defs", {}).get("Base")) is not None:
+        base_validator = Draft7Validator(base_schema)
+        results = []
+        with _generated_model(output_file, "numeric_allof_base_probe", "Base") as model:
+            for payload in payloads:
+                try:
+                    model.model_validate(payload)
+                    accepted = True
+                except ValidationError:
+                    accepted = False
+                results.append({"payload": payload, "native": base_validator.is_valid(payload), "generated": accepted})
+        assert_output(json.dumps(results, indent=2) + "\n", expected / f"{case}_base_runtime.txt")
 
 
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
@@ -128,3 +141,55 @@ def test_numeric_allof_empty_intersection(
     else:
         with assert_inputs_not_mutated({"schema": schema}), pytest.raises(SchemaParseError, match=message):
             generate(schema, input_file_type=InputFileType.JsonSchema, output=output_file, allof_merge_mode=merge_mode)
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+def test_numeric_null_custom_template(output_file: Path, entrypoint: str) -> None:
+    """Preserve valid custom rendering, including raw constraints and existing imports."""
+    source = JSON_SCHEMA_DATA_PATH / "numeric_allof_types/null_template.json"
+    expected = EXPECTED_JSON_SCHEMA_PATH / "numeric_allof_types"
+    template_dir = DATA_PATH / "templates_numeric_null"
+    if entrypoint == "cli":
+        run_main_with_args([
+            "--input",
+            str(source),
+            "--output",
+            str(output_file),
+            "--input-file-type",
+            "jsonschema",
+            "--disable-timestamp",
+            "--field-constraints",
+            "--custom-template-dir",
+            str(template_dir),
+        ])
+    else:
+        generate(
+            source,
+            **_default_formatter_generate_options({
+                "input_file_type": InputFileType.JsonSchema,
+                "output": output_file,
+                "disable_timestamp": True,
+                "field_constraints": True,
+                "custom_template_dir": template_dir,
+            }),
+        )
+    assert_output(output_file.read_text(encoding="utf-8"), expected / "null_custom.py")
+    try:
+        with _generated_model(
+            DATA_PATH / "python/numeric_allof_types/native_null.py", "native_null_control", "NativeNull"
+        ):
+            pass
+    except AssertionError as native_error:
+        assert_output(str(native_error) + "\n", expected / "native_null_error.txt")
+        with ExitStack() as stack, pytest.raises(AssertionError) as generated_error:
+            stack.enter_context(_generated_model(output_file, "numeric_custom_null", "Root"))
+        assert_output(str(generated_error.value) + "\n", expected / "native_null_error.txt")
+        return
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="numeric_custom_null",
+        model_name="Root",
+        valid_json="null",
+        invalid_json="2",
+        expected_error_type="none_required",
+    )
