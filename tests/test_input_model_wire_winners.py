@@ -43,10 +43,9 @@ def test_input_model_validation_property_winners(tmp_path: Path, case: str, entr
         schema = load_model_schema(paths, InputFileType.JsonSchema)
         if case == "InlinedWins":
             assert_output(json.dumps(schema["examples"]), EXPECTED_INPUT_MODEL_PATH / "wire_winner_examples.txt")
-        if not options.get("user_extensions"):
-            assert "x-datamodel-code-generator-field-" not in json.dumps({
-                key: value for key, value in schema.items() if key != "examples"
-            })
+        assert_output(
+            json.dumps(schema, indent=2), EXPECTED_INPUT_MODEL_PATH / f"wire_winner_{case.lower()}_schema.txt"
+        )
         generate(
             schema,
             config=GenerateConfig(
@@ -74,12 +73,21 @@ def test_input_model_validation_property_winners(tmp_path: Path, case: str, entr
         generated = model.model_validate({"item": payload} if options.get("nested") else payload)
         if options.get("nested"):
             native, generated = native.item, generated.item
-        assert list(type(generated).model_fields) == options["order"]
-        for wire_name, attribute_name in options["fields"].items():
-            expected = native[attribute_name] if isinstance(native, dict) else getattr(native, attribute_name)
-            actual = getattr(generated, wire_name)
-            assert actual == expected
-            assert type(actual) is type(expected)
+        for instance, fields, order in (
+            (native, options["fields"], options["order"]),
+            (generated, {name: name for name in options["fields"]}, list(type(generated).model_fields)),
+        ):
+            values = {}
+            for wire_name, attribute_name in fields.items():
+                value = instance[attribute_name] if isinstance(instance, dict) else getattr(instance, attribute_name)
+                values[wire_name] = {
+                    "type": type(value).__name__,
+                    "value": value(7) if callable(value) else sorted(value) if isinstance(value, frozenset) else value,
+                }
+            assert_output(
+                json.dumps({"order": order, "values": values}, indent=2),
+                EXPECTED_INPUT_MODEL_PATH / f"wire_winner_{case.lower()}_runtime.txt",
+            )
         if options.get("reject_noncallable"):
             payload["shared"] = "not callable"
             with pytest.raises(ValidationError):
@@ -96,8 +104,13 @@ def test_validation_property_user_extensions(case: str) -> None:
     schema = load_model_schema([f"{SOURCE_MODULE}:{case}"], InputFileType.JsonSchema)
     observed = schema["$defs"]["CollisionExtensions"] if case == "ExtensionContainer" else schema
     expected = native_schema["$defs"]["CollisionExtensions"] if case == "ExtensionContainer" else native_schema
-    for key in ("x-datamodel-code-generator-field-name", "x-datamodel-code-generator-field-names", "examples"):
-        assert observed[key] == expected[key]
-    for key in ("x-datamodel-code-generator-field-name", "x-datamodel-code-generator-field-names"):
-        assert observed["properties"]["shared"][key] == expected["properties"]["shared"][key]
-    assert observed["properties"]["metadata"]["default"] == expected["properties"]["metadata"]["default"]
+    for candidate in (observed, expected):
+        keys = ("x-datamodel-code-generator-field-name", "x-datamodel-code-generator-field-names")
+        records = {
+            "root": {key: candidate[key] for key in (*keys, "examples")},
+            "property": {key: candidate["properties"]["shared"][key] for key in keys},
+            "default": candidate["properties"]["metadata"]["default"],
+        }
+        assert_output(
+            json.dumps(records, indent=2), EXPECTED_INPUT_MODEL_PATH / f"wire_winner_{case.lower()}_extensions.txt"
+        )
