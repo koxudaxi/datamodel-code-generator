@@ -7,11 +7,11 @@ from typing import cast
 
 import pytest
 
-from datamodel_code_generator import DataModelType, load_data
+from datamodel_code_generator import DataModelType, InputFileType, generate, load_data
 from datamodel_code_generator.__main__ import Exit
-from datamodel_code_generator.format import PythonVersion, is_supported_in_black
+from datamodel_code_generator.format import Formatter, PythonVersion, is_supported_in_black
 from datamodel_code_generator.parser.avro import convert_avro_schema_data
-from tests.conftest import assert_mutable_copy_is_isolated, assert_output
+from tests.conftest import assert_inputs_not_mutated, assert_mutable_copy_is_isolated, assert_output
 from tests.main.avro.conftest import assert_file_content
 from tests.main.conftest import (
     AVRO_DATA_PATH,
@@ -21,6 +21,7 @@ from tests.main.conftest import (
     LEGACY_BLACK_SKIP,
     _generated_model,
     get_current_version_args,
+    run_generate_file_and_assert,
     run_main_and_assert,
 )
 
@@ -106,6 +107,83 @@ def test_main_avro_fixed_reference_default(output_file: Path) -> None:
         ],
         force_exec_validation=True,
     )
+
+
+@pytest.mark.parametrize(
+    ("output_model_type", "backend"),
+    [
+        (DataModelType.PydanticV2BaseModel, "pydantic_v2"),
+        (DataModelType.DataclassesDataclass, "dataclass"),
+        (DataModelType.MsgspecStruct, "msgspec"),
+    ],
+)
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+def test_avro_container_bytes_defaults(
+    output_file: Path, output_model_type: DataModelType, backend: str, entrypoint: str
+) -> None:
+    """Preserve bytes, fixed leaves, strings, order, scope, and isolated defaults through generation."""
+    input_path = AVRO_DATA_PATH / "container_bytes_defaults.avsc"
+    expected_file = f"container_bytes_defaults_{backend}.py"
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type="avro",
+            assert_func=assert_file_content,
+            expected_file=expected_file,
+            extra_args=[
+                "--target-python-version",
+                "3.10",
+                "--output-model-type",
+                output_model_type.value,
+                "--disable-timestamp",
+                "--formatters",
+                "builtin",
+            ],
+            force_exec_validation=True,
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type=InputFileType.Avro,
+            assert_func=assert_file_content,
+            expected_file=expected_file,
+            output_model_type=output_model_type,
+            target_python_version=PythonVersion.PY_310,
+            disable_timestamp=True,
+            formatters=[Formatter.BUILTIN],
+            use_annotated=output_model_type == DataModelType.MsgspecStruct,
+            field_constraints=output_model_type == DataModelType.MsgspecStruct,
+        )
+    with _generated_model(
+        output_file, f"generated_container_defaults_{backend}_{entrypoint}", "ContainerDefaults"
+    ) as model:
+        first = model()
+        first.array.append(b"changed")
+        first.mapping["z"] = b"changed"
+        first.nested[0]["z"].append(b"changed")
+        rendered = repr(model())
+    assert_output(f"{rendered}\n", AVRO_DATA_PATH.parent / f"expected/main/avro/container_bytes_defaults_{backend}.txt")
+
+
+@pytest.mark.parametrize("fixture_name", ["container_bytes_defaults.avsc", "bytes_default_controls.yaml"])
+def test_avro_bytes_defaults_raw_input_unchanged(output_file: Path, fixture_name: str) -> None:
+    """Keep raw default objects intact, including already decoded bytes from YAML."""
+    input_path = AVRO_DATA_PATH / fixture_name
+    raw_schema = load_data(input_path.read_text(encoding="utf-8"))
+    with assert_inputs_not_mutated({"schema": raw_schema}):
+        generate(
+            input_=raw_schema,
+            output=output_file,
+            input_file_type=InputFileType.Avro,
+            input_filename=fixture_name,
+            output_model_type=DataModelType.PydanticV2BaseModel,
+            target_python_version=PythonVersion.PY_310,
+            disable_timestamp=True,
+            formatters=[Formatter.BUILTIN],
+        )
+    assert_file_content(output_file, f"{input_path.stem}_pydantic_v2.py")
 
 
 @pytest.mark.parametrize(("output_model_type", "expected_name"), BACKEND_GOLDEN_CASES)
@@ -297,6 +375,7 @@ def test_main_avro_schema_version_not_supported(output_file: Path, capsys: pytes
         ("invalid_schema_bad_fields.avsc", "Avro record fields must be a list"),
         ("invalid_schema_bad_field.avsc", "Avro record field requires a string name"),
         ("invalid_schema_field_item.avsc", "Avro record field requires a string name"),
+        ("invalid_schema_recursive_default_fields.avsc", "Avro record field requires a string name"),
         ("invalid_schema_field_value.avsc", "Unsupported Avro schema value"),
         ("invalid_schema_duplicate.avsc", "Duplicate Avro named type"),
         ("invalid_schema_unknown_ref.avsc", "Unknown Avro named type reference"),
@@ -313,6 +392,18 @@ def test_main_avro_schema_version_not_supported(output_file: Path, capsys: pytes
         ("invalid_schema_bad_field_name.avsc", "Invalid Avro record field name"),
         (
             "invalid_schema_bytes_default_unicode.avsc",
+            "Avro bytes and fixed defaults must contain only code points from 0 through 255",
+        ),
+        (
+            "invalid_schema_array_bytes_default_unicode.avsc",
+            "Avro bytes and fixed defaults must contain only code points from 0 through 255",
+        ),
+        (
+            "invalid_schema_map_bytes_default_unicode.avsc",
+            "Avro bytes and fixed defaults must contain only code points from 0 through 255",
+        ),
+        (
+            "invalid_schema_record_bytes_default_unicode.avsc",
             "Avro bytes and fixed defaults must contain only code points from 0 through 255",
         ),
         ("invalid_schema_primitive_name_reuse.avsc", "Avro primitive type names may not be redefined"),

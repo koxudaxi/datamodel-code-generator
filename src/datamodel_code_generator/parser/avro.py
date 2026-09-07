@@ -377,29 +377,68 @@ class _AvroSchemaConverter:
 
     def _convert_default(self, value: Any, schema: Any, namespace: str | None) -> Any:
         """Convert Avro's JSON-encoded bytes and fixed defaults to Python bytes."""
+        if not isinstance(value, str | list | dict):
+            return value
         while isinstance(schema, list | dict):
             match schema:
                 case []:  # pragma: no cover - rejected while converting the union
                     return value
                 case list():
                     schema = schema[0]
+                case {"type": "array", "items": item_schema} if isinstance(value, list):
+                    converted = value
+                    for index, item in enumerate(value):
+                        if (converted_item := self._convert_default(item, item_schema, namespace)) is not item:
+                            if converted is value:
+                                converted = value.copy()
+                            converted[index] = converted_item
+                    return converted
+                case {"type": "map" | "record"} if isinstance(value, dict):
+                    return self._convert_default_mapping(value, schema, namespace)
                 case {"type": nested_schema}:
                     schema = nested_schema
                 case _:  # pragma: no cover - rejected while converting the field schema
                     return value
+        return self._convert_default_type(value, schema, namespace)
+
+    def _convert_default_type(self, value: Any, schema: Any, namespace: str | None) -> Any:
+        """Resolve named defaults in their record scope and decode bytes leaves."""
         if not isinstance(schema, str):  # pragma: no cover - rejected while converting the field schema
             return value
         if schema not in {"bytes", "fixed"}:
             fullname = self._resolve_fullname(schema, namespace)
-            if (named_schema := self.named_schemas.get(fullname)) is None or named_schema.get("type") != "fixed":
+            if (named_schema := self.named_schemas.get(fullname)) is None:
+                return value
+            if named_schema.get("type") == "record" and isinstance(value, dict):
+                return self._convert_default_mapping(value, named_schema, namespace)
+            if named_schema.get("type") != "fixed":
                 return value
         if not isinstance(value, str):
-            return value  # pragma: no cover - downstream validation reports the invalid default
+            return value
         try:
             return value.encode("latin-1")
         except UnicodeEncodeError as exc:
             msg = "Avro bytes and fixed defaults must contain only code points from 0 through 255"
             raise Error(msg) from exc
+
+    def _convert_default_mapping(self, value: dict[str, Any], schema: JsonSchema, namespace: str | None) -> Any:
+        """Decode mapping leaves without changing the input values or their order."""
+        field_types = None
+        if schema["type"] == "record":
+            namespace = self.names[self._fullname_from_named_schema(schema, namespace)].namespace
+            field_types = {
+                field["name"]: field.get("type")
+                for field in schema.get("fields", [])
+                if isinstance(field, dict) and isinstance(field.get("name"), str)
+            }
+        converted = value
+        for name, item in value.items():
+            item_schema = field_types.get(name) if field_types is not None else schema.get("values")
+            if (converted_item := self._convert_default(item, item_schema, namespace)) is not item:
+                if converted is value:
+                    converted = value.copy()
+                converted[name] = converted_item
+        return converted
 
     def _convert_enum(self, schema: JsonSchema, fullname: str) -> JsonSchema:
         symbols = schema.get("symbols")
