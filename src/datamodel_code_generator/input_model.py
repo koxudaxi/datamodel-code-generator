@@ -1407,6 +1407,8 @@ def _transform_single_model_to_inheritance(  # noqa: PLR0913, PLR0917
     schema_types: dict[str, type | str] | None = None,
 ) -> dict[str, object]:
     """Transform a single model's schema to use allOf inheritance structure."""
+    if getattr(model_class, "__pydantic_root_model__", False):
+        return schema
     if processed_parents is None:
         processed_parents = {}
 

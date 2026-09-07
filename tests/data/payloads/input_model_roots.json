@@ -1,0 +1,320 @@
+[
+  {
+    "name": "ScalarRoot",
+    "strategy": "regenerate-all",
+    "valid": 3,
+    "invalid": "bad"
+  },
+  {
+    "name": "ScalarRoot",
+    "strategy": "reuse-all",
+    "valid": 3,
+    "invalid": "bad"
+  },
+  {
+    "name": "ScalarRoot",
+    "strategy": "reuse-foreign",
+    "valid": 3,
+    "invalid": "bad"
+  },
+  {
+    "name": "ScalarChild",
+    "strategy": "regenerate-all",
+    "valid": 3,
+    "invalid": "bad"
+  },
+  {
+    "name": "ScalarChild",
+    "strategy": "reuse-all",
+    "valid": 3,
+    "invalid": "bad"
+  },
+  {
+    "name": "ScalarChild",
+    "strategy": "reuse-foreign",
+    "valid": 3,
+    "invalid": "bad"
+  },
+  {
+    "name": "BoundedRoot",
+    "strategy": "regenerate-all",
+    "valid": 3,
+    "invalid": 1
+  },
+  {
+    "name": "BoundedRoot",
+    "strategy": "reuse-all",
+    "valid": 3,
+    "invalid": 1
+  },
+  {
+    "name": "BoundedRoot",
+    "strategy": "reuse-foreign",
+    "valid": 3,
+    "invalid": 1
+  },
+  {
+    "name": "DefaultRoot",
+    "strategy": "regenerate-all",
+    "valid": 4,
+    "invalid": "bad",
+    "default": 3
+  },
+  {
+    "name": "DefaultRoot",
+    "strategy": "reuse-all",
+    "valid": 4,
+    "invalid": "bad",
+    "default": 3
+  },
+  {
+    "name": "DefaultRoot",
+    "strategy": "reuse-foreign",
+    "valid": 4,
+    "invalid": "bad",
+    "default": 3
+  },
+  {
+    "name": "ListRoot",
+    "strategy": "regenerate-all",
+    "valid": [
+      2,
+      1
+    ],
+    "invalid": "bad"
+  },
+  {
+    "name": "ListRoot",
+    "strategy": "reuse-all",
+    "valid": [
+      2,
+      1
+    ],
+    "invalid": "bad"
+  },
+  {
+    "name": "ListRoot",
+    "strategy": "reuse-foreign",
+    "valid": [
+      2,
+      1
+    ],
+    "invalid": "bad"
+  },
+  {
+    "name": "BoundedList",
+    "strategy": "regenerate-all",
+    "valid": [
+      2,
+      1
+    ],
+    "invalid": []
+  },
+  {
+    "name": "BoundedList",
+    "strategy": "reuse-all",
+    "valid": [
+      2,
+      1
+    ],
+    "invalid": []
+  },
+  {
+    "name": "BoundedList",
+    "strategy": "reuse-foreign",
+    "valid": [
+      2,
+      1
+    ],
+    "invalid": []
+  },
+  {
+    "name": "ListDefault",
+    "strategy": "regenerate-all",
+    "valid": [
+      2,
+      1
+    ],
+    "invalid": "bad",
+    "default": [
+      2,
+      1
+    ]
+  },
+  {
+    "name": "ListDefault",
+    "strategy": "reuse-all",
+    "valid": [
+      2,
+      1
+    ],
+    "invalid": "bad",
+    "default": [
+      2,
+      1
+    ]
+  },
+  {
+    "name": "ListDefault",
+    "strategy": "reuse-foreign",
+    "valid": [
+      2,
+      1
+    ],
+    "invalid": "bad",
+    "default": [
+      2,
+      1
+    ]
+  },
+  {
+    "name": "NullableRoot",
+    "strategy": "regenerate-all",
+    "valid": null,
+    "invalid": "bad"
+  },
+  {
+    "name": "NullableRoot",
+    "strategy": "reuse-all",
+    "valid": null,
+    "invalid": "bad"
+  },
+  {
+    "name": "NullableRoot",
+    "strategy": "reuse-foreign",
+    "valid": null,
+    "invalid": "bad"
+  },
+  {
+    "name": "ObjectRoot",
+    "strategy": "regenerate-all",
+    "valid": {
+      "first": 2
+    },
+    "invalid": {
+      "first": "bad"
+    }
+  },
+  {
+    "name": "ObjectRoot",
+    "strategy": "reuse-all",
+    "valid": {
+      "first": 2
+    },
+    "invalid": {
+      "first": "bad"
+    }
+  },
+  {
+    "name": "ObjectRoot",
+    "strategy": "reuse-foreign",
+    "valid": {
+      "first": 2
+    },
+    "invalid": {
+      "first": "bad"
+    }
+  },
+  {
+    "name": "ObjectList",
+    "strategy": "regenerate-all",
+    "valid": [
+      {
+        "first": 2
+      }
+    ],
+    "invalid": [
+      {
+        "first": "bad"
+      }
+    ]
+  },
+  {
+    "name": "ObjectList",
+    "strategy": "reuse-all",
+    "valid": [
+      {
+        "first": 2
+      }
+    ],
+    "invalid": [
+      {
+        "first": "bad"
+      }
+    ]
+  },
+  {
+    "name": "ObjectList",
+    "strategy": "reuse-foreign",
+    "valid": [
+      {
+        "first": 2
+      }
+    ],
+    "invalid": [
+      {
+        "first": "bad"
+      }
+    ]
+  },
+  {
+    "name": "OrdinaryChild",
+    "strategy": "regenerate-all",
+    "valid": {
+      "first": 2
+    },
+    "invalid": {
+      "first": "bad"
+    }
+  },
+  {
+    "name": "OrdinaryChild",
+    "strategy": "reuse-all",
+    "valid": {
+      "first": 2
+    },
+    "invalid": {
+      "first": "bad"
+    }
+  },
+  {
+    "name": "OrdinaryChild",
+    "strategy": "reuse-foreign",
+    "valid": {
+      "first": 2
+    },
+    "invalid": {
+      "first": "bad"
+    }
+  },
+  {
+    "name": "NestedRoot",
+    "strategy": "regenerate-all",
+    "valid": {
+      "payload": 3
+    },
+    "invalid": {
+      "payload": "bad"
+    }
+  },
+  {
+    "name": "NestedRoot",
+    "strategy": "reuse-all",
+    "valid": {
+      "payload": 3
+    },
+    "invalid": {
+      "payload": "bad"
+    }
+  },
+  {
+    "name": "NestedRoot",
+    "strategy": "reuse-foreign",
+    "valid": {
+      "payload": 3
+    },
+    "invalid": {
+      "payload": "bad"
+    }
+  }
+]
