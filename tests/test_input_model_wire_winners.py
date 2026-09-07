@@ -114,3 +114,66 @@ def test_validation_property_user_extensions(case: str) -> None:
         assert_output(
             json.dumps(records, indent=2), EXPECTED_INPUT_MODEL_PATH / f"wire_winner_{case.lower()}_extensions.txt"
         )
+
+
+@pytest.mark.parametrize("roots", ["ordinary", "before", "after", "nested", "nested_duplicate", "inline_duplicate"])
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("formatter", ["external", "builtin"])
+def test_validation_property_owner_scope(tmp_path: Path, roots: str, entrypoint: str, formatter: str) -> None:
+    """Ordinary roots do not install owner hooks or inherit cleanup from prior roots."""
+    import sys
+
+    module_name = "tests.data.python.input_model.wire_owner_scope"
+    names = {
+        "ordinary": ["Plain"],
+        "before": ["Plain", "Duplicate"],
+        "after": ["Duplicate", "Plain"],
+        "nested": ["Container", "Plain"],
+        "nested_duplicate": ["NestedDuplicate", "Plain"],
+        "inline_duplicate": ["InlineDuplicate", "Plain"],
+    }[roots]
+    paths = [f"{module_name}:{name}" for name in names]
+    source_module = importlib.import_module(module_name)
+    source_module.owner_calls.clear()
+
+    formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
+    output = tmp_path / "model.py"
+    previous = sys.getprofile()
+    sys.setprofile(source_module.record_owner_calls)
+    try:
+        if entrypoint == "cli":
+            run_main_with_args(
+                _input_model_args(
+                    paths, output_path=output, extra_args=["--disable-timestamp", "--formatters", *formatters]
+                )
+            )
+        else:
+            generate(
+                load_model_schema(paths, InputFileType.JsonSchema),
+                config=GenerateConfig(
+                    input_file_type=InputFileType.JsonSchema,
+                    output=output,
+                    disable_timestamp=True,
+                    input_filename="<stdin>",
+                    formatters=[Formatter(value) for value in formatters],
+                ),
+            )
+    finally:
+        sys.setprofile(previous)
+    assert_output(output.read_text(), EXPECTED_INPUT_MODEL_PATH / f"wire_owner_scope_{roots}.py")
+    assert_output(
+        json.dumps(dict(source_module.owner_calls), indent=2),
+        EXPECTED_INPUT_MODEL_PATH / f"wire_owner_scope_{roots}_counts.txt",
+    )
+    with _generated_model(output, f"owner_scope_{roots}", names[0]) as generated:
+        module = sys.modules[generated.__module__]
+        for name in names:
+            payload = {"first": 1, "second": 2, "third": 3} if name == "Plain" else {"wire": [1, 1, 2]}
+            if name in {"Container", "NestedDuplicate", "InlineDuplicate"}:
+                payload = {"item": payload}
+            for model in (getattr(source_module, name), getattr(module, name)):
+                instance = model.model_validate(payload)
+                assert_output(
+                    json.dumps(instance.model_dump(mode="json", by_alias=True), separators=(",", ":")),
+                    EXPECTED_INPUT_MODEL_PATH / f"wire_owner_scope_{name.lower()}_runtime.txt",
+                )

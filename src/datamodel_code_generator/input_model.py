@@ -367,18 +367,10 @@ def _get_input_model_json_schema_class(
 
         has_field_schema_owners = False
 
-        def generate_inner(self, schema: Any) -> dict[str, Any]:
-            field_names = getattr(self, "_active_field_names", None)
-            field_name = field_names.get(id(schema)) if field_names is not None else None
-            result = super().generate_inner(schema)
-            if field_name is not None:
-                type(self).has_field_schema_owners = True
-                return {
-                    **result,
-                    _FIELD_SCHEMA_NAME: _FieldSchemaOwner(
-                        field_name, result.get(_FIELD_SCHEMA_NAME, _MISSING_FIELD_SCHEMA_NAME)
-                    ),
-                }
+        def generate(self, schema: Any, mode: Any = "validation") -> dict[str, Any]:
+            self.has_field_schema_owners = False
+            result = super().generate(schema, mode=mode)
+            type(self).has_field_schema_owners = self.has_field_schema_owners
             return result
 
         def _named_required_fields_schema(self, named_required_fields: Any) -> dict[str, Any]:
@@ -398,16 +390,36 @@ def _get_input_model_json_schema_class(
             if not duplicates:
                 return super()._named_required_fields_schema(named_required_fields)
 
-            previous_names = getattr(self, "_active_field_names", None)
-            self._active_field_names = {
+            field_names = {
                 id(field): name
                 for name, _required, field in named_required_fields
                 if self._get_alias_name(field, name) in duplicates
             }
+            previous_generate_inner = self.generate_inner
+            previous_override = self.__dict__.get("generate_inner")
+
+            def generate_owned_field(schema: Any) -> dict[str, Any]:
+                result = previous_generate_inner(schema)
+                if (field_name := field_names.get(id(schema))) is None:
+                    return result
+                self.has_field_schema_owners = True
+                return {
+                    **result,
+                    _FIELD_SCHEMA_NAME: _FieldSchemaOwner(
+                        field_name, result.get(_FIELD_SCHEMA_NAME, _MISSING_FIELD_SCHEMA_NAME)
+                    ),
+                }
+
+            # Keep any definition-identity hook in the delegate, and intercept only
+            # this affected field group. Remove the instance binding afterwards.
+            self.__dict__["generate_inner"] = generate_owned_field
             try:
                 return super()._named_required_fields_schema(named_required_fields)
             finally:
-                self._active_field_names = previous_names
+                if previous_override is None:
+                    del self.__dict__["generate_inner"]
+                else:
+                    self.__dict__["generate_inner"] = previous_override
 
         def handle_invalid_for_json_schema(
             self,
