@@ -905,7 +905,10 @@ def _add_python_type_to_properties(
 
 def _clear_field_schema_names(schema: dict[str, Any]) -> None:
     """Remove temporary owners from schema positions, including custom inlined models."""
-    from datamodel_code_generator.parser.mcp import SCHEMA_MAP_KEYS, SCHEMA_VALUE_KEYS  # ruff: ignore[import-outside-top-level]
+    from datamodel_code_generator.parser.mcp import (  # ruff: ignore[import-outside-top-level]
+        SCHEMA_MAP_KEYS,
+        SCHEMA_VALUE_KEYS,
+    )
 
     pending: list[Any] = [schema]
     while pending:
