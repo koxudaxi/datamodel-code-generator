@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 import msgspec
 import pytest
+from typing_extensions import TypeAliasType
 
 from datamodel_code_generator import DataModelType, InputFileType, PythonVersion
 from tests.conftest import assert_output
@@ -78,6 +79,11 @@ def test_msgspec_alias_structured_defaults(
 
     payloads = json.loads((DATA_PATH / "payloads" / "msgspec_alias_defaults_runtime.json").read_text())
     with _generated_model(output_file, "msgspec_alias_defaults_runtime", "AliasDefaults") as model:
+        if use_alias_type and target == PythonVersion.PY_310 and TypeAliasType.__module__ == "typing_extensions":
+            # msgspec supports native aliases, but not the unchanged typing_extensions backport.
+            with pytest.raises(TypeError, match="Type 'ItemAlias' is not supported"):
+                msgspec.convert(payloads["default"], type=model)
+            return
         first = msgspec.convert(payloads["default"], type=model)
         second = msgspec.convert(payloads["default"], type=model)
         explicit = msgspec.convert(payloads["explicit"], type=model)
@@ -168,6 +174,10 @@ def test_msgspec_graphql_scalar_alias_defaults(entrypoint: str, use_alias_type: 
         )
     payloads = json.loads((DATA_PATH / "payloads" / "msgspec_scalar_alias_defaults.json").read_text())
     with _generated_model(output_file, "msgspec_scalar_alias_defaults_runtime", "ScalarDefaults") as model:
+        if use_alias_type and TypeAliasType.__module__ == "typing_extensions":
+            with pytest.raises(TypeError, match="Type 'Int' is not supported"):
+                msgspec.convert(payloads["default"], type=model)
+            return
         default = msgspec.convert(payloads["default"], type=model)
         explicit = msgspec.convert(payloads["explicit"], type=model)
         with pytest.raises(msgspec.ValidationError):
