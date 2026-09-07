@@ -72,6 +72,20 @@ class ConditionalRequiredRule:
     else_groups: RequiredGroups
 
 
+def conditional_value_uses_json_equality(value: object) -> bool:
+    """Identify condition literals for which Python conflates booleans and numbers."""
+    match value:
+        case bool():
+            return True
+        case int() | float():
+            return value in {0, 1}
+        case list() as array:
+            return any(conditional_value_uses_json_equality(item) for item in array)
+        case dict() as object_:
+            return any(conditional_value_uses_json_equality(item) for item in object_.values())
+    return False
+
+
 @dataclass(frozen=True, slots=True)
 class PropertyCountRule:
     """Runtime rule for JSON Schema object property-count bounds."""
