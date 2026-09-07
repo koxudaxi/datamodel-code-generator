@@ -468,7 +468,6 @@ jobs:
       SHARD_TOTAL: ${{ matrix.shard_total }}
       TOX_ENV: ${{ matrix.tox_env }}
       EXTRA_TESTS: ${{ matrix.extra_tests }}
-      PYTEST_ADDOPTS: ${{ matrix.tox_env == 'py314-parallel' && '--durations=0 --durations-min=0' || '' }}
       WINDOWS_TOX_UV_VERSION: "1.35.2"
       WINDOWS_TOX_VERSION: "4.56.1"
       WINDOWS_UV_VERSION: "0.11.26"
@@ -537,6 +536,7 @@ jobs:
             --cov datamodel_code_generator
             --cov tests
             --cov scripts.ci_coverage
+            --cov scripts.select_ci_test_shard
             --cov-config=pyproject.toml
             --cov-fail-under=0
             --no-cov-on-fail
@@ -591,60 +591,70 @@ jobs:
             name: "3.14"
             os: windows-latest
             coverage: false
+            extra_tests: ""
             shard: 1
             shard_total: 2
           - tox_env: py314-nocov-parallel
             name: "3.14"
             os: windows-latest
             coverage: false
+            extra_tests: ""
             shard: 2
             shard_total: 2
           - tox_env: py313-nocov-parallel
             name: "3.13"
             os: windows-latest
             coverage: false
+            extra_tests: ""
             shard: 1
             shard_total: 2
           - tox_env: py313-nocov-parallel
             name: "3.13"
             os: windows-latest
             coverage: false
+            extra_tests: ""
             shard: 2
             shard_total: 2
           - tox_env: py312-nocov-parallel
             name: "3.12"
             os: windows-latest
             coverage: false
+            extra_tests: ""
             shard: 1
             shard_total: 2
           - tox_env: py312-nocov-parallel
             name: "3.12"
             os: windows-latest
             coverage: false
+            extra_tests: ""
             shard: 2
             shard_total: 2
           - tox_env: py311-nocov-parallel
             name: "3.11"
             os: windows-latest
             coverage: false
+            extra_tests: ""
             shard: 1
             shard_total: 2
           - tox_env: py311-nocov-parallel
             name: "3.11"
             os: windows-latest
             coverage: false
+            extra_tests: ""
             shard: 2
             shard_total: 2
           - tox_env: py310-nocov-parallel
             name: "3.10"
             os: windows-latest
             coverage: false
+            extra_tests: ""
             shard: 1
             shard_total: 2
           - tox_env: py310-nocov-parallel
             name: "3.10"
             os: windows-latest
             coverage: false
+            extra_tests: ""
             shard: 2
             shard_total: 2
     runs-on: ${{ matrix.os }}

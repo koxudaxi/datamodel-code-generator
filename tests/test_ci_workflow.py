@@ -45,6 +45,12 @@ def test_workflow_matrix_and_coverage_contract() -> None:
     output = {
         "configurations": sorted(configurations),
         "job_count": len(configurations) + sum("strategy" not in job for job in jobs.values()),
+        "extra_tests": sorted(
+            f"{entry['tox_env']}:shard{entry['shard']}:{entry['extra_tests']}"
+            for entries in groups.values()
+            for entry in entries
+            if entry.get("extra_tests")
+        ),
         "coverage_count": len(names),
         "coverage_unique": len(set(names)),
         "expected_names_match": set(names) == EXPECTED_NAMES,
