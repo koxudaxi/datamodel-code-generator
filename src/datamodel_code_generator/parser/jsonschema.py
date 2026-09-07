@@ -62,6 +62,7 @@ from datamodel_code_generator.model.base import UNDEFINED, c3_merge, get_inherit
 from datamodel_code_generator.model.enum import (
     NULL_ENUM_MEMBER_VALUE,
     SPECIALIZED_ENUM_TYPE_MATCH,
+    SUBCLASS_BASE_CLASSES,
     Enum,
     EnumMemberValue,
     StrEnum,
@@ -10077,6 +10078,26 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 self._get_type_with_mappings(obj.type, obj.format) if isinstance(obj.type, str) else None
             )
             enum_cls, type_ = self._get_enum_model_class(type_, enum_times)
+            # Enum subclasses coerce values; plain Enum aliases retain the first equal value.
+            if (
+                self.field_name_model_type is ModelType.MSGSPEC
+                and enum_cls is Enum
+                and not (self.use_subclass_enum and type_ and SUBCLASS_BASE_CLASSES.get(type_) in {"int", "str"})
+                and (
+                    unsupported := "float"
+                    if self.use_subclass_enum and type_ and SUBCLASS_BASE_CLASSES.get(type_) == "float"
+                    else next(
+                        (
+                            type(value).__name__
+                            for index, value in enumerate(enum_times)
+                            if isinstance(value, (bool, float)) and enum_times.index(value) == index
+                        ),
+                        None,
+                    )
+                )
+            ):
+                msg = f"msgspec.Struct does not support {unsupported} Enum members in {reference_.name!r}."
+                raise Error(msg)
             self._set_schema_metadata(reference_.path, obj)
             self.set_schema_extensions(reference_.path, obj)
 

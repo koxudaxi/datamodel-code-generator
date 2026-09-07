@@ -1,0 +1,1 @@
+msgspec.Struct does not support float Enum members in 'Value'.

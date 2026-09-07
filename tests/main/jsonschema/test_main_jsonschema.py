@@ -16,6 +16,7 @@ from collections.abc import Callable as ABCCallable
 from collections.abc import Sequence
 from dataclasses import Field as DataclassField
 from decimal import Decimal
+from operator import itemgetter
 from pathlib import Path, PurePath
 from typing import TYPE_CHECKING, get_args, get_type_hints
 
@@ -19515,3 +19516,149 @@ def test_custom_template_dependencies_bound_generation_roots(tmp_path: Path) -> 
         )
     finally:
         model_base._clear_custom_template_caches()
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize(
+    "case",
+    json.loads((JSON_SCHEMA_DATA_PATH / "msgspec_enum_diagnostics/errors.json").read_text()),
+    ids=itemgetter("name"),
+)
+def test_msgspec_enum_diagnostics_reject_unsupported_members(
+    output_file: Path, capsys: pytest.CaptureFixture[str], entrypoint: str, case: dict
+) -> None:
+    """Reject unusable bool/float Enum members before CLI or API writes generated output."""
+    schema = JSON_SCHEMA_DATA_PATH / "msgspec_enum_diagnostics" / f"{case['schema']}.json"
+    expected = EXPECTED_JSON_SCHEMA_PATH / "msgspec_enum_diagnostics" / f"error_{case['name']}.txt"
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=schema,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            extra_args=["--output-model-type", "msgspec.Struct", *case["cli"]],
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr=expected.read_text(),
+            output_should_not_exist=True,
+        )
+    else:
+        with pytest.raises(Error) as error:
+            generate(
+                schema,
+                output=output_file,
+                input_file_type=InputFileType.JsonSchema,
+                output_model_type=DataModelType.MsgspecStruct,
+                **case["options"],
+            )
+        assert_output(f"{error.value}\n", expected)
+        assert_output(f"{output_file.exists()}\n", EXPECTED_JSON_SCHEMA_PATH / "msgspec_enum_diagnostics/absent.txt")
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize(
+    "case",
+    json.loads((JSON_SCHEMA_DATA_PATH / "msgspec_enum_diagnostics/controls.json").read_text()),
+    ids=itemgetter("name"),
+)
+def test_msgspec_enum_diagnostics_preserve_supported_representations(
+    output_file: Path, entrypoint: str, case: dict
+) -> None:
+    """Keep supported Enum/subclass/Literal output and real convert/decode behavior unchanged."""
+    import msgspec
+
+    data = JSON_SCHEMA_DATA_PATH / "msgspec_enum_diagnostics"
+    expected = f"msgspec_enum_diagnostics/{case['name']}.py"
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=data / f"{case['schema']}.json",
+            output_path=output_file,
+            input_file_type="jsonschema",
+            extra_args=[
+                "--output-model-type",
+                "msgspec.Struct",
+                "--target-python-version",
+                case["python"],
+                "--disable-timestamp",
+                *case["cli"],
+            ],
+            assert_func=assert_file_content,
+            expected_file=expected,
+            force_exec_validation=True,
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=data / f"{case['schema']}.json",
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            output_model_type=DataModelType.MsgspecStruct,
+            target_python_version=PythonVersion(case["python"]),
+            disable_timestamp=True,
+            assert_func=assert_file_content,
+            expected_file=expected,
+            unchanged_inputs={"options": case["options"]},
+            **case["options"],
+        )
+    results = []
+    with _generated_model(output_file, "generated_msgspec_enum_controls", "Payload") as model:
+        for payload in json.loads((data / f"{case['schema']}_valid.json").read_text()):
+            converted = msgspec.convert(payload, type=model)
+            decoded = msgspec.json.decode(json.dumps(payload).encode(), type=model)
+            results.append({"convert": msgspec.to_builtins(converted), "decode": msgspec.to_builtins(decoded)})
+        for payload in json.loads((data / f"{case['schema']}_invalid.json").read_text()):
+            with pytest.raises(msgspec.ValidationError):
+                msgspec.convert(payload, type=model)
+            with pytest.raises(msgspec.ValidationError):
+                msgspec.json.decode(json.dumps(payload).encode(), type=model)
+    assert_output(
+        json.dumps(results, indent=2) + "\n",
+        EXPECTED_JSON_SCHEMA_PATH / "msgspec_enum_diagnostics" / f"{case['name']}.txt",
+    )
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize(
+    "backend",
+    [
+        DataModelType.PydanticV2BaseModel,
+        DataModelType.PydanticV2Dataclass,
+        DataModelType.DataclassesDataclass,
+        DataModelType.TypingTypedDict,
+    ],
+)
+def test_msgspec_enum_diagnostics_preserve_other_backends(
+    output_file: Path, entrypoint: str, backend: DataModelType
+) -> None:
+    """Retain boolean and float Enum members, ordering, and runtime validation on other backends."""
+    data = JSON_SCHEMA_DATA_PATH / "msgspec_enum_diagnostics"
+    expected = f"msgspec_enum_diagnostics/other_{backend.value.replace('.', '_')}.py"
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=data / "other_backends.json",
+            output_path=output_file,
+            input_file_type="jsonschema",
+            extra_args=["--output-model-type", backend.value, "--target-python-version", "3.10", "--disable-timestamp"],
+            assert_func=assert_file_content,
+            expected_file=expected,
+            force_exec_validation=True,
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=data / "other_backends.json",
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            output_model_type=backend,
+            target_python_version=PythonVersion.PY_310,
+            disable_timestamp=True,
+            assert_func=assert_file_content,
+            expected_file=expected,
+        )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="generated_other_backend_enums",
+        model_name="Payload",
+        valid_json=(data / "other_backends_valid.json").read_text(),
+        invalid_json='{"always": false}',
+        expected_error_type="literal_error" if backend is DataModelType.TypingTypedDict else "enum",
+        expected_attribute_path=("enabled",) if backend is DataModelType.TypingTypedDict else ("enabled", "value"),
+        expected_attribute_value=False,
+    )
