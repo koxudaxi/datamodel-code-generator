@@ -8142,6 +8142,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         default: Any,
     ) -> DataModel:
         """Create and register one concrete root model."""
+        if (fallback := data_model_root_type.ROOT_MODEL_CONSTRAINTS_FALLBACK) is not None and (
+            constrained_root_type := fallback(fields)
+        ) is not None:
+            data_model_root_type = constrained_root_type
         data_model_root = data_model_root_type(
             reference=reference,
             fields=fields,

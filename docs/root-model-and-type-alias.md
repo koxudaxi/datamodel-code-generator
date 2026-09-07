@@ -11,6 +11,11 @@ When a schema defines a simple type (not an object with properties), `datamodel-
 - 📌 RootModel and type aliases do not fully support field-specific metadata (default, alias, etc). See [Named Type Aliases](https://docs.pydantic.dev/latest/concepts/types/#named-type-aliases) for details.
 - 🚫 Type aliases do not support some RootModel features (e.g. `model_config`)
 - 📄 A RootModel or type alias is also generated for the main schema, allowing you to define a single type alias from a schema file (e.g. `model.json` containing `{"title": "MyString", "type": "string"}`)
+When `--use-root-model-type-alias` is enabled, roots with field constraints or
+patterns that require Python regex configuration use a regular `RootModel` class
+to preserve validation. Unconstrained roots and constraints already represented
+in the alias type keep the alias form. This does not change `--use-type-alias`.
+
 ## 📊 Type Alias Behavior by Output Type and Python Version
 
 The type of type alias generated depends on the output model type and target Python version:

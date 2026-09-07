@@ -1,0 +1,9 @@
+{
+  "title": "Root",
+  "type": "array",
+  "items": {
+    "type": "integer"
+  },
+  "minItems": 2,
+  "maxItems": 3
+}
