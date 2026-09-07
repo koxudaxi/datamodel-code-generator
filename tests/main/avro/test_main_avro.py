@@ -2,12 +2,21 @@
 
 from __future__ import annotations
 
+from decimal import Inexact, Rounded, localcontext
 from pathlib import Path
 from typing import cast
 
 import pytest
 
-from datamodel_code_generator import DataModelType, DatetimeClassType, InputFileType, generate, load_data
+from datamodel_code_generator import (
+    DataModelType,
+    DatetimeClassType,
+    DefaultValueType,
+    DefaultValueTypeWarning,
+    InputFileType,
+    generate,
+    load_data,
+)
 from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.format import Formatter, PythonVersion, is_supported_in_black
 from datamodel_code_generator.parser.avro import convert_avro_schema_data
@@ -334,6 +343,158 @@ def test_main_avro_unrepresentable_temporal_default(
     """Report only temporal range and exactness errors through the real CLI."""
     run_main_and_assert(
         input_path=AVRO_DATA_PATH / f"invalid_temporal_default_{fixture}.avsc",
+        output_path=output_file,
+        input_file_type="avro",
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains=message,
+    )
+
+
+@pytest.mark.parametrize(
+    ("output_model_type", "backend"),
+    [
+        (DataModelType.PydanticV2BaseModel, "pydantic_v2"),
+        (DataModelType.PydanticV2Dataclass, "pydantic_dataclass"),
+        (DataModelType.DataclassesDataclass, "dataclass"),
+        (DataModelType.MsgspecStruct, "msgspec"),
+        (DataModelType.TypingTypedDict, "typed_dict"),
+    ],
+)
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("fixture", ["decimal_defaults", "decimal_defaults_simple"])
+@pytest.mark.parametrize("deserialize", [False, True])
+def test_avro_decimal_defaults(
+    output_file: Path,
+    output_model_type: DataModelType,
+    backend: str,
+    entrypoint: str,
+    fixture: str,
+    deserialize: bool,
+) -> None:
+    """Preserve signed coefficients and scale despite restrictive decimal contexts."""
+    input_path = AVRO_DATA_PATH / f"{fixture}.avsc"
+    expected_file = f"{fixture}_{backend}.py"
+    builtin = fixture == "decimal_defaults"
+    with localcontext() as context:
+        context.prec = 2
+        context.capitals = 0
+        context.traps[Inexact] = True
+        context.traps[Rounded] = True
+        if entrypoint == "cli":
+            run_main_and_assert(
+                input_path=input_path,
+                output_path=output_file,
+                input_file_type="avro",
+                assert_func=assert_file_content,
+                expected_file=expected_file,
+                extra_args=[
+                    "--target-python-version",
+                    "3.10",
+                    "--disable-timestamp",
+                    "--output-model-type",
+                    output_model_type.value,
+                    *(["--formatters", "builtin"] if builtin else []),
+                    *(["--deserialize-default-values", "decimal"] if deserialize else []),
+                ],
+                force_exec_validation=True,
+            )
+        else:
+            run_generate_file_and_assert(
+                input_path=input_path,
+                output_path=output_file,
+                input_file_type=InputFileType.Avro,
+                assert_func=assert_file_content,
+                expected_file=expected_file,
+                output_model_type=output_model_type,
+                target_python_version=PythonVersion.PY_310,
+                disable_timestamp=True,
+                **({"formatters": [Formatter.BUILTIN]} if builtin else {}),
+                deserialize_default_values=[DefaultValueType.Decimal] if deserialize else [],
+                use_annotated=output_model_type == DataModelType.MsgspecStruct,
+                field_constraints=output_model_type == DataModelType.MsgspecStruct,
+            )
+        if output_model_type == DataModelType.TypingTypedDict:
+            return
+        with _generated_model(output_file, f"generated_{fixture}_{backend}_{entrypoint}", "DecimalDefaults") as model:
+            assert_output(f"{model()!r}\n", AVRO_DATA_PATH.parent / f"expected/main/avro/{fixture}_{backend}.txt")
+            if output_model_type == DataModelType.PydanticV2BaseModel:
+                model.model_config["validate_default"] = True
+                model.model_rebuild(force=True)
+                assert_output(f"{model()!r}\n", AVRO_DATA_PATH.parent / f"expected/main/avro/{fixture}_{backend}.txt")
+
+
+@pytest.mark.parametrize("fixture", ["decimal_defaults.avsc", "decimal_defaults_raw.yaml"])
+def test_avro_decimal_defaults_preserve_raw_input(output_file: Path, fixture: str) -> None:
+    """Normalize JSON strings and raw YAML bytes without changing their input objects."""
+    raw_schema = load_data((AVRO_DATA_PATH / fixture).read_text(encoding="utf-8"))
+    with localcontext() as context, assert_inputs_not_mutated({"schema": raw_schema}):
+        context.prec = 2
+        context.traps[Inexact] = True
+        context.traps[Rounded] = True
+        generate(
+            raw_schema,
+            output=output_file,
+            input_file_type=InputFileType.Avro,
+            input_filename=fixture,
+            disable_timestamp=True,
+            target_python_version=PythonVersion.PY_310,
+            formatters=[Formatter.BUILTIN],
+        )
+        converted = convert_avro_schema_data(raw_schema)
+    assert_file_content(
+        output_file, "decimal_defaults_pydantic_v2.py" if fixture.endswith("avsc") else "decimal_defaults_raw.py"
+    )
+    rendered = "\n".join(f"{name}: {field['default']!r}" for name, field in converted["properties"].items())
+    assert_output(f"{rendered}\n", AVRO_DATA_PATH.parent / f"expected/main/avro/{Path(fixture).stem}_converted.txt")
+
+
+def test_main_avro_decimal_default_controls(output_file: Path) -> None:
+    """Keep ordinary bytes, unsupported metadata and default-free logical schemas unchanged."""
+    with pytest.warns(DefaultValueTypeWarning, match="10 Decimal default values were emitted as serialized data"):
+        run_main_and_assert(
+            input_path=AVRO_DATA_PATH / "decimal_default_controls.avsc",
+            output_path=output_file,
+            input_file_type="avro",
+            assert_func=assert_file_content,
+            expected_file="decimal_default_controls.py",
+            extra_args=["--target-python-version", "3.10", "--disable-timestamp", "--formatters", "builtin"],
+            force_exec_validation=True,
+        )
+
+
+def test_main_avro_decimal_defaults_unused_by_typed_dict(output_file: Path) -> None:
+    """Do not reject unrepresentable decimal defaults when no default is emitted."""
+    run_main_and_assert(
+        input_path=AVRO_DATA_PATH / "invalid_decimal_default_scale.avsc",
+        output_path=output_file,
+        input_file_type="avro",
+        assert_func=assert_file_content,
+        expected_file="invalid_decimal_default_scale.py",
+        extra_args=[
+            "--target-python-version",
+            "3.10",
+            "--disable-timestamp",
+            "--output-model-type",
+            DataModelType.TypingTypedDict.value,
+        ],
+        force_exec_validation=True,
+    )
+
+
+@pytest.mark.parametrize(
+    ("fixture", "message"),
+    [
+        ("scale", "Avro decimal default scale is outside the Python Decimal range"),
+        ("unicode", "Avro bytes and fixed defaults must contain only code points from 0 through 255"),
+    ],
+)
+def test_main_avro_unrepresentable_decimal_default(
+    output_file: Path, capsys: pytest.CaptureFixture[str], fixture: str, message: str
+) -> None:
+    """Report invalid encoded defaults and unrepresentable scales through the real CLI."""
+    run_main_and_assert(
+        input_path=AVRO_DATA_PATH / f"invalid_decimal_default_{fixture}.avsc",
         output_path=output_file,
         input_file_type="avro",
         expected_exit=Exit.ERROR,
