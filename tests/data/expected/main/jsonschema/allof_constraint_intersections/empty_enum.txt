@@ -1,0 +1,1 @@
+allOf enum intersection is empty and cannot be represented

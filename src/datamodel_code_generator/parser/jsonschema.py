@@ -193,6 +193,17 @@ _INHERITED_NESTED_SCHEMA_FIELDS = (
 _INHERITED_POSITIONAL_SCHEMA_FIELDS = frozenset({"items", "prefixItems"})
 _INHERITED_SCHEMA_MAP_FIELDS = frozenset({"patternProperties", "properties"})
 _INHERITED_PROPERTY_COUNT_CONSTRAINT_FIELDS = frozenset({"maxProperties", "minProperties"})
+_ALLOF_BOUND_CONSTRAINT_FIELDS = frozenset({
+    "minimum",
+    "maximum",
+    "exclusiveMinimum",
+    "exclusiveMaximum",
+    "minLength",
+    "maxLength",
+    "minItems",
+    "maxItems",
+    *_INHERITED_PROPERTY_COUNT_CONSTRAINT_FIELDS,
+})
 _INHERITED_ARRAY_EXTRA_CONSTRAINT_FIELDS = frozenset({"contains", "maxContains", "minContains"})
 _RAW_SCHEMA_EXPLICIT_FIELD_EXTRAS_KEY = "_raw_schema_explicit_field_extras"
 _INHERITED_TYPE_SHAPE_FIELDS = frozenset({
@@ -3968,11 +3979,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         v2 = val2.value if isinstance(val2, UnionIntFloat) else val2
 
         match field:
-            case "minLength" | "minimum" | "exclusiveMinimum" | "minItems":
+            case "minLength" | "minimum" | "exclusiveMinimum" | "minItems" | "minProperties":
                 if v1 is not None and v2 is not None:
                     return val1 if v1 >= v2 else val2
                 return val1  # pragma: no cover
-            case "maxLength" | "maximum" | "exclusiveMaximum" | "maxItems":
+            case "maxLength" | "maximum" | "exclusiveMaximum" | "maxItems" | "maxProperties":
                 if v1 is not None and v2 is not None:
                     return val1 if v1 <= v2 else val2
                 return val1  # pragma: no cover
@@ -6189,6 +6200,65 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         return self.parse_root_type(name, merged_schema, path)
 
+    @staticmethod
+    def _intersect_all_of_enum(parent: list[Any], child: list[Any]) -> list[Any]:
+        """Intersect JSON enum values while retaining order and already-correct enum aliases."""
+        if all(item is None or isinstance(item, (str, int, float)) for item in chain(parent, child)):
+            # JSON booleans are distinct from numbers; integral floats equal their integer values.
+            parent_keys = {(isinstance(item, bool), item) for item in parent}
+            child_keys = {(isinstance(item, bool), item) for item in child}
+            if parent_keys == child_keys and parent:
+                return parent + child
+            intersection = [item for item in parent if (isinstance(item, bool), item) in child_keys]
+        else:
+            intersection = [
+                item for item in parent if any(_json_literal_values_equal(item, candidate) for candidate in child)
+            ]
+            if len(intersection) == len(parent) and all(
+                any(_json_literal_values_equal(item, candidate) for candidate in parent) for item in child
+            ):
+                return parent + child
+        if not intersection:
+            raise SchemaParseError(message="allOf enum intersection is empty and cannot be represented")
+        return intersection
+
+    def _merge_all_of_schema(
+        self,
+        parent: dict[str, Any],
+        child: dict[str, Any],
+        *,
+        schema_map: bool = False,
+    ) -> dict[str, Any]:
+        """Intersect allOf bounds and enums only in positive schema positions."""
+        result = parent.copy()
+        for key, value in child.items():
+            if key not in result:
+                result[key] = value
+                continue
+            previous = result[key]
+            if isinstance(previous, dict) and isinstance(value, dict):
+                if schema_map or key in _INHERITED_NESTED_SCHEMA_FIELDS:
+                    result[key] = self._merge_all_of_schema(
+                        previous,
+                        value,
+                        schema_map=not schema_map and key in _INHERITED_SCHEMA_MAP_FIELDS,
+                    )
+                else:
+                    result[key] = self._deep_merge(previous, value)
+            elif (
+                not schema_map and key in _ALLOF_BOUND_CONSTRAINT_FIELDS and previous is not None and value is not None
+            ):
+                # Preserve the legacy child representation when two bounds are equal.
+                result[key] = self._intersect_constraint(key, value, previous)
+            elif isinstance(previous, list) and isinstance(value, list):
+                if not schema_map and key == "enum":
+                    result[key] = self._intersect_all_of_enum(previous, value)
+                else:
+                    result[key] = previous + value
+            else:
+                result[key] = value
+        return result
+
     def _merge_all_of_object(self, obj: JsonSchemaObject) -> JsonSchemaObject | None:
         """Merge allOf items when they share object properties to avoid duplicate models.
 
@@ -6221,8 +6291,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return None
 
         merged_schema: dict[str, Any] = obj.model_dump(exclude={"allOf"}, exclude_unset=True, by_alias=True)
+        merge_schema = (
+            self._deep_merge if self.allof_merge_mode == AllOfMergeMode.NoMerge else self._merge_all_of_schema
+        )
         for resolved_item in resolved_items:
-            merged_schema = self._deep_merge(merged_schema, resolved_item.model_dump(exclude_unset=True, by_alias=True))
+            merged_schema = merge_schema(merged_schema, resolved_item.model_dump(exclude_unset=True, by_alias=True))
 
         if "required" in merged_schema and isinstance(merged_schema["required"], list):
             merged_schema["required"] = list(dict.fromkeys(merged_schema["required"]))
