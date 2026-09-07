@@ -1417,6 +1417,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self._recursive_anchor_index: dict[tuple[str, ...], list[str]] = {}
         self._ref_data_type_facts: dict[str, tuple[Any, bool]] = {}
         self._python_imports: tuple[dict[str, Import], set[str], list[str]] | None = None
+        self._generic_python_import_expressions: dict[str, PythonTypeExpr] | None = None
         self._false_schema_refs: set[str] | None = None
         self._inherited_schema_cache: dict[str, JsonSchemaObject] = {}
         self._inherited_schema_ancestor_cache: dict[str, frozenset[str]] = {}
@@ -3274,6 +3275,51 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         qualname = _validate_schema_python_import_path(qualname, "x-python-import qualname")
         return PythonTypeRuntimeSymbol(x_python_import["module"], tuple(qualname.split(".")))
 
+    def _get_x_python_import_expression(
+        self, x_python_import: dict[str, Any], resolved_ref: str
+    ) -> PythonTypeExpr | None:
+        """Bind a specialized import while retaining its runtime module boundaries."""
+        path = x_python_import.get("native-field")
+        if not path and not x_python_import.get("x-python-type"):
+            return self._get_x_python_runtime_symbol(x_python_import)
+        if self._generic_python_import_expressions is None:
+            self._generic_python_import_expressions = {}
+        if (cached := self._generic_python_import_expressions.get(resolved_ref)) is not None:
+            return cached
+        if path:
+            from datamodel_code_generator._python_type_annotation import (  # ruff: ignore[import-outside-top-level]
+                PythonTypeModelField,
+                PythonTypeRuntimeSymbol,
+            )
+
+            expression: PythonTypeExpr = PythonTypeRuntimeSymbol(path["module"], tuple(path["qualname"].split(".")))
+            for field in path["fields"]:
+                expression = PythonTypeModelField(
+                    expression, field["name"], tuple(field["arguments"]), field["pydantic"]
+                )
+            self._generic_python_import_expressions[resolved_ref] = expression
+            return expression
+        from datamodel_code_generator._python_type_annotation import (  # ruff: ignore[import-outside-top-level]
+            PythonTypeQualifiedName,
+            PythonTypeRuntimeSymbol,
+            rewrite_python_type_expr,
+        )
+
+        expression = self._get_x_python_type(self.SCHEMA_OBJECT_TYPE.model_validate(x_python_import))
+        symbols = {
+            name: PythonTypeRuntimeSymbol(
+                symbol["module"],
+                tuple(symbol["qualname"].split(".")),
+            )
+            for name, symbol in x_python_import["symbols"].items()
+        }
+        expression = rewrite_python_type_expr(
+            cast("PythonTypeExpr", expression),
+            lambda item: symbols.get(".".join(item.parts), item) if isinstance(item, PythonTypeQualifiedName) else item,
+        )
+        self._generic_python_import_expressions[resolved_ref] = expression
+        return expression
+
     def _get_x_python_import(self, full_path: str) -> Import:
         """Disambiguate imports of distinct runtime types sharing a class name."""
         if self._python_imports is None:
@@ -3336,7 +3382,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             )
         x_python_import, is_optional = facts
         if isinstance(x_python_import, dict) and (full_path := self._get_x_python_import_path(x_python_import)):
-            if runtime_symbol := self._get_x_python_runtime_symbol(x_python_import):
+            if runtime_symbol := self._get_x_python_import_expression(x_python_import, resolved_ref):
                 from datamodel_code_generator._python_type_annotation import (  # ruff: ignore[import-outside-top-level]
                     render_python_type_expr,
                 )
@@ -3590,13 +3636,15 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             raise Error(msg) from exc
         return _qualified_python_type_import(import_path)
 
-    def _resolve_type_import_from_defs(self, type_name: str) -> Import | PythonTypeRuntimeSymbol | None:
+    def _resolve_type_import_from_defs(self, type_name: str) -> Import | PythonTypeExpr | None:
         """Resolve import for a type name from $defs with x-python-import."""
         try:
             ref_schema = self._load_ref_schema_object(f"#/$defs/{type_name}")
             x_python_import = ref_schema.extras.get("x-python-import")
             if isinstance(x_python_import, dict) and (full_path := self._get_x_python_import_path(x_python_import)):
-                return self._get_x_python_runtime_symbol(x_python_import) or self._get_x_python_import(full_path)
+                return self._get_x_python_import_expression(
+                    x_python_import, self.model_resolver.resolve_ref(f"#/$defs/{type_name}")
+                ) or self._get_x_python_import(full_path)
         except Error:
             raise
         except Exception:  # noqa: BLE001, S110
@@ -3614,6 +3662,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         # extension is present so ordinary schema generation keeps its fast path.
         from datamodel_code_generator._python_type_annotation import (  # noqa: PLC0415
             PythonTypeBoundName,
+            PythonTypeExpr,
             PythonTypeName,
             PythonTypeQualifiedName,
             PythonTypeRuntimeSymbol,
@@ -3627,7 +3676,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         imports: dict[Import, None] = {}
         bound_imports: dict[tuple[str | None, str], Import] = {}
-        resolved_name_imports: dict[str, Import | PythonTypeRuntimeSymbol | None] = {}
+        resolved_name_imports: dict[str, Import | PythonTypeExpr | None] = {}
 
         def bind_import(import_: Import) -> tuple[Import, str]:
             key = python_type_import_key(import_)
@@ -3661,8 +3710,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                             resolved_name_imports[name] = (
                                 None if is_builtin else import_ or self._resolve_type_import_from_defs(name)
                             )
-                    if isinstance(resolved := resolved_name_imports[name], PythonTypeRuntimeSymbol):
-                        return bind_leaf(resolved)
+                    if isinstance(resolved := resolved_name_imports[name], PythonTypeExpr):
+                        return rewrite_python_type_expr(resolved, bind_leaf)
                     if resolved:
                         import_, bound_name = bind_import(resolved)
                         return PythonTypeBoundName(bound_name, import_.from_, import_.import_)
