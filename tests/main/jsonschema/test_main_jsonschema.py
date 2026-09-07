@@ -3711,6 +3711,95 @@ def test_main_generate_pydantic_v2_dataclass_field(output_file: Path) -> None:
         sys.modules.pop(module_name, None)
 
 
+def test_generate_pydantic_v2_dataclass_dict_default_api(output_file: Path) -> None:
+    """Generate dictionary factories through the public Python API."""
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pydantic_v2_dataclass_dict_default.json",
+        output_path=output_file,
+        input_file_type=InputFileType.JsonSchema,
+        assert_func=assert_file_content,
+        expected_file="pydantic_v2_dataclass_dict_default.py",
+        output_model_type=DataModelType.PydanticV2Dataclass,
+        disable_timestamp=True,
+        formatters=[Formatter.BUILTIN],
+    )
+
+
+@pytest.mark.parametrize(
+    ("extra_args", "module_name"),
+    [
+        pytest.param((), "generated_pydantic_v2_dataclass_dict_default", id="default"),
+        pytest.param(
+            ("--use-annotated", "--field-constraints"),
+            "generated_pydantic_v2_dataclass_dict_default_annotated",
+            id="annotated-field-constraints",
+        ),
+        pytest.param(
+            ("--use-type-alias",),
+            "generated_pydantic_v2_dataclass_dict_default_type_alias",
+            id="type-alias",
+        ),
+    ],
+)
+def test_main_generate_pydantic_v2_dataclass_dict_default(
+    output_file: Path,
+    extra_args: tuple[str, ...],
+    module_name: str,
+) -> None:
+    """Import dataclasses with empty and populated dictionary factories."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pydantic_v2_dataclass_dict_default.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="pydantic_v2_dataclass_dict_default.py",
+        extra_args=[
+            "--output-model-type",
+            DataModelType.PydanticV2Dataclass.value,
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+            *extra_args,
+        ],
+        force_exec_validation=True,
+    )
+    with _generated_model(output_file, module_name, "Payload") as model:
+        first = model()
+        second = model()
+        for field_name, label in (
+            ("empty", "empty dict"),
+            ("nonempty", "populated dict"),
+            ("untyped", "untyped dict"),
+            ("tags", "type alias dict"),
+        ):
+            assert_mutable_copy_is_isolated(
+                original=getattr(second, field_name),
+                copied=getattr(first, field_name),
+                mutate_copied=lambda value: value.update(copied=True),
+                label=f"pydantic dataclass {label} default",
+            )
+
+
+def test_main_generate_pydantic_v2_dataclass_dict_default_edge_cases(output_file: Path) -> None:
+    """Keep ClassVar and required dictionary defaults free of Field imports."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pydantic_v2_dataclass_dict_default_edge_cases.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="pydantic_v2_dataclass_dict_default_edge_cases.py",
+        extra_args=[
+            "--output-model-type",
+            DataModelType.PydanticV2Dataclass.value,
+            "--field-include-all-keys",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ],
+        force_exec_validation=True,
+    )
+
+
 def test_main_generate_pydantic_v2_dataclass_required_field_order(output_file: Path) -> None:
     """Test pydantic_v2.dataclass keeps required fields before defaulted fields."""
     run_main_and_assert(
