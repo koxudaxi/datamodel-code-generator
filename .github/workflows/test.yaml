@@ -13,6 +13,9 @@ concurrency:
   group: test-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  PYTEST_COVERAGE_REPORT: ""
+
 permissions:
   contents: read
 
@@ -56,6 +59,11 @@ jobs:
       uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
       with:
         enable-cache: true
+        cache-local-path: .tox/uv-cache
+        cache-dependency-glob: |
+          pyproject.toml
+          tox.ini
+          uv.lock
         cache-suffix: "${{ matrix.py || matrix.tox_env }}"
     - name: Install tox
       run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
@@ -113,6 +121,11 @@ jobs:
       uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
       with:
         enable-cache: true
+        cache-local-path: .tox/uv-cache
+        cache-dependency-glob: |
+          pyproject.toml
+          tox.ini
+          uv.lock
         cache-suffix: "${{ matrix.tox_env }}"
     - name: Install tox
       run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
@@ -154,9 +167,11 @@ jobs:
           - tox_env: py312-blacklatest-parallel
             name: py312-black-latest
             coverage_name: py312-black-latest
+            pytest_workers: 0
           - tox_env: py312-black22-parallel
             name: py312-black22
             coverage_name: py312-black22
+            pytest_workers: auto
     runs-on: ubuntu-24.04
     env:
       OS: ubuntu-24.04
@@ -170,6 +185,11 @@ jobs:
       uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
       with:
         enable-cache: true
+        cache-local-path: .tox/uv-cache
+        cache-dependency-glob: |
+          pyproject.toml
+          tox.ini
+          uv.lock
         cache-suffix: "${{ matrix.tox_env }}-coverage"
     - name: Install tox
       run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
@@ -214,7 +234,7 @@ jobs:
       run: |
         mapfile -t test_paths < .tox/formatter-coverage-tests.txt
         tox run --skip-uv-sync --skip-pkg-install -e "$TOX_ENV" -- \
-          -n auto \
+          -n "${{ matrix.pytest_workers }}" \
           --dist=worksteal \
           --color=yes \
           -m "not perf" \
@@ -223,7 +243,7 @@ jobs:
           --cov-config=pyproject.toml \
           --cov-fail-under=0 \
           --no-cov-on-fail \
-          --cov-report term-missing:skip-covered \
+          --cov-report= \
           "${test_paths[@]}"
       shell: bash
       env:
@@ -282,6 +302,11 @@ jobs:
       uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
       with:
         enable-cache: true
+        cache-local-path: .tox/uv-cache
+        cache-dependency-glob: |
+          pyproject.toml
+          tox.ini
+          uv.lock
         cache-suffix: "${{ matrix.tox_env }}-${{ matrix.os }}"
     - name: Install tox
       run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
@@ -502,7 +527,12 @@ jobs:
       uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
       with:
         enable-cache: true
-        cache-suffix: "${{ matrix.tox_env }}-shard-${{ matrix.shard_total }}"
+        cache-local-path: .tox/uv-cache
+        cache-dependency-glob: |
+          pyproject.toml
+          tox.ini
+          uv.lock
+        cache-suffix: "${{ matrix.tox_env }}-shard"
         save-cache: ${{ matrix.shard == 1 }}
     - name: Install tox (Windows)
       if: matrix.os == 'windows-latest'
@@ -529,8 +559,8 @@ jobs:
       run: |
         mapfile -t test_paths < .tox/ci-shard-tests.txt
         if [ "${#test_paths[@]}" -eq 0 ]; then
-          echo "No tests selected for this shard; skipping."
-          exit 0
+          echo "No tests selected for this shard." >&2
+          exit 1
         fi
         coverage_args=()
         if [ "${{ matrix.coverage }}" = "true" ]; then
@@ -540,7 +570,7 @@ jobs:
             --cov-config=pyproject.toml
             --cov-fail-under=0
             --no-cov-on-fail
-            --cov-report term-missing:skip-covered
+            --cov-report=
           )
         fi
         tox run --skip-uv-sync --skip-pkg-install -e "$TOX_ENV" -- \
@@ -587,6 +617,14 @@ jobs:
           persist-credentials: false
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+          cache-local-path: .tox/uv-cache
+          cache-dependency-glob: |
+            pyproject.toml
+            tox.ini
+            uv.lock
+          cache-suffix: coverage
       - name: Install tox
         run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
       - name: Setup coverage tool
@@ -646,6 +684,14 @@ jobs:
           persist-credentials: false
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+          cache-local-path: .tox/uv-cache
+          cache-dependency-glob: |
+            pyproject.toml
+            tox.ini
+            uv.lock
+          cache-suffix: check
       - name: Setup docs Python
         run: uv python install 3.14.6
       - name: Install tox
@@ -707,6 +753,14 @@ jobs:
           persist-credentials: false
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+          cache-local-path: .tox/uv-cache
+          cache-dependency-glob: |
+            pyproject.toml
+            tox.ini
+            uv.lock
+          cache-suffix: e2e
       - name: Install tox
         run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
       - name: Setup e2e suites
