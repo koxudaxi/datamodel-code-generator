@@ -2440,11 +2440,11 @@ def _generate(  # noqa: PLR0914
             )
         )
         if additional_options["base_path"] is None and not isinstance(source, Path):
-            additional_options["base_path"] = (
-                _path_list_base_path(cast("list[Path]", input_), caller_cwd)
-                if isinstance(input_, list) and input_file_type != InputFileType.MCPTools
-                else caller_cwd
-            )
+            match input_:
+                case [Path(), *_] as input_paths:
+                    additional_options["base_path"] = _path_list_base_path(input_paths, caller_cwd)
+                case _:
+                    additional_options["base_path"] = caller_cwd
         schema_versions = _resolve_schema_versions(input_file_type, config.schema_version)
         parser_settings_path = (
             config.settings_path if use_output_cwd else _settings_path_from(output_context_path, config.settings_path)
