@@ -1,0 +1,150 @@
+{
+  "overlap": {
+    "payloads": [
+      {
+        "x": {
+          "a": 1,
+          "b": 2
+        }
+      },
+      {
+        "x": {
+          "a": 1
+        }
+      },
+      {
+        "z": {
+          "a": 1,
+          "b": 2
+        }
+      }
+    ],
+    "fixed": true,
+    "changed": true
+  },
+  "declared": {
+    "payloads": [
+      {
+        "x": 1
+      },
+      {
+        "x": 2
+      },
+      {}
+    ],
+    "fixed": true,
+    "changed": true
+  },
+  "declared_object": {
+    "payloads": [
+      {
+        "x": {
+          "a": 1,
+          "b": 2
+        }
+      },
+      {
+        "x": {
+          "a": 1
+        }
+      },
+      {
+        "x": {
+          "b": 2
+        }
+      }
+    ],
+    "fixed": true,
+    "changed": true
+  },
+  "rejected": {
+    "payloads": [
+      {
+        "x": 1
+      },
+      {}
+    ],
+    "fixed": true,
+    "changed": true
+  },
+  "aliased_declared": {
+    "payloads": [
+      {
+        "x-value": 1
+      },
+      {
+        "x-value": 2
+      },
+      {}
+    ],
+    "fixed": true,
+    "changed": true
+  },
+  "disjoint": {
+    "payloads": [
+      {
+        "a": {
+          "a": 1
+        },
+        "b": {
+          "b": 2
+        }
+      },
+      {
+        "a": {
+          "b": 2
+        }
+      },
+      {
+        "z": {}
+      }
+    ],
+    "fixed": true,
+    "changed": false
+  },
+  "shared": {
+    "payloads": [
+      {
+        "x": {
+          "a": 1
+        }
+      },
+      {
+        "x": {}
+      }
+    ],
+    "fixed": true,
+    "changed": false
+  },
+  "single": {
+    "payloads": [
+      {
+        "x": {
+          "a": 1
+        }
+      },
+      {
+        "x": {}
+      }
+    ],
+    "fixed": true,
+    "changed": false
+  },
+  "complex": {
+    "payloads": [
+      {
+        "x": {
+          "a": 1,
+          "b": 2
+        }
+      },
+      {
+        "x": {
+          "a": 1
+        }
+      }
+    ],
+    "fixed": false,
+    "changed": false
+  }
+}

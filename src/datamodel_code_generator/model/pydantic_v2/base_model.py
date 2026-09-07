@@ -1522,6 +1522,39 @@ class BaseModel(BaseModelBase):
             )
         return "\n\n\n".join(helpers) + "\n"
 
+    @staticmethod
+    def _requires_independent_pattern_validation(runtime_validations: list[SchemaRuntimeValidation]) -> bool:
+        """Recognize declared intersections and shared literal keys for distinct model adapters."""
+        for runtime_validation in runtime_validations:
+            for rule in runtime_validation.pattern_properties:
+                if rule.declared_properties:
+                    try:
+                        if any(
+                            re.search(pattern, name)
+                            for pattern in (
+                                *rule.rejected_patterns,
+                                *(pattern for pattern, _ in rule.pattern_properties),
+                            )
+                            for name in rule.declared_properties
+                        ):
+                            return True
+                    except re.error:
+                        continue
+                if len(rule.pattern_properties) <= 1:
+                    continue
+                literal_models: dict[str, str] = {}
+                for pattern, data_type in rule.pattern_properties:
+                    if (
+                        data_type.reference is None
+                        or (match := re.fullmatch(r"\^?([A-Za-z0-9_ -]+)\$?", pattern)) is None
+                    ):
+                        continue
+                    literal = match[1]
+                    if (previous := literal_models.get(literal)) is not None and previous != data_type.reference.path:
+                        return True
+                    literal_models[literal] = data_type.reference.path
+        return False
+
     @classmethod
     def _render_core_schema_runtime_validation_helpers(
         cls,
@@ -1536,6 +1569,7 @@ class BaseModel(BaseModelBase):
         )
         context = {
             "schema_runtime_validation_base_class_name": base_class_name,
+            "has_pattern_property_intersections": cls._requires_independent_pattern_validation(runtime_validations),
             "has_pattern_properties": any(
                 runtime_validation.pattern_properties for runtime_validation in runtime_validations
             ),
