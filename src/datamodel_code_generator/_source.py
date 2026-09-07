@@ -100,7 +100,8 @@ def load_yaml_dict_from_path(path: Path, encoding: str) -> dict[str, YamlValue]:
     from datamodel_code_generator.util import record_watch_dependency  # noqa: PLC0415
 
     record_watch_dependency(path)
-    return _load_yaml_dict_from_path_cached(path, path.stat().st_mtime, encoding)
+    cache_path = path if path.is_absolute() else path.absolute()
+    return _load_yaml_dict_from_path_cached(cache_path, cache_path.stat().st_mtime, encoding)
 
 
 @lru_cache(maxsize=128)
