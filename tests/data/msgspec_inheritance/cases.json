@@ -565,5 +565,17 @@
       "field_14": 14,
       "field_15": 15
     }
+  },
+  {
+    "name": "jsonschema_fallback_diamond",
+    "schema": "jsonschema_fallback_diamond.json",
+    "format": "jsonschema",
+    "options": {},
+    "cli": [],
+    "error": true,
+    "payload": {
+      "seed": 1,
+      "other": 2
+    }
   }
 ]
