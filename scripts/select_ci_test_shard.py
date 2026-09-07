@@ -5,8 +5,8 @@ from __future__ import annotations
 import argparse
 import ast
 import json
+import os
 from pathlib import Path
-from typing import Any
 
 EXCLUDED_PARTS = frozenset({"__pycache__", "cli_doc", "data"})
 PAYLOAD_VALIDATION_FILE = "tests/main/test_payload_validation.py"
@@ -127,12 +127,6 @@ def _as_posix(path: Path) -> str:
     return path.as_posix()
 
 
-def _is_test_file(path: Path) -> bool:
-    if EXCLUDED_PARTS & set(path.parts):
-        return False
-    return path.name.startswith("test_") and path.suffix == ".py" and path.as_posix() not in SPLIT_NODE_FILES
-
-
 def _collect_split_nodeids(path: Path) -> list[str]:
     module = ast.parse(path.read_text(encoding="utf-8"), filename=_as_posix(path))
     nodeids: list[str] = []
@@ -151,33 +145,62 @@ def _collect_split_nodeids(path: Path) -> list[str]:
 
 
 def _collect_test_items(root: Path = TESTS_ROOT) -> list[str]:
-    file_items = (path.as_posix() for path in root.rglob("*.py") if _is_test_file(path))
+    file_items: list[str] = []
+    for directory, subdirectories, filenames in os.walk(root):
+        subdirectories[:] = [name for name in subdirectories if name not in EXCLUDED_PARTS]
+        file_items.extend(
+            item
+            for name in filenames
+            if name.startswith("test_") and name.endswith(".py")
+            if (item := (Path(directory) / name).as_posix()) not in SPLIT_NODE_FILES
+        )
     split_node_items = (
         nodeid for split_file in sorted(SPLIT_NODE_FILES) for nodeid in _collect_split_nodeids(Path(split_file))
     )
-    return sorted([*file_items, *split_node_items])
+    file_items.extend(split_node_items)
+    file_items.sort()
+    return file_items
+
+
+def _median_weight(weights: dict[str, int]) -> int:
+    ordered = sorted(weights.values())
+    middle = len(ordered) // 2
+    return (ordered[middle] + ordered[~middle]) // 2
+
+
+# Estimates share the measured millisecond unit and are computed once per process.
+FILE_FALLBACK_MS = _median_weight(WEIGHT_OVERRIDES)
+SPLIT_FALLBACK_MS = _median_weight(SPLIT_NODE_WEIGHT_OVERRIDES)
 
 
 def _item_weight(item: str) -> int:
-    path = Path(item.partition("::")[0])
     if "::" in item:
-        return SPLIT_NODE_WEIGHT_OVERRIDES.get(item, 10_000)
-    return WEIGHT_OVERRIDES.get(item, path.stat().st_size)
+        return SPLIT_NODE_WEIGHT_OVERRIDES.get(item, SPLIT_FALLBACK_MS)
+    return WEIGHT_OVERRIDES.get(item, FILE_FALLBACK_MS)
 
 
 def _build_recipe_items() -> list[dict[str, int | str]]:
     return [{"nodeid": item, "weight": _item_weight(item)} for item in _collect_test_items()]
 
 
-def _validate_recipe_items(items: Any) -> list[dict[str, int | str]]:
-    if not isinstance(items, list):
-        msg = "recipe items must be a list"
+def _validate_recipe_items(items: object) -> list[dict[str, int | str]]:
+    if not isinstance(items, list) or not items:
+        msg = "recipe items must be a nonempty list"
         raise SystemExit(msg)
 
     validated: list[dict[str, int | str]] = []
+    seen: set[str] = set()
     for item in items:
         match item:
-            case {"nodeid": str(nodeid), "weight": int(weight)} if not isinstance(weight, bool):
+            case {"nodeid": str(nodeid), "weight": int(weight)} if (
+                not isinstance(weight, bool)
+                and weight > 0
+                and nodeid.strip()
+                and "\n" not in nodeid
+                and "\r" not in nodeid
+                and nodeid not in seen
+            ):
+                seen.add(nodeid)
                 validated.append({"nodeid": nodeid, "weight": weight})
             case _:
                 msg = f"invalid recipe item: {item!r}"
@@ -220,13 +243,14 @@ def _select_shard(items: list[dict[str, int | str]], shard_index: int, shard_tot
     return sorted(shards[shard_index - 1])
 
 
-def _main() -> None:
+def main(argv: list[str] | None = None) -> None:
+    """Select a shard or serialize its reproducible recipe."""
     parser = argparse.ArgumentParser()
     parser.add_argument("shard_index", type=int, nargs="?")
     parser.add_argument("shard_total", type=int, nargs="?")
     parser.add_argument("--recipe", type=Path)
     parser.add_argument("--write-recipe", type=Path)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     items = _load_recipe_items(args.recipe) if args.recipe else _build_recipe_items()
     if args.write_recipe:
@@ -244,7 +268,7 @@ def _main() -> None:
         case False:
             msg = "shard_index must be between 1 and shard_total"
             raise SystemExit(msg)
-        case True:
+        case _:
             if selected := _select_shard(items, shard_index, shard_total):
                 print(*selected, sep="\n")
                 return
@@ -254,4 +278,4 @@ def _main() -> None:
 
 
 if __name__ == "__main__":
-    _main()
+    main()
