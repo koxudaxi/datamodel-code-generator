@@ -19521,7 +19521,7 @@ def test_custom_template_dependencies_bound_generation_roots(tmp_path: Path) -> 
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
 @pytest.mark.parametrize(
     "case",
-    json.loads((JSON_SCHEMA_DATA_PATH / "msgspec_enum_diagnostics/errors.json").read_text()),
+    json.loads((DATA_PATH / "payloads/msgspec_enum_diagnostics/errors.json").read_text()),
     ids=itemgetter("name"),
 )
 def test_msgspec_enum_diagnostics_reject_unsupported_members(
@@ -19557,7 +19557,7 @@ def test_msgspec_enum_diagnostics_reject_unsupported_members(
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
 @pytest.mark.parametrize(
     "case",
-    json.loads((JSON_SCHEMA_DATA_PATH / "msgspec_enum_diagnostics/controls.json").read_text()),
+    json.loads((DATA_PATH / "payloads/msgspec_enum_diagnostics/controls.json").read_text()),
     ids=itemgetter("name"),
 )
 def test_msgspec_enum_diagnostics_preserve_supported_representations(
@@ -19600,11 +19600,15 @@ def test_msgspec_enum_diagnostics_preserve_supported_representations(
         )
     results = []
     with _generated_model(output_file, "generated_msgspec_enum_controls", "Payload") as model:
-        for payload in json.loads((data / f"{case['schema']}_valid.json").read_text()):
+        for payload in json.loads(
+            (DATA_PATH / "payloads/msgspec_enum_diagnostics" / f"{case['schema']}_valid.json").read_text()
+        ):
             converted = msgspec.convert(payload, type=model)
             decoded = msgspec.json.decode(json.dumps(payload).encode(), type=model)
             results.append({"convert": msgspec.to_builtins(converted), "decode": msgspec.to_builtins(decoded)})
-        for payload in json.loads((data / f"{case['schema']}_invalid.json").read_text()):
+        for payload in json.loads(
+            (DATA_PATH / "payloads/msgspec_enum_diagnostics" / f"{case['schema']}_invalid.json").read_text()
+        ):
             with pytest.raises(msgspec.ValidationError):
                 msgspec.convert(payload, type=model)
             with pytest.raises(msgspec.ValidationError):
@@ -19656,7 +19660,7 @@ def test_msgspec_enum_diagnostics_preserve_other_backends(
         output_file,
         module_name="generated_other_backend_enums",
         model_name="Payload",
-        valid_json=(data / "other_backends_valid.json").read_text(),
+        valid_json=(DATA_PATH / "payloads/msgspec_enum_diagnostics/other_backends_valid.json").read_text(),
         invalid_json='{"always": false}',
         expected_error_type="literal_error" if backend is DataModelType.TypingTypedDict else "enum",
         expected_attribute_path=("enabled",) if backend is DataModelType.TypingTypedDict else ("enabled", "value"),
@@ -19669,7 +19673,7 @@ def test_msgspec_enum_diagnostics_preserve_other_backends(
 )
 @pytest.mark.parametrize(
     "case",
-    json.loads((JSON_SCHEMA_DATA_PATH / "msgspec_enum_diagnostics/subclass_cases.json").read_text()),
+    json.loads((DATA_PATH / "payloads/msgspec_enum_diagnostics/subclass_cases.json").read_text()),
     ids=itemgetter("name"),
 )
 def test_msgspec_enum_diagnostics_integer_subclasses(
