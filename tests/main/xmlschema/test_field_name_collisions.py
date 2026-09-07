@@ -33,6 +33,7 @@ COLLISIONS = (
     "namespaced_attributes",
     "local_forms",
     "simple_content_collision",
+    "simple_content_value",
     "default_namespace_distinct",
     "default_namespace_attributes",
 )

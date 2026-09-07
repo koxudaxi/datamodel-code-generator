@@ -1185,6 +1185,7 @@ class _XMLSchemaConverter:
 
         schema: JsonSchema = {"type": "object", "properties": {"value": value_schema}, "required": ["value"]}
         with self._property_scope():
+            self._property_sources["value"] = simple_content
             self._apply_attributes(owner, schema)
             if child is not None:
                 self._apply_attributes(child, schema)
@@ -1322,6 +1323,8 @@ class _XMLSchemaConverter:
 
     def _property_identity(self, declaration: ET.Element) -> tuple[str, QNameKey]:
         kind = _local_name(declaration.tag)
+        if kind == "simpleContent":
+            return "simple content", (None, "value")
         if ref := declaration.get("ref"):
             if ":" not in ref and (namespace := self._namespaces_for(declaration).get("")):
                 return kind, (namespace, ref)

@@ -97,6 +97,7 @@ test = [
   "hypothesis-jsonschema>=0.23.1",
   "inline-snapshot>=0.34.2",
   "jsonschema>=4.24",
+  "lxml>=5.3",
   "msgspec>=0.18",
   "pytest>=8.3.4",
   "pytest-cov>=5",
