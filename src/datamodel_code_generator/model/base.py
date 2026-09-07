@@ -150,9 +150,17 @@ class _CustomTemplateDependencies:
 
     def __init__(self) -> None:
         self.paths: dict[Path, tuple[int, ...] | None] = {}
-        self.directories: dict[Path, _CustomTemplateSignature] = {}
+        self.directories: dict[Path, _CustomTemplateSignature | None] = {}
         self.overflow = False
         self.incomplete = False
+
+    def require_full_scan(self) -> None:
+        """Capture external baselines before the first unobserved dependency is read."""
+        if self.overflow:
+            return
+        self.overflow = True
+        for directory in self.directories:
+            self.directories[directory] = _get_custom_template_signature(directory)
 
     @property
     def needs_full_scan(self) -> bool:
@@ -1385,7 +1393,7 @@ def _apply_custom_template_adapter(
     if not getattr(adapter, _ORIGINAL_TEMPLATE_LOADER_MARKER, False):
         with _missing_custom_template_state.lock:
             if dependencies := _missing_custom_template_state.dependencies.get(custom_template_dir):
-                dependencies.overflow = True
+                dependencies.require_full_scan()
     return adapter(template)
 
 
@@ -1531,7 +1539,7 @@ def _remember_custom_template_dependency(custom_template_dir: Path, path: Path) 
         if dependencies is None or dependencies.overflow or path in dependencies.paths:
             return
         if len(dependencies.paths) >= _MAX_CUSTOM_TEMPLATE_DEPENDENCIES:
-            dependencies.overflow = True
+            dependencies.require_full_scan()
             return
         dependencies.paths[path] = _custom_template_path_signature(path)
 
@@ -1547,7 +1555,9 @@ def _remember_custom_template_directory(custom_template_dir: Path, directory: Pa
         if len(dependencies.directories) >= _MAX_CUSTOM_TEMPLATE_DEPENDENCIES:
             dependencies.incomplete = True
             return
-        dependencies.directories[directory] = _get_custom_template_signature(directory)
+        dependencies.directories[directory] = (
+            _get_custom_template_signature(directory) if dependencies.overflow else None
+        )
 
 
 def _custom_template_loader(custom_template_dir: Path, directory: Path) -> Any:

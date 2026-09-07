@@ -19259,17 +19259,34 @@ def test_custom_template_dependencies_bound_and_refresh_overflow(tmp_path: Path,
     )
 
 
-@pytest.mark.parametrize("model_name", ["AdaptedModel", "DefaultDirectoryModel", "AbsoluteTemplateModel"])
-def test_custom_template_dependencies_support_parser_extensions(tmp_path: Path, model_name: str) -> None:
+@pytest.mark.parametrize(
+    ("model_name", "external_directory"),
+    [
+        ("AdaptedModel", False),
+        pytest.param(
+            "AdaptedModel",
+            True,
+            marks=pytest.mark.skipif(os.name == "nt", reason="symlink creation requires privileges"),
+        ),
+        ("DefaultDirectoryModel", False),
+        ("AbsoluteTemplateModel", False),
+    ],
+)
+def test_custom_template_dependencies_support_parser_extensions(
+    tmp_path: Path, model_name: str, *, external_directory: bool
+) -> None:
     """Preserve direct parser extensions and conservatively refresh unknown adapters."""
     template_data = DATA_PATH / "templates_dependencies"
     custom_root = tmp_path / "templates"
-    custom_directory = custom_root / "pydantic_v2"
+    custom_directory = tmp_path / "external" if external_directory else custom_root / "pydantic_v2"
     custom_directory.mkdir(parents=True)
     shutil.copyfile(template_data / "standalone.jinja2", custom_directory / "BaseModel.jinja2")
+    if external_directory:
+        custom_root.mkdir()
+        (custom_root / "BaseModel.jinja2").symlink_to(custom_directory / "BaseModel.jinja2")
     output = tmp_path / "output.py"
     model_types = get_data_model_types(DataModelType.PydanticV2BaseModel, PythonVersion.PY_310)
-    stages = ["first", "second"] if model_name == "AdaptedModel" else ["first"]
+    stages = ["first", "first", "second"] if model_name == "AdaptedModel" else ["first"]
     with _generated_model(template_data / "plugin.py", "template_dependency_plugin", model_name) as model_type:
         for field in stages:
             shutil.copyfile(
@@ -19297,7 +19314,8 @@ def test_custom_template_dependencies_support_parser_extensions(tmp_path: Path, 
             )
 
 
-def test_custom_template_dependencies_bound_external_directories(tmp_path: Path) -> None:
+@pytest.mark.parametrize("model_name", ["SplitTemplateModel", "SplitAdaptedModel"])
+def test_custom_template_dependencies_bound_external_directories(tmp_path: Path, model_name: str) -> None:
     """Fail closed after a public parser extension selects more external directories than retained."""
     template_data = DATA_PATH / "templates_dependencies"
     custom_root = tmp_path / "templates"
@@ -19308,6 +19326,7 @@ def test_custom_template_dependencies_bound_external_directories(tmp_path: Path)
         directory = tmp_path / "split" / name
         directory.mkdir(parents=True)
         shutil.copyfile(template_data / "standalone.jinja2", directory / "BaseModel.jinja2")
+        shutil.copyfile(template_data / "standalone.jinja2", directory / "adapted.jinja2")
     model_types = get_data_model_types(DataModelType.PydanticV2BaseModel, PythonVersion.PY_310)
     output = tmp_path / "output.py"
     for expected in ("parser_split.py", "parser_split.py", "parser_split_changed.py"):
@@ -19315,7 +19334,8 @@ def test_custom_template_dependencies_bound_external_directories(tmp_path: Path)
             shutil.copyfile(
                 template_data / "adapted_second.jinja2", tmp_path / "split" / names[-1] / "BaseModel.jinja2"
             )
-        with _generated_model(template_data / "plugin.py", "split_template_plugin", "SplitTemplateModel") as model_type:
+            shutil.copyfile(template_data / "adapted_second.jinja2", tmp_path / "split" / names[-1] / "adapted.jinja2")
+        with _generated_model(template_data / "plugin.py", "split_template_plugin", model_name) as model_type:
             generated = JsonSchemaParser(
                 schema,
                 data_model_type=model_type,
@@ -19350,6 +19370,70 @@ def test_custom_template_dependencies_bound_external_directories(tmp_path: Path)
         valid_json='{"second": "accepted"}',
         invalid_json='{"second": 42}',
         expected_error_type="string_type",
+    )
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.skipif(os.name == "nt", reason="symlink creation requires privileges")
+def test_custom_template_dependencies_defer_external_signatures(tmp_path: Path, entrypoint: str) -> None:
+    """Capture external metadata only when a warmed loader starts untracked lookups."""
+    custom_root = (tmp_path / "templates").resolve()
+    custom_root.mkdir()
+    custom_directory = tmp_path / "external"
+    custom_directory.mkdir()
+    template_data = DATA_PATH / "templates_dependencies"
+    shutil.copyfile(template_data / "root_deferred_overflow.jinja2", custom_directory / "BaseModel.jinja2")
+    (custom_root / "BaseModel.jinja2").symlink_to(custom_directory / "BaseModel.jinja2")
+    for index in range(1_000):
+        shutil.copyfile(template_data / "standalone.jinja2", custom_directory / f"unrelated-{index}.jinja2")
+    output = tmp_path / "output.py"
+    snapshots = []
+    source = tmp_path / "custom_template_refresh.json"
+    for stage in range(5):
+        if stage == 4:
+            shutil.copyfile(template_data / "overflow_added.jinja2", custom_directory / "unused-129.jinja2")
+        shutil.copyfile(
+            JSON_SCHEMA_DATA_PATH
+            / ("custom_template_refresh.json" if stage < 2 else "custom_template_dependencies_overflow.json"),
+            source,
+        )
+        expected = (
+            "custom_template_dependencies/overflow_added.py" if stage == 4 else "custom_template_refresh/first.py"
+        )
+        if entrypoint == "cli":
+            run_main_and_assert(
+                input_path=source,
+                output_path=output,
+                input_file_type="jsonschema",
+                assert_func=assert_file_content,
+                expected_file=expected,
+                extra_args=["--custom-template-dir", str(custom_root), "--disable-timestamp"],
+            )
+        else:
+            run_generate_file_and_assert(
+                input_path=source,
+                output_path=output,
+                input_file_type=InputFileType.JsonSchema,
+                custom_template_dir=custom_root,
+                disable_timestamp=True,
+                assert_func=assert_file_content,
+                expected_file=expected,
+            )
+        dependencies = model_base._missing_custom_template_state.dependencies[custom_root]
+        snapshots.append(all(signature is not None for signature in dependencies.directories.values()))
+    assert_output(
+        json.dumps(snapshots, indent=2) + "\n",
+        EXPECTED_JSON_SCHEMA_PATH / "custom_template_dependencies/deferred_directories.txt",
+    )
+    assert_generated_model_json_validation(
+        output,
+        module_name="generated_deferred_external_templates",
+        model_name="Example",
+        valid_json='{"first": "accepted"}',
+        invalid_json='{"first": 42}',
+        expected_error_type="string_type",
+        expected_attribute_path=("discovered",),
+        expected_attribute_value=4,
     )
 
 

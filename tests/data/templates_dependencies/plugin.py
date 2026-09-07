@@ -28,3 +28,7 @@ class SplitTemplateModel(BaseModel):
             kwargs["custom_template_dir"].parent / "split" / kwargs["reference"].name / "BaseModel.jinja2"
         )
         super().__init__(*args, **kwargs)
+
+
+class SplitAdaptedModel(SplitTemplateModel):
+    CUSTOM_TEMPLATE_ADAPTER = staticmethod(AdaptedModel.CUSTOM_TEMPLATE_ADAPTER)
