@@ -662,7 +662,7 @@ def _set_python_type_for_unserializable(
     item.pop(_UNSERIALIZABLE_MARKER, None)
 
 
-def _get_model_field_schema_name(field_name: str, field_info: Any) -> str:
+def _input_model_field_wire_name(field_name: str, field_info: Any) -> str:
     """Resolve the property name emitted by Pydantic's validation schema."""
     if (alias := field_info.validation_alias) is None:
         return field_name
@@ -687,7 +687,7 @@ def _add_python_type_for_unserializable(
     if "properties" in schema:
         model_fields = getattr(model, "model_fields", {})
         for field_name, field_info in model_fields.items():
-            schema_name = _get_model_field_schema_name(field_name, field_info)
+            schema_name = _input_model_field_wire_name(field_name, field_info)
             if (prop := schema["properties"].get(schema_name)) is not None:
                 owner = prop.get(_FIELD_SCHEMA_NAME)
                 if isinstance(owner, _FieldSchemaOwner) and owner.field_name != field_name:
@@ -881,7 +881,7 @@ def _add_python_type_to_properties(
 ) -> None:
     """Add x-python-type to properties dict for given model fields."""
     for field_name, field_info in model_fields.items():
-        schema_name = _get_model_field_schema_name(field_name, field_info)
+        schema_name = _input_model_field_wire_name(field_name, field_info)
         if (prop := properties.get(schema_name)) is None:
             continue
         owner = prop.get(_FIELD_SCHEMA_NAME)
@@ -1072,19 +1072,6 @@ def _try_rebuild_model(obj: type) -> None:
 def _get_base_model_parents(model_class: type) -> list[type[BaseModel]]:
     """Get parent classes that are BaseModel subclasses (excluding BaseModel itself)."""
     return [p for p in model_class.__bases__ if isinstance(p, type) and issubclass(p, BaseModel) and p is not BaseModel]
-
-
-def _input_model_field_wire_name(field_name: str, field: Any) -> str:
-    """Match the validation schema's first usable simple alias."""
-    alias = field.validation_alias
-    if isinstance(alias, str):
-        return alias
-    for choice in getattr(alias, "choices", ()):
-        if isinstance(choice, str):
-            return choice
-        if len(path := choice.path) == 1:
-            return path[0]
-    return field_name
 
 
 def _partition_inherited_fields(
