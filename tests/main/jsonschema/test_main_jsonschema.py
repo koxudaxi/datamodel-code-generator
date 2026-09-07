@@ -18021,7 +18021,7 @@ def test_schema_reference_cycles_ignore_instance_values(output_file: Path, entry
             force_exec_validation=True,
         )
 
-    payloads = json.loads((input_path.parent / "payloads.json").read_text(encoding="utf-8"))
+    payloads = json.loads((JSON_DATA_PATH / "schema_reference_cycles" / "payloads.json").read_text(encoding="utf-8"))
     for field_name, value in payloads.items():
         invalid_value = {key: item for key, item in value.items() if key != "code"}
         assert_generated_model_json_validation(
