@@ -8130,6 +8130,13 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             default=default,
         )
 
+    @cached_property
+    def _root_constraints_fallbacks(
+        self,
+    ) -> dict[type[DataModel], Callable[[list[DataModelFieldBase]], type[DataModel] | None] | None]:
+        """Keep template-origin decisions local to this generation and model type."""
+        return {}
+
     def _create_registered_root_model(  # noqa: PLR0913
         self,
         data_model_root_type: type[DataModel],
@@ -8142,10 +8149,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         default: Any,
     ) -> DataModel:
         """Create and register one concrete root model."""
-        if (fallback := data_model_root_type.ROOT_MODEL_CONSTRAINTS_FALLBACK) is not None and (
-            constrained_root_type := fallback(fields, self.custom_template_dir)
-        ) is not None:
-            data_model_root_type = constrained_root_type
+        if (factory := data_model_root_type.ROOT_MODEL_CONSTRAINTS_FALLBACK) is not None:
+            fallbacks = self._root_constraints_fallbacks
+            if data_model_root_type not in fallbacks:
+                fallbacks[data_model_root_type] = factory(self.custom_template_dir)
+            if (fallback := fallbacks[data_model_root_type]) is not None and (
+                constrained_root_type := fallback(fields)
+            ) is not None:
+                data_model_root_type = constrained_root_type
         data_model_root = data_model_root_type(
             reference=reference,
             fields=fields,

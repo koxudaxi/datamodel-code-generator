@@ -17,28 +17,34 @@ from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_ROOT_MODEL
 from datamodel_code_generator.model.pydantic_v2.root_model import RootModel
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from pathlib import Path
 
     from datamodel_code_generator.imports import Import
     from datamodel_code_generator.model.base import DataModelFieldBase
 
 
-def _root_model_constraints_fallback(
-    fields: list[DataModelFieldBase], custom_template_dir: Path | None
-) -> type[RootModel] | None:
+def _constrained_root_model(fields: list[DataModelFieldBase]) -> type[RootModel] | None:
     """Keep constraints omitted by the alias template on an executable root class."""
     if any(
         field.constraints and field.constraints.model_dump(exclude={"unique_items"}, exclude_none=True)
         for field in fields
     ) or has_lookaround_pattern(fields):
-        if (
-            custom_template_dir is not None
-            and cached_path_exists(custom_template_dir / RootModelTypeAlias.TEMPLATE_FILE_PATH)
-            and custom_template_dir.resolve() != TEMPLATE_DIR.resolve()
-        ):
-            return None
         return RootModel
     return None
+
+
+def _root_model_constraints_fallback(
+    custom_template_dir: Path | None,
+) -> Callable[[list[DataModelFieldBase]], type[RootModel] | None] | None:
+    """Resolve an alias template once without inspecting or replacing custom templates."""
+    if (
+        custom_template_dir is not None
+        and cached_path_exists(custom_template_dir / RootModelTypeAlias.TEMPLATE_FILE_PATH)
+        and custom_template_dir.resolve() != TEMPLATE_DIR.resolve()
+    ):
+        return None
+    return _constrained_root_model
 
 
 class RootModelTypeAlias(RootModel):
