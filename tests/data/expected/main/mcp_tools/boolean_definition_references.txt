@@ -22,6 +22,15 @@
               "$ref": "#Anchor"
             }
           ]
+        },
+        "dynamic_anchor": {
+          "$dynamicRef": "#Anchor"
+        },
+        "dynamic_external": {
+          "$dynamicRef": "https://example.com/schema#Anchor"
+        },
+        "dynamic_unmapped": {
+          "$dynamicRef": "#/$defs/Missing"
         }
       },
       "title": "BooleanReferencesInput"

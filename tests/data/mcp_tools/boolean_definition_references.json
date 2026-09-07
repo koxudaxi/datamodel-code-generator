@@ -6,15 +6,31 @@
       "values": {
         "type": "array",
         "prefixItems": [
-          {"$ref": "#/$defs/Allowed"},
-          {"$ref": "#Anchor"}
+          {
+            "$ref": "#/$defs/Allowed"
+          },
+          {
+            "$ref": "#Anchor"
+          }
         ]
+      },
+      "dynamic_anchor": {
+        "$dynamicRef": "#Anchor"
+      },
+      "dynamic_external": {
+        "$dynamicRef": "https://example.com/schema#Anchor"
+      },
+      "dynamic_unmapped": {
+        "$dynamicRef": "#/$defs/Missing"
       }
     },
     "$defs": {
       "Allowed": true,
       "Unused": false,
-      "Anchor": {"$anchor": "Anchor", "type": "string"},
+      "Anchor": {
+        "$anchor": "Anchor",
+        "type": "string"
+      },
       "Ignored": null
     }
   }

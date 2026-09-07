@@ -187,6 +187,10 @@ def _to_definition_name(name: str) -> str:
 
 
 def _local_definition_ref_name(ref: str) -> tuple[str, str, str] | None:
+    if "%" in ref:
+        from urllib.parse import unquote  # noqa: PLC0415
+
+        ref = unquote(ref)
     for key in DEFINITION_KEYS:
         prefix = f"#/{key}/"
         if not ref.startswith(prefix):
@@ -215,7 +219,7 @@ def _rewrite_schema_refs(
         for key, item in value.items():
             if strip_root_definitions and key in DEFINITION_KEYS:
                 continue
-            if key == "$ref" and isinstance(item, str):
+            if key in {"$ref", "$dynamicRef"} and isinstance(item, str):
                 rewritten[key] = _rewrite_local_definition_ref(item, ref_map)
                 continue
             if schema_positions_only and key in SCHEMA_MAP_KEYS and isinstance(item, Mapping):
@@ -243,7 +247,7 @@ def _schema_local_definition_refs(value: Any) -> set[str]:
     def visit(item: Any) -> None:
         if isinstance(item, Mapping):
             for key, child in item.items():
-                if key == "$ref" and isinstance(child, str):
+                if key in {"$ref", "$dynamicRef"} and isinstance(child, str):
                     if local_ref := _local_definition_ref_name(child):
                         references.add(local_ref[0])
                     continue
@@ -298,6 +302,9 @@ def _normalize_schema(
                     if referenced_definitions is None:
                         referenced_definitions = _schema_local_definition_refs(schema_copy)
                     if definition_key in referenced_definitions:
+                        if inner_schema is False:
+                            msg = f"Referenced MCP boolean false definition is not supported: {definition_key}"
+                            raise Error(msg)
                         hoisted_definitions[local_ref_map[definition_key]] = inner_schema
 
     normalized_schema = _rewrite_schema_refs(

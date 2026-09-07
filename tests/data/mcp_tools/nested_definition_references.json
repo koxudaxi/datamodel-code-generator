@@ -16,9 +16,6 @@
           },
           "allowed": {
             "$ref": "#/$defs/Allowed"
-          },
-          "denied": {
-            "$ref": "#/$defs/Denied"
           }
         },
         "required": [
@@ -56,7 +53,6 @@
             }
           },
           "Allowed": true,
-          "Denied": false,
           "Unused": false
         }
       },
@@ -71,9 +67,6 @@
           },
           "allowed": {
             "$ref": "#/definitions/Allowed"
-          },
-          "denied": {
-            "$ref": "#/definitions/Denied"
           }
         },
         "definitions": {
@@ -98,7 +91,6 @@
             "type": "integer"
           },
           "Allowed": true,
-          "Denied": false,
           "Unused": true
         }
       }

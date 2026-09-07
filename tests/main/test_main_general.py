@@ -1571,7 +1571,12 @@ def test_mcp_tools_dangling_local_ref(output_file: Path) -> None:
 
 @pytest.mark.parametrize(
     "input_name",
-    ["nested_definition_references", "nested_keyword_references", "boolean_definition_references"],
+    [
+        "nested_definition_references",
+        "nested_keyword_references",
+        "boolean_definition_references",
+        "dynamic_definition_references",
+    ],
 )
 def test_mcp_tools_hoisted_definition_references_conversion(input_name: str) -> None:
     """Preserve references to renamed definitions while hoisting MCP schemas."""
@@ -1658,6 +1663,55 @@ def test_mcp_tools_hoisted_keyword_references(entrypoint: str, output_file: Path
     )
 
 
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+def test_mcp_tools_dynamic_definition_references(entrypoint: str, output_file: Path) -> None:
+    """Resolve dynamic pointers to hoisted definitions without dropping their types."""
+    input_path = DATA_PATH / "mcp_tools" / "dynamic_definition_references.json"
+    expected_file = "mcp_tools/dynamic_definition_references.py"
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type="mcp-tools",
+            assert_func=assert_file_content,
+            expected_file=expected_file,
+            extra_args=["--strict-refs", "--disable-timestamp"],
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type=InputFileType.MCPTools,
+            assert_func=assert_file_content,
+            expected_file=expected_file,
+            strict_refs=True,
+            disable_timestamp=True,
+        )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name=f"mcp_dynamic_definition_references_{entrypoint}",
+        model_name="DynamicInput",
+        valid_json=(DATA_PATH / "mcp_tools" / "dynamic_valid.json").read_text(),
+        invalid_json=(DATA_PATH / "mcp_tools" / "dynamic_invalid.json").read_text(),
+        expected_error_type="string_type",
+    )
+
+
+@pytest.mark.parametrize(
+    "input_name",
+    [
+        "referenced_false_definition",
+        "referenced_false_output_definition",
+        "referenced_nested_false_definition",
+        "referenced_false_dynamic_definition",
+    ],
+)
+def test_mcp_tools_referenced_false_definition_api(input_name: str) -> None:
+    """Reject unsupported false definitions instead of emitting a permissive model."""
+    with pytest.raises(Error, match="Referenced MCP boolean false definition is not supported: Denied"):
+        generate(DATA_PATH / "mcp_tools" / f"{input_name}.json", input_file_type=InputFileType.MCPTools)
+
+
 @pytest.mark.parametrize(argnames="input_kind", argvalues=["mapping", "list", "string"])
 def test_mcp_tools_generate_direct_input(input_kind: str, output_file: Path) -> None:
     """Generate MCP tool models from direct generate() input values."""
@@ -1718,6 +1772,13 @@ def test_mcp_tools_url_preserves_relative_ref_context(
         ("invalid_output_schema.json", "MCP tool 'bad_output' outputSchema must be a JSON Schema object"),
         ("invalid_tool_title.json", "MCP tool 'bad_title' title must be a string"),
         ("invalid_json.json", "Invalid file format for mcp-tools"),
+        ("referenced_false_definition.json", "Referenced MCP boolean false definition is not supported: Denied"),
+        ("referenced_false_output_definition.json", "Referenced MCP boolean false definition is not supported: Denied"),
+        ("referenced_nested_false_definition.json", "Referenced MCP boolean false definition is not supported: Denied"),
+        (
+            "referenced_false_dynamic_definition.json",
+            "Referenced MCP boolean false definition is not supported: Denied",
+        ),
     ],
 )
 def test_mcp_tools_invalid(

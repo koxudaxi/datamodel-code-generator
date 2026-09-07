@@ -36,7 +36,6 @@
       "title": "DemoToolInputNode"
     },
     "DemoToolInputAllowed": true,
-    "DemoToolInputDenied": false,
     "DemoToolInput": {
       "type": "object",
       "properties": {
@@ -51,9 +50,6 @@
         },
         "allowed": {
           "$ref": "#/$defs/DemoToolInputAllowed"
-        },
-        "denied": {
-          "$ref": "#/$defs/DemoToolInputDenied"
         }
       },
       "required": [
@@ -87,7 +83,6 @@
       "title": "DemoToolOutputAB"
     },
     "DemoToolOutputAllowed": true,
-    "DemoToolOutputDenied": false,
     "DemoToolOutput": {
       "type": "object",
       "properties": {
@@ -99,9 +94,6 @@
         },
         "allowed": {
           "$ref": "#/$defs/DemoToolOutputAllowed"
-        },
-        "denied": {
-          "$ref": "#/$defs/DemoToolOutputDenied"
         }
       },
       "title": "DemoToolOutput"

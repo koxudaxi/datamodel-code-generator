@@ -28,16 +28,11 @@ class DemoToolInputAllowed(RootModel[Any]):
     root: Any
 
 
-class DemoToolInputDenied(RootModel[Any]):
-    root: Any
-
-
 class DemoToolInput(BaseModel):
     outer: DemoToolInputOuter
     escaped: DemoToolInputAB
     node: DemoToolInputNode
     allowed: DemoToolInputAllowed | None = None
-    denied: DemoToolInputDenied | None = None
 
 
 class DemoToolOutputInner(RootModel[str]):
@@ -56,15 +51,10 @@ class DemoToolOutputAllowed(RootModel[Any]):
     root: Any
 
 
-class DemoToolOutputDenied(RootModel[Any]):
-    root: Any
-
-
 class DemoToolOutput(BaseModel):
     outer: DemoToolOutputOuter | None = None
     escaped: DemoToolOutputAB | None = None
     allowed: DemoToolOutputAllowed | None = None
-    denied: DemoToolOutputDenied | None = None
 
 
 class DemoToolInput2Inner(RootModel[int]):
