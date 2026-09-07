@@ -10084,6 +10084,7 @@ def test_external_discriminator_parent_load_order(output_file: Path, entrypoint:
             input_path=source,
             output_path=output_file,
             input_file_type="openapi",
+            assert_func=assert_file_content,
             expected_file=expected,
             extra_args=["--disable-timestamp"],
         )
