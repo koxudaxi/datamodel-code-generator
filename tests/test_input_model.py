@@ -2132,7 +2132,8 @@ def test_input_model_inherited_overrides(model_name: str, entrypoint: str, tmp_p
 @pytest.mark.parametrize("reverse", [False, True])
 @pytest.mark.parametrize("strategy", ["regenerate-all", "reuse-all", "reuse-foreign"])
 @pytest.mark.parametrize(
-    "case", ["nested", "roots", "shared", "plain", "identical", "metadata", "recursive", "generic"]
+    "case",
+    ["nested", "roots", "shared", "plain", "identical", "metadata", "recursive", "generic", "suffixes", "suffix_roots"],
 )
 def test_input_model_definition_collisions(
     tmp_path: Path,
@@ -2158,8 +2159,11 @@ def test_input_model_definition_collisions(
         "metadata": ("ExtraDefinitions", "EmptyDefinitions"),
         "recursive": ("Recursive", "Recursive"),
         "generic": ("GenericRootA", "GenericRootB"),
+        "suffixes": ("PlainA", "PlainB", "PlainC"),
+        "suffix_roots": ("Root", "Root", "Root"),
     }[case]
-    paths = [f"tests.data.python.input_model.collision_{side}:{root}" for side, root in zip("ab", roots, strict=True)]
+    sides = "abc"[: len(roots)]
+    paths = [f"tests.data.python.input_model.collision_{side}:{root}" for side, root in zip(sides, roots, strict=True)]
     if reverse:
         paths.reverse()
     settings = Path(__file__).parent / "data/python/input_model/collision_settings"
@@ -2215,6 +2219,12 @@ def test_input_model_definition_collisions(
             {"data": {"id": 1}, "kind": "a", "mode": "mode-a"},
             {"data": {"name": "b"}, "kind": "b", "mode": "mode-b"},
         ],
+        "suffixes": [
+            {"data": {"id": 1}, "kind": "a", "mode": "mode-a"},
+            {"data": {"name": "b"}, "kind": "b", "mode": "mode-b"},
+            {"data": {"score": 3}, "kind": "c", "mode": "mode-c"},
+        ],
+        "suffix_roots": [{"data": {"id": 1}}, {"data": {"name": "b"}}, {"data": {"score": 3}}],
         "identical": [{"data": {"value": "a"}}, {"data": {"value": "b"}}],
         "metadata": [{"first": 1}, {"second": "b"}],
         "generic": [{"data": {"value": 1}}, {"data": {"value": "b"}}],
@@ -2223,7 +2233,7 @@ def test_input_model_definition_collisions(
             {"second": "a", "name": "b", "child": {"second": "c", "name": "d"}},
         ],
     }[case]
-    for side, root, payload in zip("ab", roots, payloads, strict=True):
+    for side, root, payload in zip(sides, roots, payloads, strict=True):
         source_model = getattr(importlib.import_module(f"tests.data.python.input_model.collision_{side}"), root)
         assert source_model.model_validate(payload).model_dump(mode="json", exclude_unset=True) == payload
         result = module.Model.model_validate(payload).root.model_dump(mode="json", exclude_unset=True)

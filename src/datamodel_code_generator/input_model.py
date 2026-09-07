@@ -1021,6 +1021,7 @@ class _InputModelDefinitions:
         self.nested_types: dict[str, type] = {}
         self.names: dict[type | str, str] = {}
         self.owners: dict[str, type | str] = {}
+        self.next_suffixes: dict[str, int] | None = None
         self.reserved = {model.__name__ for model in models}
         for model in models:
             self.reserved.update(_collect_nested_models(model))
@@ -1031,9 +1032,13 @@ class _InputModelDefinitions:
             return name
         name = proposed
         if name in self.owners:
-            suffix = 2
+            if self.next_suffixes is None:
+                self.next_suffixes = {}
+            suffix = self.next_suffixes.get(proposed, 2)
             while (name := f"{proposed}_{suffix}") in self.owners or name in self.reserved:
                 suffix += 1
+            # Owners and reservations only grow, so earlier suffixes stay occupied.
+            self.next_suffixes[proposed] = suffix + 1
         self.names[model] = name
         self.owners[name] = model
         return name

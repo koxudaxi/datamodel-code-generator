@@ -1416,7 +1416,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self._dynamic_anchor_index: dict[tuple[str, ...], dict[str, str]] = {}
         self._recursive_anchor_index: dict[tuple[str, ...], list[str]] = {}
         self._ref_data_type_facts: dict[str, tuple[Any, bool]] = {}
-        self._python_imports: tuple[dict[str, Import], set[str]] | None = None
+        self._python_imports: tuple[dict[str, Import], set[str], list[str]] | None = None
         self._false_schema_refs: set[str] | None = None
         self._inherited_schema_cache: dict[str, JsonSchemaObject] = {}
         self._inherited_schema_ancestor_cache: dict[str, frozenset[str]] = {}
@@ -3264,16 +3264,20 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _get_x_python_import(self, full_path: str) -> Import:
         """Disambiguate imports of distinct runtime types sharing a class name."""
         if self._python_imports is None:
-            self._python_imports = ({}, set())
-        imports, binding_names = self._python_imports
+            self._python_imports = ({}, set(), [])
+        imports, binding_names, pending_bindings = self._python_imports
         if import_ := imports.get(full_path):
             return import_
         import_ = Import.from_full_path(full_path)
         if import_.import_ in binding_names:
-            self.model_resolver.exclude_names.update(binding_names)
+            # Preserve reservation timing without revisiting already reserved imports.
+            self.model_resolver.exclude_names.update(pending_bindings)
+            pending_bindings.clear()
             alias = self.model_resolver.get_class_name(import_.import_).name
             self.model_resolver.exclude_names.add(alias)
             import_ = Import(from_=import_.from_, import_=import_.import_, alias=alias)
+        else:
+            pending_bindings.append(import_.binding_name)
         imports[full_path] = import_
         binding_names.add(import_.binding_name)
         return import_
