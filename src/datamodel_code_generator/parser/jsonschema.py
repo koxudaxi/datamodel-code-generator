@@ -60,8 +60,8 @@ from datamodel_code_generator.enums import AliasGenerator
 from datamodel_code_generator.imports import IMPORT_ANY, Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.base import (
-    UNDEFINED,
     _SEQUENCE_ROOT_WRAPPED_KEY,
+    UNDEFINED,
     c3_merge,
     get_inherited_fields,
     sanitize_module_name,
