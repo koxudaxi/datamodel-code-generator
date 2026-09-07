@@ -9,6 +9,7 @@ import msgspec
 import pytest
 
 from datamodel_code_generator import DataModelType, InputFileType, PythonVersion
+from datamodel_code_generator.format import Formatter
 from tests.main.conftest import (
     JSON_SCHEMA_DATA_PATH,
     _generated_model,
@@ -132,11 +133,13 @@ def test_field_name_bindings(
 
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
 @pytest.mark.parametrize("template", ["factory", "wrapper", "nested"])
-def test_field_name_factory_template(output_file: Path, entrypoint: str, template: str) -> None:
+@pytest.mark.parametrize("formatter", ["builtin", "external"])
+def test_field_name_factory_template(output_file: Path, entrypoint: str, template: str, formatter: str) -> None:
     """Keep custom factories that resolve annotations outside a class body unchanged."""
     schema = JSON_SCHEMA_DATA_PATH / "field_name_bindings/factory.json"
     template_dir = JSON_SCHEMA_DATA_PATH.parent / f"templates_field_name_{template}"
     expected = f"field_name_bindings/{template}.py"
+    formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
     if entrypoint == "cli":
         run_main_and_assert(
             input_path=schema,
@@ -156,6 +159,8 @@ def test_field_name_factory_template(output_file: Path, entrypoint: str, templat
                 "--disable-timestamp",
                 "--custom-template-dir",
                 str(template_dir),
+                "--formatters",
+                *formatters,
             ],
         )
     else:
@@ -172,6 +177,7 @@ def test_field_name_factory_template(output_file: Path, entrypoint: str, templat
             enum_field_as_literal="all",
             disable_timestamp=True,
             custom_template_dir=template_dir,
+            formatters=[Formatter(value) for value in formatters],
         )
     with _generated_model(output_file, "field_name_factory", "Record") as model:
         hints = get_type_hints(model)
@@ -181,3 +187,60 @@ def test_field_name_factory_template(output_file: Path, entrypoint: str, templat
         assert result.items == {"first": [1, 2]}
         assert result.Optional == "Optional Field list — 名前"
         assert result.choice == "Optional"
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("formatter", ["builtin", "external"])
+@pytest.mark.parametrize("case", ["helper_normal", "helper_collision"])
+def test_field_name_template_helper(output_file: Path, entrypoint: str, formatter: str, case: str) -> None:
+    """Inspect the actual model instead of an unrelated preceding helper class."""
+    schema = JSON_SCHEMA_DATA_PATH / f"field_name_bindings/{case}.json"
+    template_dir = JSON_SCHEMA_DATA_PATH.parent / f"templates_field_name_{case}"
+    expected = f"field_name_bindings/{case}.py"
+    formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=schema,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file=expected,
+            extra_args=[
+                "--output-model-type",
+                "dataclasses.dataclass",
+                "--target-python-version",
+                "3.10",
+                "--use-standard-collections",
+                "--no-use-union-operator",
+                "--disable-timestamp",
+                "--custom-template-dir",
+                str(template_dir),
+                "--formatters",
+                *formatters,
+            ],
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=schema,
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            assert_func=assert_file_content,
+            expected_file=expected,
+            output_model_type=DataModelType.DataclassesDataclass,
+            target_python_version=PythonVersion.PY_310,
+            use_standard_collections=True,
+            use_union_operator=False,
+            disable_timestamp=True,
+            custom_template_dir=template_dir,
+            formatters=[Formatter(value) for value in formatters],
+        )
+    with _generated_model(output_file, "field_name_helper", "Record") as model:
+        assert list(get_type_hints(model)) == ["Optional", "items"]
+        assert list[int] in get_args(get_type_hints(model)["items"])
+        result = _model_json_validator(model)('{"Optional": "ok", "items": [1, 2]}')
+        assert result.Optional == "ok"
+        assert result.items == [1, 2]
+    with _generated_model(output_file, "field_name_helper", "Helper") as helper:
+        assert helper().value == 1
+        if case == "helper_normal":
+            assert get_type_hints(helper)["value"] == int | None

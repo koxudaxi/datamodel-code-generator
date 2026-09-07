@@ -83,7 +83,12 @@ def bind_module_field_names(models: list[DataModel], imports: Imports) -> None:
         if not candidates:
             continue
         class_body = next(
-            (node.body for node in ast.parse(model.render()).body if isinstance(node, ast.ClassDef)), None
+            (
+                node.body
+                for node in ast.parse(model.render()).body
+                if isinstance(node, ast.ClassDef) and node.name == model.class_name
+            ),
+            None,
         )
         if class_body is None:
             continue
