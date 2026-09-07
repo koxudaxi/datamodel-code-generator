@@ -19723,8 +19723,14 @@ def test_msgspec_enum_diagnostics_integer_subclasses(
     generate(schema, output=output_file, **options)
     assert_file_content(output_file, expected)
     with _generated_model(output_file, "generated_integer_subclass", "Payload") as model:
-        assert msgspec.to_builtins(msgspec.convert(case["payload"], type=model)) == case["payload"]
-        assert msgspec.to_builtins(msgspec.json.decode(json.dumps(case["payload"]), type=model)) == case["payload"]
+        results = {
+            "convert": msgspec.to_builtins(msgspec.convert(case["payload"], type=model)),
+            "decode": msgspec.to_builtins(msgspec.json.decode(json.dumps(case["payload"]), type=model)),
+        }
+    assert_output(
+        json.dumps(results, indent=2) + "\n",
+        EXPECTED_JSON_SCHEMA_PATH / "msgspec_enum_diagnostics" / f"{case['name']}.txt",
+    )
     run_main_and_assert(
         input_path=schema_path,
         output_path=output_file,
