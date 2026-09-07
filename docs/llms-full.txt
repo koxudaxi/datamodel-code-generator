@@ -7666,6 +7666,8 @@ When `--use-root-model-type-alias` is enabled, roots with field constraints or
 patterns that require Python regex configuration use a regular `RootModel` class
 to preserve validation. Unconstrained roots and constraints already represented
 in the alias type keep the alias form. This does not change `--use-type-alias`.
+An existing custom `pydantic_v2/RootModelTypeAlias.jinja2` remains selected;
+that template is responsible for preserving its root constraints.
 
 ## 📊 Type Alias Behavior by Output Type and Python Version
 
