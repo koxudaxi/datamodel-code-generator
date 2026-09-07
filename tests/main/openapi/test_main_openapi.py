@@ -9867,15 +9867,20 @@ def test_discriminator_final_field_aliases(
         with _generated_model(output_file, f"generated_discriminator_dump_{case}_{tag}", model_name) as model:
             value = model.model_validate({"petType": tag, detail: "yes"})
             wire_name = "wireKind" if "serialization_aliases" in options else "petType"
-            assert value.model_dump(by_alias=True, exclude_none=True) == {wire_name: tag, detail: "yes"}
+            payload_dir = DATA_PATH / "payloads" / "discriminator_alias_outputs"
+            assert_output(
+                json.dumps(value.model_dump(by_alias=True, exclude_none=True), sort_keys=True) + "\n",
+                payload_dir / f"{wire_name}_{tag}.txt",
+            )
             if case.startswith("wire_collision"):
                 bare = model.model_validate({"petType": tag})
-                assert bare.root.other is None
+                assert_output(json.dumps(bare.root.other) + "\n", payload_dir / "missing.txt")
                 ordinary = type(bare.root).model_validate({"petType": tag, "kind": "ordinary"})
-                assert ordinary.model_dump(mode="json", by_alias=True, exclude_none=True) == {
-                    wire_name: tag,
-                    "kind": "ordinary",
-                }
+                assert_output(
+                    json.dumps(ordinary.model_dump(mode="json", by_alias=True, exclude_none=True), sort_keys=True)
+                    + "\n",
+                    payload_dir / f"{wire_name}_{tag}_ordinary.txt",
+                )
 
 
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
