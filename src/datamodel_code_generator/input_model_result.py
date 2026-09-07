@@ -46,6 +46,36 @@ class PythonTypeSchemaAnnotation:
 _EMPTY_PYTHON_TYPE_EXPRESSIONS: Mapping[str, PythonTypeExpr] = MappingProxyType({})
 
 
+class PythonFieldOverrides:
+    """Immutable, converter-owned Python field replacement information."""
+
+    __slots__ = ("_fields",)
+
+    def __init__(self, fields: Mapping[str, str]) -> None:
+        """Freeze the field bindings for one Python model."""
+        self._fields = MappingProxyType(dict(fields))
+
+    @property
+    def fields(self) -> Mapping[str, str]:
+        """Return the child wire names and inherited bindings."""
+        return self._fields
+
+    def __deepcopy__(self, _memo: dict[int, object]) -> PythonFieldOverrides:
+        """Share immutable bindings across schema copies."""
+        return self
+
+
+class PythonModelBases(list[dict[str, str]]):  # noqa: FURB189 - must remain JSON-serializable as an ordinary list.
+    """JSON-compatible base references carrying owned override metadata."""
+
+    __slots__ = ("_python_field_overrides",)
+
+    def __init__(self, reference: str, fields: Mapping[str, str]) -> None:
+        """Attach field replacements without reserving a caller extension key."""
+        super().__init__([{"$ref": reference}])
+        self._python_field_overrides = PythonFieldOverrides(fields)
+
+
 @dataclass(frozen=True, slots=True, init=False)
 class LoadedInputModelSchema(Mapping[str, object]):
     """Loaded input-model schema carrying neutral Python type annotations."""

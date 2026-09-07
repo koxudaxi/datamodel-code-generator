@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+from copy import deepcopy
 from pathlib import Path
 
 import pytest
@@ -29,8 +30,8 @@ def test_input_model_inherited_overrides(model_name: str, entrypoint: str, tmp_p
     use_builtin = os.environ.get(TEST_DEFAULT_FORMATTER_ENV) == BUILTIN_FORMATTER_VALUE
     formatters = [Formatter.BUILTIN] if use_builtin else [Formatter.ISORT, Formatter.BLACK]
     schema_path = (
-        Path(__file__).parent / "data" / "jsonschema" / "input_model_inherited_alias_winner.json"
-        if model_name == "SharedAliasChild"
+        Path(__file__).parent / "data" / "jsonschema" / "input_model_caller_override_extension.json"
+        if model_name == "RawSchemaIntersection"
         else None
     )
     input_args = (
@@ -58,7 +59,7 @@ def test_input_model_inherited_overrides(model_name: str, entrypoint: str, tmp_p
         )
         with assert_inputs_not_mutated(schema):
             generate(
-                schema,
+                deepcopy(schema),
                 config=GenerateConfig(
                     input_file_type=InputFileType.JsonSchema,
                     input_filename=schema_path.name if schema_path else "<stdin>",
@@ -71,7 +72,9 @@ def test_input_model_inherited_overrides(model_name: str, entrypoint: str, tmp_p
                 ),
             )
     assert_output(output.read_text(), EXPECTED / f"{model_name}{'_builtin' if use_builtin else ''}.py")
-    schema = load_model_schema([source], InputFileType.JsonSchema)
+    schema = (
+        json.loads(schema_path.read_text()) if schema_path else load_model_schema([source], InputFileType.JsonSchema)
+    )
     assert_output(json.dumps(schema, indent=2), EXPECTED / f"{model_name}_schema.txt")
     records = []
     with _generated_model(output, "_generated_inherited_overrides", model_name) as generated:

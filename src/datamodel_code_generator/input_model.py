@@ -872,7 +872,7 @@ def _partition_inherited_fields(
     inherited_names: set[str] = set()
     overrides: dict[str, str] = {}
     for field_name, parent_field in parent_fields.items():
-        child_field = model_class.model_fields[field_name]
+        child_field = model_class.model_fields.get(field_name, parent_field)
         parent_wire = _input_model_field_wire_name(field_name, parent_field)
         child_wire = _input_model_field_wire_name(field_name, child_field)
         if child_wire in original_props and (
@@ -952,7 +952,9 @@ def _transform_single_model_to_inheritance(
     new_schema["title"] = schema.get("title")
     new_schema["type"] = "object"
     if overrides:
-        new_schema["x-python-field-overrides"] = overrides
+        from datamodel_code_generator.input_model_result import PythonModelBases  # noqa: PLC0415
+
+        new_schema["allOf"] = PythonModelBases(f"#/$defs/{parent_name}", overrides)
 
     new_schema.update({
         key: value

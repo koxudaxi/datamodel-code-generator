@@ -32,8 +32,5 @@
     "value"
   ],
   "title": "TightenedChild",
-  "type": "object",
-  "x-python-field-overrides": {
-    "value": "value"
-  }
+  "type": "object"
 }

@@ -34,8 +34,5 @@
     "value"
   ],
   "title": "DifferentConstraintsChild",
-  "type": "object",
-  "x-python-field-overrides": {
-    "value": "value"
-  }
+  "type": "object"
 }

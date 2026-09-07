@@ -270,6 +270,7 @@ _REF_SIBLING_KEYWORDS_DISABLED_VERSIONS = frozenset({
     JsonSchemaVersion.Draft6,
     JsonSchemaVersion.Draft7,
 })
+_PYTHON_FIELD_OVERRIDES_KEY = "__python_field_overrides"
 
 
 def _field_source_name(field: DataModelFieldBase) -> str | None:
@@ -940,12 +941,23 @@ class JsonSchemaObject(BaseModel):
             return values
         alias_extras = values.get(cls.__extra_key__, {})
         raw_extras = {k: v for k, v in values.items() if k not in EXCLUDE_FIELD_KEYS}
+        if (overrides := getattr(values.get("allOf"), "_python_field_overrides", None)) is not None:
+            raw_extras[_PYTHON_FIELD_OVERRIDES_KEY] = overrides
         if not alias_extras and not raw_extras:
             return values
         extras = {**alias_extras, **raw_extras}
         if "const" in alias_extras:  # pragma: no cover
             extras["const"] = alias_extras["const"]
         return {**values, cls.__extra_key__: extras}
+
+    @property
+    def python_field_overrides(self) -> Mapping[str, str]:
+        """Read only converter-owned replacement metadata."""
+        if (annotation := self.extras.get(_PYTHON_FIELD_OVERRIDES_KEY)) is None:
+            return {}
+        from datamodel_code_generator.input_model_result import PythonFieldOverrides  # noqa: PLC0415
+
+        return annotation.fields if isinstance(annotation, PythonFieldOverrides) else {}
 
     @field_validator("ref")
     @classmethod
@@ -7559,7 +7571,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                             owned_paths,
                             get_data_type_property_input_names(field.data_type) if field is not None else None,
                         )
-                if overrides := source.extras.get("x-python-field-overrides"):
+                if overrides := source.python_field_overrides:
                     overridden_properties.update(overrides)
                     overridden_properties.update(overrides.values())
 
@@ -7819,7 +7831,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             inherited_fields = self._get_inherited_field_map(base_classes)
             inherited_properties = self._get_inherited_property_map(base_classes)
             inherited_required_names = self._get_inherited_required_names(base_classes)
-        python_overrides = obj.extras.get("x-python-field-overrides", {})
+        python_overrides = obj.python_field_overrides
         if python_overrides:
             inherited_properties = {
                 key: value for key, value in inherited_properties.items() if key not in python_overrides
@@ -7858,9 +7870,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     if parent_field is None and parent_name != field_name:
                         for resolved_ref in self._linearize_inherited_schema_refs(base_classes):
                             parent_schema = self._load_inherited_schema_object(resolved_ref)
-                            parent_name = parent_schema.extras.get("x-python-field-overrides", {}).get(
-                                parent_name, parent_name
-                            )
+                            parent_name = parent_schema.python_field_overrides.get(parent_name, parent_name)
                         parent_field = next(
                             (
                                 candidate

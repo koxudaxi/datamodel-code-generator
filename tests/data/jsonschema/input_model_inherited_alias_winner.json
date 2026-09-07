@@ -27,6 +27,5 @@
   },
   "required": ["shared", "shared"],
   "title": "SharedAliasChild",
-  "type": "object",
-  "x-python-field-overrides": {"shared": "shared"}
+  "type": "object"
 }

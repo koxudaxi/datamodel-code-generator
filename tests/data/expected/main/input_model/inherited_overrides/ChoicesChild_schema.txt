@@ -26,8 +26,5 @@
     }
   },
   "title": "ChoicesChild",
-  "type": "object",
-  "x-python-field-overrides": {
-    "new": "old"
-  }
+  "type": "object"
 }

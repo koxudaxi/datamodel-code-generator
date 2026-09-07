@@ -42,9 +42,6 @@
       },
       "title": "DefaultChild",
       "type": "object",
-      "x-python-field-overrides": {
-        "value": "value"
-      },
       "x-is-base-class": true
     }
   },
@@ -61,8 +58,5 @@
     }
   },
   "title": "GrandChild",
-  "type": "object",
-  "x-python-field-overrides": {
-    "value": "value"
-  }
+  "type": "object"
 }

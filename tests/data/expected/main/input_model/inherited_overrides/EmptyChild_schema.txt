@@ -37,8 +37,5 @@
     "value"
   ],
   "title": "EmptyChild",
-  "type": "object",
-  "x-python-field-overrides": {
-    "value": "value"
-  }
+  "type": "object"
 }

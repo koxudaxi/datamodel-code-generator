@@ -39,9 +39,6 @@
       ],
       "title": "RepeatedChild",
       "type": "object",
-      "x-python-field-overrides": {
-        "value": "value"
-      },
       "x-is-base-class": true
     }
   },
@@ -65,8 +62,5 @@
     "value"
   ],
   "title": "UniqueChild",
-  "type": "object",
-  "x-python-field-overrides": {
-    "value": "value"
-  }
+  "type": "object"
 }

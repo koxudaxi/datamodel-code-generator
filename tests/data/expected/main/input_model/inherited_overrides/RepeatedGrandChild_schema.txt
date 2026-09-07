@@ -39,9 +39,6 @@
       ],
       "title": "RepeatedChild",
       "type": "object",
-      "x-python-field-overrides": {
-        "value": "value"
-      },
       "x-is-base-class": true
     }
   },

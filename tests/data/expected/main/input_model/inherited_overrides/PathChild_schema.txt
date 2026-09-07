@@ -26,8 +26,5 @@
     }
   },
   "title": "PathChild",
-  "type": "object",
-  "x-python-field-overrides": {
-    "value": "value"
-  }
+  "type": "object"
 }

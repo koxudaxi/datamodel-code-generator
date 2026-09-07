@@ -27,9 +27,6 @@
       },
       "title": "AliasChild",
       "type": "object",
-      "x-python-field-overrides": {
-        "new": "old"
-      },
       "x-is-base-class": true
     }
   },
@@ -46,8 +43,5 @@
     }
   },
   "title": "AliasGrandChild",
-  "type": "object",
-  "x-python-field-overrides": {
-    "newest": "new"
-  }
+  "type": "object"
 }

@@ -8,7 +8,8 @@
           },
           "title": "Shared",
           "type": "array",
-          "uniqueItems": true
+          "uniqueItems": true,
+          "x-python-type": "frozenset[int]"
         }
       },
       "required": [
@@ -30,7 +31,8 @@
         "type": "integer"
       },
       "title": "Shared",
-      "type": "array"
+      "type": "array",
+      "x-python-type": "list[int]"
     }
   },
   "required": [
@@ -38,8 +40,5 @@
     "shared"
   ],
   "title": "SharedAliasChild",
-  "type": "object",
-  "x-python-field-overrides": {
-    "shared": "shared"
-  }
+  "type": "object"
 }
