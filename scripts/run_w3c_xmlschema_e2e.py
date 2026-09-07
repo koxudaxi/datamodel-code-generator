@@ -203,8 +203,8 @@ def main() -> int:
     failures: list[str] = []
     started_at = time.monotonic()
     for index, schema_path in enumerate(unique_paths, start=1):
-        relative_schema_path = schema_path.relative_to(suite_root)
-        expected_diagnostic = expected_diagnostics.get(relative_schema_path.as_posix())
+        relative_schema_path = schema_path.relative_to(suite_root).as_posix()
+        expected_diagnostic = expected_diagnostics.get(relative_schema_path)
         try:
             generated = generate(
                 schema_path,
@@ -216,7 +216,8 @@ def main() -> int:
             if (
                 expected_diagnostic is not None
                 and f"{type(exc).__name__}: {exc}" == expected_diagnostic["error"]
-                and hashlib.sha256(schema_path.read_bytes()).hexdigest() == expected_diagnostic["sha256"]
+                and hashlib.sha256(schema_path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+                == expected_diagnostic["sha256"]
             ):
                 diagnostics += 1
             else:
