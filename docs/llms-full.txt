@@ -4241,6 +4241,12 @@ Common `google.protobuf` well-known types are mapped through the generator's nor
 | `FieldMask` | `str` |
 | Wrapper types | Optional scalar fields |
 
+Referenced standard types without a built-in mapping are generated from their
+compiled descriptors; unrelated standard types remain omitted. This includes the
+`NullValue` enum, represented by its `NULL_VALUE` member like other generated enums.
+This enum representation does not implement ProtoJSON's special `null` serialization;
+acceptance of `None` follows the selected output backend.
+
 ## Schema Version
 
 Protocol Buffers syntax is detected from each compiled `.proto` descriptor:
