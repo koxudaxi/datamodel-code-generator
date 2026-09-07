@@ -6315,9 +6315,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if merged_schema is None:
             return None
 
-        if obj.description:
+        if obj.has_constraint or obj.description:
             merged_dict = merged_schema.model_dump(exclude_unset=True, by_alias=True)
-            merged_dict["description"] = obj.description
+            if obj.has_constraint:
+                self._merge_schema_constraints(merged_dict, [obj], intersect=True)
+            if obj.description:
+                merged_dict["description"] = obj.description
             merged_schema = self.SCHEMA_OBJECT_TYPE.model_validate(merged_dict)
 
         return self.parse_root_type(name, merged_schema, path)

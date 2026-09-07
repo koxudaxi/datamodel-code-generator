@@ -1,0 +1,106 @@
+[
+  {
+    "name": "length",
+    "valid": [
+      "a",
+      "abc"
+    ],
+    "invalid": [
+      "",
+      "abcd"
+    ],
+    "normal": false,
+    "error_type": "string_too_short"
+  },
+  {
+    "name": "minimum",
+    "valid": [
+      "abc",
+      "abcd"
+    ],
+    "invalid": [
+      "",
+      "ab"
+    ],
+    "normal": false,
+    "error_type": "string_too_short"
+  },
+  {
+    "name": "number",
+    "valid": [
+      0,
+      5
+    ],
+    "invalid": [
+      -1,
+      6
+    ],
+    "normal": false,
+    "error_type": "greater_than_equal"
+  },
+  {
+    "name": "multiple",
+    "valid": [
+      0,
+      6,
+      12
+    ],
+    "invalid": [
+      2,
+      3,
+      7
+    ],
+    "normal": false,
+    "error_type": "multiple_of"
+  },
+  {
+    "name": "redundant",
+    "valid": [
+      "a",
+      "abc"
+    ],
+    "invalid": [
+      "",
+      "abcd"
+    ],
+    "normal": true,
+    "error_type": "string_too_short"
+  },
+  {
+    "name": "description",
+    "valid": [
+      "a",
+      "abcd"
+    ],
+    "invalid": [
+      ""
+    ],
+    "normal": true,
+    "error_type": "string_too_short"
+  },
+  {
+    "name": "ordinary",
+    "valid": [
+      "a",
+      "abcd"
+    ],
+    "invalid": [
+      ""
+    ],
+    "normal": true,
+    "error_type": "string_too_short"
+  },
+  {
+    "name": "same_pattern",
+    "valid": [
+      "a",
+      "ba"
+    ],
+    "invalid": [
+      "",
+      "bb"
+    ],
+    "normal": true,
+    "error_type": "string_too_short"
+  }
+]
