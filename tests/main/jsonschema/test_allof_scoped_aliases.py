@@ -28,10 +28,15 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 DATA = JSON_SCHEMA_DATA_PATH / "allof_scoped_aliases"
+PAYLOADS = JSON_SCHEMA_DATA_PATH.parent / "payloads"
 
 
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
-@pytest.mark.parametrize("case", json.loads((DATA / "cases.json").read_text()), ids=itemgetter("name"))
+@pytest.mark.parametrize(
+    "case",
+    json.loads((PAYLOADS / "allof_scoped_aliases_cases.json").read_text()),
+    ids=itemgetter("name"),
+)
 def test_allof_final_scoped_aliases(output_file: Path, entrypoint: str, case: dict) -> None:
     """Keep final/raw/global precedence, alias choices, required fields and baseline class order."""
     with (
@@ -71,7 +76,7 @@ def test_allof_final_scoped_aliases(output_file: Path, entrypoint: str, case: di
             import msgspec
 
             with _generated_model(output_file, "allof_scoped_msgspec", "ApiRootSchema") as model:
-                value = msgspec.json.decode((DATA / "valid.json").read_bytes(), type=model)
+                value = msgspec.json.decode((PAYLOADS / "allof_scoped_aliases_valid.json").read_bytes(), type=model)
                 assert_output(
                     f"{value.child.renamed}\n", EXPECTED_JSON_SCHEMA_PATH / "allof_scoped_aliases/attribute.txt"
                 )
@@ -80,9 +85,9 @@ def test_allof_final_scoped_aliases(output_file: Path, entrypoint: str, case: di
                     EXPECTED_JSON_SCHEMA_PATH / "allof_scoped_aliases/msgspec-runtime.txt",
                 )
                 with pytest.raises(msgspec.ValidationError):
-                    msgspec.json.decode((DATA / "invalid.json").read_bytes(), type=model)
+                    msgspec.json.decode((PAYLOADS / "allof_scoped_aliases_invalid.json").read_bytes(), type=model)
             return
-        valid_data = json.loads((DATA / "valid.json").read_text())
+        valid_data = json.loads((PAYLOADS / "allof_scoped_aliases_valid.json").read_text())
         if case["options"].get("output_model_type") in {"dataclasses.dataclass", "typing.TypedDict"}:
             valid_data["child"][case["attribute"]] = valid_data["child"].pop("x")
         assert_generated_model_json_validation(
@@ -90,7 +95,7 @@ def test_allof_final_scoped_aliases(output_file: Path, entrypoint: str, case: di
             module_name=f"allof_scoped_{case['name']}_{entrypoint}",
             model_name="ApiRootSchema" if case["options"].get("class_name_prefix") else "Root",
             valid_json=json.dumps(valid_data),
-            invalid_json=(DATA / "invalid.json").read_text(),
+            invalid_json=(PAYLOADS / "allof_scoped_aliases_invalid.json").read_text(),
             expected_error_type="missing",
             expected_attribute_path=("child", case["attribute"]),
             expected_attribute_value="ok",
@@ -134,7 +139,7 @@ def test_allof_final_scoped_aliases_modular(output_dir: Path, entrypoint: str) -
         )
     with _generated_package_module(output_dir, "pkg") as module:
         model = module.ApiChildSchema
-        value = model.model_validate(json.loads((DATA / "valid.json").read_text())["child"])
+        value = model.model_validate(json.loads((PAYLOADS / "allof_scoped_aliases_valid.json").read_text())["child"])
         assert_output(
             json.dumps({"fields": list(model.model_fields), "data": value.model_dump(by_alias=True)}, indent=2) + "\n",
             EXPECTED_JSON_SCHEMA_PATH / "allof_scoped_aliases/modular-runtime.txt",
@@ -143,7 +148,9 @@ def test_allof_final_scoped_aliases_modular(output_dir: Path, entrypoint: str) -
 
 
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
-@pytest.mark.parametrize("case", json.loads((DATA / "errors.json").read_text()), ids=itemgetter("name"))
+@pytest.mark.parametrize(
+    "case", json.loads((PAYLOADS / "allof_scoped_aliases_errors.json").read_text()), ids=itemgetter("name")
+)
 def test_allof_final_scoped_aliases_invalid(
     output_file: Path, entrypoint: str, case: dict, capsys: pytest.CaptureFixture[str]
 ) -> None:
