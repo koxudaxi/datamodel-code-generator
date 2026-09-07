@@ -44,7 +44,7 @@ def test_field_name_bindings(
     """Preserve fields, literal text and runtime types when class names shadow imports."""
     schema_path = JSON_SCHEMA_DATA_PATH / "field_name_bindings" / f"{case}.json"
     expected = f"field_name_bindings/{case}/{backend.name}_{target.value}_{union}.py"
-    alias_path = JSON_SCHEMA_DATA_PATH / "field_name_bindings/wire_aliases.json"
+    alias_path = DATA_PATH / "payloads/field_name_bindings_runtime/wire_aliases.json"
     aliases = json.loads(alias_path.read_text()) if case == "wire" else {}
     if entrypoint == "cli":
         run_main_and_assert(
