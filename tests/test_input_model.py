@@ -2953,3 +2953,89 @@ def test_python_inline_future_generic_diagnostic(
                 InputModelRefStrategy(strategy),
                 DataModelType.PydanticV2BaseModel,
             )
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("formatter", ["builtin", "external"])
+@pytest.mark.parametrize("strategy", ["regenerate-all", "reuse-all", "reuse-foreign"])
+@pytest.mark.parametrize(
+    "case",
+    [
+        "DataInner",
+        "TypedInner",
+        "ModelInner",
+        "DataRoot",
+        "TypedRoot",
+        "ModelRoot",
+        "DeepRoot",
+        "Recursive",
+        "SameNames",
+    ],
+)
+def test_nested_family_python_types(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, entrypoint: str, formatter: str, strategy: str, case: str
+) -> None:
+    """Supplement exact nested definitions without losing native collection behavior."""
+    import json
+
+    from pydantic import TypeAdapter
+
+    from datamodel_code_generator import DataModelType, GenerateConfig, InputFileType, generate
+    from datamodel_code_generator.enums import InputModelRefStrategy
+    from datamodel_code_generator.format import Formatter
+    from datamodel_code_generator.input_model import load_model_schema
+    from tests.data.python.input_model import nested_family_types
+
+    output = tmp_path / "output.py"
+    (tmp_path / "pyproject.toml").write_text(
+        (Path(__file__).parent / "data/python/input_model/collision_settings/pyproject.toml").read_text()
+    )
+    paths = [f"tests.data.python.input_model.nested_family_types:{case}"]
+    formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
+    if entrypoint == "cli":
+        run_main_with_args(
+            _input_model_args(
+                paths,
+                output_path=output,
+                extra_args=["--disable-timestamp", "--input-model-ref-strategy", strategy, "--formatters", *formatters],
+            )
+        )
+    else:
+        schema = load_model_schema(
+            paths, InputFileType.JsonSchema, InputModelRefStrategy(strategy), DataModelType.PydanticV2BaseModel
+        )
+        generate(
+            schema,
+            config=GenerateConfig(
+                input_file_type=InputFileType.JsonSchema,
+                output=output,
+                input_filename="<stdin>",
+                disable_timestamp=True,
+                settings_path=tmp_path,
+                formatters=[Formatter(value) for value in formatters],
+            ),
+        )
+    assert_output(output.read_text(), EXPECTED_INPUT_MODEL_PATH / f"nested_family_{case}_{strategy}.py")
+    cases = json.loads((Path(__file__).parent / "data/payloads/nested_family_types.json").read_text())
+    fixture = next(item for item in cases if item["name"] == case)
+    module = types.ModuleType("nested_family_output")
+    monkeypatch.setitem(sys.modules, module.__name__, module)
+    exec(output.read_text(), module.__dict__)
+    source_type = getattr(nested_family_types, case)
+    native = TypeAdapter(source_type).validate_python(fixture["payload"])
+    generated = getattr(module, case).model_validate(fixture["payload"])
+    for path in fixture["paths"]:
+        original, result = native, generated
+        for name in path:
+            original = original[name] if isinstance(original, dict) else getattr(original, name)
+            result = result[name] if isinstance(result, dict) else getattr(result, name)
+        original = original["values"] if isinstance(original, dict) else original.values
+        result = result["values"] if isinstance(result, dict) else result.values
+        assert type(result) is type(original) is frozenset
+        assert result == original
+        assert hash(result) == hash(original)
+    if case == "DeepRoot":
+        for name in ("DataInner", "TypedInner", "ModelInner"):
+            result = getattr(module, name).model_validate({"values": [1, 2]})
+            assert result.values == frozenset({1, 2})
+            assert isinstance(result.values, frozenset)

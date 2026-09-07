@@ -346,6 +346,7 @@ def _get_input_model_json_schema_class(
     *,
     preserve_type_identity: bool = False,
     preserve_generic_identity: bool = False,
+    use_standard_schema: bool = False,
 ) -> type[GenerateJsonSchema]:
     """Get the InputModelJsonSchema class lazily."""
     from pydantic.json_schema import GenerateJsonSchema  # noqa: PLC0415
@@ -452,7 +453,9 @@ def _get_input_model_json_schema_class(
     if definition_types is None:
         return InputModelJsonSchema
 
-    class IdentifiedInputModelJsonSchema(InputModelJsonSchema):
+    class IdentifiedInputModelJsonSchema(
+        cast("Any", GenerateJsonSchema if use_standard_schema else InputModelJsonSchema)
+    ):
         """Retain Pydantic's definition-to-runtime-type correspondence when merging."""
 
         def generate_inner(self, schema: Any) -> dict[str, Any]:
@@ -516,9 +519,12 @@ def _get_input_model_json_schema_class(
                     if preserve_type_identity:
                         _collect_core_type_identities(model_classes or (), core_types)
                     else:
-                        for model in model_classes or ():
-                            for nested in _collect_nested_models(model).values():
+                        pending_models = list(model_classes or ())
+                        visited: set[type] = set()
+                        while pending_models:
+                            for nested in _collect_nested_models(pending_models.pop(), visited).values():
                                 core_types[f"{nested.__module__}.{nested.__qualname__}:{id(nested)}"] = nested
+                                pending_models.append(nested)
                     legacy_types_loaded = True
                 definition_types[name] = core_types.get(core_ref, core_ref)
             return result
@@ -947,56 +953,47 @@ def _clear_field_schema_names(schema: dict[str, Any]) -> None:
             pending.extend(node)
 
 
-def _add_python_type_info(
+def _add_python_type_to_model_properties(
+    properties: dict[str, Any],
+    model: type,
+    expression_collector: PythonTypeExpressionCollector | None,
+    generic_names: dict[type, str] | None,
+) -> None:
+    """Supplement one definition using the fields of its actual Python model."""
+    if model_fields := getattr(model, "model_fields", None):
+        _add_python_type_to_properties(properties, model_fields, expression_collector, generic_names)
+        return
+    for field_name, field_type in _get_type_hints_safe(model).items():
+        if (prop := properties.get(field_name)) is not None and (
+            serialized := _serialize_python_type(field_type, expression_collector, generic_names)
+        ):
+            prop["x-python-type"] = serialized
+
+
+def _add_python_type_info(  # ruff: ignore[too-many-arguments]
     schema: dict[str, Any],
     model: type,
     expression_collector: PythonTypeExpressionCollector | None = None,
     generic_definitions: dict[str, type | str] | None = None,
+    schema_types: dict[str, type | str] | None = None,
     *,
     clear_field_names: bool = False,
 ) -> dict[str, Any]:
-    """Add x-python-type information to JSON Schema for types lost during conversion."""
+    """Add Python type information to root properties and identified nested definitions."""
     generic_names = _generic_definition_names(generic_definitions)
-    model_fields = getattr(model, "model_fields", None)
-    if model_fields and "properties" in schema:
-        _add_python_type_to_properties(schema["properties"], model_fields, expression_collector, generic_names)
+    if properties := schema.get("properties"):
+        _add_python_type_to_model_properties(properties, model, expression_collector, generic_names)
 
-    if "$defs" in schema:
-        nested_models = _collect_nested_models(model)
-        model_name = getattr(model, "__name__", None)
-        if model_name and model_name in schema["$defs"]:
-            nested_models[model_name] = model
-        for def_name, def_schema in schema["$defs"].items():
-            if def_name not in nested_models or "properties" not in def_schema:  # pragma: no cover
-                continue
-            nested_model = nested_models[def_name]
-            nested_fields = getattr(nested_model, "model_fields", None)
-            if nested_fields:
-                _add_python_type_to_properties(
-                    def_schema["properties"], nested_fields, expression_collector, generic_names
-                )
-
+    if (definitions := schema.get("$defs")) and schema_types:
+        for def_name, def_schema in definitions.items():
+            if (
+                isinstance(nested_model := schema_types.get(def_name), type)
+                and (not _pydantic_generic_metadata(nested_model) or def_name == nested_model.__name__)
+                and (properties := def_schema.get("properties"))
+            ):
+                _add_python_type_to_model_properties(properties, nested_model, expression_collector, generic_names)
     if clear_field_names:
         _clear_field_schema_names(schema)
-    return schema
-
-
-def _add_python_type_info_generic(
-    schema: dict[str, Any],
-    obj: type,
-    expression_collector: PythonTypeExpressionCollector | None = None,
-    generic_definitions: dict[str, type | str] | None = None,
-) -> dict[str, Any]:
-    """Add x-python-type information using get_type_hints (for dataclass/TypedDict)."""
-    generic_names = _generic_definition_names(generic_definitions)
-    type_hints = _get_type_hints_safe(obj)
-    if type_hints and "properties" in schema:  # pragma: no branch
-        for field_name, field_type in type_hints.items():
-            if field_name in schema["properties"]:  # pragma: no branch
-                serialized = _serialize_python_type(field_type, expression_collector, generic_names)
-                if serialized:
-                    schema["properties"][field_name]["x-python-type"] = serialized
-
     return schema
 
 
@@ -1412,6 +1409,7 @@ def _transform_single_model_to_inheritance(  # noqa: PLR0913, PLR0917
     expression_collector: PythonTypeExpressionCollector | None = None,
     definitions: _InputModelDefinitions | None = None,
     generic_definitions: dict[str, type | str] | None = None,
+    schema_types: dict[str, type | str] | None = None,
 ) -> dict[str, object]:
     """Transform a single model's schema to use allOf inheritance structure."""
     if processed_parents is None:
@@ -1440,6 +1438,7 @@ def _transform_single_model_to_inheritance(  # noqa: PLR0913, PLR0917
             parent,
             expression_collector,
             generic_definitions,
+            schema_types,
             clear_field_names=getattr(schema_generator, "has_field_schema_owners", False),
         )
         if definitions is not None:
@@ -1454,6 +1453,7 @@ def _transform_single_model_to_inheritance(  # noqa: PLR0913, PLR0917
             expression_collector,
             definitions,
             generic_definitions,
+            schema_types,
         )
         processed_parents[parent] = parent_schema, parent_properties, parent_required
     parent_schema, parent_properties, parent_required = processed_parents[parent]
@@ -1677,6 +1677,7 @@ def _load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
                 model_class,
                 expression_collector,
                 generic_definitions,
+                definitions.current_types,
                 clear_field_names=getattr(schema_generator, "has_field_schema_owners", False),
             )
             schema = definitions.normalize(schema, model_class)
@@ -1690,6 +1691,7 @@ def _load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
                 expression_collector,
                 definitions,
                 generic_definitions,
+                definitions.current_types,
             )
 
             if "$defs" in schema:
@@ -1719,7 +1721,7 @@ def _load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
             _restore_path_module(state)
 
 
-def _load_single_model_schema(  # noqa: PLR0912, PLR0915
+def _load_single_model_schema(  # ruff: ignore[too-many-branches, too-many-locals, too-many-statements]
     input_model: str,
     input_file_type: InputFileType,
     ref_strategy: InputModelRefStrategy | None,
@@ -1776,8 +1778,9 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0915
                 raise Error(msg)
             _try_rebuild_model(obj)
             nested_models, definition_types = _prepare_reused_model_types(obj, ref_strategy, output_family)
+            schema_types = definition_types if definition_types is not None else {}
             schema_generator = _get_input_model_json_schema_class(
-                definition_types,
+                schema_types,
                 [obj],
                 preserve_type_identity=ref_strategy is InputModelRefStrategy.ReuseAll,
                 preserve_generic_identity=_reuses_pydantic_generics(ref_strategy, output_family),
@@ -1800,6 +1803,7 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0915
                 obj,
                 expression_collector,
                 definition_types,
+                schema_types,
                 clear_field_names=getattr(schema_generator, "has_field_schema_owners", False),
             )
 
@@ -1809,6 +1813,7 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0915
                 schema_generator,
                 expression_collector=expression_collector,
                 generic_definitions=definition_types,
+                schema_types=schema_types,
             )
 
             if ref_strategy and nested_models is not None:
@@ -1836,16 +1841,16 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0915
 
             obj_type = cast("type", obj)
             nested_models, definition_types = _prepare_reused_model_types(obj_type, ref_strategy, output_family)
-            schema = (
-                TypeAdapter(obj).json_schema()
-                if definition_types is None
-                else TypeAdapter(obj).json_schema(
-                    schema_generator=_get_input_model_json_schema_class(
-                        definition_types, [obj_type], preserve_generic_identity=True
-                    )
+            schema_types = definition_types if definition_types is not None else {}
+            schema = TypeAdapter(obj).json_schema(
+                schema_generator=_get_input_model_json_schema_class(
+                    schema_types,
+                    [obj_type],
+                    use_standard_schema=definition_types is None,
+                    preserve_generic_identity=definition_types is not None,
                 )
             )
-            schema = _add_python_type_info_generic(schema, obj_type, expression_collector, definition_types)
+            schema = _add_python_type_info(schema, obj, expression_collector, definition_types, schema_types)
 
             if ref_strategy and ref_strategy != InputModelRefStrategy.RegenerateAll:
                 nested_models = cast("dict[str, type]", nested_models)
@@ -1857,7 +1862,7 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0915
                     )
                 obj_name = getattr(obj, "__name__", None)
                 if obj_name and "$defs" in schema and obj_name in schema["$defs"]:  # pragma: no cover
-                    nested_models[obj_name] = obj_type
+                    nested_models[obj_name] = obj
                 schema = _filter_defs_by_strategy(
                     schema, nested_models, output_family, ref_strategy, expression_collector, [obj_type]
                 )
