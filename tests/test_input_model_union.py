@@ -62,3 +62,43 @@ def test_input_model_union_branch_provenance(model_name: str, entrypoint: str, t
                         observations[name] = describe(result.model_dump())
             records[label] = observations
     assert_output(json.dumps(records, indent=2), EXPECTED / f"{model_name}_runtime.txt")
+
+
+@pytest.mark.parametrize("model_name", ["Serializable", "Mixed", "Container", "Nested"])
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+def test_input_model_union_caller_extensions(model_name: str, entrypoint: str, tmp_path: Path) -> None:
+    """Consume generated provenance without discarding similarly named user metadata."""
+    from tests.data.python.input_model import union_extensions
+
+    source = f"tests.data.python.input_model.union_extensions:{model_name}"
+    output = tmp_path / "output.py"
+    if entrypoint == "cli":
+        run_main_with_args(["--input-model", source, "--output", str(output), "--disable-timestamp"])
+    else:
+        generate(
+            load_model_schema([source], InputFileType.JsonSchema),
+            config=GenerateConfig(
+                input_file_type=InputFileType.JsonSchema,
+                input_filename="<stdin>",
+                disable_timestamp=True,
+                output=output,
+            ),
+        )
+    assert_output(output.read_text(), EXPECTED / f"extension_{model_name}.py")
+    schema = load_model_schema([source], InputFileType.JsonSchema)
+    assert_output(json.dumps(schema, indent=2), EXPECTED / f"extension_{model_name}_schema.txt")
+    if model_name == "Serializable":
+        assert schema == union_extensions.Serializable.model_json_schema()
+    with _generated_model(output, "_generated_union_extensions", model_name) as generated:
+        for value in (1, "text", int, None, [int]):
+            payload = {"value": value}
+            observations = []
+            for model in (getattr(union_extensions, model_name), generated):
+                with assert_inputs_not_mutated(payload):
+                    try:
+                        result = model.model_validate(payload)
+                    except ValidationError:
+                        observations.append("rejected")
+                    else:
+                        observations.append(describe(result.model_dump()))
+            assert observations[0] == observations[1]

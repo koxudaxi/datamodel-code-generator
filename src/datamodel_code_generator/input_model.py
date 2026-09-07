@@ -377,11 +377,32 @@ def _iter_unserializable_schemas(value: Any) -> Iterator[dict[str, Any]]:
             yield from _iter_unserializable_schemas(item)
 
 
+class _UnionBranchIndex(int):
+    """Identify generated provenance while retaining a caller's same-named extension."""
+
+    original: tuple[Any, ...] = ()
+
+
+def _consume_union_branch(schema: dict[str, Any]) -> int | None:
+    """Consume only provenance produced by the schema generator."""
+    if not isinstance(index := schema.get(_UNION_BRANCH_MARKER), _UnionBranchIndex):
+        return None
+    if index.original:
+        schema[_UNION_BRANCH_MARKER] = index.original[0]
+    else:
+        schema.pop(_UNION_BRANCH_MARKER)
+    return index
+
+
 def _bind_union_choice(value: Any, targets: dict[int, dict[str, Any]], index: int) -> None:
     if not targets:
         return
     if (branch := targets.pop(id(value), None)) is not None:
-        branch[_UNION_BRANCH_MARKER] = index
+        marker = _UnionBranchIndex(index)
+        if _UNION_BRANCH_MARKER in branch:
+            previous = branch[_UNION_BRANCH_MARKER]
+            marker.original = previous.original if isinstance(previous, _UnionBranchIndex) else (previous,)
+        branch[_UNION_BRANCH_MARKER] = marker
         return
     if isinstance(value, dict):
         for item in value.values():
@@ -402,7 +423,7 @@ def _has_unserializable_schema(value: Any) -> bool:
 def _remove_unserializable_markers(value: Any) -> None:
     if isinstance(value, dict):
         value.pop(_UNSERIALIZABLE_MARKER, None)
-        value.pop(_UNION_BRANCH_MARKER, None)
+        _consume_union_branch(value)
         for key, item in value.items():
             if key in _UNSERIALIZABLE_SCHEMA_KEYS:
                 _remove_unserializable_markers(item)
@@ -420,7 +441,7 @@ def _process_unserializable_property(
     if branches := prop.get("anyOf", prop.get("oneOf")):
         args = None
         for item in branches:
-            index = item.pop(_UNION_BRANCH_MARKER, None)
+            index = _consume_union_branch(item)
             if not _has_unserializable_schema(item):
                 continue
             if args is None:
