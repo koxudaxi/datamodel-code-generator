@@ -114,6 +114,7 @@ from datamodel_code_generator.types import (
     ANY,
     DataType,
     EmptyDataType,
+    FloatConstraint,
     Types,
     UnionIntFloat,
 )
@@ -811,8 +812,8 @@ class JsonSchemaObject(BaseModel):
         """Validate and convert boolean exclusive maximum and minimum to numeric values."""
         if not isinstance(values, dict):
             return values
-        exclusive_maximum: float | bool | None = values.get("exclusiveMaximum")
-        exclusive_minimum: float | bool | None = values.get("exclusiveMinimum")
+        exclusive_maximum: int | float | bool | None = values.get("exclusiveMaximum")
+        exclusive_minimum: int | float | bool | None = values.get("exclusiveMinimum")
         if not isinstance(exclusive_maximum, bool) and not isinstance(exclusive_minimum, bool):
             return values
 
@@ -917,9 +918,9 @@ class JsonSchemaObject(BaseModel):
     maxItems: Optional[int] = None  # noqa:  N815,UP045
     minProperties: Optional[int] = None  # noqa: N815, UP045
     maxProperties: Optional[int] = None  # noqa: N815, UP045
-    multipleOf: Optional[float] = None  # noqa: N815, UP045
-    exclusiveMaximum: Optional[Union[float, bool]] = None  # noqa: N815, UP007, UP045
-    exclusiveMinimum: Optional[Union[float, bool]] = None  # noqa: N815, UP007, UP045
+    multipleOf: Optional[FloatConstraint] = None  # noqa: N815, UP045
+    exclusiveMaximum: Optional[Union[FloatConstraint, bool]] = None  # noqa: N815, UP007, UP045
+    exclusiveMinimum: Optional[Union[FloatConstraint, bool]] = None  # noqa: N815, UP007, UP045
     additionalProperties: Optional[Union[JsonSchemaObject, bool]] = None  # noqa: N815, UP007, UP045
     unevaluatedProperties: Optional[Union[JsonSchemaObject, bool]] = None  # noqa: N815, UP007, UP045
     unevaluatedItems: Optional[Union[JsonSchemaObject, bool]] = None  # noqa: N815, UP007, UP045
