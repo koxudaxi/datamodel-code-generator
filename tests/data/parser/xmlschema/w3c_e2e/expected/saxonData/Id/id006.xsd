@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+    <!-- in XSD 1.1 list-of-IDREF works the same way as the built-in IDREFS -->
+  <xs:element name="doc">
+    <xs:complexType>
+       <xs:sequence>
+          <xs:element ref="node" maxOccurs="unbounded"/>
+       </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="node">
+    <xs:complexType>
+         <xs:choice minOccurs="0" maxOccurs="unbounded">
+            <xs:element ref="node"/>
+            <xs:element name="id" type="idList"/>
+            <xs:element name="idrefs" type="idrefList"/>
+         </xs:choice>
+         <xs:attribute name="id" type="idList" use="optional"/>
+         <xs:attribute name="idrefs" type="idrefList" use="optional"/>
+    </xs:complexType>
+  </xs:element>
+  
+  <xs:simpleType name="idList">
+    <xs:list itemType="ID-or-integer"/>
+  </xs:simpleType> 
+  
+  <xs:simpleType name="idrefList">
+    <xs:list itemType="IDREF-or-integer"/>
+  </xs:simpleType>
+  
+  <xs:simpleType name="ID-or-integer">
+    <xs:union memberTypes="xs:ID xs:integer"/>
+  </xs:simpleType>
+  
+  <xs:simpleType name="IDREF-or-integer">
+    <xs:union memberTypes="xs:IDREF xs:integer"/>
+  </xs:simpleType>
+        
+        
+
+</xs:schema>

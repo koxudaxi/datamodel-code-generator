@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import msgspec
 import pytest
 from lxml import etree
-from pydantic import ValidationError
+from pydantic import PydanticUserError, ValidationError
 
 from datamodel_code_generator import DataModelType, Error, InputFileType
 from datamodel_code_generator.__main__ import Exit
@@ -161,6 +161,29 @@ def test_xsd_ordinary_fields_runtime(backend: DataModelType, entrypoint: str, ou
     invalid_json = (payloads / "ordinary_invalid.json").read_text(encoding="utf-8")
     with _generated_model(output_file, f"b65_{backend.name}_{entrypoint}", "Root") as model:
         fields = list(model.__annotations__)
+        if backend == DataModelType.TypingTypedDict:
+            with _generated_model(
+                DATA_PATH / "python/xsd_field_name_collisions/native_typeddict.py", "native_xsd_typeddict", "NativeRoot"
+            ) as native_model:
+                try:
+                    _model_json_validator(native_model)
+                except PydanticUserError as native_error:
+                    assert_output(
+                        f"{native_error.code}: {native_error.message}\n",
+                        EXPECTED_XML_SCHEMA_PATH / "field_name_collisions/typeddict_native_error.txt",
+                    )
+                    with pytest.raises(PydanticUserError) as generated_error:
+                        _model_json_validator(model)
+                    assert_output(
+                        f"{generated_error.value.code}: {generated_error.value.message}\n",
+                        EXPECTED_XML_SCHEMA_PATH / "field_name_collisions/typeddict_native_error.txt",
+                    )
+                    assert_output(
+                        json.dumps({"fields": fields, "item": model(**json.loads(valid_json))["item"]}, indent=2)
+                        + "\n",
+                        EXPECTED_XML_SCHEMA_PATH / "field_name_collisions/ordinary_runtime.txt",
+                    )
+                    return
         if backend == DataModelType.MsgspecStruct:
             value = msgspec.json.decode(valid_json, type=model)
             item = value.item

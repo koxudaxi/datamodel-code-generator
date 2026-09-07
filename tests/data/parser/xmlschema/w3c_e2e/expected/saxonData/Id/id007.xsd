@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+    <!-- A highly devious test in which we define a list type whose items may be either IDs or IDREFs -->
+  <xs:element name="doc">
+    <xs:complexType>
+       <xs:sequence>
+          <xs:element ref="node" maxOccurs="unbounded"/>
+       </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="node">
+    <xs:complexType>
+         <xs:choice minOccurs="0" maxOccurs="unbounded">
+            <xs:element ref="node"/>
+            <xs:element name="mixedA" type="mixedAList"/>
+            <xs:element name="mixedB" type="mixedBList"/>
+         </xs:choice>
+         <xs:attribute name="mixedA" type="mixedAList" use="optional"/>
+         <xs:attribute name="mixedB" type="mixedBList" use="optional"/>
+    </xs:complexType>
+  </xs:element>
+  
+  <xs:simpleType name="mixedAList">
+    <!-- in a mixedAList, anything starting with A is an IDREF; anything else is an ID -->
+    <xs:list>
+       <xs:simpleType>
+           <xs:union>
+              <xs:simpleType>
+                <xs:restriction base="xs:IDREF">
+                   <xs:pattern value="A.*"/>
+                </xs:restriction>
+              </xs:simpleType>
+              <xs:simpleType>
+                <xs:restriction base="xs:ID">
+                   <xs:pattern value="[^A].*"/>
+                </xs:restriction>
+              </xs:simpleType>
+           </xs:union>
+       </xs:simpleType>
+    </xs:list>
+  </xs:simpleType>
+  
+  <xs:simpleType name="mixedBList">
+    <!-- in a mixedBList, anything starting with B is an IDREF; anything else is an ID -->
+    <xs:list>
+       <xs:simpleType>
+           <xs:union>
+              <xs:simpleType>
+                <xs:restriction base="xs:IDREF">
+                   <xs:pattern value="B.*"/>
+                </xs:restriction>
+              </xs:simpleType>
+              <xs:simpleType>
+                <xs:restriction base="xs:ID">
+                   <xs:pattern value="[^B].*"/>
+                </xs:restriction>
+              </xs:simpleType>
+           </xs:union>
+       </xs:simpleType>
+    </xs:list>
+  </xs:simpleType> 
+  
+ 
+</xs:schema>

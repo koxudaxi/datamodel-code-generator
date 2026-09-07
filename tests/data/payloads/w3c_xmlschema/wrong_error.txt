@@ -1,0 +1,4 @@
+exit=1
+checked 1 valid schemaDocument entries (1 unique paths) in <elapsed>s
+1 W3C XML Schema e2e failures:
+  saxonData/Id/id005.xsd: generate failed with Error: XML Schema cannot represent both element 'code' and attribute 'code' as property 'code'.
