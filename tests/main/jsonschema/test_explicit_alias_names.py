@@ -389,7 +389,7 @@ def test_explicit_alias_names_custom_namespace(
 
 @pytest.mark.parametrize(
     "case",
-    json.loads((JSON_SCHEMA_DATA_PATH / "explicit_alias_namespace_inheritance" / "cases.json").read_text()),
+    json.loads((JSON_SCHEMA_DATA_PATH.parent / "payloads" / "explicit_alias_namespace_inheritance_cases.json").read_text()),
     ids=operator.itemgetter("name"),
 )
 def test_explicit_alias_names_external_namespace_precedence(
