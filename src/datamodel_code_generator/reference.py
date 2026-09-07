@@ -17,6 +17,7 @@ from itertools import zip_longest
 from keyword import iskeyword
 from pathlib import Path, PurePath
 from re import Pattern
+from threading import RLock
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -1689,7 +1690,8 @@ class ModelResolver:  # noqa: PLR0904
 
 
 _inflect_engine: inflect.engine | None = None
-_TYPEGUARD_NOT_LOADED = object()
+_PRIVATE_INFLECT_MODULE = "datamodel_code_generator._inflect"
+_INFLECT_IMPORT_LOCK = RLock()
 
 
 def _noop_typechecked(target: Any = None, **_: Any) -> Any:
@@ -1699,55 +1701,58 @@ def _noop_typechecked(target: Any = None, **_: Any) -> Any:
     return target
 
 
-def _restore_typeguard_module(original_typeguard: Any, typeguard_stub: Any) -> None:
-    import sys  # noqa: PLC0415
+def _load_private_inflect() -> Any:
+    """Execute inflect bytecode with a private package and module-local import policy."""
+    import builtins  # ruff: ignore[import-outside-top-level]
+    import copy  # ruff: ignore[import-outside-top-level]
+    import importlib.util  # ruff: ignore[import-outside-top-level]
+    import sys  # ruff: ignore[import-outside-top-level]
+    import types  # ruff: ignore[import-outside-top-level]
 
-    match original_typeguard:
-        case _ if original_typeguard is _TYPEGUARD_NOT_LOADED:
-            if sys.modules.get("typeguard") is typeguard_stub:
-                del sys.modules["typeguard"]
-            return
-        case _:
-            sys.modules["typeguard"] = original_typeguard
+    source_spec = importlib.util.find_spec("inflect")
+    if source_spec is None or (get_code := getattr(source_spec.loader, "get_code", None)) is None:
+        msg = "inflect loader does not expose Python code"
+        raise ImportError(msg)
+    code = get_code("inflect")
+    private_spec = copy.copy(source_spec)
+    private_spec.name = _PRIVATE_INFLECT_MODULE
+    inflect_module = importlib.util.module_from_spec(private_spec)
+    typeguard_stub = types.ModuleType("typeguard")
+    typeguard_stub.__dict__["typechecked"] = _noop_typechecked
+    original_import = builtins.__import__
+
+    def import_without_typeguard(name: str, *args: Any, **kwargs: Any) -> Any:
+        if name == "typeguard":
+            return typeguard_stub
+        return original_import(name, *args, **kwargs)
+
+    inflect_module.__dict__["__builtins__"] = {**vars(builtins), "__import__": import_without_typeguard}
+    sys.modules[_PRIVATE_INFLECT_MODULE] = inflect_module
+    exec(code, inflect_module.__dict__)  # ruff: ignore[exec-builtin]
+    return inflect_module
 
 
 def _import_inflect_without_typeguard_instrumentation() -> Any:
-    """Import inflect without paying typeguard's import-time AST instrumentation cost."""
-    import _imp  # noqa: PLC0415, PLC2701
-    import sys  # noqa: PLC0415
+    """Load a private inflect package without changing public dependency modules."""
+    import importlib  # ruff: ignore[import-outside-top-level]
+    import sys  # ruff: ignore[import-outside-top-level]
 
-    # Guard the temporary sys.modules replacement from concurrent imports.
-    _imp.acquire_lock()
-    try:
-        if (inflect_module := sys.modules.get("inflect")) is not None:
+    with _INFLECT_IMPORT_LOCK:
+        if sys.modules.get("inflect") is not None:
+            return importlib.import_module("inflect")
+        if (inflect_module := sys.modules.get(_PRIVATE_INFLECT_MODULE)) is not None:
             return inflect_module
 
-        import importlib  # noqa: PLC0415
-        import types  # noqa: PLC0415
-
-        original_typeguard = sys.modules.get("typeguard", _TYPEGUARD_NOT_LOADED)
-        typeguard_stub = types.ModuleType("typeguard")
-        typeguard_stub.__dict__["__datamodel_codegen_stub__"] = True
-        typeguard_stub.__dict__["typechecked"] = _noop_typechecked
-        sys.modules["typeguard"] = typeguard_stub
         try:
-            return importlib.import_module("inflect")
+            inflect_module = _load_private_inflect()
         except (AttributeError, ImportError, TypeError):
-            # inflect>=7.2 imports typeguard and @typechecked reparses the module
-            # during import, causing the startup regression tracked in:
-            # https://github.com/jaraco/inflect/issues/212
-            #
-            # datamodel-code-generator only needs inflect.engine().singular_noun()
-            # for generated class names, not runtime validation. If inflect starts
-            # requiring more typeguard behavior than typechecked(), restore the real
-            # module and fall back to a normal import to preserve compatibility.
-            sys.modules.pop("inflect", None)
-            _restore_typeguard_module(original_typeguard, typeguard_stub)
+            # Unsupported loaders or future inflect APIs retain normal import semantics.
+            for module_name in tuple(sys.modules):
+                if module_name == _PRIVATE_INFLECT_MODULE or module_name.startswith(f"{_PRIVATE_INFLECT_MODULE}."):
+                    sys.modules.pop(module_name, None)
             return importlib.import_module("inflect")
-        finally:
-            _restore_typeguard_module(original_typeguard, typeguard_stub)
-    finally:
-        _imp.release_lock()
+        else:
+            return inflect_module
 
 
 def _get_inflect_engine() -> inflect.engine:
