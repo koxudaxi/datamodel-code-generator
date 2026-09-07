@@ -21152,7 +21152,10 @@ def test_validator_collisions(output_file: Path, entrypoint: str, case: str, con
         )
     if case == "single":
         with _generated_model(output_file, "validator_single", "Single") as model:
-            assert model(value="V").value == "V:private"
+            assert_output(
+                json.dumps({"value": model(value="V").value}, indent=2) + "\n",
+                DATA_PATH / "payloads/validator_runtime/single.txt",
+            )
         return
     with _generated_model(output_file, "validator_collisions", "Collision") as model:
         data = {
@@ -21163,14 +21166,13 @@ def test_validator_collisions(output_file: Path, entrypoint: str, case: str, con
             "other": {"value": "O"},
             "child": {"value": "C"},
         }
-        assert model.model_validate(data).model_dump() == {
-            **data,
-            "x": "X:first:first:second:any:other",
-            "y": "Y:plain:wrap",
-            "other": {"value": "O:second"},
-            "child": {"value": "C:first:second"},
-        }
-        assert list(model.model_fields) == list(data)
+        assert_output(
+            json.dumps(
+                {"result": model.model_validate(data).model_dump(), "fields": list(model.model_fields)}, indent=2
+            )
+            + "\n",
+            DATA_PATH / "payloads/validator_runtime/collision.txt",
+        )
         for field in ("validate_validator", "validate_validator_1"):
             _assert_model_json_invalid(
                 model.model_validate, {key: value for key, value in data.items() if key != field}, "missing"
@@ -21213,8 +21215,14 @@ def test_validator_inheritance_definition_order(output_file: Path, entrypoint: s
             disable_timestamp=True,
         )
     with _generated_model(output_file, "validator_inheritance_order", "Child") as model:
-        assert model(value="v").value == "v:first:first"
-        assert list(model.__pydantic_decorators__.field_validators) == ["validate_validator", "validate_validator_1"]
+        assert_output(
+            json.dumps(
+                {"value": model(value="v").value, "validators": list(model.__pydantic_decorators__.field_validators)},
+                indent=2,
+            )
+            + "\n",
+            DATA_PATH / "payloads/validator_runtime/inheritance.txt",
+        )
 
 
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
@@ -21256,5 +21264,11 @@ def test_validator_finalized_model_import(output_dir: Path, entrypoint: str, exa
         )
         assert_directory_content(output_dir, expected)
     with _generated_package_module(output_dir, "child") as module:
-        assert module.Child(value="v").value == "v:custom"
-        assert module.Child.__bases__[0] is module.Base
+        assert_output(
+            json.dumps(
+                {"value": module.Child(value="v").value, "base_identity": module.Child.__bases__[0] is module.Base},
+                indent=2,
+            )
+            + "\n",
+            DATA_PATH / "payloads/validator_runtime/imports.txt",
+        )
