@@ -3769,15 +3769,20 @@ def test_watch_cli_reports_generation_error_after_change(tmp_path: Path) -> None
     )
 
     first_modified_time: int | None = None
+    first_error_count = 0
 
     def error_after_retry() -> bool:
-        nonlocal first_modified_time
+        nonlocal first_modified_time, first_error_count
 
         modified_time = input_file.stat().st_mtime_ns
         if first_modified_time is None:
             first_modified_time = modified_time
             return False
-        return modified_time != first_modified_time and _lines_contain(stderr_lines, "Error:")
+        error_count = sum("Error:" in line for line in stderr_lines)
+        if not first_error_count:
+            first_error_count = error_count
+            return False
+        return modified_time != first_modified_time and error_count > first_error_count
 
     try:
         _write_watch_cli_input_and_wait(
