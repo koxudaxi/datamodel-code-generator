@@ -6974,6 +6974,24 @@ def test_main_openapi_msgspec_use_annotated_with_field_constraints(output_file: 
         extra_args=["--field-constraints", "--target-python-version", "3.10", "--output-model-type", "msgspec.Struct"],
     )
 
+    import msgspec
+
+    cases = json.loads((DATA_PATH / "payloads/openapi_msgspec_numeric_unions.json").read_text())
+    actual = []
+    with _generated_model(output_file, "openapi_msgspec_numeric_unions", "User") as model:
+        decoder = msgspec.json.Decoder(model)
+        for case in cases:
+            payload = json.dumps(case["input"])
+            if case["valid"]:
+                actual.append(msgspec.to_builtins(decoder.decode(payload)))
+            else:
+                with pytest.raises(msgspec.ValidationError):
+                    decoder.decode(payload)
+    assert_output(
+        json.dumps(actual, indent=2) + "\n",
+        EXPECTED_OPENAPI_PATH / "msgspec_numeric_unions_runtime.txt",
+    )
+
 
 @pytest.mark.parametrize(
     ("output_model", "expected_file"),
