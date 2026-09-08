@@ -23003,7 +23003,7 @@ def test_explicit_frozen_set_hashes(
             field_order=list(item.model_fields) == list(MODELS[case.get("source", case["name"])].model_fields),
             native_dump=first.model_dump(mode="json") == originals[0].model_dump(mode="json"),
             native_json_dump=item.model_validate_json(json.dumps(payload)).model_dump(mode="json")
-            == native.model_validate_json(json.dumps(payload)).model_dump(mode="json"),
+            == MODELS[case["name"]].model_validate_json(json.dumps(payload)).model_dump(mode="json"),
         )
         result = container.model_validate({"items": [payload, payload]})
         expected = TypeAdapter(set[type(originals[0])]).validate_python([payload, payload])
@@ -23029,7 +23029,9 @@ def test_explicit_frozen_set_hashes(
         with pytest.raises(ValidationError):
             item.model_validate_json((DATA_PATH / "payloads/explicit_frozen_sets/invalid.json").read_text())
         with pytest.raises(ValidationError):
-            native.model_validate_json((DATA_PATH / "payloads/explicit_frozen_sets/invalid.json").read_text())
+            MODELS[case["name"]].model_validate_json(
+                (DATA_PATH / "payloads/explicit_frozen_sets/invalid.json").read_text()
+            )
         with pytest.raises(ValidationError):
             item.model_validate({})
         with pytest.raises(ValidationError):
