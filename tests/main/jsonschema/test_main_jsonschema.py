@@ -16450,6 +16450,13 @@ composed object models, required-only oneOf/anyOf groups, simple
 if/then/else required-property conditions, and uniqueItems array validation.
 This feature is experimental and may change as JSON Schema coverage is expanded.
 
+With standard models and templates, required names absent from generated fields
+are checked against the raw object input. This also preserves required names
+that are not declared in `properties` when validating overlapping open object
+patterns. `--force-optional` retains its existing behavior. Custom base classes,
+custom templates, and extra template data retain their previous handling of
+undeclared required names.
+
 When generating uniqueItems validation, do not override
 `pydantic_v2/schema_runtime_validation_helpers.jinja2`; custom helper overrides
 are unsupported and generation fails fast.""",
