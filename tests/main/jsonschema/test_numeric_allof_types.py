@@ -7,6 +7,7 @@ import warnings
 from contextlib import ExitStack
 from typing import TYPE_CHECKING
 
+import black
 import pytest
 from jsonschema import Draft7Validator
 from pydantic import ValidationError
@@ -19,6 +20,7 @@ from tests.main.conftest import (
     JSON_SCHEMA_DATA_PATH,
     _default_formatter_generate_options,
     _generated_model,
+    _uses_builtin_test_default_formatter,
     assert_generated_model_json_validation,
     run_main_with_args,
 )
@@ -173,7 +175,12 @@ def test_numeric_null_custom_template(output_file: Path, entrypoint: str) -> Non
                 "custom_template_dir": template_dir,
             }),
         )
-    assert_output(output_file.read_text(encoding="utf-8"), expected / "null_custom.py")
+    filename = (
+        "null_custom_black23.py"
+        if int(black.__version__.split(".")[0]) < 24 and not _uses_builtin_test_default_formatter()
+        else "null_custom.py"
+    )
+    assert_output(output_file.read_text(encoding="utf-8"), expected / filename)
     try:
         with _generated_model(
             DATA_PATH / "python/numeric_allof_types/native_null.py", "native_null_control", "NativeNull"
