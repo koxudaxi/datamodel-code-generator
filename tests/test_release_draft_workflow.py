@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import json
+import shlex
 from pathlib import Path
 
 import pytest
 import yaml
+from jsonschema import Draft202012Validator
 
 from tests.conftest import assert_output
 
@@ -71,4 +73,20 @@ def test_maintenance_exclusion_is_wired_before_note_generation() -> None:
         )
         + "\n",
         root / "tests/data/expected/release_draft_workflow/maintenance_exclusion.txt",
+    )
+
+
+def test_claude_output_schema_rejects_invalid_reasoning() -> None:
+    """The actual action schema rejects unsafe explanations before local validation."""
+    root = Path(__file__).parents[1]
+    workflow = yaml.safe_load((root / ".github/workflows/release-draft.yaml").read_text(encoding="utf-8"))
+    claude_step = next(step for step in workflow["jobs"]["analyze"]["steps"] if step.get("id") == "claude")
+    args = shlex.split(claude_step["with"]["claude_args"])
+    schema = json.loads(args[args.index("--json-schema") + 1])
+    Draft202012Validator.check_schema(schema)
+    validator = Draft202012Validator(schema)
+    cases = json.loads((root / "tests/data/release_draft_workflow/reasoning.json").read_text(encoding="utf-8"))
+    assert_output(
+        json.dumps({name: validator.is_valid(output) for name, output in cases.items()}, indent=2) + "\n",
+        root / "tests/data/expected/release_draft_workflow/reasoning.txt",
     )
