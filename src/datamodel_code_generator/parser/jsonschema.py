@@ -9454,7 +9454,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             or not self.generate_schema_validators
             or self.custom_template_dir
             or self.base_class
-            or self.base_class_map
+        ):
+            return
+        if (
+            self.base_class_map
             or self.config.extra_template_data
             or type(self) is not JsonSchemaParser
             or path[:-1] != list(self.model_resolver.current_root or ["#"])
@@ -9463,15 +9466,16 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if (
             not self._configured_generation_types_are_builtin
             or not self.data_model_type.SUPPORTS_SCHEMA_RUNTIME_VALIDATION
-            or (
-                obj.type != "array"
-                or not obj.model_fields_set <= {"type", "items", "title", "extras"}
-                or not obj.extras.keys() <= {"$schema", "$defs", "definitions", "title"}
-                or not isinstance(item := obj.items, JsonSchemaObject)
-                or item.type != "object"
-                or not item.model_fields_set <= {"type", "patternProperties"}
-                or len(patterns := item.patternProperties or {}) != 1
-            )
+            or obj.type != "array"
+            or not obj.model_fields_set <= {"type", "items", "title", "extras"}
+        ):
+            return
+        if (
+            not obj.extras.keys() <= {"$schema", "$defs", "definitions", "title"}
+            or not isinstance(item := obj.items, JsonSchemaObject)
+            or item.type != "object"
+            or not item.model_fields_set <= {"type", "patternProperties"}
+            or len(patterns := item.patternProperties or {}) != 1
         ):
             return
         pattern, value = next(iter(patterns.items()))
@@ -9481,7 +9485,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             or not pattern[1:].isalnum()
             or not isinstance(value, JsonSchemaObject)
             or value.type != "string"
-            or not value.model_fields_set <= {"type", "minLength", "maxLength"}
+        ):
+            return
+        if (
+            not value.model_fields_set <= {"type", "minLength", "maxLength"}
             or not ((value.minLength or 0) > 0 or value.maxLength is not None)
             or (value.maxLength is not None and value.maxLength < (value.minLength or 0))
         ):
