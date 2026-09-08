@@ -1,0 +1,7 @@
+{
+  "title": "Root",
+  "type": "array",
+  "items": {
+    "type": "string"
+  }
+}

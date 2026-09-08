@@ -1342,6 +1342,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self.remote_object_cache: DefaultPutDict[str, dict[str, YamlValue]] = DefaultPutDict()
         self.raw_obj: dict[str, YamlValue] = {}
         self._all_of_root_value_ref_stack: set[tuple[str, ...]] | None = None
+        self._root_pattern_string_constraints: JsonSchemaObject | None = None
         self._root_id: Optional[str] = None  # noqa: UP045
         self._root_id_base_path: Optional[str] = None  # noqa: UP045
         self._output_model_context = OutputModelContext.from_generation_types(
@@ -7512,7 +7513,13 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     case JsonSchemaObject():
                         pattern_value_types.append((
                             pattern,
-                            self.parse_item(
+                            self.data_type_manager.get_data_type(
+                                Types.string,
+                                field_constraints=False,
+                                **_get_data_type_constraint_kwargs(schema, Types.string),
+                            )
+                            if schema is self._root_pattern_string_constraints
+                            else self.parse_item(
                                 name,
                                 schema,
                                 get_special_path(
@@ -9440,6 +9447,47 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             use_annotated=True,
         )
 
+    def _mark_root_pattern_string_constraints(self, obj: JsonSchemaObject, path: list[str]) -> None:
+        """Retain effective string bounds for a witnessed plain root-array pattern."""
+        if (
+            not self.field_constraints
+            or not self.generate_schema_validators
+            or self.custom_template_dir
+            or self.base_class
+            or self.base_class_map
+            or self.config.extra_template_data
+            or type(self) is not JsonSchemaParser
+            or path[:-1] != list(self.model_resolver.current_root or ["#"])
+        ):
+            return
+        if (
+            not self._configured_generation_types_are_builtin
+            or not self.data_model_type.SUPPORTS_SCHEMA_RUNTIME_VALIDATION
+            or (
+                obj.type != "array"
+                or not obj.model_fields_set <= {"type", "items", "title", "extras"}
+                or not obj.extras.keys() <= {"$schema", "$defs", "definitions", "title"}
+                or not isinstance(item := obj.items, JsonSchemaObject)
+                or item.type != "object"
+                or not item.model_fields_set <= {"type", "patternProperties"}
+                or len(item.patternProperties or {}) != 1
+            )
+        ):
+            return
+        pattern, value = next(iter(item.patternProperties.items()))
+        if (
+            not pattern.startswith("^")
+            or not pattern[1:].isascii()
+            or not pattern[1:].isalnum()
+            or not isinstance(value, JsonSchemaObject)
+            or value.type != "string"
+            or not value.model_fields_set <= {"type", "minLength", "maxLength"}
+            or not ((value.minLength or 0) > 0 or value.maxLength is not None)
+            or (value.maxLength is not None and value.maxLength < (value.minLength or 0))
+        ):
+            return
+        self._root_pattern_string_constraints = value
+
     def parse_array_fields(
         self,
         name: str,
@@ -9451,6 +9499,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         """Parse array schema into a data model field with list type."""
         # Strict mode: check for version-specific array features
         self._check_array_version_features(obj, path)
+        self._mark_root_pattern_string_constraints(obj, path)
         use_annotated = self.use_annotated if use_annotated is None else use_annotated
 
         required, nullable = self._resolve_array_field_required_nullable(obj)

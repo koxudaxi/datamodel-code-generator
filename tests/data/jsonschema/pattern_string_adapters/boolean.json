@@ -1,0 +1,10 @@
+{
+  "title": "Root",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "patternProperties": {
+      "^x": true
+    }
+  }
+}
