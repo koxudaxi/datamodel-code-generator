@@ -1756,9 +1756,9 @@ def test_mcp_tools_schema_value_references_cli(output_file: Path, input_name: st
             invalid_json=json.dumps({field_name: ["not-an-object"] if field_name == "sequence" else "not-an-object"}),
             expected_error_type="dict_type",
             expected_attribute_path=(field_name,),
-            expected_attribute_value=source[
-                "outputSchema" if model_name == "SchemaValuesOutput" else "inputSchema"
-            ]["properties"][field_name]["default"],
+            expected_attribute_value=source["outputSchema" if model_name == "SchemaValuesOutput" else "inputSchema"][
+                "properties"
+            ][field_name]["default"],
         )
 
 
@@ -1790,9 +1790,9 @@ def test_mcp_tools_schema_value_references_api(output_file: Path, input_name: st
             invalid_json=json.dumps({field_name: ["not-an-object"] if field_name == "sequence" else "not-an-object"}),
             expected_error_type="dict_type",
             expected_attribute_path=(field_name,),
-            expected_attribute_value=source[
-                "outputSchema" if model_name == "SchemaValuesOutput" else "inputSchema"
-            ]["properties"][field_name]["default"],
+            expected_attribute_value=source["outputSchema" if model_name == "SchemaValuesOutput" else "inputSchema"][
+                "properties"
+            ][field_name]["default"],
         )
 
 
