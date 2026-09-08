@@ -1,0 +1,10 @@
+{
+  "jsonschema/compound_property_names/unsupported_allof.json": "compound_property_names/unsupported_allof.txt",
+  "jsonschema/compound_property_names/unsupported_oneof.json": "compound_property_names/unsupported_oneof.txt",
+  "jsonschema/compound_property_names/unsupported_sibling.json": "compound_property_names/unsupported_sibling.txt",
+  "jsonschema/compound_property_names/unsupported_nonstring.json": "compound_property_names/unsupported_nonstring.txt",
+  "jsonschema/compound_property_names/unsupported_mixed.json": "compound_property_names/unsupported_mixed.txt",
+  "jsonschema/compound_property_names/unsupported_one_false.json": "compound_property_names/unsupported_one_false.txt",
+  "jsonschema/compound_property_names/unsupported_one_constrained.json": "compound_property_names/unsupported_one_constrained.txt",
+  "jsonschema/compound_property_names/unsupported_one_sibling.json": "compound_property_names/unsupported_one_sibling.txt"
+}

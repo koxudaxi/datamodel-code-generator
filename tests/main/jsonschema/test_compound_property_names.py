@@ -13,6 +13,7 @@ from pydantic import ValidationError
 from datamodel_code_generator import InputFileType, SchemaParseError, generate, generate_dynamic_models
 from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.config import GenerateConfig
+from datamodel_code_generator.model.pydantic_v2.version import PYDANTIC_V2_ROOT_MODEL_DICT_KEY_FORWARD_REF_NEEDS_SORTING
 from tests.conftest import assert_output
 from tests.main.conftest import (
     DATA_PATH,
@@ -23,6 +24,7 @@ from tests.main.conftest import (
     run_main_and_assert,
 )
 from tests.main.jsonschema.conftest import assert_file_content
+from tests.main.payload_validation.constants import COMPOUND_PROPERTY_NAMES_DIAGNOSTIC_CASES
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -39,7 +41,12 @@ CASES = json.loads((PAYLOADS / "cases.json").read_text())
 def test_compound_property_name_generation(name: str, constraints: bool, entry: str, output_file: Path) -> None:
     """Preserve string keys, native acceptance, and deterministic generated output."""
     input_path = INPUTS / f"{name}.json"
-    expected_file = f"compound_property_names/{name}_{int(constraints)}.py"
+    suffix = (
+        "_legacy_pydantic"
+        if PYDANTIC_V2_ROOT_MODEL_DICT_KEY_FORWARD_REF_NEEDS_SORTING and name in {"enum_refs", "ref_then_any"}
+        else ""
+    )
+    expected_file = f"compound_property_names/{name}_{int(constraints)}{suffix}.py"
     if entry == "cli":
         run_main_and_assert(
             input_path=input_path,
@@ -90,17 +97,21 @@ def test_compound_property_name_generation(name: str, constraints: bool, entry: 
     assert_output(json.dumps(actual, indent=2) + "\n", EXPECTED / f"{name}_runtime.txt")
 
 
-@pytest.mark.parametrize(
-    "name", ["allof", "oneof", "sibling", "nonstring", "mixed", "one_false", "one_constrained", "one_sibling"]
-)
+@pytest.mark.parametrize(("case_id", "expected_file"), COMPOUND_PROPERTY_NAMES_DIAGNOSTIC_CASES.items())
 @pytest.mark.parametrize("constraints", [False, True])
 @pytest.mark.parametrize("entry", ["cli", "api"])
 def test_unrepresentable_compound_property_names(
-    name: str, constraints: bool, entry: str, output_file: Path, capsys: pytest.CaptureFixture[str]
+    case_id: str,
+    expected_file: str,
+    constraints: bool,
+    entry: str,
+    output_file: Path,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Diagnose unsupported key intersections instead of emitting invalid models."""
-    input_path = INPUTS / f"unsupported_{name}.json"
-    expected = EXPECTED / f"unsupported_{name}.txt"
+    input_path = DATA_PATH / case_id
+    expected = EXPECTED_JSON_SCHEMA_PATH / expected_file
+    Draft202012Validator.check_schema(json.loads(input_path.read_text(encoding="utf-8")))
     if entry == "cli":
         run_main_and_assert(
             input_path=input_path,
