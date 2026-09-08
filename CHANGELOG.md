@@ -5,92 +5,123 @@ This changelog is automatically generated from GitHub Releases.
 
 ---
 
-## [0.76.2](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.76.2) - 2026-09-04
-
-## What's Changed
-* Update CHANGELOG for 0.76.1 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3850
-* Harden JSON Schema resolution by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3838
-* Preserve reference naming invariants by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3839
-* Correct model backend output by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3840
-* Preserve parser model reuse by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3841
-* Correct input format semantics by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3842
-* Correct OpenAPI and AsyncAPI generation by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3843
-* Harden runtime edge cases by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3844
-* Harden CLI configuration and errors by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3845
-* Tune GC thresholds during generation by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3848
-* Speed up PyYAML document construction by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3849
-* Bump the github-actions group with 4 updates by @dependabot[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3851
-* Skip unnecessary release analysis by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3853
-
-
-**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.76.1...0.76.2
-
----
-
-## [0.76.1](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.76.1) - 2026-09-02
-
-## What's Changed
-* Update CHANGELOG for 0.76.0 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3812
-* Update release benchmark data by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3813
-* Fix payload runtime validation exclusions by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3815
-* Optimize collapsed root model replacement by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3826
-* Track collapsed root model references incrementally by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3827
-* Skip unnecessary built-in string normalization by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3828
-* Fix runtime validator output model ownership by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3817
-* Move parser source loading by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3818
-* Move field name policies to output models by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3820
-* Decouple parser run lifecycle by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3821
-* Move parser recursion signal by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3822
-* Move output template context to models by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3823
-* Isolate parser source context by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3824
-* Decouple input model transport by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3825
-* Enforce architecture boundaries by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3832
-* Allow null enum descriptions by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3835
-* Fix release draft analysis for stacked PRs by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3836
-* Fix paginated release draft reads by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3837
-* Fix release draft PR permissions by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3847
-
-
-**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.76.0...0.76.1
-
----
-
-## [0.76.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.76.0) - 2026-08-29
+## [0.76.2](https://github.com/datamodel-code-generator/datamodel-code-generator/releases/tag/0.76.2) - 2026-09-04
 
 ## Breaking Changes
 
+These corrections change generated output or existing configuration behavior for the affected cases. Regenerate and review affected models before upgrading snapshots or downstream integrations.
+
+### Code Generation Changes
+
+* **Avro field defaults are now honored.** Fields with schema defaults are no longer always treated as required; generated fields receive those defaults. Top-level `bytes` and `fixed` defaults become Python bytes using Avro's code-point mapping, including named fixed types. Review constructor requirements and default values. This release does not yet recursively decode nested bytes defaults. (#3842)
+* **GraphQL operation roots are identified from the schema.** Actual query, mutation, and subscription roots are omitted even when they have custom names; ordinary types named `Query` or `Mutation` are no longer excluded solely by name. References to omitted operation roots become `Any` instead of unresolved class names. Review imports of previously emitted root classes and affected annotations. (#3842)
+* **Backend-specific fields render differently.** Pydantic v2 dataclasses use factories for mutable defaults. Msgspec null fields retain `None` alongside `UnsetType`, and boolean enum values use supported non-literal types rather than boolean `Literal` annotations. TypedDict extra-item types now bring their required imports. Review generated annotations, default factories, and snapshots. (#3840)
+* **Root collapsing and model reuse preserve more schema information.** Root wrappers are retained where collapsing would lose container constraints or mishandle cyclic dictionary-key references. Field renaming retains existing source aliases, msgspec inherited fields retain unique wire aliases, and dataclass/msgspec constructor fields are reordered when necessary. Generated module contents and imports also change where reuse previously overwrote package initializers or lost module ownership. (#3841)
+* **OpenAPI parameter overrides and discriminator mappings are corrected.** Operation-level parameters override matching path-level parameters by name and location, including referenced parameters, rather than producing duplicates. Short discriminator mappings are recognized, and OpenAPI/AsyncAPI discriminator state is cleared between documents. Review parameter fields and discriminated-union output. (#3843)
+* **External JSON Schema anchors take precedence over legacy shorthand pointers.** A reference such as `other.json#name` resolves a matching anchor within that schema resource before falling back to the legacy `/name` pointer. Schemas that relied on the old pointer interpretation when an anchor also exists can resolve to a different definition. (#3838)
+
+### Configuration and Error Handling Changes
+
+* **Relative paths in `pyproject.toml` resolve from the configuration file's directory.** This applies to input, output, custom headers/templates, comparison output, model metadata, local HTTP references, and lockfiles, including batch jobs. When invoking from another directory, adjust relative values or use absolute paths if you previously relied on the working directory. Explicit CLI paths retain their command-line interpretation. (#3845)
+* **Msgspec CLI defaults are applied after configuration merging.** Msgspec enables annotations when that setting is implicit, including when selected through configuration; an explicit `use-annotated = false` is respected. Implicit field constraints follow the final annotation setting. Review output if CLI, presets, and `pyproject.toml` previously supplied conflicting options. (#3845)
+* **Invalid inputs produce more specific failures.** Avro bytes/fixed defaults containing code points above 255 are rejected. Invalid special-field-name prefixes and references with multiple fragment delimiters are rejected explicitly. Directory references, directory file-output targets, unreadable custom headers, and custom-formatter import failures now produce generator `Error` diagnostics rather than leaking the previous lower-level exceptions. CLI configuration validation and input-decoding failures report concise errors. Update exception handlers or exact-error assertions where applicable. (#3838, #3842, #3845)
+
+## Compatibility Notes
+
+* Explicit default HTTP/HTTPS ports are normalized in remote-lock URL handling; review persisted lockfile comparisons if they distinguish `:80` or `:443` from an omitted port. (#3844)
+* Generation temporarily raises the process-wide young-generation garbage-collection threshold and restores it when the outermost generation finishes. Existing disabled-GC state is respected. Hosts inspecting GC thresholds during generation will observe this temporary change. (#3848)
+
+## What's Changed
+
+* Harden JSON Schema resolution by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3838
+* Preserve reference naming invariants by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3839
+* Correct model backend output by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3840
+* Preserve parser model reuse by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3841
+* Correct input format semantics by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3842
+* Correct OpenAPI and AsyncAPI generation by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3843
+* Harden runtime edge cases by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3844
+* Harden CLI configuration and errors by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3845
+* Tune GC thresholds during generation by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3848
+* Speed up PyYAML document construction by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3849
+
+
+**Full Changelog**: https://github.com/datamodel-code-generator/datamodel-code-generator/compare/0.76.1...0.76.2
+
+---
+
+## [0.76.1](https://github.com/datamodel-code-generator/datamodel-code-generator/releases/tag/0.76.1) - 2026-09-02
+
+## Highlights
+
+* Parser source loading, run state, output-model capabilities, field-name policies, and input-model transport have been separated to clarify internal ownership. Compatibility imports and the public field-name resolver mapping are retained. (#3818, #3820, #3821, #3822, #3823, #3824, #3825)
+* Root-model collapsing tracks references incrementally, and the built-in formatter skips unnecessary string normalization. These optimizations retain the existing generated-output behavior. (#3826, #3827, #3828)
+* `x-enum-descriptions` now accepts null entries, allowing schemas with missing individual enum descriptions to generate successfully. (#3835)
+
+## What's Changed
+
+* Optimize collapsed root model replacement by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3826
+* Track collapsed root model references incrementally by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3827
+* Skip unnecessary built-in string normalization by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3828
+* Fix runtime validator output model ownership by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3817
+* Move parser source loading by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3818
+* Move field name policies to output models by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3820
+* Decouple parser run lifecycle by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3821
+* Move parser recursion signal by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3822
+* Move output template context to models by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3823
+* Isolate parser source context by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3824
+* Decouple input model transport by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3825
+* Enforce architecture boundaries by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3832
+* Allow null enum descriptions by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3835
+
+
+**Full Changelog**: https://github.com/datamodel-code-generator/datamodel-code-generator/compare/0.76.0...0.76.1
+
+---
+
+## [0.76.0](https://github.com/datamodel-code-generator/datamodel-code-generator/releases/tag/0.76.0) - 2026-08-29
+
+## Breaking Changes
+
+### Code Generation Changes
+
+* **Pydantic v2 extra-property keys now enforce `propertyNames`.** When `additionalProperties` specifies a value schema, its generated dictionary key type now includes supported string-key constraints from `propertyNames`, instead of always using plain `str`. Regenerated annotations and imports change, and keys that violate those constraints can fail validation. Review affected extra-property inputs and generated-code snapshots. (#3794)
 
 ### API/CLI Changes
-* `--list-deprecations` output format changed - The deprecations listing now includes a new `Status` column and renames the `Warning since` column header to `Since` across all output formats (`table`, `json`, and `markdown`). Table rows also no longer emit trailing whitespace padding, so column widths and spacing differ. Scripts or tooling that parse the `--list-deprecations` output may need to be updated. The JSON output additionally gains a `status` field per entry (the existing `warning_since` field is retained). (#3810)
+
+* **`--list-deprecations` output changed.** Table and Markdown output add `Status` and rename the `Warning since` heading to `Since`. Table lines no longer retain trailing padding. JSON adds `status` while retaining the existing `warning_since` key. Update scripts that depend on exact columns, whitespace, or JSON field sets. (#3810)
+
 ```text
-# Before
+# Before (table)
 ID   Kind   Target   Warning since   Removal   Replacement
 
-# After
+# After (table)
 ID   Status   Kind   Target   Since   Removal   Replacement
 ```
 
+## Compatibility Notes
+
+* Decimal-typed fields whose defaults remain serialized now emit `DefaultValueTypeWarning`; the existing generated default stays unchanged when Decimal deserialization is disabled. Use `--deserialize-default-values decimal` to generate compatible `Decimal` defaults, or account for this warning if your application promotes warnings to errors. The new dated `standard-*-20260826` and `practical-*-20260826` presets enable Decimal and enum default deserialization; existing `*-20260619` presets remain available. (#3792, #3811)
+* `--set-default-enum-member` is registered as a scheduled deprecation. It still works and does not emit a runtime deprecation warning in this release. Prefer `--deserialize-default-values enum`; no removal version is set. (#3810, #3811)
+
 ## What's Changed
-* Update CHANGELOG for 0.75.1 by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3789
-* Update release benchmark data by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3790
-* Cache local reference file resolution by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3799
-* Reuse empty Pydantic field render plans by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3800
-* Optimize unconstrained array schemas by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3801
-* Skip child traversal for leaf schemas by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3802
-* Bump the github-actions group with 5 updates by @dependabot[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3798
-* Install bundled Agent Skill by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3804
-* Validate Pydantic extra property names by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3794
-* Deserialize Decimal defaults by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3792
-* Structure runtime expression imports by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3795
-* Complete scheduled deprecation support by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3810
-* Deserialize enum defaults by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3811
-* Move shared parser helpers by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3805
-* Refactor input model compatibility by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3806
-* Decouple parser backend capabilities by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3807
-* Enforce architecture boundaries by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3808
+
+* Cache local reference file resolution by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3799
+* Reuse empty Pydantic field render plans by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3800
+* Optimize unconstrained array schemas by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3801
+* Skip child traversal for leaf schemas by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3802
+* Install bundled Agent Skill by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3804
+* Validate Pydantic extra property names by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3794
+* Deserialize Decimal defaults by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3792
+* Structure runtime expression imports by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3795
+* Complete scheduled deprecation support by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3810
+* Deserialize enum defaults by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3811
+* Move shared parser helpers by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3805
+* Refactor input model compatibility by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3806
+* Decouple parser backend capabilities by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3807
+* Enforce architecture boundaries by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3808
 
 
-**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.75.1...0.76.0
+**Full Changelog**: https://github.com/datamodel-code-generator/datamodel-code-generator/compare/0.75.1...0.76.0
 
 ---
 
