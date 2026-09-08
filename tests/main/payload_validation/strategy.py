@@ -112,6 +112,12 @@ def _bound_float_multiples(schema: dict[str, Any]) -> None:
         if outside_domain:
             msg = "Numeric interval lies outside the finite multipleOf sampling domain"
             raise ValueError(msg)
+        if "minimum" in node and "maximum" in node and minimum == maximum:
+            # Sample the exact JSON endpoint; binary multiplication can miss it.
+            # The unchanged source validator still enforces multipleOf afterward.
+            node["enum"] = [minimum]
+            del node["multipleOf"]
+            continue
         node["minimum"] = max(minimum, -limit)
         node["maximum"] = min(maximum, limit)
 

@@ -197,5 +197,32 @@
     "type": "string",
     "multipleOf": 1e-310,
     "minimum": 10000000000.0
+  },
+  "decimal_singleton": {
+    "type": "number",
+    "minimum": 0.3,
+    "maximum": 0.3,
+    "multipleOf": 0.1
+  },
+  "negative_decimal_singleton": {
+    "type": "number",
+    "minimum": -0.3,
+    "maximum": -0.3,
+    "multipleOf": 0.1
+  },
+  "nested_decimal_singleton": {
+    "type": "object",
+    "properties": {
+      "value": {
+        "type": "number",
+        "minimum": 0.3,
+        "maximum": 0.3,
+        "multipleOf": 0.1
+      }
+    },
+    "required": [
+      "value"
+    ],
+    "additionalProperties": false
   }
 }
