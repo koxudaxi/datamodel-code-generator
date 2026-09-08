@@ -9470,11 +9470,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 or not isinstance(item := obj.items, JsonSchemaObject)
                 or item.type != "object"
                 or not item.model_fields_set <= {"type", "patternProperties"}
-                or len(item.patternProperties or {}) != 1
+                or len(patterns := item.patternProperties or {}) != 1
             )
         ):
             return
-        pattern, value = next(iter(item.patternProperties.items()))
+        pattern, value = next(iter(patterns.items()))
         if (
             not pattern.startswith("^")
             or not pattern[1:].isascii()
