@@ -79,9 +79,11 @@ def test_allof_literal_patterns(
             field_constraints=constraints,
             formatters=[Formatter(value) for value in formatters],
         )
-    cases = json.loads((JSON_SCHEMA_DATA_PATH.parent / "payloads/allof_literal_patterns.json").read_text())
+    cases = json.loads(
+        (JSON_SCHEMA_DATA_PATH.parent / "payloads/allof_literal_patterns.json").read_text(encoding="utf-8")
+    )
     payloads = next(item for item in cases if item["name"] == case)
-    validator = Draft7Validator(json.loads(schema.read_text()))
+    validator = Draft7Validator(json.loads(schema.read_text(encoding="utf-8")))
     for value in payloads["valid"]:
         validator.validate(value)
         assert_generated_model_json_validation(
