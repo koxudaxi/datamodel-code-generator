@@ -7811,16 +7811,22 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         return pattern_value_types, rejected_patterns, additional_property_type, allow_unmatched
 
     @staticmethod
-    def _plain_pattern_value_type(schema: object) -> str | None:
-        """Identify inhabited primitive schemas without validation or conversion modifiers."""
-        if (
-            isinstance(schema, JsonSchemaObject)
-            and not schema.extras
-            and schema.model_fields_set <= {"type", "default", "title", "description"}
-            and isinstance(schema.type, str)
-            and schema.type in {"string", "integer", "boolean"}
+    def _plain_pattern_value_type(schema: object, *, allow_minimum: bool = False) -> str | None:
+        """Identify inhabited primitives, optionally allowing integer minimum-only constraints."""
+        if not isinstance(schema, JsonSchemaObject) or schema.extras:
+            return None
+        if schema.model_fields_set <= {"type", "default", "title", "description"}:
+            return (
+                schema.type
+                if isinstance(schema.type, str) and schema.type in {"string", "integer", "boolean"}
+                else None
+            )
+        if not allow_minimum or schema.type != "integer" or schema.model_fields_set != {"type", "minimum"}:
+            return None
+        if schema.minimum is not None and (
+            isinstance(schema.minimum.value, int) or math.isfinite(schema.minimum.value)
         ):
-            return schema.type
+            return "integer"
         return None
 
     @classmethod
@@ -7840,7 +7846,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return None
         properties = {}
         for name, field in schema.properties.items():
-            if (field_type := cls._plain_pattern_value_type(field)) is None:
+            if (field_type := cls._plain_pattern_value_type(field, allow_minimum=True)) is None:
                 return None
             properties[name] = field_type
         return properties
@@ -7861,8 +7867,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 and pattern.minimum is not None
                 and (isinstance(pattern.minimum, int) or math.isfinite(pattern.minimum))
             )
-        declared_properties = cls._plain_pattern_object(declared)
         pattern_properties = cls._plain_pattern_object(pattern)
+        if declared is True:
+            return pattern_properties is not None and bool(cast("JsonSchemaObject", pattern).required)
+        declared_properties = cls._plain_pattern_object(declared)
         return (
             declared_properties is not None
             and pattern_properties is not None
@@ -7896,7 +7904,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return None
         declared_properties = obj.properties or {}
         if not set(obj.required or ()) <= declared_properties.keys() or any(
-            cls._plain_pattern_value_type(field) is None and cls._plain_pattern_object(field) is None
+            field is not True
+            and cls._plain_pattern_value_type(field) is None
+            and cls._plain_pattern_object(field) is None
             for field in declared_properties.values()
         ):
             return None
@@ -7911,16 +7921,25 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         pair_size = 2
         if len(obj.patternProperties) != pair_size or len(pattern_value_types) != pair_size:
             return None
+        # A literal prefix followed by a literal suffix supplies an explicit common key.
+        witness = None
+        patterns = tuple(obj.patternProperties)
+        for prefix, suffix in (patterns, patterns[::-1]):
+            if (start := re.fullmatch(r"\^([A-Za-z0-9_ -]+)", prefix)) and (
+                end := re.fullmatch(r"([A-Za-z0-9_ -]+)\$", suffix)
+            ):
+                witness = start[1] + end[1] if start[1] != end[1] else None
+                break
         literal_models: dict[str, list[tuple[str, dict[str, str]]]] = {}
         for pattern, data_type in pattern_value_types:
             if (
                 data_type.reference is None
                 or (match := re.fullmatch(r"\^?([A-Za-z0-9_ -]+)\$?", pattern)) is None
-                or match[1] in declared_properties
+                or (witness or match[1]) in declared_properties
                 or (properties := cls._plain_pattern_object(obj.patternProperties.get(pattern, False))) is None
             ):
                 continue
-            previous = literal_models.setdefault(match[1], [])
+            previous = literal_models.setdefault(witness or match[1], [])
             if any(
                 reference != data_type.reference.path
                 and all(properties[name] == field_type for name, field_type in fields.items() if name in properties)
