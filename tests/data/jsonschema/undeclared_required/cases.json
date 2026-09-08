@@ -487,5 +487,32 @@
       "True_builtin": "base_objects_True_builtin.py",
       "True_external": "base_objects_True_external.py"
     }
+  },
+  "schema_base_open": {
+    "options": {},
+    "custom": false,
+    "payloads": [
+      {},
+      {
+        "known": 2
+      },
+      {
+        "missing": null
+      },
+      {
+        "known": 2,
+        "missing": true
+      },
+      {
+        "renamed": 2,
+        "missing": true
+      }
+    ],
+    "code_names": {
+      "False_builtin": "schema_base_open_builtin.py",
+      "False_external": "schema_base_open_external.py",
+      "True_builtin": "schema_base_open_builtin.py",
+      "True_external": "schema_base_open_external.py"
+    }
   }
 }

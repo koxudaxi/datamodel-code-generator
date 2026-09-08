@@ -8118,6 +8118,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         names_by_property = self._get_input_names_by_property(fields, base_classes)
         if (
             not self.force_optional_for_required_fields
+            and not obj.custom_base_path
             and not any((self.config.base_class, self.config.base_class_map, self.config.custom_template_dir))
             and self.config.extra_template_data is None
             and (missing_required := [name for name in obj.required if name not in names_by_property])
