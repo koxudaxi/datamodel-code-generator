@@ -222,7 +222,7 @@
     "name": "standard_opaque_date",
     "options": {},
     "payload": "2024-01-02",
-    "safe": false
+    "safe": true
   },
   {
     "name": "standard_unknown_import",
@@ -422,6 +422,159 @@
     "payload": [
       "2026-09-08"
     ],
+    "safe": true
+  },
+  {
+    "name": "transported_date",
+    "options": {},
+    "payload": "2026-09-08",
+    "safe": true
+  },
+  {
+    "name": "transported_date_tuple",
+    "options": {},
+    "payload": [
+      "2026-09-08"
+    ],
+    "safe": true
+  },
+  {
+    "name": "transported_datetime",
+    "options": {},
+    "payload": "2026-09-08T12:00:00",
+    "safe": true
+  },
+  {
+    "name": "transported_datetime_tuple",
+    "options": {},
+    "payload": [
+      "2026-09-08T12:00:00"
+    ],
+    "safe": true
+  },
+  {
+    "name": "transported_time",
+    "options": {},
+    "payload": "12:00:00",
+    "safe": true
+  },
+  {
+    "name": "transported_time_tuple",
+    "options": {},
+    "payload": [
+      "12:00:00"
+    ],
+    "safe": true
+  },
+  {
+    "name": "transported_duration",
+    "options": {},
+    "payload": "P1D",
+    "safe": true
+  },
+  {
+    "name": "transported_duration_tuple",
+    "options": {},
+    "payload": [
+      "P1D"
+    ],
+    "safe": true
+  },
+  {
+    "name": "transported_decimal",
+    "options": {},
+    "payload": "1.5",
+    "safe": true
+  },
+  {
+    "name": "transported_decimal_tuple",
+    "options": {},
+    "payload": [
+      "1.5"
+    ],
+    "safe": true
+  },
+  {
+    "name": "transported_uuid",
+    "options": {},
+    "payload": "550e8400-e29b-41d4-a716-446655440000",
+    "safe": true
+  },
+  {
+    "name": "transported_uuid_tuple",
+    "options": {},
+    "payload": [
+      "550e8400-e29b-41d4-a716-446655440000"
+    ],
+    "safe": true
+  },
+  {
+    "name": "transported_aware",
+    "options": {},
+    "payload": "2026-09-08T12:00:00Z",
+    "safe": true
+  },
+  {
+    "name": "transported_aware_tuple",
+    "options": {},
+    "payload": [
+      "2026-09-08T12:00:00Z"
+    ],
+    "safe": true
+  },
+  {
+    "name": "transported_naive",
+    "options": {},
+    "payload": "2026-09-08T12:00:00",
+    "safe": true
+  },
+  {
+    "name": "transported_naive_tuple",
+    "options": {},
+    "payload": [
+      "2026-09-08T12:00:00"
+    ],
+    "safe": true
+  },
+  {
+    "name": "transported_custom",
+    "options": {},
+    "payload": "2026-09-08",
+    "safe": false,
+    "custom": true
+  },
+  {
+    "name": "transported_partial",
+    "options": {},
+    "payload": "2026-09-08",
+    "safe": false,
+    "partial": true
+  },
+  {
+    "name": "transported_validators",
+    "options": {},
+    "payload": "2026-09-08",
+    "safe": false,
+    "validators": true
+  },
+  {
+    "name": "transported_custom_base",
+    "options": {
+      "base_class": "tests.data.python.unique_model_sets.explicit_native.IdentityBase"
+    },
+    "payload": "2026-09-08",
+    "safe": false
+  },
+  {
+    "name": "transported_collision",
+    "options": {},
+    "payload": "2026-09-08",
+    "safe": true
+  },
+  {
+    "name": "transported_foreign",
+    "options": {},
+    "payload": 1,
     "safe": false
   },
   {

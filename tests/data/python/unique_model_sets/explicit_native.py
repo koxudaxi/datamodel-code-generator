@@ -195,3 +195,91 @@ MODELS.update({
 })
 
 MODELS["tuple_collision"] = TupleItem
+
+MODELS["transported_date"] = DateItem
+
+
+class TransportedDateTuple(TupleItem):
+    """Native frozen tuple of canonical immutable values."""
+
+    value: tuple[date, ...]
+
+
+MODELS["transported_date_tuple"] = TransportedDateTuple
+MODELS["transported_datetime"] = LocalDatetimeItem
+
+
+class TransportedDatetimeTuple(TupleItem):
+    """Native frozen tuple of canonical immutable values."""
+
+    value: tuple[datetime, ...]
+
+
+MODELS["transported_datetime_tuple"] = TransportedDatetimeTuple
+MODELS["transported_time"] = TimeItem
+
+
+class TransportedTimeTuple(TupleItem):
+    """Native frozen tuple of canonical immutable values."""
+
+    value: tuple[time, ...]
+
+
+MODELS["transported_time_tuple"] = TransportedTimeTuple
+MODELS["transported_duration"] = DurationItem
+
+
+class TransportedDurationTuple(TupleItem):
+    """Native frozen tuple of canonical immutable values."""
+
+    value: tuple[timedelta, ...]
+
+
+MODELS["transported_duration_tuple"] = TransportedDurationTuple
+MODELS["transported_decimal"] = DecimalItem
+
+
+class TransportedDecimalTuple(TupleItem):
+    """Native frozen tuple of canonical immutable values."""
+
+    value: tuple[Decimal, ...]
+
+
+MODELS["transported_decimal_tuple"] = TransportedDecimalTuple
+MODELS["transported_uuid"] = UUIDItem
+
+
+class TransportedUuidTuple(TupleItem):
+    """Native frozen tuple of canonical immutable values."""
+
+    value: tuple[UUID, ...]
+
+
+MODELS["transported_uuid_tuple"] = TransportedUuidTuple
+MODELS["transported_aware"] = DatetimeItem
+
+
+class TransportedAwareTuple(TupleItem):
+    """Native frozen tuple of canonical immutable values."""
+
+    value: tuple[AwareDatetime, ...]
+
+
+MODELS["transported_aware_tuple"] = TransportedAwareTuple
+MODELS["transported_naive"] = NaiveDatetimeItem
+
+
+class TransportedNaiveTuple(TupleItem):
+    """Native frozen tuple of canonical immutable values."""
+
+    value: tuple[NaiveDatetime, ...]
+
+
+MODELS["transported_naive_tuple"] = TransportedNaiveTuple
+
+MODELS["tuple_date"] = TransportedDateTuple
+MODELS["standard_opaque_date"] = DateItem
+MODELS["transported_collision"] = DateItem
+
+SUBCLASS_VALUES["transported_date"] = SUBCLASS_VALUES["opaque"]
+SUBCLASS_VALUES["transported_uuid"] = SUBCLASS_VALUES["standard_uuid"]

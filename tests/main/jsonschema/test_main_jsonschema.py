@@ -23157,6 +23157,6 @@ def test_transported_tuple_incomplete_binding(case: dict) -> None:
     )
     bound = BoundPythonType(expression, tuple(Import(**item) for item in case["imports"]))
     assert_output(
-        json.dumps(SetItemValidator._has_native_tuple_hash(bound)) + "\n",
+        json.dumps(SetItemValidator._has_native_bound_hash(bound)) + "\n",
         DATA_PATH / "payloads/explicit_frozen_sets/incomplete_tuple_binding.txt",
     )

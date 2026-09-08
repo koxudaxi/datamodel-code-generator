@@ -139,7 +139,7 @@ class SetItemValidator:
                 not data_type.is_custom_type
                 and not data_type.is_func
                 and not data_type.kwargs
-                and SetItemValidator._has_native_tuple_hash(data_type.python_type)
+                and SetItemValidator._has_native_bound_hash(data_type.python_type)
             )
         if data_type.import_:
             return (
@@ -152,8 +152,8 @@ class SetItemValidator:
         return data_type.type in {"str", "int", "float", "bool", "bytes", "None"}
 
     @staticmethod
-    def _has_native_tuple_hash(bound_type: BoundPythonType) -> bool:
-        """Prove transported tuple elements from IR and bound imports without executing types."""
+    def _has_native_bound_hash(bound_type: BoundPythonType) -> bool:
+        """Prove transported immutable types from IR and bound imports without executing types."""
         from datamodel_code_generator._python_type_annotation import (  # ruff: ignore[import-outside-top-level]
             PythonTypeBoundName,
             PythonTypeEllipsis,
@@ -162,7 +162,10 @@ class SetItemValidator:
             PythonTypeUnion,
         )
 
-        if type(bound_type.expression) is not PythonTypeSubscript:
+        if type(bound_type.expression) is not PythonTypeSubscript and not (
+            type(bound_type.expression) is PythonTypeBoundName
+            and (bound_type.expression.import_from, bound_type.expression.import_name) in _STANDARD_IMMUTABLE_IMPORTS
+        ):
             return False
         variadic_arity = 2
         bindings = {(item.from_, item.import_, item.binding_name) for item in bound_type.imports}
@@ -186,7 +189,9 @@ class SetItemValidator:
             else:
                 return False
             if arguments is None:
-                if module != "builtins" or name not in {"int", "str", "float", "bool", "bytes", "None"}:
+                if (module, name) not in _STANDARD_IMMUTABLE_IMPORTS and (
+                    module != "builtins" or name not in {"int", "str", "float", "bool", "bytes", "None"}
+                ):
                     return False
                 continue
             if (module, name) in {("builtins", "tuple"), ("typing", "Tuple")}:

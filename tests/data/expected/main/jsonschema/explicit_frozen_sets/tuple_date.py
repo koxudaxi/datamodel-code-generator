@@ -12,7 +12,6 @@ class Item(BaseModel):
     model_config = ConfigDict(
         frozen=True,
     )
-    __hash__ = object.__hash__
     value: tuple[date, ...]
 
 
