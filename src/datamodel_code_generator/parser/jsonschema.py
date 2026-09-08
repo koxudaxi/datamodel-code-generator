@@ -3261,13 +3261,15 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             raise Error(msg)
         return _validate_schema_python_import_path(f"{module}.{type_name}", "x-python-import")
 
-    def _get_x_python_runtime_symbol(  # noqa: PLR6301
+    def _get_x_python_runtime_symbol(  # ruff: ignore[no-self-use]
         self, x_python_import: dict[str, Any]
     ) -> PythonTypeRuntimeSymbol | None:
         """Retain nested runtime module boundaries; snooper requires an instance method."""
         if (qualname := x_python_import.get("qualname")) is None:
             return None
-        from datamodel_code_generator._python_type_annotation import PythonTypeRuntimeSymbol  # noqa: PLC0415
+        from datamodel_code_generator._python_type_annotation import (  # ruff: ignore[import-outside-top-level]
+            PythonTypeRuntimeSymbol,
+        )
 
         qualname = _validate_schema_python_import_path(qualname, "x-python-import qualname")
         return PythonTypeRuntimeSymbol(x_python_import["module"], tuple(qualname.split(".")))
@@ -3335,7 +3337,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         x_python_import, is_optional = facts
         if isinstance(x_python_import, dict) and (full_path := self._get_x_python_import_path(x_python_import)):
             if runtime_symbol := self._get_x_python_runtime_symbol(x_python_import):
-                from datamodel_code_generator._python_type_annotation import render_python_type_expr  # noqa: PLC0415
+                from datamodel_code_generator._python_type_annotation import (  # ruff: ignore[import-outside-top-level]
+                    render_python_type_expr,
+                )
 
                 bound_type = self._bind_python_type(runtime_symbol)
                 return self.data_type(type=render_python_type_expr(bound_type.expression), python_type=bound_type)

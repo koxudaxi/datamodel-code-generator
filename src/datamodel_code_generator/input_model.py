@@ -1026,7 +1026,7 @@ def _has_qualified_type_export(nested_type: type, qualname: str) -> bool:
             parent = owner
             namespace = type.__dict__["__dict__"].__get__(owner)
         return namespace.get(name) is nested_type and getattr(parent, name, None) is nested_type
-    except Exception:  # noqa: BLE001
+    except Exception:  # ruff: ignore[blind-except]
         # A user attribute hook may reject this optional path while the short export still works.
         return False
 
