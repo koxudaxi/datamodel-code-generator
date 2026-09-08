@@ -3539,13 +3539,12 @@ def test_batch_watch_failed_cycle_preserves_outputs_and_recovers_from_new_depend
     try:
         shutil.copyfile(first_output, first_expected)
         shutil.copyfile(second_output, second_expected)
-        broken_root = root_file.read_text(encoding="utf-8").replace('"child.json"', '"missing.json"')
         _write_watch_cli_input_and_wait(
             process,
             stdout_lines,
             stderr_lines,
             root_file,
-            broken_root,
+            root_file.read_text(encoding="utf-8").replace('"child.json"', '"missing.json"'),
             lambda: _lines_contain(stderr_lines, "Generation failed"),
             "the failed batch cycle to be reported",
         )
