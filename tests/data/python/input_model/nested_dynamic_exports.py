@@ -268,3 +268,28 @@ class RedirectModule(types.ModuleType):
 
 
 sys.modules[__name__].__class__ = RedirectModule
+
+
+class ProxyOwner:
+    class Proxy(BaseModel):
+        value: int
+
+
+ProxyOwner.Proxy.__module__ = "tests.data.python.input_model.nested_dynamic_proxy"
+exports["Proxy"] = ProxyOwner.Proxy
+
+
+class ProxyRoot(BaseModel):
+    child: ProxyOwner.Proxy
+
+
+class ModuleProxy(types.SimpleNamespace):
+    @property
+    def __class__(self) -> type:
+        calls.append("proxy.__class__")
+        return type(self)
+
+
+sys.modules[ProxyOwner.Proxy.__module__] = ModuleProxy(
+    __name__=ProxyOwner.Proxy.__module__, __spec__=None, Proxy=ProxyOwner.Proxy, ProxyOwner=ProxyOwner
+)

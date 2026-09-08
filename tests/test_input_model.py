@@ -2680,6 +2680,7 @@ def test_input_model_nested_reuse_type_binding(
         "Raising",
         "Chained",
         "ModuleRedirected",
+        "Proxy",
     ],
 )
 def test_input_model_dynamic_nested_exports(
@@ -2740,5 +2741,5 @@ def test_input_model_dynamic_nested_exports(
     if strategy != "regenerate-all":
         assert type(generated.child) is type(native.child) is nested_dynamic_exports.exports[case]
     assert nested_dynamic_exports.calls == (
-        ["__path__", case] if strategy != "regenerate-all" and case not in {"Live", "Lazy"} else []
+        ["__path__", case] if strategy != "regenerate-all" and case not in {"Live", "Lazy", "Proxy"} else []
     )

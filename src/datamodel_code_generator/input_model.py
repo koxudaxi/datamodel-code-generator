@@ -1011,7 +1011,7 @@ def _should_reuse_type(source_family: str, output_family: _OutputModelFamily) ->
 
 def _has_qualified_type_export(nested_type: type, qualname: str) -> bool:
     """Confirm that a static owner path resolves to the same runtime type."""
-    if (module := sys.modules.get(nested_type.__module__)) is None:
+    if not issubclass(type(module := sys.modules.get(nested_type.__module__)), types.ModuleType):
         return False
     namespace = vars(types.ModuleType)["__dict__"].__get__(module)
     if namespace.get(nested_type.__name__) is nested_type:
