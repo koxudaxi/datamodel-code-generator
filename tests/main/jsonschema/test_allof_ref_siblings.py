@@ -24,6 +24,7 @@ from tests.main.conftest import (
     run_main_and_assert,
 )
 from tests.main.jsonschema.conftest import assert_file_content
+from tests.main.payload_validation.constants import ALLOF_REF_SIBLING_DIAGNOSTICS
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -118,10 +119,15 @@ def test_allof_ref_siblings(
                 adapter.validate_json(json.dumps(value))
 
 
-@pytest.mark.parametrize("case_name", ["enum_disjoint", "literal_boolean_number"])
+@pytest.mark.parametrize("case_name", ALLOF_REF_SIBLING_DIAGNOSTICS)
 def test_allof_ref_sibling_empty_intersection(output_file: Path, case_name: str) -> None:
     """Reject disjoint literal intersections, including JSON booleans versus numbers."""
     schema_path = JSON_SCHEMA_DATA_PATH / "allof_ref_siblings" / f"{case_name}.json"
+    schema = json.loads(schema_path.read_text())
+    validator = validator_for(schema)(schema)
+    for value in ALLOF_REF_SIBLING_DIAGNOSTICS[case_name]:
+        with pytest.raises(JsonSchemaValidationError):
+            validator.validate(value)
     run_main_and_assert(input_path=schema_path, output_path=output_file, expected_exit=Exit.ERROR)
     with pytest.raises(Error, match="unsatisfiable"):
         generate(schema_path, input_file_type=InputFileType.JsonSchema)
