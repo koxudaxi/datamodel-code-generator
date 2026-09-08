@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import sys
+import types
 from typing import Any, NoReturn
 
 from pydantic import BaseModel
@@ -178,3 +180,91 @@ def __getattr__(name: str) -> type[BaseModel]:
     if name in exports and name != "Live":
         return exports[name]
     raise AttributeError(name)
+
+
+class RedirectMeta(type):
+    """Redirect a nested leaf while retaining its original static dictionary."""
+
+    def __getattribute__(cls, name: str) -> Any:
+        if name == "Redirected":
+            return Other
+        return super().__getattribute__(name)
+
+
+class RedirectOwner(metaclass=RedirectMeta):
+    class Redirected(BaseModel):
+        value: int
+
+
+exports["Redirected"] = RedirectOwner.__dict__["Redirected"]
+
+
+class RedirectedRoot(BaseModel):
+    child: exports["Redirected"]
+
+
+class RaisingMeta(type):
+    """Reject qualified lookup while the original short export remains usable."""
+
+    def __getattribute__(cls, name: str) -> Any:
+        if name == "Raising":
+            raise RuntimeError("qualified lookup is unavailable")
+        return super().__getattribute__(name)
+
+
+class RaisingOwner(metaclass=RaisingMeta):
+    class Raising(BaseModel):
+        value: int
+
+
+exports["Raising"] = RaisingOwner.__dict__["Raising"]
+
+
+class RaisingRoot(BaseModel):
+    child: exports["Raising"]
+
+
+class ChainMeta(type):
+    """Redirect an intermediate owner rather than the leaf itself."""
+
+    def __getattribute__(cls, name: str) -> Any:
+        if name == "Middle":
+            return Other
+        return super().__getattribute__(name)
+
+
+class ChainOwner(metaclass=ChainMeta):
+    class Middle:
+        class Chained(BaseModel):
+            value: int
+
+
+exports["Chained"] = ChainOwner.__dict__["Middle"].Chained
+
+
+class ChainedRoot(BaseModel):
+    child: exports["Chained"]
+
+
+class ModuleOwner:
+    class ModuleRedirected(BaseModel):
+        value: int
+
+
+exports["ModuleRedirected"] = ModuleOwner.ModuleRedirected
+
+
+class ModuleRedirectedRoot(BaseModel):
+    child: ModuleOwner.ModuleRedirected
+
+
+class RedirectModule(types.ModuleType):
+    """Redirect a qualified owner through a real module attribute hook."""
+
+    def __getattribute__(self, name: str) -> Any:
+        if name == "ModuleOwner":
+            return Other
+        return super().__getattribute__(name)
+
+
+sys.modules[__name__].__class__ = RedirectModule

@@ -2667,11 +2667,27 @@ def test_input_model_nested_reuse_type_binding(
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
 @pytest.mark.parametrize("formatter", ["builtin", "external"])
 @pytest.mark.parametrize("strategy", ["regenerate-all", "reuse-all", "reuse-foreign"])
-@pytest.mark.parametrize("case", ["Deleted", "Scalar", "Changed", "Descriptor", "Live", "Lazy"])
+@pytest.mark.parametrize(
+    "case",
+    [
+        "Deleted",
+        "Scalar",
+        "Changed",
+        "Descriptor",
+        "Live",
+        "Lazy",
+        "Redirected",
+        "Raising",
+        "Chained",
+        "ModuleRedirected",
+    ],
+)
 def test_input_model_dynamic_nested_exports(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, entrypoint: str, formatter: str, strategy: str, case: str
 ) -> None:
-    """Check static owner identity without executing export or descriptor hooks."""
+    """Check owner identity while preserving existing dynamic short exports."""
+    from pydantic import ValidationError
+
     from datamodel_code_generator import DataModelType, GenerateConfig, InputFileType, generate
     from datamodel_code_generator.enums import InputModelRefStrategy
     from datamodel_code_generator.format import Formatter
@@ -2717,6 +2733,10 @@ def test_input_model_dynamic_nested_exports(
     generated = getattr(module, f"{case}Root")(child={"value": 1})
     assert generated.model_dump() == native.model_dump() == {"child": {"value": 1}}
     assert list(type(generated).model_fields) == ["child"]
+    with pytest.raises(ValidationError):
+        type(native).model_validate({"child": {"value": "invalid"}})
+    with pytest.raises(ValidationError):
+        type(generated).model_validate({"child": {"value": "invalid"}})
     if strategy != "regenerate-all":
         assert type(generated.child) is type(native.child) is nested_dynamic_exports.exports[case]
     assert nested_dynamic_exports.calls == (

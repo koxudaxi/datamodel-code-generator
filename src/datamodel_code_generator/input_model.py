@@ -1010,19 +1010,25 @@ def _should_reuse_type(source_family: str, output_family: _OutputModelFamily) ->
 
 
 def _has_qualified_type_export(nested_type: type, qualname: str) -> bool:
-    """Confirm an importable owner path without executing user attribute hooks."""
+    """Confirm that a static owner path resolves to the same runtime type."""
     if (module := sys.modules.get(nested_type.__module__)) is None:
         return False
     namespace = vars(types.ModuleType)["__dict__"].__get__(module)
     if namespace.get(nested_type.__name__) is nested_type:
         return False
     owner_path, _, name = qualname.rpartition(".")
-    for owner_name in owner_path.split("."):
-        owner = namespace.get(owner_name)
-        if not issubclass(type(owner), type):
-            return False
-        namespace = type.__dict__["__dict__"].__get__(owner)
-    return namespace.get(name) is nested_type
+    parent: object = module
+    try:
+        for owner_name in owner_path.split("."):
+            owner = namespace.get(owner_name)
+            if not issubclass(type(owner), type) or getattr(parent, owner_name, None) is not owner:
+                return False
+            parent = owner
+            namespace = type.__dict__["__dict__"].__get__(owner)
+        return namespace.get(name) is nested_type and getattr(parent, name, None) is nested_type
+    except Exception:  # noqa: BLE001
+        # A user attribute hook may reject this optional path while the short export still works.
+        return False
 
 
 def _filter_defs_by_strategy(
