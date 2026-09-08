@@ -31,7 +31,7 @@
     "name": "opaque",
     "options": {},
     "payload": "2026-09-08",
-    "safe": false
+    "safe": true
   },
   {
     "name": "tuple",
@@ -124,6 +124,117 @@
     "payload": 1,
     "safe": false,
     "validators": true
+  },
+  {
+    "name": "standard_datetime",
+    "options": {},
+    "payload": "2024-01-02T03:04:05Z",
+    "safe": true
+  },
+  {
+    "name": "standard_local_datetime",
+    "options": {},
+    "payload": "2024-01-02T03:04:05",
+    "safe": true
+  },
+  {
+    "name": "standard_naive_datetime",
+    "options": {
+      "output_datetime_class": "NaiveDatetime"
+    },
+    "payload": "2024-01-02T03:04:05",
+    "safe": true
+  },
+  {
+    "name": "standard_time",
+    "options": {},
+    "payload": "03:04:05",
+    "safe": true
+  },
+  {
+    "name": "standard_duration",
+    "options": {},
+    "payload": "P1D",
+    "safe": true
+  },
+  {
+    "name": "standard_uuid",
+    "options": {},
+    "payload": "550e8400-e29b-41d4-a716-446655440000",
+    "safe": true
+  },
+  {
+    "name": "standard_decimal",
+    "options": {},
+    "payload": "1.5",
+    "safe": true
+  },
+  {
+    "name": "standard_optional",
+    "options": {},
+    "payload": null,
+    "safe": true
+  },
+  {
+    "name": "standard_custom",
+    "options": {},
+    "payload": "2024-01-02",
+    "safe": false,
+    "custom": true
+  },
+  {
+    "name": "standard_partial",
+    "options": {},
+    "payload": "2024-01-02",
+    "safe": false,
+    "partial": true
+  },
+  {
+    "name": "standard_validators",
+    "options": {},
+    "payload": "2024-01-02",
+    "safe": false,
+    "validators": true
+  },
+  {
+    "name": "standard_nested",
+    "options": {},
+    "payload": {
+      "value": "2024-01-02"
+    },
+    "safe": true
+  },
+  {
+    "name": "standard_inherited",
+    "options": {},
+    "payload": "2024-01-02",
+    "safe": true
+  },
+  {
+    "name": "standard_plain_datetime",
+    "options": {
+      "output_datetime_class": "datetime"
+    },
+    "payload": "2024-01-02T03:04:05",
+    "safe": true
+  },
+  {
+    "name": "standard_opaque_date",
+    "options": {},
+    "payload": "2024-01-02",
+    "safe": false
+  },
+  {
+    "name": "standard_unknown_import",
+    "options": {},
+    "payload": "person@example.com",
+    "safe": false
+  },
+  {
+    "name": "standard_constrained",
+    "options": {},
+    "payload": "1.5",
+    "safe": false
   },
   {
     "name": "inherited_mutable_base",

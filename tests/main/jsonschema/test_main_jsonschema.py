@@ -90,7 +90,7 @@ from tests.conftest import (
     validate_generated_code,
 )
 from tests.data.python.schema_resource_server import RecordingRequestHandler
-from tests.data.python.unique_model_sets.explicit_native import MODELS
+from tests.data.python.unique_model_sets.explicit_native import MODELS, SUBCLASS_VALUES
 from tests.main.conftest import (
     ALIASES_DATA_PATH,
     BACKEND_GOLDEN_CASES,
@@ -23002,6 +23002,8 @@ def test_explicit_frozen_set_hashes(
         runtime.update(
             field_order=list(item.model_fields) == list(MODELS[case.get("source", case["name"])].model_fields),
             native_dump=first.model_dump(mode="json") == originals[0].model_dump(mode="json"),
+            native_json_dump=item.model_validate_json(json.dumps(payload)).model_dump(mode="json")
+            == native.model_validate_json(json.dumps(payload)).model_dump(mode="json"),
         )
         result = container.model_validate({"items": [payload, payload]})
         expected = TypeAdapter(set[type(originals[0])]).validate_python([payload, payload])
@@ -23024,6 +23026,10 @@ def test_explicit_frozen_set_hashes(
             json.dumps(runtime, indent=2) + "\n",
             EXPECTED_JSON_SCHEMA_PATH / "explicit_frozen_sets/safe.runtime.txt",
         )
+        with pytest.raises(ValidationError):
+            item.model_validate_json((DATA_PATH / "payloads/explicit_frozen_sets/invalid.json").read_text())
+        with pytest.raises(ValidationError):
+            native.model_validate_json((DATA_PATH / "payloads/explicit_frozen_sets/invalid.json").read_text())
         with pytest.raises(ValidationError):
             item.model_validate({})
         with pytest.raises(ValidationError):
@@ -23095,3 +23101,32 @@ def test_explicit_non_pydantic_set_imports(tmp_path: Path, entrypoint: str, back
             expected_file=expected,
             assert_func=assert_file_content,
         )
+
+
+@pytest.mark.parametrize(("case", "value"), SUBCLASS_VALUES.items())
+def test_standard_frozen_unhashable_subclass(output_file: Path, case: str, value: object) -> None:
+    """Known annotations preserve native behavior even for unhashable user subclasses."""
+    run_main_with_args([
+        "--input",
+        str(JSON_SCHEMA_DATA_PATH / "explicit_frozen_sets" / f"{case}.json"),
+        "--input-file-type",
+        "jsonschema",
+        "--output",
+        str(output_file),
+        "--enable-faux-immutability",
+        "--disable-timestamp",
+        "--formatters",
+        "builtin",
+    ])
+    assert_output(
+        output_file.read_text(encoding="utf-8"), EXPECTED_JSON_SCHEMA_PATH / "explicit_frozen_sets" / f"{case}.py"
+    )
+    with _generated_model(output_file, "standard_frozen_subclass", "Container") as container:
+        for implementation in (sys.modules[container.__module__].Item, MODELS[case]):
+            instance = implementation(value=value)
+            assert_output(
+                f"{instance.value is value}\n",
+                EXPECTED_JSON_SCHEMA_PATH / "explicit_frozen_sets/subclass_identity.txt",
+            )
+            with pytest.raises(TypeError, match="unhashable type"):
+                hash(instance)

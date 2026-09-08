@@ -2,9 +2,12 @@
 from __future__ import annotations
 
 from enum import Enum
+from datetime import date, datetime, time, timedelta
+from decimal import Decimal
+from uuid import UUID
 from typing import ClassVar, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import AwareDatetime, BaseModel, ConfigDict, NaiveDatetime
 
 
 class IdentityBase(BaseModel):
@@ -69,4 +72,75 @@ MODELS = {
     'integer': Integer, 'nested': Nested, 'inherited': Inherited,
     'recursive': Recursive, 'tuple': TupleItem, 'literal': LiteralItem,
     'enum': EnumItem, 'classvar': Classvar, 'packaged': Integer,
+}
+
+
+class DateItem(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    value: date
+
+
+class DatetimeItem(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    value: AwareDatetime
+
+
+class LocalDatetimeItem(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    value: datetime
+
+
+class NaiveDatetimeItem(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    value: NaiveDatetime
+
+
+class TimeItem(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    value: time
+
+
+class DurationItem(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    value: timedelta
+
+
+class UUIDItem(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    value: UUID
+
+
+class DecimalItem(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    value: Decimal
+
+
+class OptionalDateItem(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    value: Optional[date]
+
+
+class NestedDateItem(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    value: DateItem
+
+
+class UnhashableDate(date):
+    __hash__ = None
+
+
+class UnhashableUUID(UUID):
+    __hash__ = None
+
+
+MODELS.update({
+    'opaque': DateItem, 'standard_datetime': DatetimeItem,
+    'standard_plain_datetime': LocalDatetimeItem, 'standard_local_datetime': NaiveDatetimeItem, 'standard_naive_datetime': NaiveDatetimeItem,
+    'standard_time': TimeItem, 'standard_duration': DurationItem, 'standard_uuid': UUIDItem,
+    'standard_decimal': DecimalItem, 'standard_optional': OptionalDateItem,
+    'standard_nested': NestedDateItem, 'standard_inherited': DateItem,
+})
+SUBCLASS_VALUES = {
+    'opaque': UnhashableDate(2024, 1, 2),
+    'standard_uuid': UnhashableUUID('550e8400-e29b-41d4-a716-446655440000'),
 }

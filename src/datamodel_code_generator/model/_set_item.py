@@ -16,6 +16,18 @@ if TYPE_CHECKING:
     from datamodel_code_generator.types import DataType
 
 
+_STANDARD_IMMUTABLE_IMPORTS = frozenset({
+    ("datetime", "date"),
+    ("datetime", "datetime"),
+    ("datetime", "time"),
+    ("datetime", "timedelta"),
+    ("decimal", "Decimal"),
+    ("uuid", "UUID"),
+    ("pydantic", "AwareDatetime"),
+    ("pydantic", "NaiveDatetime"),
+})
+
+
 class SetItemValidator:
     """Inspect reachable generated fields without importing external Python types."""
 
@@ -113,15 +125,26 @@ class SetItemValidator:
                     elif (
                         not data_type.data_types
                         and not data_type.literals
-                        and (
-                            data_type.python_type
-                            or data_type.import_
-                            or data_type.type not in {"str", "int", "float", "bool", "bytes", "None"}
-                        )
+                        and not self._has_native_hash_leaf(data_type)
                     ):
                         return False
         self.native_hash_models.update(path for path, require_frozen in visited if require_frozen)
         return True
+
+    @staticmethod
+    def _has_native_hash_leaf(data_type: DataType) -> bool:
+        """Recognize standard value types by existing import identity, never by execution."""
+        if data_type.python_type:
+            return False
+        if data_type.import_:
+            return (
+                not data_type.is_custom_type
+                and not data_type.is_func
+                and not data_type.kwargs
+                and (data_type.import_.from_, data_type.import_.import_) in _STANDARD_IMMUTABLE_IMPORTS
+                and data_type.type == data_type.import_.import_
+            )
+        return data_type.type in {"str", "int", "float", "bool", "bytes", "None"}
 
     def _field_types(self, model: DataModel) -> Iterator[DataType]:
         if model.reference.path in self.safe_fields:

@@ -191,6 +191,19 @@ This exits with code 1 if the output would differ, without modifying files.
 
 ---
 
+### 🔒 How do frozen models behave in sets?
+
+Standard Pydantic v2 frozen models retain their native value hash when their fields
+use known immutable types. This includes primitive values, proven generated models,
+standard `date`, `datetime`, `time`, `timedelta`, `Decimal`, and `UUID` imports, and
+Pydantic's `AwareDatetime` and `NaiveDatetime`. Equal values then deduplicate in sets.
+
+This preserves native frozen behavior; it does not guarantee that every Python input
+is hashable. A user subclass with no hash raises `TypeError`, just as it does in a
+native frozen model. Custom bases, templates, decorators, validators, and opaque
+Python annotations retain their existing generation behavior. An explicit
+`x-python-type` tuple remains opaque even when its rendered annotation looks immutable.
+
 ## ⚡ Performance
 
 ### 🐢 Generation is slow for large schemas
