@@ -19,3 +19,15 @@ class DecoratedModel(BaseModel):
         model = BaseModel(*args, **kwargs)
         model.decorators.append('@(lambda cls: cls)')
         return model
+
+
+class IncompleteReferenceModel(BaseModel):
+    """Simulate an extension that leaves a primitive reference without its source."""
+
+    def __new__(cls, *args, **kwargs):
+        from datamodel_code_generator.reference import Reference
+
+        model = BaseModel(*args, **kwargs)
+        if model.name == 'Item':
+            model.fields[0].data_type.reference = Reference(path=model.reference.path, name='int')
+        return model

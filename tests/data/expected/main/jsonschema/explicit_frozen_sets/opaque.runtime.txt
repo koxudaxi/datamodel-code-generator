@@ -1,0 +1,5 @@
+{
+  "equal": true,
+  "identity_hash": true,
+  "equal_dump": true
+}

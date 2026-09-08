@@ -35,7 +35,6 @@ def test_explicit_frozen_set_hashes(
     tmp_path: Path, entrypoint: str, formatter: str, conversion: bool, case: dict
 ) -> None:
     """Compare real generation, native hashes, and preserved opaque controls."""
-    source = JSON_SCHEMA_DATA_PATH / "explicit_frozen_sets" / f"{case['name']}.json"
     output = tmp_path / "model.py"
     (tmp_path / "pyproject.toml").write_text('[tool.isort]\nknown_first_party = ["tests"]\n')
     options = {"enable_faux_immutability": True, **case["options"]}
@@ -52,7 +51,7 @@ def test_explicit_frozen_set_hashes(
     if entrypoint == "cli":
         args = [
             "--input",
-            str(source),
+            str(JSON_SCHEMA_DATA_PATH / "explicit_frozen_sets" / f"{case['name']}.json"),
             "--input-file-type",
             "jsonschema",
             "--output",
@@ -79,7 +78,7 @@ def test_explicit_frozen_set_hashes(
                 dict, json.loads((DATA_PATH / "payloads/explicit_frozen_sets/validators.json").read_text())
             )
         generate(
-            source,
+            JSON_SCHEMA_DATA_PATH / "explicit_frozen_sets" / f"{case['name']}.json",
             config=GenerateConfig(
                 input_file_type=InputFileType.JsonSchema,
                 output=output,
@@ -96,32 +95,53 @@ def test_explicit_frozen_set_hashes(
         item = sys.modules[container.__module__].Item
         payload = {"value": case["payload"]}
         first, second = item.model_validate(payload), item.model_validate(payload)
-        assert first == second
+        runtime = {"equal": first == second}
         if not case["safe"]:
-            assert "__hash__ = object.__hash__" in code
-            assert first.model_dump(mode="json") == second.model_dump(mode="json")
+            runtime.update(
+                identity_hash="__hash__ = object.__hash__" in code,
+                equal_dump=first.model_dump(mode="json") == second.model_dump(mode="json"),
+            )
+            assert_output(
+                json.dumps(runtime, indent=2) + "\n",
+                EXPECTED_JSON_SCHEMA_PATH / "explicit_frozen_sets/opaque.runtime.txt",
+            )
             return
         native = MODELS[case["name"]]
         originals = [native.model_validate(payload), native.model_validate(payload)]
-        assert list(item.model_fields) == list(native.model_fields)
-        assert first.model_dump(mode="json") == originals[0].model_dump(mode="json")
-        for pair in ([first, second], originals):
-            assert pair[0] == pair[1]
-            assert hash(pair[0]) == hash(pair[1])
-            expected = {pair[0]}
-            assert pair[1] in expected
-            assert len(set(pair)) == 1
+        runtime.update(
+            field_order=list(item.model_fields) == list(native.model_fields),
+            native_dump=first.model_dump(mode="json") == originals[0].model_dump(mode="json"),
+        )
         result = container.model_validate({"items": [payload, payload]})
         expected = TypeAdapter(set[native]).validate_python([payload, payload])
-        assert len(result.items) == len(expected) == 1
-        assert [x.model_dump(mode="json") for x in result.items] == [x.model_dump(mode="json") for x in expected]
+        runtime.update(
+            pairs=[
+                {
+                    "equal": pair[0] == pair[1],
+                    "equal_hash": hash(pair[0]) == hash(pair[1]),
+                    "membership": pair[1] in set(pair[:1]),
+                    "size": len(set(pair)),
+                }
+                for pair in ([first, second], originals)
+            ],
+            generated_size=len(result.items),
+            native_size=len(expected),
+            container_dump=[x.model_dump(mode="json") for x in result.items]
+            == [x.model_dump(mode="json") for x in expected],
+        )
+        assert_output(
+            json.dumps(runtime, indent=2) + "\n",
+            EXPECTED_JSON_SCHEMA_PATH / "explicit_frozen_sets/safe.runtime.txt",
+        )
         with pytest.raises(ValidationError):
             item.model_validate({})
         with pytest.raises(ValidationError):
             native.model_validate({})
 
 
-@pytest.mark.parametrize("implementation", ["OpaqueModel", "ModelWithMethods", "DecoratedModel"])
+@pytest.mark.parametrize(
+    "implementation", ["OpaqueModel", "ModelWithMethods", "DecoratedModel", "IncompleteReferenceModel"]
+)
 @pytest.mark.parametrize("conversion", [False, True])
 def test_explicit_set_parser_extension(tmp_path: Path, implementation: str, conversion: bool) -> None:
     """Keep actual external parser model implementations and custom methods opaque."""
@@ -140,33 +160,21 @@ def test_explicit_set_parser_extension(tmp_path: Path, implementation: str, conv
         formatters=[Formatter.BUILTIN],
     )
     code = parser.parse()
-    assert isinstance(code, str)
     assert_output(code, EXPECTED_JSON_SCHEMA_PATH / "explicit_frozen_sets" / f"{implementation}.py")
     output = tmp_path / "model.py"
     output.write_text(code, encoding="utf-8")
     with _generated_model(output, "opaque_set_output", "Container") as container:
         item = sys.modules[container.__module__].Item
         first, second = item(value=1), item(value=1)
-        assert first == second
-        assert "__hash__ = object.__hash__" in code
-        assert first.model_dump() == second.model_dump() == {"value": 1}
-
-
-def test_explicit_set_unresolved_reference() -> None:
-    """An incomplete third-party reference cannot prove a native frozen hash."""
-    from collections import defaultdict
-
-    from datamodel_code_generator.model._set_item import SetItemValidator
-    from datamodel_code_generator.model.pydantic_v2 import BaseModel, DataModelField, DataTypeManager
-    from datamodel_code_generator.reference import Reference
-
-    data_type = DataTypeManager().data_type
-    model = BaseModel(
-        reference=Reference(path="Item", name="Item"),
-        fields=[DataModelField(name="value", data_type=data_type(reference=Reference(path="missing", name="Missing")))],
-        extra_template_data=defaultdict(dict, {"Item": {"config": {"frozen": True}}}),
-    )
-    assert not SetItemValidator().has_native_pydantic_hash(model)
+        runtime = {
+            "equal": first == second,
+            "identity_hash": "__hash__ = object.__hash__" in code,
+            "equal_dump": first.model_dump() == second.model_dump() == {"value": 1},
+        }
+        assert_output(
+            json.dumps(runtime, indent=2) + "\n",
+            EXPECTED_JSON_SCHEMA_PATH / "explicit_frozen_sets/opaque.runtime.txt",
+        )
 
 
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
@@ -224,6 +232,12 @@ def test_explicit_non_pydantic_set_imports(tmp_path: Path, entrypoint: str, back
     )
     assert_output(output.read_text(encoding="utf-8"), expected)
     imported = json.loads(record.read_text(encoding="utf-8"))["modules"]
-    assert "datamodel_code_generator.model._set_item" not in imported
+    runtime = {"hash_analysis_imported": "datamodel_code_generator.model._set_item" in imported}
     if entrypoint == "cli":
-        assert not any(name.startswith("datamodel_code_generator.model.pydantic_v2") for name in imported)
+        runtime["pydantic_backend_imported"] = any(
+            name.startswith("datamodel_code_generator.model.pydantic_v2") for name in imported
+        )
+    assert_output(
+        json.dumps(runtime, indent=2) + "\n",
+        EXPECTED_JSON_SCHEMA_PATH / "explicit_frozen_sets" / f"{entrypoint}.imports.txt",
+    )
