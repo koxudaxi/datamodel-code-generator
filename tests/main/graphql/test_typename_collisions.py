@@ -5,7 +5,7 @@ from __future__ import annotations
 import dataclasses
 import json
 import sys
-from typing import TYPE_CHECKING, get_type_hints
+from typing import TYPE_CHECKING, Literal, get_origin, get_type_hints
 
 import msgspec
 import pytest
@@ -84,6 +84,7 @@ def test_graphql_typename_collisions(
         "graphql_data": result.data,
         "models": {},
     }
+    inherited_type_roles = []
     with _generated_model(output_file, "graphql_typename_runtime", "Item") as item:
         for name in payload["models"]:
             model = getattr(sys.modules[item.__module__], name)
@@ -116,9 +117,19 @@ def test_graphql_typename_collisions(
                     dumped = dataclasses.asdict(instance)
                 case _:
                     fields = list(get_type_hints(model))
-                    arguments = payload["python"][name].copy()
+                    values = payload["python"][name].copy()
                     if not no_typename:
-                        arguments.update({field: name for field in fields if field not in arguments})
-                    dumped = model(**arguments)
+                        values.update({field: name for field in fields if field not in values})
+                    dumped = model(**values)
+            annotations = get_type_hints(model)
+            inherited_type_roles.extend(
+                (get_origin(annotation) is Literal, get_origin(annotations[field]) is Literal)
+                for interface in getattr(schema.get_type(name), "interfaces", ())
+                for field, annotation in get_type_hints(getattr(sys.modules[item.__module__], interface.name)).items()
+            )
             actual["models"][name] = {"fields": fields, "values": dumped}
+    assert_output(
+        f"{all(base == child for base, child in inherited_type_roles)}\n",
+        DATA_PATH / "payloads/typename_inherited_type_compatible.txt",
+    )
     assert_output(f"{json.dumps(actual, indent=2)}\n", EXPECTED_GRAPHQL_PATH / f"{expected_name}.txt")

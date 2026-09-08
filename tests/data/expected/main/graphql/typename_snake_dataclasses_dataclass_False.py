@@ -28,20 +28,20 @@ The `String` scalar type represents textual data, represented as UTF-8 character
 @dataclass
 class Base:
     value: Int
-    typename__: Literal['Base'] | None = 'Base'
+    typename___1: Literal['Base'] | None = 'Base'
 
 
 @dataclass
 class ZNode:
     camel_value: Int
     typename__: String
-    typename___1: Literal['ZNode'] | None = 'ZNode'
+    typename___2: Literal['ZNode'] | None = 'ZNode'
 
 
 @dataclass
 class Cross(Base):
     value: Int
-    typename__: String = field()
+    typename__: String = field(kw_only=True)
     typename___1: Literal['Cross'] | None = 'Cross'
 
 
@@ -49,7 +49,7 @@ class Cross(Base):
 class Item(ZNode):
     camel_value: Int
     typename__: String
-    typename___1: Int = field()
+    typename___1: Int = field(kw_only=True)
     typename___2: Literal['Item'] | None = 'Item'
 
 
@@ -57,7 +57,7 @@ class Item(ZNode):
 class Second(ZNode):
     camel_value: Int
     typename__: String
-    typename___1: Int = field()
+    typename___1: Int = field(kw_only=True)
     typename___2: Literal['Second'] | None = 'Second'
 
 
@@ -85,5 +85,5 @@ Choice: TypeAlias = Union[
 class ANode(ZNode):
     camel_value: Int
     typename__: String
-    typename___1: Int = field()
+    typename___1: Int = field(kw_only=True)
     typename___2: Literal['ANode'] | None = 'ANode'

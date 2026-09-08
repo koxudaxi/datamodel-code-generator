@@ -31,27 +31,27 @@ The `String` scalar type represents textual data, represented as UTF-8 character
 @dataclass
 class Base:
     value: Int
-    typename__: Literal['Base'] | None = Field('Base', alias='__typename')
+    typename___1: Literal['Base'] | None = Field('Base', alias='__typename')
 
 
 @dataclass
 class ZNode:
     camelValue: Int
     typename__: String
-    typename___1: Literal['ZNode'] | None = Field('ZNode', alias='__typename')
+    typename___2: Literal['ZNode'] | None = Field('ZNode', alias='__typename')
 
 
 @dataclass
 class Cross(Base):
     value: Int
-    typename__: String = Field(...)
+    typename__: String = Field(..., kw_only=True)
     typename___1: Literal['Cross'] | None = Field('Cross', alias='__typename')
 
 
 @dataclass
 class Item(ZNode):
     camelValue: Int
-    typename___1: Int = Field(...)
+    typename___1: Int = Field(..., kw_only=True)
     typename__: String = Field(..., serialization_alias='custom_name')
     typename___2: Literal['Item'] | None = Field(
         'Item', alias='__typename', serialization_alias='__typename'
@@ -62,7 +62,7 @@ class Item(ZNode):
 class Second(ZNode):
     camelValue: Int
     typename__: String
-    typename___1: Int = Field(...)
+    typename___1: Int = Field(..., kw_only=True)
     typename___2: Literal['Second'] | None = Field('Second', alias='__typename')
 
 
@@ -93,5 +93,5 @@ Choice = TypeAliasType(
 class ANode(ZNode):
     camelValue: Int
     typename__: String
-    typename___1: Int = Field(...)
+    typename___1: Int = Field(..., kw_only=True)
     typename___2: Literal['ANode'] | None = Field('ANode', alias='__typename')

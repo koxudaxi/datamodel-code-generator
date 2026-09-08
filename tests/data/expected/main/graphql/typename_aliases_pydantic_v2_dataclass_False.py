@@ -31,20 +31,20 @@ The `String` scalar type represents textual data, represented as UTF-8 character
 @dataclass
 class Base:
     value: Int
-    typename__: Literal['Base'] | None = Field('Base', alias='__typename')
+    typename___1: Literal['Base'] | None = Field('Base', alias='__typename')
 
 
 @dataclass
 class ZNode:
     camelValue: Int
     typename__: String = Field(..., alias='label')
-    typename___1: Literal['ZNode'] | None = Field('ZNode', alias='__typename')
+    typename___2: Literal['ZNode'] | None = Field('ZNode', alias='__typename')
 
 
 @dataclass
 class Cross(Base):
     value: Int
-    typename__: String = Field(..., alias='label')
+    typename__: String = Field(..., alias='label', kw_only=True)
     typename___1: Literal['Cross'] | None = Field('Cross', alias='__typename')
 
 
@@ -52,7 +52,7 @@ class Cross(Base):
 class Item(ZNode):
     camelValue: Int
     typename__: String = Field(..., alias='label')
-    typename___1: Int = Field(..., alias='spare')
+    typename___1: Int = Field(..., alias='spare', kw_only=True)
     typename___2: Literal['Item'] | None = Field('Item', alias='__typename')
 
 
@@ -60,7 +60,7 @@ class Item(ZNode):
 class Second(ZNode):
     camelValue: Int
     typename__: String = Field(..., alias='label')
-    typename___1: Int = Field(..., alias='spare')
+    typename___1: Int = Field(..., alias='spare', kw_only=True)
     typename___2: Literal['Second'] | None = Field('Second', alias='__typename')
 
 
@@ -91,5 +91,5 @@ Choice = TypeAliasType(
 class ANode(ZNode):
     camelValue: Int
     typename__: String = Field(..., alias='label')
-    typename___1: Int = Field(..., alias='spare')
+    typename___1: Int = Field(..., alias='spare', kw_only=True)
     typename___2: Literal['ANode'] | None = Field('ANode', alias='__typename')

@@ -29,20 +29,20 @@
       "fields": [
         "camelValue",
         "typename__",
-        "typename___1"
+        "typename___2"
       ],
       "values": {
         "camelValue": 1,
         "typename__": "node",
-        "typename___1": "ZNode"
+        "typename___2": "ZNode"
       }
     },
     "ANode": {
       "fields": [
         "camelValue",
         "typename__",
-        "typename___1",
-        "typename___2"
+        "typename___2",
+        "typename___1"
       ],
       "values": {
         "camelValue": 2,
@@ -55,8 +55,8 @@
       "fields": [
         "camelValue",
         "typename__",
-        "typename___1",
-        "typename___2"
+        "typename___2",
+        "typename___1"
       ],
       "values": {
         "camelValue": 3,
@@ -69,8 +69,8 @@
       "fields": [
         "camelValue",
         "typename__",
-        "typename___1",
-        "typename___2"
+        "typename___2",
+        "typename___1"
       ],
       "values": {
         "camelValue": 4,
@@ -82,18 +82,18 @@
     "Base": {
       "fields": [
         "value",
-        "typename__"
+        "typename___1"
       ],
       "values": {
         "value": 5,
-        "typename__": "Base"
+        "typename___1": "Base"
       }
     },
     "Cross": {
       "fields": [
         "value",
-        "typename__",
-        "typename___1"
+        "typename___1",
+        "typename__"
       ],
       "values": {
         "value": 6,

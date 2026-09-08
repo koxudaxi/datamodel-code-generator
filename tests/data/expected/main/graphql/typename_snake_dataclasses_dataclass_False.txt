@@ -29,76 +29,76 @@
       "fields": [
         "camel_value",
         "typename__",
-        "typename___1"
+        "typename___2"
       ],
       "values": {
         "camel_value": 1,
         "typename__": "node",
-        "typename___1": "ZNode"
+        "typename___2": "ZNode"
       }
     },
     "ANode": {
       "fields": [
         "camel_value",
         "typename__",
-        "typename___1",
-        "typename___2"
+        "typename___2",
+        "typename___1"
       ],
       "values": {
         "camel_value": 2,
         "typename__": "child",
-        "typename___1": 12,
-        "typename___2": "ANode"
+        "typename___2": "ANode",
+        "typename___1": 12
       }
     },
     "Item": {
       "fields": [
         "camel_value",
         "typename__",
-        "typename___1",
-        "typename___2"
+        "typename___2",
+        "typename___1"
       ],
       "values": {
         "camel_value": 3,
         "typename__": "item",
-        "typename___1": 13,
-        "typename___2": "Item"
+        "typename___2": "Item",
+        "typename___1": 13
       }
     },
     "Second": {
       "fields": [
         "camel_value",
         "typename__",
-        "typename___1",
-        "typename___2"
+        "typename___2",
+        "typename___1"
       ],
       "values": {
         "camel_value": 4,
         "typename__": "second",
-        "typename___1": 14,
-        "typename___2": "Second"
+        "typename___2": "Second",
+        "typename___1": 14
       }
     },
     "Base": {
       "fields": [
         "value",
-        "typename__"
+        "typename___1"
       ],
       "values": {
         "value": 5,
-        "typename__": "Base"
+        "typename___1": "Base"
       }
     },
     "Cross": {
       "fields": [
         "value",
-        "typename__",
-        "typename___1"
+        "typename___1",
+        "typename__"
       ],
       "values": {
         "value": 6,
-        "typename__": "cross",
-        "typename___1": "Cross"
+        "typename___1": "Cross",
+        "typename__": "cross"
       }
     },
     "Solo": {

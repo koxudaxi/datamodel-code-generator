@@ -434,8 +434,7 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
             base_classes = [self.references[i.name] for i in obj.interfaces]  # ty: ignore[not-iterable]
 
         if (
-            self.field_name_model_type == ModelType.MSGSPEC
-            and not self.config.graphql_no_typename
+            not self.config.graphql_no_typename
             and fields[-1].name != "typename__"
             and isinstance(obj, graphql.GraphQLObjectType | graphql.GraphQLInterfaceType)
         ):
@@ -548,7 +547,7 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
         schema: graphql.GraphQLSchema,
         collisions: list[graphql.GraphQLObjectType | graphql.GraphQLInterfaceType],
     ) -> None:
-        """Keep one msgspec synthetic slot throughout each affected inheritance family."""
+        """Keep one synthetic slot throughout each affected inheritance family."""
         visited: set[graphql.GraphQLObjectType | graphql.GraphQLInterfaceType] = set()
         for root in collisions:
             if root in visited:
