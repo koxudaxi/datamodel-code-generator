@@ -1248,6 +1248,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self._python_type_expressions: Mapping[str, PythonTypeExpr] | None = None
         self.remote_object_cache: DefaultPutDict[str, dict[str, YamlValue]] = DefaultPutDict()
         self.raw_obj: dict[str, YamlValue] = {}
+        self._all_of_root_value_ref_stack: set[tuple[str, ...]] | None = None
         self._root_id: Optional[str] = None  # noqa: UP045
         self._root_id_base_path: Optional[str] = None  # noqa: UP045
         self._output_model_context = OutputModelContext.from_generation_types(
@@ -6268,15 +6269,39 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 return
             merged["items"] = self._merge_all_of_root_value_nodes(cast("list[JsonSchemaObject | bool]", item_schemas))
 
-    def _merge_all_of_root_value_nodes(  # noqa: PLR0912
-        self, nodes: list[JsonSchemaObject | bool]
-    ) -> dict[str, Any] | bool:
+    def _merge_all_of_root_value_nodes(self, nodes: list[JsonSchemaObject | bool]) -> dict[str, Any] | bool:
         """Intersect schema nodes without dropping constraints on nested properties."""
         first = nodes[0]
         if len(nodes) == 1:
             return first.model_dump(exclude_unset=True, by_alias=True) if isinstance(first, JsonSchemaObject) else first
         if False in nodes:
             return False
+        references = tuple(
+            self.model_resolver.resolve_ref(node.ref)
+            for node in nodes
+            if isinstance(node, JsonSchemaObject) and node.ref
+        )
+        if not references:
+            return self._merge_all_of_root_value_children(nodes)
+        if self._all_of_root_value_ref_stack is None:
+            self._all_of_root_value_ref_stack = set()
+        if references in self._all_of_root_value_ref_stack:
+            return {
+                "allOf": [
+                    node.model_dump(exclude_unset=True, by_alias=True) if isinstance(node, JsonSchemaObject) else node
+                    for node in nodes
+                ]
+            }
+        self._all_of_root_value_ref_stack.add(references)
+        try:
+            return self._merge_all_of_root_value_children(nodes)
+        finally:
+            self._all_of_root_value_ref_stack.remove(references)
+
+    def _merge_all_of_root_value_children(  # noqa: PLR0912
+        self, nodes: list[JsonSchemaObject | bool]
+    ) -> dict[str, Any] | bool:
+        """Merge acyclic nodes while leaving recursive references for normal reference resolution."""
         children: list[JsonSchemaObject] = []
         for child in nodes:
             if not isinstance(child, JsonSchemaObject):
@@ -8121,16 +8146,38 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         else:
             root_data_type = self.parse_root_type(name, merged_root, path)
         reference = cast("Reference", root_data_type.reference)
-        root_model = cast("DataModel", reference.source)
-        if item_type is not None:
-            array_type = next(
-                data_type
-                for data_type in root_model.fields[0].data_type.all_data_types
-                if data_type.is_list or data_type.is_sequence or data_type.is_set or data_type.is_tuple
+        variants: tuple[Literal["Request", "Response"] | None, ...] = (
+            (None,) if reference.source is not None else ("Request", "Response")
+        )
+        for variant in variants:
+            root_model = cast(
+                "DataModel",
+                reference.source
+                if variant is None
+                else self._rw_model_variant_references[reference.path, variant].source,
             )
-            array_type.data_types = [item_type]
-        if literal_values:
-            literal_validation(root_model, literal_values)
+            if item_type is not None:
+                array_type = next(
+                    (
+                        data_type
+                        for data_type in root_model.fields[0].data_type.all_data_types
+                        if data_type.is_list or data_type.is_sequence or data_type.is_set or data_type.is_tuple
+                    ),
+                    None,
+                )
+                if array_type is None:
+                    array_type = next(
+                        nested
+                        for data_type in root_model.fields[0].data_type.all_data_types
+                        if (array_ref := data_type.reference) is not None
+                        and (array_model := array_ref.source) is not None
+                        and (array_model.IS_ALIAS or array_model.IS_ROOT_MODEL)
+                        for nested in array_model.fields[0].data_type.all_data_types
+                        if nested.is_list or nested.is_sequence or nested.is_set or nested.is_tuple
+                    )
+                array_type.data_types = [item_type]
+            if literal_values:
+                literal_validation(root_model, literal_values)
         return root_data_type
 
     def parse_all_of(  # noqa: PLR0911

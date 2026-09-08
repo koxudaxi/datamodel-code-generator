@@ -17,6 +17,7 @@ from datamodel_code_generator.model.pydantic_v2.base_model import (
     _safe_config_dict_items,
 )
 from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_CONFIG_DICT
+from datamodel_code_generator.python_literal import represent_untrusted_python_value
 
 IMPORT_ABC_ITERATOR = Import.from_full_path("collections.abc.Iterator")
 IMPORT_ABC_SEQUENCE = Import.from_full_path("collections.abc.Sequence")
@@ -56,6 +57,12 @@ class RootModel(BaseModel):
             Import.from_full_path("enum.Enum"),
             Import.from_full_path("pydantic.model_validator"),
         ))
+        literal_source = repr(values)
+        if any(
+            marker in literal_source
+            for marker in ("[inf", "(inf", "{inf", " inf", "[nan", "(nan", "{nan", " nan", "-inf")
+        ):
+            literal_source = represent_untrusted_python_value(values)
         lines = [
             "",
             "@classmethod",
@@ -93,7 +100,7 @@ class RootModel(BaseModel):
             "    if getattr(type(value), '__pydantic_root_model__', False):",
             "        value = value.model_dump(mode='json')",
             "    candidate = cls._json_schema_literal_key(value)",
-            f"    allowed_values = {values!r}",
+            f"    allowed_values = {literal_source}",
             "    if not any(",
             "        candidate == cls._json_schema_literal_key(allowed)",
             "        for allowed in allowed_values",
