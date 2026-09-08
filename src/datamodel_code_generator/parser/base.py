@@ -3604,10 +3604,12 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
     def __mark_set_item_models_hashable(self, models: list[DataModel]) -> None:
         """Mark models used as set/frozenset items with hash flag for __hash__ generation."""
         set_item_references = self.__collect_set_item_references(models)
-        if self.use_unique_items_as_set:
-            from datamodel_code_generator.model._set_item import SetItemValidator  # noqa: PLC0415
+        if not set_item_references and not self.use_unique_items_as_set:
+            return
+        from datamodel_code_generator.model._set_item import SetItemValidator  # noqa: PLC0415
 
-            validator = SetItemValidator(self.custom_template_dir)
+        validator = SetItemValidator(self.custom_template_dir)
+        if self.use_unique_items_as_set:
             for model in models:
                 for field in model.fields:
                     for data_type in field.data_type.all_data_types:
@@ -3619,7 +3621,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
         for model in models:
             if model.reference.path in set_item_references:
-                if isinstance(model, Enum):
+                if isinstance(model, Enum) or validator.has_native_pydantic_hash(model):
                     continue
                 model._append_internal_template_data("class_body_lines", "__hash__ = object.__hash__")  # noqa: SLF001
 

@@ -1,0 +1,128 @@
+[
+  {
+    "name": "integer",
+    "options": {},
+    "payload": 1,
+    "safe": true
+  },
+  {
+    "name": "mutable",
+    "options": {
+      "enable_faux_immutability": false
+    },
+    "payload": 1,
+    "safe": false
+  },
+  {
+    "name": "list",
+    "options": {},
+    "payload": [
+      1
+    ],
+    "safe": false
+  },
+  {
+    "name": "any",
+    "options": {},
+    "payload": 1,
+    "safe": false
+  },
+  {
+    "name": "opaque",
+    "options": {},
+    "payload": "2026-09-08",
+    "safe": false
+  },
+  {
+    "name": "tuple",
+    "options": {},
+    "payload": [
+      1
+    ],
+    "safe": false
+  },
+  {
+    "name": "literal",
+    "options": {
+      "enum_field_as_literal": "all"
+    },
+    "payload": "a",
+    "safe": true
+  },
+  {
+    "name": "enum",
+    "options": {},
+    "payload": "a",
+    "safe": true
+  },
+  {
+    "name": "inherited",
+    "options": {},
+    "payload": 1,
+    "safe": true
+  },
+  {
+    "name": "recursive",
+    "options": {},
+    "payload": 1,
+    "safe": true
+  },
+  {
+    "name": "classvar",
+    "options": {
+      "field_include_all_keys": true
+    },
+    "payload": 1,
+    "safe": true
+  },
+  {
+    "name": "nested",
+    "options": {},
+    "payload": {
+      "value": 1
+    },
+    "safe": true
+  },
+  {
+    "name": "custom",
+    "options": {},
+    "payload": 1,
+    "safe": false,
+    "custom": true
+  },
+  {
+    "name": "packaged",
+    "options": {},
+    "payload": 1,
+    "safe": true,
+    "packaged": true
+  },
+  {
+    "name": "custom_base",
+    "options": {
+      "base_class": "tests.data.python.unique_model_sets.explicit_native.IdentityBase"
+    },
+    "payload": 1,
+    "safe": false
+  },
+  {
+    "name": "partial_template",
+    "options": {},
+    "payload": 1,
+    "safe": false,
+    "partial": true
+  },
+  {
+    "name": "shadowed_builtin",
+    "options": {},
+    "payload": 1,
+    "safe": false
+  },
+  {
+    "name": "validators",
+    "options": {},
+    "payload": 1,
+    "safe": false,
+    "validators": true
+  }
+]

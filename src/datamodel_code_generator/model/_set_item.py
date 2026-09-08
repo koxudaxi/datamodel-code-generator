@@ -26,6 +26,7 @@ class SetItemValidator:
         self.safe_models: set[str] = set()
         self.frozen_models: dict[str, bool] = {}
         self.safe_fields: set[str] = set()
+        self.native_hash_models: set[str] = set()
 
     def validate(self, data_type: DataType, owner: str) -> None:
         """Reject a known generated object whose value hash cannot be guaranteed."""
@@ -61,6 +62,64 @@ class SetItemValidator:
             else:
                 pending.extend((child, in_model) for child in current.data_types)
         self.safe_models.update(visited)
+
+    def has_native_pydantic_hash(self, model: DataModel) -> bool:
+        """Preserve proven native frozen hashes for explicitly declared model sets."""
+        from datamodel_code_generator.model.pydantic_v2 import (  # ruff: ignore[import-outside-top-level]
+            BaseModel,
+            RootModel,
+        )
+
+        field_inspector = SetItemValidator()
+        pending = [model]
+        visited: set[str] = set()
+        while pending:
+            current = pending.pop()
+            path = current.reference.path
+            if path in self.native_hash_models or path in visited:
+                continue
+            if (
+                type(current) not in {BaseModel, RootModel}
+                or current.methods
+                or current.decorators
+                or current.extra_template_data.get("validators")
+            ):
+                return False
+            if (
+                current.custom_base_class
+                or (current._custom_template_dir and not self._uses_builtin_template_dir)  # ruff: ignore[private-member-access]
+                or not self._is_frozen(current)
+            ):
+                return False
+            visited.add(path)
+            pending.extend(
+                source
+                for parent in current.base_classes
+                if parent.reference and isinstance(source := parent.reference.source, DataModel)
+            )
+            for field_type in field_inspector._field_types(current):
+                for data_type in field_type.all_data_types:
+                    if self._is_unhashable_container(data_type, in_model=True):
+                        return False
+                    if data_type.reference:
+                        source = data_type.reference.source
+                        if isinstance(source, Enum):
+                            continue
+                        if not isinstance(source, DataModel):
+                            return False
+                        pending.append(source)
+                    elif (
+                        not data_type.data_types
+                        and not data_type.literals
+                        and (
+                            data_type.python_type
+                            or data_type.import_
+                            or data_type.type not in {"str", "int", "float", "bool", "bytes", "None"}
+                        )
+                    ):
+                        return False
+        self.native_hash_models.update(visited)
+        return True
 
     def _field_types(self, model: DataModel) -> Iterator[DataType]:
         if model.reference.path in self.safe_fields:
