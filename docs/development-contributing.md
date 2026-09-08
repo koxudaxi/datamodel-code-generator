@@ -3,7 +3,7 @@
 Install the package in editable mode:
 
 ```sh
-$ git clone git@github.com:koxudaxi/datamodel-code-generator.git
+$ git clone git@github.com:datamodel-code-generator/datamodel-code-generator.git
 $ pip install -e datamodel-code-generator
 ```
 

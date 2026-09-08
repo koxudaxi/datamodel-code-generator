@@ -12,8 +12,8 @@
 [![Conda-forge](https://img.shields.io/conda/v/conda-forge/datamodel-code-generator)](https://anaconda.org/conda-forge/datamodel-code-generator)
 [![Downloads](https://api.pepy.tech/badge/datamodel-code-generator/month)](https://pepy.tech/projects/datamodel-code-generator)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/datamodel-code-generator)](https://pypi.python.org/pypi/datamodel-code-generator)
-[![codecov](https://codecov.io/gh/koxudaxi/datamodel-code-generator/graph/badge.svg?token=plzSSFb9Li)](https://codecov.io/gh/koxudaxi/datamodel-code-generator)
-![license](https://img.shields.io/github/license/koxudaxi/datamodel-code-generator.svg)
+[![codecov](https://codecov.io/gh/datamodel-code-generator/datamodel-code-generator/graph/badge.svg?token=plzSSFb9Li)](https://codecov.io/gh/datamodel-code-generator/datamodel-code-generator)
+![license](https://img.shields.io/github/license/datamodel-code-generator/datamodel-code-generator.svg)
 [![Pydantic v2](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/pydantic/pydantic/main/docs/badge/v2.json)](https://pydantic.dev)
 
 ---
@@ -164,7 +164,7 @@ Validate generated models in your CI pipeline:
 
 ```yaml title=".github/workflows/validate-models.yml"
 # Replace vX.Y.Z with a released action version.
-- uses: koxudaxi/datamodel-code-generator@vX.Y.Z
+- uses: datamodel-code-generator/datamodel-code-generator@vX.Y.Z
   with:
     input: schemas/api.yaml
     output: src/models/api.py
@@ -228,7 +228,7 @@ These public examples are grouped by how each project uses datamodel-code-genera
 - [vllm-project/vllm](https://github.com/vllm-project/vllm) - *[Test dependency for MiniCPM3 tests](https://github.com/vllm-project/vllm/blob/46f01a50acd6862806ed67b88176c96c2b161142/requirements/test/cuda.in#L40)*
 - [stanfordnlp/dspy](https://github.com/stanfordnlp/dspy) - *[Generate Pydantic models from JSON Schema for reliability tests](https://github.com/stanfordnlp/dspy/blob/main/tests/reliability/generate/utils.py)*
 
-[See all dependents →](https://github.com/koxudaxi/datamodel-code-generator/network/dependents)
+[See all dependents →](https://github.com/datamodel-code-generator/datamodel-code-generator/network/dependents)
 
 ---
 

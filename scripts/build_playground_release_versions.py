@@ -94,7 +94,9 @@ def _build_release_versions(repo: str, limit: int) -> list[dict[str, Any]]:
 def main() -> int:
     """Print release versions that can run in the browser playground."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--repo", default=os.environ.get("GITHUB_REPOSITORY", "koxudaxi/datamodel-code-generator"))
+    parser.add_argument(
+        "--repo", default=os.environ.get("GITHUB_REPOSITORY", "datamodel-code-generator/datamodel-code-generator")
+    )
     parser.add_argument("--limit", type=int, default=30)
     args = parser.parse_args()
 

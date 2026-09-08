@@ -160,7 +160,7 @@ arg_parser = SuggestingArgumentParser(
     "For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev",
     epilog="Documentation: https://datamodel-code-generator.koxudaxi.dev\n"
     "Agent skill: https://datamodel-code-generator.koxudaxi.dev/coding-agent-skill/\n"
-    "GitHub: https://github.com/koxudaxi/datamodel-code-generator",
+    "GitHub: https://github.com/datamodel-code-generator/datamodel-code-generator",
     formatter_class=SortingHelpFormatter,
     add_help=False,
 )

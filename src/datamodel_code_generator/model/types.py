@@ -175,6 +175,6 @@ class DataTypeManager(_DataTypeManager):
             return self.copy_data_type(self.type_map[types])
         msg = (
             f"Type mapping for {types.name!r} not implemented. "
-            f"Please report this at https://github.com/koxudaxi/datamodel-code-generator/issues"
+            f"Please report this at https://github.com/datamodel-code-generator/datamodel-code-generator/issues"
         )
         raise NotImplementedError(msg)
