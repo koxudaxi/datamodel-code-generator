@@ -46,6 +46,65 @@ class RootModel(BaseModel):
     SUPPORTS_CONFIG_EXTRA: ClassVar[bool] = False
     SUPPORTS_ARBITRARY_TYPES_ALLOWED: ClassVar[bool] = False
 
+    def add_literal_validation(self, values: list[object]) -> None:
+        """Keep finite JSON literal membership beside the root's existing value constraints."""
+        self._requires_literal_validation = True
+        self._literal_values = values
+        self._additional_imports.extend((
+            IMPORT_ANY,
+            IMPORT_CONFIG_DICT,
+            Import.from_full_path("enum.Enum"),
+            Import.from_full_path("pydantic.model_validator"),
+        ))
+        lines = [
+            "",
+            "@classmethod",
+            "def _json_schema_literal_key(cls, value: Any) -> Any:",
+            "    if isinstance(value, Enum):",
+            "        value = value.value",
+            "    if getattr(type(value), '__pydantic_root_model__', False):",
+            "        value = value.model_dump(mode='json')",
+            "    if isinstance(value, dict):",
+            "        return (",
+            "            'object',",
+            "            frozenset(",
+            "                (key, cls._json_schema_literal_key(item))",
+            "                for key, item in value.items()",
+            "            ),",
+            "        )",
+            "    if isinstance(value, list):",
+            "        return (",
+            "            'array',",
+            "            tuple(cls._json_schema_literal_key(item) for item in value),",
+            "        )",
+            "    if isinstance(value, bool):",
+            "        return ('boolean', value)",
+            "    if isinstance(value, (int, float)):",
+            "        return ('number', value)",
+            "    if isinstance(value, str):",
+            "        return ('string', value)",
+            "    return (type(value).__name__, value)",
+            "",
+            "@model_validator(mode='before')",
+            "@classmethod",
+            "def _validate_json_schema_literal(cls, value: Any) -> Any:",
+            "    if isinstance(value, Enum):",
+            "        value = value.value",
+            "    if getattr(type(value), '__pydantic_root_model__', False):",
+            "        value = value.model_dump(mode='json')",
+            "    candidate = cls._json_schema_literal_key(value)",
+            f"    allowed_values = {values!r}",
+            "    if not any(",
+            "        candidate == cls._json_schema_literal_key(allowed)",
+            "        for allowed in allowed_values",
+            "    ):",
+            "        raise ValueError('Value does not match an allowed JSON Schema literal')",
+            "    return value",
+            "",
+        ]
+        for line in lines:
+            self._append_internal_template_data("class_body_lines", line)
+
     def __init__(
         self,
         **kwargs: Any,
@@ -79,6 +138,10 @@ class RootModel(BaseModel):
     def _sync_config_items(self) -> None:
         config = self.extra_template_data.get("config")
         config_items = _root_model_config_items(config)
+        if literal_values := getattr(self, "_literal_values", None):
+            config_items.append(("json_schema_extra", {"enum": literal_values}))
+            if not config:
+                self.extra_template_data["config"] = {"json_schema_extra": {"enum": literal_values}}
         if self._internal_template_data.get(_NEUTRALIZE_ROOT_MODEL_EXTRA_CONFIG_TEMPLATE_DATA_KEY):
             config_items.append(("extra", None))
             if not config:
@@ -134,6 +197,15 @@ class RootModel(BaseModel):
             **extra_template_data,
         )
         self._validate_custom_template_sequence_interface(rendered)
+        if (
+            use_custom_template
+            and getattr(self, "_requires_literal_validation", False)
+            and "def _validate_json_schema_literal(" not in rendered
+        ):
+            msg = (
+                "The custom RootModel template must render class_body_lines to preserve JSON Schema literal validation."
+            )
+            raise Error(msg)
         return rendered
 
     def _validate_custom_template_sequence_interface(self, rendered: str) -> None:
