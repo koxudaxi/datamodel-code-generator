@@ -8,6 +8,7 @@ from pathlib import Path
 
 SHARD_COUNTS = {"py314": 2, "py313": 3, "py312": 3, "py311": 3, "py310": 3}
 COVERAGE_ENVS = (
+    "pydantic200",
     "pydantic20",
     "pydantic25",
     "pydantic213",
