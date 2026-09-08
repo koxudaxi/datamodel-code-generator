@@ -93,7 +93,7 @@ def test_pattern_property_intersections(
     with _generated_model(output, "generated_pattern_intersection", "Root") as model:
         for payload in CASES[source_case]["payloads"]:
             record = {"schema_valid": validator.is_valid(payload)}
-            with assert_inputs_not_mutated(payload):
+            with assert_inputs_not_mutated({"payload": payload}):
                 try:
                     value = model.model_validate(payload)
                 except ValidationError:
