@@ -3259,7 +3259,7 @@ input-file-type = "jsonschema"
             stderr_lines,
             project_file,
             project_content(lock_path=alternate_lockfile),
-            lambda: len(stderr_lines) > replan_error_count,
+            lambda: _lines_contain(stderr_lines[replan_error_count:], "HTTP 404 error fetching"),
             "the alternate existing lock to be verified by the failed replan",
         )
         alternate_lockfile.unlink()
@@ -3492,9 +3492,7 @@ def test_batch_watch_nested_dependency_reruns_full_batch_without_output_loop(tmp
         assert_output(
             second_metadata.read_text(encoding="utf-8"), PROJECT_ROOT / "tests/data/expected/main_kr/jobs/stale.py"
         )
-        child_file.with_suffix(".pending").write_text(
-            (WATCH_DATA_PATH / "nested_ref/child_changed.json").read_text(encoding="utf-8"), encoding="utf-8"
-        )
+        shutil.copyfile(WATCH_DATA_PATH / "nested_ref/child_changed.json", child_file.with_suffix(".pending"))
         child_file.with_suffix(".pending").replace(child_file)
         # Do not open batch destinations until their atomic publication completes. On Windows,
         # a reader can temporarily prevent replacement and make the test race with the watch CLI.
@@ -3520,7 +3518,6 @@ def test_batch_watch_failed_cycle_preserves_outputs_and_recovers_from_new_depend
     nested_dir = tmp_path / "nested"
     nested_dir.mkdir()
     root_file = nested_dir / "root.json"
-    child_file = nested_dir / "child.json"
     missing_file = nested_dir / "missing.json"
     second_input = tmp_path / "second.json"
     first_output = tmp_path / "first.py"
@@ -3528,7 +3525,7 @@ def test_batch_watch_failed_cycle_preserves_outputs_and_recovers_from_new_depend
     first_expected = tmp_path / "first.expected.py"
     second_expected = tmp_path / "second.expected.py"
     shutil.copyfile(WATCH_DATA_PATH / "nested_ref/root.json", root_file)
-    shutil.copyfile(WATCH_DATA_PATH / "nested_ref/child.json", child_file)
+    shutil.copyfile(WATCH_DATA_PATH / "nested_ref/child.json", nested_dir / "child.json")
     second_input.write_text(WATCH_SCHEMA_INITIAL, encoding="utf-8")
     (tmp_path / "pyproject.toml").write_text(
         _batch_pyproject([
@@ -3555,13 +3552,14 @@ def test_batch_watch_failed_cycle_preserves_outputs_and_recovers_from_new_depend
         assert_output(first_output.read_text(encoding="utf-8"), first_expected)
         assert_output(second_output.read_text(encoding="utf-8"), second_expected)
 
+        completed_before_recovery = sum(line.strip() == "Done." for line in stdout_lines)
         _write_watch_cli_input_and_wait(
             process,
             stdout_lines,
             stderr_lines,
             missing_file,
             (WATCH_DATA_PATH / "nested_ref/child_changed.json").read_text(encoding="utf-8"),
-            lambda: _file_contains(first_output, "age: int | None = None"),
+            lambda: sum(line.strip() == "Done." for line in stdout_lines) > completed_before_recovery,
             "the failed batch to recover from its newly created dependency",
         )
         assert_output(first_output.read_text(encoding="utf-8"), EXPECTED_MAIN_PATH / "watch_missing_ref_recovery.py")
