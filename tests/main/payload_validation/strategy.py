@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sys
+import re
 from copy import deepcopy
 from fractions import Fraction
 from typing import TYPE_CHECKING, Any
@@ -141,6 +142,18 @@ def payload_strategy(case: SchemaCase) -> st.SearchStrategy[Any]:
     if case.id == NATIVE_FLOAT_CONTRACT["case_id"]:
         witnesses = st.sampled_from(NATIVE_FLOAT_CONTRACT["source_valid_witnesses"]).map(deepcopy)
         strategy = st.one_of(witnesses, strategy)
+    # Literal regex fragments provide constructive witnesses for intersections whose
+    # Unicode alphabet is prohibitively unlikely under rejection sampling. Each
+    # candidate is proved against the unchanged source, including refs and bounds.
+    literals = [
+        pattern
+        for node in _iter_schema_nodes(schema)
+        if isinstance(pattern := node.get("pattern"), str) and not re.search(r"[.\\^$*+?{}\[\]|()]", pattern)
+    ]
+    if literals:
+        candidates = dict.fromkeys([*literals, "".join(literals), "".join(reversed(literals))])
+        if witnesses := [candidate for candidate in candidates if validator.is_valid(candidate)]:
+            strategy = st.one_of(st.sampled_from(witnesses), strategy)
     strategy = strategy.filter(validator.is_valid)
     _payload_strategy_cache[cache_key] = strategy
     return strategy
