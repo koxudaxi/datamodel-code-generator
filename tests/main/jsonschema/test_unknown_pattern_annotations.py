@@ -124,9 +124,7 @@ def test_custom_pattern_annotation_context(tmp_path: Path, monkeypatch: pytest.M
         monkeypatch.setattr(JsonSchemaParser, "SCHEMA_OBJECT_TYPE", CustomSchema)
     parser_type = AttributesParser if custom.startswith("parser") else JsonSchemaParser
     source = FIXTURES / ("other_annotation.json" if custom == "parser_other" else "annotation.json")
-    parser = parser_type(
-        source, generate_schema_validators=True, formatters=[Formatter.BUILTIN], **options
-    )
+    parser = parser_type(source, generate_schema_validators=True, formatters=[Formatter.BUILTIN], **options)
     output = tmp_path / "output.py"
     output.write_text(parser.parse())
     assert_output(output.read_text(), EXPECTED / f"custom_{custom}.py")
