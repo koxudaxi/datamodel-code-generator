@@ -3259,7 +3259,7 @@ input-file-type = "jsonschema"
             stderr_lines,
             project_file,
             project_content(lock_path=alternate_lockfile),
-            lambda: len(stderr_lines) > replan_error_count,
+            lambda: _lines_contain(stderr_lines[replan_error_count:], "HTTP 404 error fetching"),
             "the alternate existing lock to be verified by the failed replan",
         )
         alternate_lockfile.unlink()
@@ -3492,9 +3492,7 @@ def test_batch_watch_nested_dependency_reruns_full_batch_without_output_loop(tmp
         assert_output(
             second_metadata.read_text(encoding="utf-8"), PROJECT_ROOT / "tests/data/expected/main_kr/jobs/stale.py"
         )
-        child_file.with_suffix(".pending").write_text(
-            (WATCH_DATA_PATH / "nested_ref/child_changed.json").read_text(encoding="utf-8"), encoding="utf-8"
-        )
+        shutil.copyfile(WATCH_DATA_PATH / "nested_ref/child_changed.json", child_file.with_suffix(".pending"))
         child_file.with_suffix(".pending").replace(child_file)
         # Do not open batch destinations until their atomic publication completes. On Windows,
         # a reader can temporarily prevent replacement and make the test race with the watch CLI.
