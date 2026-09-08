@@ -144,9 +144,13 @@ jobs:
         uses: anthropics/claude-code-action/base-action@833fb0f8c9f6686b33d963a8bae0a94f4936ab2a # v1.0.211
         env:
           CLAUDE_WORKING_DIR: ${{ steps.pr-diff.outputs.claude_working_dir }}
+          # The pinned action also enables raw output through this environment variable.
+          ACTIONS_STEP_DEBUG: 'false'
         with:
           # OAuth authentication for Max plan subscribers
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # Execution content can include untrusted PR text and must remain private.
+          show_full_output: false
           prompt: |
             Analyze PR #${{ github.event.pull_request.number }} for breaking changes.
 
@@ -206,6 +210,12 @@ jobs:
             --allowedTools "Read(/${{ steps.pr-diff.outputs.claude_working_dir }}/**)"
             --permission-mode dontAsk
             --json-schema '{"type":"object","additionalProperties":false,"properties":{"has_breaking_changes":{"type":"boolean","description":"Whether this PR contains breaking changes"},"breaking_changes_content":{"type":"string","description":"Formatted breaking changes section content (without ## Breaking Changes header), or empty string if none"},"reasoning":{"type":"string","description":"Brief explanation of why this is or is not a breaking change"}},"required":["has_breaking_changes","breaking_changes_content","reasoning"]}'
+
+      - name: Report Claude failure category
+        if: failure() && steps.claude.outcome == 'failure'
+        run: |
+          python3 scripts/report_release_analysis_failure.py \
+            --execution-path "$RUNNER_TEMP/claude-execution-output.json"
 
       - name: Parse Claude output
         id: parse
