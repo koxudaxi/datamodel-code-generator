@@ -38,6 +38,7 @@ ROUTING_CASES = (
     ("pre_commit_hooks", 1, "requires_claude"),
     ("prompt_data", 1, "requires_claude"),
     ("readme", 1, "requires_claude"),
+    ("release_diagnostics", 1, "safe"),
     ("rename", 1, "requires_claude"),
     ("rename_safe", 1, "safe"),
     ("runtime", 1, "requires_claude"),
