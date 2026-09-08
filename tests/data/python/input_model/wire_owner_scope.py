@@ -73,7 +73,7 @@ def record_owner_calls(frame: Any, event: str, _arg: Any) -> None:
     """Count real owner work during public conversion of these external models."""
     if (
         event == "call"
-        and frame.f_code.co_filename.endswith("/datamodel_code_generator/input_model.py")
+        and frame.f_code.co_filename.replace("\\", "/").endswith("/datamodel_code_generator/input_model.py")
         and frame.f_code.co_name in {"generate_owned_field", "_clear_field_schema_names"}
     ):
         owner_calls[frame.f_code.co_name] += 1
