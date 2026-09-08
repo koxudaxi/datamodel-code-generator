@@ -344,3 +344,38 @@ def test_allof_literal_options_without_validators(output_file: Path, entrypoint:
             assert_func=assert_file_content,
             expected_file=expected,
         )
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("output_model_type", [DataModelType.PydanticV2BaseModel, DataModelType.DataclassesDataclass])
+def test_allof_ref_siblings_root_config(output_file: Path, entrypoint: str, output_model_type: DataModelType) -> None:
+    """Preserve root config and native alias output while merging scalar siblings."""
+    validators = output_model_type == DataModelType.PydanticV2BaseModel
+    case = "enum_sibling" if validators else "string_2019-09"
+    schema_path = JSON_SCHEMA_DATA_PATH / f"allof_ref_siblings/{case}.json"
+    expected = f"allof_ref_siblings/root_config_{output_model_type.name}.py"
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=schema_path,
+            output_path=output_file,
+            extra_args=[
+                "--disable-timestamp",
+                "--output-model-type",
+                output_model_type.value,
+                *(["--generate-schema-validators", "--enable-faux-immutability"] if validators else []),
+            ],
+            assert_func=assert_file_content,
+            expected_file=expected,
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=schema_path,
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            disable_timestamp=True,
+            output_model_type=output_model_type,
+            generate_schema_validators=validators,
+            enable_faux_immutability=validators,
+            assert_func=assert_file_content,
+            expected_file=expected,
+        )
