@@ -94,8 +94,7 @@ def test_additional_pattern_intersections(
             records.append(result)
     runtime_expected = (
         EXPECTED / "pydantic20"
-        if case in {"minimum_number", "minimum_shared"}
-        and PYDANTIC_VERSION.split(".")[:2] == ["2", "0"]
+        if case in {"minimum_number", "minimum_shared"} and PYDANTIC_VERSION.split(".")[:2] == ["2", "0"]
         else EXPECTED
     )
     assert_output(json.dumps(records, indent=2), runtime_expected / f"{case}_{enabled}_{field_constraints}_runtime.txt")
