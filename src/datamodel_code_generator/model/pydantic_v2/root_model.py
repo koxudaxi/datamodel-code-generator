@@ -102,6 +102,65 @@ class RootModel(BaseModel):
             "    return value",
             "",
         ]
+        if any(isinstance(value, (dict, list)) for value in values):
+            self._additional_imports.extend((
+                Import.from_full_path("pydantic.BaseModel"),
+                Import.from_full_path("pydantic.TypeAdapter"),
+            ))
+            key_index = lines.index("def _json_schema_literal_key(cls, value: Any) -> Any:")
+            lines[key_index] = "def _json_schema_literal_key(cls, value: Any, models: list[bool] | None = None) -> Any:"
+            lines[key_index + 1 : key_index + 1] = [
+                "    if models is not None and isinstance(value, BaseModel):",
+                "        models[0] = True",
+                "        return ('model', id(value))",
+            ]
+            lines = [
+                line.replace("_json_schema_literal_key(item)", "_json_schema_literal_key(item, models)")
+                for line in lines
+            ]
+            validator_index = lines.index("def _validate_json_schema_literal(cls, value: Any) -> Any:")
+            lines[validator_index + 4] = "        value = value.model_dump(mode='json', by_alias=True)"
+            lines[validator_index - 2] = "@model_validator(mode='wrap')"
+            lines[validator_index] = "def _validate_json_schema_literal(cls, value: Any, handler: Any) -> Any:"
+            lines[validator_index + 1 : validator_index + 1] = [
+                "    if isinstance(value, cls):",
+                "        return handler(value)",
+            ]
+            lines[-2] = "    return result if models[0] else handler(value)"
+            candidate_index = lines.index("    candidate = cls._json_schema_literal_key(value)")
+            lines[candidate_index : candidate_index + 1] = [
+                "    models = [False]",
+                "    candidate = cls._json_schema_literal_key(value, models)",
+                "    if models[0]:",
+                "        result = handler(value)",
+                "        try:",
+                "            adapter = TypeAdapter(cls.model_fields['root'].annotation)",
+                "            parsed = result.root",
+                "            dump = adapter.dump_python",
+                "            serialized = dump(parsed, mode='json', by_alias=True, warnings=False)",
+                "            candidate_value = cls._json_schema_model_value(value, serialized)",
+                "        except (AttributeError, IndexError, TypeError, ValueError) as error:",
+                "            raise ValueError('Cannot serialize JSON Schema literal') from error",
+                "        candidate = cls._json_schema_literal_key(candidate_value)",
+            ]
+            lines.extend([
+                "@classmethod",
+                "def _json_schema_model_value(cls, value: Any, serialized: Any) -> Any:",
+                "    if isinstance(value, BaseModel):",
+                "        return serialized",
+                "    if isinstance(value, dict):",
+                "        return {",
+                "            key: cls._json_schema_model_value(item, serialized.get(key, item))",
+                "            for key, item in value.items()",
+                "        }",
+                "    if isinstance(value, list):",
+                "        return [",
+                "            cls._json_schema_model_value(item, serialized[index])",
+                "            for index, item in enumerate(value)",
+                "        ]",
+                "    return value",
+                "",
+            ])
         for line in lines:
             self._append_internal_template_data("class_body_lines", line)
 

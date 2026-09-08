@@ -6,7 +6,14 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, RootModel, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    RootModel,
+    TypeAdapter,
+    model_validator,
+)
 
 
 class RootItem(BaseModel):
@@ -20,7 +27,12 @@ class Root(RootModel[list[RootItem]]):
     )
 
     @classmethod
-    def _json_schema_literal_key(cls, value: Any) -> Any:
+    def _json_schema_literal_key(
+        cls, value: Any, models: list[bool] | None = None
+    ) -> Any:
+        if models is not None and isinstance(value, BaseModel):
+            models[0] = True
+            return ('model', id(value))
         if isinstance(value, Enum):
             value = value.value
         if getattr(type(value), '__pydantic_root_model__', False):
@@ -29,14 +41,14 @@ class Root(RootModel[list[RootItem]]):
             return (
                 'object',
                 frozenset(
-                    (key, cls._json_schema_literal_key(item))
+                    (key, cls._json_schema_literal_key(item, models))
                     for key, item in value.items()
                 ),
             )
         if isinstance(value, list):
             return (
                 'array',
-                tuple(cls._json_schema_literal_key(item) for item in value),
+                tuple(cls._json_schema_literal_key(item, models) for item in value),
             )
         if isinstance(value, bool):
             return ('boolean', value)
@@ -46,20 +58,50 @@ class Root(RootModel[list[RootItem]]):
             return ('string', value)
         return (type(value).__name__, value)
 
-    @model_validator(mode='before')
+    @model_validator(mode='wrap')
     @classmethod
-    def _validate_json_schema_literal(cls, value: Any) -> Any:
+    def _validate_json_schema_literal(cls, value: Any, handler: Any) -> Any:
+        if isinstance(value, cls):
+            return handler(value)
         if isinstance(value, Enum):
             value = value.value
         if getattr(type(value), '__pydantic_root_model__', False):
-            value = value.model_dump(mode='json')
-        candidate = cls._json_schema_literal_key(value)
+            value = value.model_dump(mode='json', by_alias=True)
+        models = [False]
+        candidate = cls._json_schema_literal_key(value, models)
+        if models[0]:
+            result = handler(value)
+            try:
+                adapter = TypeAdapter(cls.model_fields['root'].annotation)
+                parsed = result.root
+                dump = adapter.dump_python
+                serialized = dump(parsed, mode='json', by_alias=True, warnings=False)
+                candidate_value = cls._json_schema_model_value(value, serialized)
+            except (AttributeError, IndexError, TypeError, ValueError) as error:
+                raise ValueError('Cannot serialize JSON Schema literal') from error
+            candidate = cls._json_schema_literal_key(candidate_value)
         allowed_values = [[], [{'a': 1, 'b': 2}]]
         if not any(
             candidate == cls._json_schema_literal_key(allowed)
             for allowed in allowed_values
         ):
             raise ValueError('Value does not match an allowed JSON Schema literal')
+        return result if models[0] else handler(value)
+
+    @classmethod
+    def _json_schema_model_value(cls, value: Any, serialized: Any) -> Any:
+        if isinstance(value, BaseModel):
+            return serialized
+        if isinstance(value, dict):
+            return {
+                key: cls._json_schema_model_value(item, serialized.get(key, item))
+                for key, item in value.items()
+            }
+        if isinstance(value, list):
+            return [
+                cls._json_schema_model_value(item, serialized[index])
+                for index, item in enumerate(value)
+            ]
         return value
 
     root: list[RootItem] = Field(..., title='Root')

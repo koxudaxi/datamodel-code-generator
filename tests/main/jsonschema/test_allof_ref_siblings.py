@@ -186,3 +186,73 @@ def test_allof_literal_custom_template_missing_validators(output_file: Path) -> 
     )
     with pytest.raises(Error, match="must render class_body_lines"):
         generate(schema_path, input_file_type=InputFileType.JsonSchema, custom_template_dir=template_dir)
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+def test_allof_literal_validated_model_items(output_file: Path, entrypoint: str) -> None:
+    """Compare declared model fields without trusting overriding serializers."""
+    from tests.data.python.allof_literal_model_inputs import model_inputs
+
+    schema_path = JSON_SCHEMA_DATA_PATH / "allof_ref_siblings/enum_model_items.json"
+    expected = "allof_ref_siblings/enum_model_items_False_False.py"
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=schema_path,
+            output_path=output_file,
+            extra_args=["--disable-timestamp"],
+            assert_func=assert_file_content,
+            expected_file=expected,
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=schema_path,
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            disable_timestamp=True,
+            assert_func=assert_file_content,
+            expected_file=expected,
+        )
+    schema = json.loads(schema_path.read_text())
+    validator = validator_for(schema)(schema)
+    actual = []
+    with _generated_model(output_file, "allof_model_items", "Root") as model:
+        item = vars(sys.modules[model.__module__])["RootItem"]
+        for (label, target, payload), (_, native_target, native_payload) in zip(
+            model_inputs(model, item), model_inputs(model, item), strict=True
+        ):
+            adapter = TypeAdapter(native_target.model_fields["root"].annotation)
+            input_before = repr(payload)
+            try:
+                native_value = adapter.validate_python(native_payload)
+                native_json = adapter.dump_python(native_value, mode="json", by_alias=True, warnings=False)
+                if isinstance(payload[0], dict):
+                    native_json[0]["a-value"] = payload[0]["a-value"]
+                native_valid = validator.is_valid(native_json)
+            except (AttributeError, TypeError, ValueError):
+                native_valid = False
+            if native_valid:
+                result = target.model_validate(payload)
+                actual.append([label, True, result.root[0] is payload[0]])
+            else:
+                with pytest.raises(ValidationError):
+                    target.model_validate(payload)
+                actual.append([label, False])
+            if label not in {"opaque", "opaque-model"} and not isinstance(payload[0], dict):
+                actual.extend([
+                    ["own-item-serializer", payload[0].model_dump(mode="json", by_alias=True)],
+                    ["own-root-serializer", target.model_construct(payload).model_dump(mode="json", by_alias=True)],
+                ])
+            if isinstance(payload[0], dict):
+                actual.append(["own-nested-serializer", payload[0]["b"].model_dump(mode="json")])
+            actual.extend([
+                ["input-unchanged", repr(payload) == input_before],
+                ["native-input-match", repr(payload) == repr(native_payload)],
+            ])
+            if label == "after-counter":
+                actual.append(["after-calls", payload[0]._calls, native_payload[0]._calls])
+        instance = model.model_validate([{"a-value": 1, "b": ["x"]}])
+        actual.append(["own-root-identity", model.model_validate(instance) is instance])
+    assert_output(
+        json.dumps(actual, indent=2) + "\n",
+        DATA_PATH / "payloads/allof_ref_sibling_outputs/validated_model_items.txt",
+    )
