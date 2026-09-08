@@ -12,11 +12,23 @@ from pydantic import BaseModel, ConfigDict, TypeAdapter, conint, model_validator
 
 class _JsonSchemaRuntimeValidationBase(BaseModel):
     __json_schema_pattern_properties__: ClassVar[tuple[Any, ...]] = ()
+    __json_schema_one_of_required_groups__: ClassVar[tuple[Any, ...]] = ()
+    __json_schema_any_of_required_groups__: ClassVar[tuple[Any, ...]] = ()
 
     @model_validator(mode='before')
     @classmethod
     def _validate_json_schema_runtime_rules(cls, data: Any) -> Any:
         data = cls._validate_json_schema_pattern_properties(data)
+        data = cls._validate_json_schema_required_groups(
+            data,
+            required_group_rules=cls.__json_schema_one_of_required_groups__,
+            require_exactly_one=True,
+        )
+        data = cls._validate_json_schema_required_groups(
+            data,
+            required_group_rules=cls.__json_schema_any_of_required_groups__,
+            require_exactly_one=False,
+        )
         return data
 
     @classmethod
@@ -67,6 +79,32 @@ class _JsonSchemaRuntimeValidationBase(BaseModel):
                     raise ValueError(f'Unexpected property {key!r}')
         return values
 
+    @classmethod
+    def _validate_json_schema_required_groups(
+        cls,
+        data: Any,
+        *,
+        required_group_rules: tuple[Any, ...],
+        require_exactly_one: bool,
+    ) -> Any:
+        if not required_group_rules or not isinstance(data, dict):
+            return data
+        for required_groups in required_group_rules:
+            matches = sum(
+                all(any(name in data for name in names) for names in group)
+                for group in required_groups
+            )
+            if require_exactly_one:
+                if matches != 1:
+                    raise ValueError(
+                        'Expected exactly one required property group to be present'
+                    )
+            elif matches == 0:
+                raise ValueError(
+                    'Expected at least one required property group to be present'
+                )
+        return data
+
 
 class Root(_JsonSchemaRuntimeValidationBase):
     model_config = ConfigDict(
@@ -81,6 +119,10 @@ class Root(_JsonSchemaRuntimeValidationBase):
             'additional_property_type': None,
             'allow_unmatched': False,
         },
+    )
+
+    __json_schema_any_of_required_groups__: ClassVar[tuple[Any, ...]] = (
+        ((('other',),),),
     )
 
     x: int | None = 2

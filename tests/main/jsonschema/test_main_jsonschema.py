@@ -23766,6 +23766,7 @@ def test_pattern_property_intersections(
         and suffix
         in {
             "complex_disabled",
+            "undeclared_required_object",
             "rejected",
             "custom_base",
             "custom_base_disabled",
