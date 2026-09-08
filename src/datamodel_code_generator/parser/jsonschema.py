@@ -1279,6 +1279,15 @@ _DEFAULT_SCHEMA_PATHS = ("#/definitions", "#/$defs")
 _REGEX_META_CHARACTERS = frozenset(r"\.^$*+?{}[]|()")
 
 
+def _literal_pattern_value(pattern: str) -> str | None:
+    """Recognize plain characters and escaped regex metacharacters only."""
+    if _REGEX_META_CHARACTERS.isdisjoint(pattern):
+        return pattern
+    if re.fullmatch(r"(?:[^\\.^$*+?{}\[\]|()]|\\[\\.^$*+?{}\[\]|()])*", pattern) is None:
+        return None
+    return re.sub(r"\\(.)", r"\1", pattern)
+
+
 @snooper_to_methods()  # noqa: PLR0904
 class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     """Parser for JSON Schema, JSON, YAML, Dict, and CSV formats."""
@@ -4076,11 +4085,13 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     return val1
                 # Only disjoint-prefix literals are provably broken by a shared search position.
                 # Preserve existing regex expressions and already-correct literal intersections.
+                literal1 = _literal_pattern_value(val1)
+                literal2 = _literal_pattern_value(val2)
                 if (
-                    not val1.startswith(val2)
-                    and not val2.startswith(val1)
-                    and _REGEX_META_CHARACTERS.isdisjoint(val1)
-                    and _REGEX_META_CHARACTERS.isdisjoint(val2)
+                    literal1 is not None
+                    and literal2 is not None
+                    and not literal1.startswith(literal2)
+                    and not literal2.startswith(literal1)
                 ):
                     return rf"\A(?=[\s\S]*{val1})(?=[\s\S]*{val2})"
                 return f"(?={val1})(?={val2})"

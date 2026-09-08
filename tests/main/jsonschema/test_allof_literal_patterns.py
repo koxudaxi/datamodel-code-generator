@@ -45,6 +45,14 @@ if TYPE_CHECKING:
         "right_anchor",
         "character_class",
         "single",
+        "escaped_dot",
+        "escaped_dollar",
+        "escaped_metacharacters",
+        "escaped_prefix",
+        "escaped_reverse_prefix",
+        "escaped_identical",
+        "unknown_escape",
+        "unknown_newline_escape",
     ],
 )
 def test_allof_literal_patterns(

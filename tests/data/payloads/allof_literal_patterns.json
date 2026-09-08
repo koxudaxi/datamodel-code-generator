@@ -167,5 +167,108 @@
       ""
     ],
     "normal": true
+  },
+  {
+    "name": "escaped_dot",
+    "valid": [
+      "x.",
+      ".x"
+    ],
+    "invalid": [
+      "x",
+      ".",
+      ""
+    ],
+    "normal": false
+  },
+  {
+    "name": "escaped_dollar",
+    "valid": [
+      "x$",
+      "$x"
+    ],
+    "invalid": [
+      "x",
+      "$",
+      ""
+    ],
+    "normal": false
+  },
+  {
+    "name": "escaped_metacharacters",
+    "valid": [
+      "x\\.^$*+?{}[]|()",
+      "\\.^$*+?{}[]|()x"
+    ],
+    "invalid": [
+      "x",
+      "\\.^$*+?{}[]|()",
+      ""
+    ],
+    "normal": false
+  },
+  {
+    "name": "escaped_prefix",
+    "valid": [
+      ".x",
+      "a.x"
+    ],
+    "invalid": [
+      ".",
+      "x",
+      ""
+    ],
+    "normal": true
+  },
+  {
+    "name": "escaped_reverse_prefix",
+    "valid": [
+      ".x",
+      "a.x"
+    ],
+    "invalid": [
+      ".",
+      "x",
+      ""
+    ],
+    "normal": true
+  },
+  {
+    "name": "escaped_identical",
+    "valid": [
+      ".",
+      "x."
+    ],
+    "invalid": [
+      "x",
+      ""
+    ],
+    "normal": true
+  },
+  {
+    "name": "unknown_escape",
+    "valid": [
+      "1",
+      "a1"
+    ],
+    "invalid": [
+      "2",
+      "x",
+      ""
+    ],
+    "normal": true
+  },
+  {
+    "name": "unknown_newline_escape",
+    "valid": [
+      "\n",
+      "x\n"
+    ],
+    "invalid": [
+      "n",
+      "x",
+      ""
+    ],
+    "normal": true
   }
 ]
