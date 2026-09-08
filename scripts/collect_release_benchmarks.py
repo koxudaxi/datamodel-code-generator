@@ -35,7 +35,7 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
     from release_benchmark_safety import MAIN_VERSION
 
 ROOT = Path(__file__).resolve().parents[1]
-GITHUB_PACKAGE_URL = "git+https://github.com/koxudaxi/datamodel-code-generator.git"
+GITHUB_PACKAGE_URL = "git+https://github.com/datamodel-code-generator/datamodel-code-generator.git"
 DEFAULT_OUTPUT = ROOT / ".benchmarks" / "release-benchmarks.json"
 DEFAULT_RUNS = 7
 DEFAULT_WARMUPS = 1

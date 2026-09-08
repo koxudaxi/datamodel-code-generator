@@ -16,7 +16,7 @@ The official GitHub Action provides a simple way to validate generated models in
 ### Basic Usage
 
 ```yaml
-- uses: koxudaxi/datamodel-code-generator@vX.Y.Z
+- uses: datamodel-code-generator/datamodel-code-generator@vX.Y.Z
   with:
     input: schema.yaml
     output: src/models.py
@@ -60,7 +60,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: koxudaxi/datamodel-code-generator@vX.Y.Z
+      - uses: datamodel-code-generator/datamodel-code-generator@vX.Y.Z
         with:
           input: schemas/api.yaml
           output: src/models/api.py
@@ -88,7 +88,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: koxudaxi/datamodel-code-generator@vX.Y.Z
+      - uses: datamodel-code-generator/datamodel-code-generator@vX.Y.Z
         with:
           input: ${{ matrix.input }}
           output: ${{ matrix.output }}
@@ -100,7 +100,7 @@ jobs:
 ### Example: Using Profiles
 
 ```yaml
-- uses: koxudaxi/datamodel-code-generator@vX.Y.Z
+- uses: datamodel-code-generator/datamodel-code-generator@vX.Y.Z
   with:
     input: schemas/api.yaml
     output: src/models.py
@@ -114,7 +114,7 @@ jobs:
 Set `check: 'false'` to actually generate the models:
 
 ```yaml
-- uses: koxudaxi/datamodel-code-generator@vX.Y.Z
+- uses: datamodel-code-generator/datamodel-code-generator@vX.Y.Z
   with:
     input: schema.yaml
     output: src/models.py
@@ -128,7 +128,7 @@ Set `check: 'false'` to actually generate the models:
 For GraphQL schemas, use the `extras` input to install the required dependency:
 
 ```yaml
-- uses: koxudaxi/datamodel-code-generator@vX.Y.Z
+- uses: datamodel-code-generator/datamodel-code-generator@vX.Y.Z
   with:
     input: schema.graphql
     output: src/models.py
@@ -140,7 +140,7 @@ For GraphQL schemas, use the `extras` input to install the required dependency:
 ### Example: Apache Avro Schema
 
 ```yaml
-- uses: koxudaxi/datamodel-code-generator@vX.Y.Z
+- uses: datamodel-code-generator/datamodel-code-generator@vX.Y.Z
   with:
     input: schema.avsc
     output: src/models.py
@@ -153,7 +153,7 @@ For GraphQL schemas, use the `extras` input to install the required dependency:
 You can install multiple extras with comma-separated values:
 
 ```yaml
-- uses: koxudaxi/datamodel-code-generator@vX.Y.Z
+- uses: datamodel-code-generator/datamodel-code-generator@vX.Y.Z
   with:
     input: schema.yaml
     output: src/models.py
@@ -167,7 +167,7 @@ You can install multiple extras with comma-separated values:
 Use `extra-args` for CLI options not covered by the inputs:
 
 ```yaml
-- uses: koxudaxi/datamodel-code-generator@vX.Y.Z
+- uses: datamodel-code-generator/datamodel-code-generator@vX.Y.Z
   with:
     input: schema.yaml
     output: src/models.py
@@ -326,7 +326,7 @@ Configure settings in `pyproject.toml` and use a simple pre-commit hook:
 
 ```yaml title=".pre-commit-config.yaml"
 repos:
-  - repo: https://github.com/koxudaxi/datamodel-code-generator
+  - repo: https://github.com/datamodel-code-generator/datamodel-code-generator
     rev: vX.Y.Z
     hooks:
       - id: datamodel-code-generator
@@ -340,7 +340,7 @@ For projects with multiple schemas using [named profiles](pyproject_toml.md#name
 
 ```yaml title=".pre-commit-config.yaml"
 repos:
-  - repo: https://github.com/koxudaxi/datamodel-code-generator
+  - repo: https://github.com/datamodel-code-generator/datamodel-code-generator
     rev: vX.Y.Z
     hooks:
       - id: datamodel-code-generator
@@ -359,7 +359,7 @@ This configuration automatically regenerates models when schema files change:
 
 ```yaml title=".pre-commit-config.yaml"
 repos:
-  - repo: https://github.com/koxudaxi/datamodel-code-generator
+  - repo: https://github.com/datamodel-code-generator/datamodel-code-generator
     rev: vX.Y.Z
     hooks:
       - id: datamodel-code-generator

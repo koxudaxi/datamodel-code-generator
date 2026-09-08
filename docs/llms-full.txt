@@ -14,8 +14,8 @@ Source: https://datamodel-code-generator.koxudaxi.dev/
 [![Conda-forge](https://img.shields.io/conda/v/conda-forge/datamodel-code-generator)](https://anaconda.org/conda-forge/datamodel-code-generator)
 [![Downloads](https://api.pepy.tech/badge/datamodel-code-generator/month)](https://pepy.tech/projects/datamodel-code-generator)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/datamodel-code-generator)](https://pypi.python.org/pypi/datamodel-code-generator)
-[![codecov](https://codecov.io/gh/koxudaxi/datamodel-code-generator/graph/badge.svg?token=plzSSFb9Li)](https://codecov.io/gh/koxudaxi/datamodel-code-generator)
-![license](https://img.shields.io/github/license/koxudaxi/datamodel-code-generator.svg)
+[![codecov](https://codecov.io/gh/datamodel-code-generator/datamodel-code-generator/graph/badge.svg?token=plzSSFb9Li)](https://codecov.io/gh/datamodel-code-generator/datamodel-code-generator)
+![license](https://img.shields.io/github/license/datamodel-code-generator/datamodel-code-generator.svg)
 [![Pydantic v2](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/pydantic/pydantic/main/docs/badge/v2.json)](https://pydantic.dev)
 
 ---
@@ -166,7 +166,7 @@ Validate generated models in your CI pipeline:
 
 ```yaml title=".github/workflows/validate-models.yml"
 # Replace vX.Y.Z with a released action version.
-- uses: koxudaxi/datamodel-code-generator@vX.Y.Z
+- uses: datamodel-code-generator/datamodel-code-generator@vX.Y.Z
   with:
     input: schemas/api.yaml
     output: src/models/api.py
@@ -230,7 +230,7 @@ These public examples are grouped by how each project uses datamodel-code-genera
 - [vllm-project/vllm](https://github.com/vllm-project/vllm) - *[Test dependency for MiniCPM3 tests](https://github.com/vllm-project/vllm/blob/46f01a50acd6862806ed67b88176c96c2b161142/requirements/test/cuda.in#L40)*
 - [stanfordnlp/dspy](https://github.com/stanfordnlp/dspy) - *[Generate Pydantic models from JSON Schema for reliability tests](https://github.com/stanfordnlp/dspy/blob/main/tests/reliability/generate/utils.py)*
 
-[See all dependents →](https://github.com/koxudaxi/datamodel-code-generator/network/dependents)
+[See all dependents →](https://github.com/datamodel-code-generator/datamodel-code-generator/network/dependents)
 
 ---
 
@@ -7734,7 +7734,7 @@ The `--class-decorators` option works with any output model type:
 
 ## Related Issues
 
-- [#2358](https://github.com/koxudaxi/datamodel-code-generator/issues/2358) - Feature request for dataclasses_json support
+- [#2358](https://github.com/datamodel-code-generator/datamodel-code-generator/issues/2358) - Feature request for dataclasses_json support
 
 ---
 
@@ -7815,7 +7815,7 @@ class Model(BaseModel):
 
 ## 📚 Template Reference
 
-You can create more complex custom templates by copying [the default templates](https://github.com/koxudaxi/datamodel-code-generator/tree/main/src/datamodel_code_generator/model/template). Use them as a reference for understanding the structure and available variables, and customize the code generation process according to your specific requirements.
+You can create more complex custom templates by copying [the default templates](https://github.com/datamodel-code-generator/datamodel-code-generator/tree/main/src/datamodel_code_generator/model/template). Use them as a reference for understanding the structure and available variables, and customize the code generation process according to your specific requirements.
 
 ---
 
@@ -9432,7 +9432,7 @@ The official GitHub Action provides a simple way to validate generated models in
 ### Basic Usage
 
 ```yaml
-- uses: koxudaxi/datamodel-code-generator@vX.Y.Z
+- uses: datamodel-code-generator/datamodel-code-generator@vX.Y.Z
   with:
     input: schema.yaml
     output: src/models.py
@@ -9476,7 +9476,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: koxudaxi/datamodel-code-generator@vX.Y.Z
+      - uses: datamodel-code-generator/datamodel-code-generator@vX.Y.Z
         with:
           input: schemas/api.yaml
           output: src/models/api.py
@@ -9504,7 +9504,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: koxudaxi/datamodel-code-generator@vX.Y.Z
+      - uses: datamodel-code-generator/datamodel-code-generator@vX.Y.Z
         with:
           input: ${{ matrix.input }}
           output: ${{ matrix.output }}
@@ -9516,7 +9516,7 @@ jobs:
 ### Example: Using Profiles
 
 ```yaml
-- uses: koxudaxi/datamodel-code-generator@vX.Y.Z
+- uses: datamodel-code-generator/datamodel-code-generator@vX.Y.Z
   with:
     input: schemas/api.yaml
     output: src/models.py
@@ -9530,7 +9530,7 @@ jobs:
 Set `check: 'false'` to actually generate the models:
 
 ```yaml
-- uses: koxudaxi/datamodel-code-generator@vX.Y.Z
+- uses: datamodel-code-generator/datamodel-code-generator@vX.Y.Z
   with:
     input: schema.yaml
     output: src/models.py
@@ -9544,7 +9544,7 @@ Set `check: 'false'` to actually generate the models:
 For GraphQL schemas, use the `extras` input to install the required dependency:
 
 ```yaml
-- uses: koxudaxi/datamodel-code-generator@vX.Y.Z
+- uses: datamodel-code-generator/datamodel-code-generator@vX.Y.Z
   with:
     input: schema.graphql
     output: src/models.py
@@ -9556,7 +9556,7 @@ For GraphQL schemas, use the `extras` input to install the required dependency:
 ### Example: Apache Avro Schema
 
 ```yaml
-- uses: koxudaxi/datamodel-code-generator@vX.Y.Z
+- uses: datamodel-code-generator/datamodel-code-generator@vX.Y.Z
   with:
     input: schema.avsc
     output: src/models.py
@@ -9569,7 +9569,7 @@ For GraphQL schemas, use the `extras` input to install the required dependency:
 You can install multiple extras with comma-separated values:
 
 ```yaml
-- uses: koxudaxi/datamodel-code-generator@vX.Y.Z
+- uses: datamodel-code-generator/datamodel-code-generator@vX.Y.Z
   with:
     input: schema.yaml
     output: src/models.py
@@ -9583,7 +9583,7 @@ You can install multiple extras with comma-separated values:
 Use `extra-args` for CLI options not covered by the inputs:
 
 ```yaml
-- uses: koxudaxi/datamodel-code-generator@vX.Y.Z
+- uses: datamodel-code-generator/datamodel-code-generator@vX.Y.Z
   with:
     input: schema.yaml
     output: src/models.py
@@ -9742,7 +9742,7 @@ Configure settings in `pyproject.toml` and use a simple pre-commit hook:
 
 ```yaml title=".pre-commit-config.yaml"
 repos:
-  - repo: https://github.com/koxudaxi/datamodel-code-generator
+  - repo: https://github.com/datamodel-code-generator/datamodel-code-generator
     rev: vX.Y.Z
     hooks:
       - id: datamodel-code-generator
@@ -9756,7 +9756,7 @@ For projects with multiple schemas using [named profiles](pyproject_toml.md#name
 
 ```yaml title=".pre-commit-config.yaml"
 repos:
-  - repo: https://github.com/koxudaxi/datamodel-code-generator
+  - repo: https://github.com/datamodel-code-generator/datamodel-code-generator
     rev: vX.Y.Z
     hooks:
       - id: datamodel-code-generator
@@ -9775,7 +9775,7 @@ This configuration automatically regenerates models when schema files change:
 
 ```yaml title=".pre-commit-config.yaml"
 repos:
-  - repo: https://github.com/koxudaxi/datamodel-code-generator
+  - repo: https://github.com/datamodel-code-generator/datamodel-code-generator
     rev: vX.Y.Z
     hooks:
       - id: datamodel-code-generator
@@ -40640,7 +40640,7 @@ datamodel-codegen --allof-merge-mode none ...
 
 See [CLI Reference: `--allof-merge-mode`](cli-reference/typing-customization.md#allof-merge-mode) for details.
 
-📎 Related: [#399](https://github.com/koxudaxi/datamodel-code-generator/issues/399)
+📎 Related: [#399](https://github.com/datamodel-code-generator/datamodel-code-generator/issues/399)
 
 ### 📁 How to generate from multiple schema files?
 
@@ -40660,7 +40660,7 @@ pip install 'datamodel-code-generator[http]'
 See [HTTP backend selection](#http-backend-selection) for the stable and
 experimental choices.
 
-📎 Related: [#215](https://github.com/koxudaxi/datamodel-code-generator/issues/215)
+📎 Related: [#215](https://github.com/datamodel-code-generator/datamodel-code-generator/issues/215)
 
 ### 🔤 YAML bool keywords (YES, NO, true, false) in string enums
 
@@ -40682,9 +40682,9 @@ class MyEnum(Enum):
     NOT_APPLICABLE = 'NOT_APPLICABLE'
 ```
 
-This matches the expected behavior when `type: string` is specified in your schema. If you need the previous behavior where YAML bool keywords were converted to Python booleans, please [open an issue](https://github.com/koxudaxi/datamodel-code-generator/issues) describing your use case.
+This matches the expected behavior when `type: string` is specified in your schema. If you need the previous behavior where YAML bool keywords were converted to Python booleans, please [open an issue](https://github.com/datamodel-code-generator/datamodel-code-generator/issues) describing your use case.
 
-📎 Related: [#1653](https://github.com/koxudaxi/datamodel-code-generator/issues/1653), [#1766](https://github.com/koxudaxi/datamodel-code-generator/issues/1766), [#2338](https://github.com/koxudaxi/datamodel-code-generator/issues/2338)
+📎 Related: [#1653](https://github.com/datamodel-code-generator/datamodel-code-generator/issues/1653), [#1766](https://github.com/datamodel-code-generator/datamodel-code-generator/issues/1766), [#2338](https://github.com/datamodel-code-generator/datamodel-code-generator/issues/2338)
 
 ---
 
@@ -40834,7 +40834,7 @@ datamodel-codegen --output-model-type pydantic_v2.BaseModel ...
 
 See [Output Model Types](output-model-types.md) for more details.
 
-📎 Related: [#803](https://github.com/koxudaxi/datamodel-code-generator/issues/803)
+📎 Related: [#803](https://github.com/datamodel-code-generator/datamodel-code-generator/issues/803)
 
 ### 💥 Generated code doesn't work with my Pydantic version
 
@@ -40934,7 +40934,7 @@ datamodel-codegen --read-only-write-only-model-type request-response ...
 datamodel-codegen --read-only-write-only-model-type all ...
 ```
 
-📎 Related: [#727](https://github.com/koxudaxi/datamodel-code-generator/issues/727)
+📎 Related: [#727](https://github.com/datamodel-code-generator/datamodel-code-generator/issues/727)
 
 ### ❓ Why are nullable fields not Optional?
 
@@ -40944,7 +40944,7 @@ Use `--strict-nullable` to treat nullable fields as truly optional:
 datamodel-codegen --strict-nullable ...
 ```
 
-📎 Related: [#327](https://github.com/koxudaxi/datamodel-code-generator/issues/327)
+📎 Related: [#327](https://github.com/datamodel-code-generator/datamodel-code-generator/issues/327)
 
 ---
 
@@ -40960,7 +40960,7 @@ datamodel-codegen --use-type-alias --output-model-type pydantic_v2.BaseModel ...
 
 See [Root Models and Type Aliases](root-model-and-type-alias.md) for details.
 
-📎 Related: [#2505](https://github.com/koxudaxi/datamodel-code-generator/issues/2505)
+📎 Related: [#2505](https://github.com/datamodel-code-generator/datamodel-code-generator/issues/2505)
 
 ---
 
@@ -40968,8 +40968,8 @@ See [Root Models and Type Aliases](root-model-and-type-alias.md) for details.
 
 - 🖥️ [CLI Reference](cli-reference/index.md) - Complete option documentation
 - ⚙️ [pyproject.toml Configuration](pyproject_toml.md) - Configure options via file
-- 🐛 [GitHub Issues](https://github.com/koxudaxi/datamodel-code-generator/issues) - Report bugs or request features
-- 💬 [Discussions](https://github.com/koxudaxi/datamodel-code-generator/discussions) - Ask questions and share ideas
+- 🐛 [GitHub Issues](https://github.com/datamodel-code-generator/datamodel-code-generator/issues) - Report bugs or request features
+- 💬 [Discussions](https://github.com/datamodel-code-generator/datamodel-code-generator/discussions) - Ask questions and share ideas
 
 ---
 
@@ -41317,7 +41317,7 @@ Source: https://datamodel-code-generator.koxudaxi.dev/development-contributing/
 Install the package in editable mode:
 
 ```sh
-$ git clone git@github.com:koxudaxi/datamodel-code-generator.git
+$ git clone git@github.com:datamodel-code-generator/datamodel-code-generator.git
 $ pip install -e datamodel-code-generator
 ```
 

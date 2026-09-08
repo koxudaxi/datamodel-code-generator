@@ -77,8 +77,8 @@ optional-dependencies.validation = [
 optional-dependencies.watch = [
   "watchfiles>=1.1",
 ]
-urls.Homepage = "https://github.com/koxudaxi/datamodel-code-generator"
-urls.Source = "https://github.com/koxudaxi/datamodel-code-generator"
+urls.Homepage = "https://github.com/datamodel-code-generator/datamodel-code-generator"
+urls.Source = "https://github.com/datamodel-code-generator/datamodel-code-generator"
 scripts.datamodel-codegen = "datamodel_code_generator.__main__:main"
 
 [dependency-groups]

@@ -292,7 +292,7 @@ def App(
       <header class="topbar">
         <div class="topbar-title">
           <h1>
-            <a href="https://github.com/koxudaxi/datamodel-code-generator" target="_blank" rel="noreferrer">datamodel-code-generator</a>
+            <a href="https://github.com/datamodel-code-generator/datamodel-code-generator" target="_blank" rel="noreferrer">datamodel-code-generator</a>
             <span>Browser</span>
           </h1>
         </div>

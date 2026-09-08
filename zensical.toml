@@ -2,8 +2,8 @@
 site_name = "datamodel-code-generator"
 site_description = "This code generator creates pydantic model from an openapi file and others."
 site_url = "https://datamodel-code-generator.koxudaxi.dev"
-repo_name = "koxudaxi/datamodel-code-generator"
-repo_url = "https://github.com/koxudaxi/datamodel-code-generator"
+repo_name = "datamodel-code-generator/datamodel-code-generator"
+repo_url = "https://github.com/datamodel-code-generator/datamodel-code-generator"
 copyright = 'Maintained by the <a href="https://datamodel-code-generator.koxudaxi.dev/#maintainers">datamodel-code-generator maintainers</a>'
 
 nav = [

@@ -121,7 +121,7 @@ def test_extract_badges_matches_known_badge_hosts_only() -> None:
         "# datamodel-code-generator",
         "https://example.com/not-a-badge/img.shields.io",
         "[![PyPI](https://img.shields.io/pypi/v/datamodel-code-generator.svg)](https://pypi.org/project/datamodel-code-generator/)",
-        "[![Codecov](https://codecov.io/gh/koxudaxi/datamodel-code-generator/branch/main/graph/badge.svg)](https://codecov.io/gh/koxudaxi/datamodel-code-generator)",
+        "[![Codecov](https://codecov.io/gh/datamodel-code-generator/datamodel-code-generator/branch/main/graph/badge.svg)](https://codecov.io/gh/datamodel-code-generator/datamodel-code-generator)",
         "## ✨ What it does",
     ])
 

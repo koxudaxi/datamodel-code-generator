@@ -704,4 +704,4 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
 
 Documentation: https://datamodel-code-generator.koxudaxi.dev
 Agent skill: https://datamodel-code-generator.koxudaxi.dev/coding-agent-skill/
-GitHub: https://github.com/koxudaxi/datamodel-code-generator
+GitHub: https://github.com/datamodel-code-generator/datamodel-code-generator

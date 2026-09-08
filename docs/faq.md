@@ -33,7 +33,7 @@ datamodel-codegen --allof-merge-mode none ...
 
 See [CLI Reference: `--allof-merge-mode`](cli-reference/typing-customization.md#allof-merge-mode) for details.
 
-📎 Related: [#399](https://github.com/koxudaxi/datamodel-code-generator/issues/399)
+📎 Related: [#399](https://github.com/datamodel-code-generator/datamodel-code-generator/issues/399)
 
 ### 📁 How to generate from multiple schema files?
 
@@ -53,7 +53,7 @@ pip install 'datamodel-code-generator[http]'
 See [HTTP backend selection](#http-backend-selection) for the stable and
 experimental choices.
 
-📎 Related: [#215](https://github.com/koxudaxi/datamodel-code-generator/issues/215)
+📎 Related: [#215](https://github.com/datamodel-code-generator/datamodel-code-generator/issues/215)
 
 ### 🔤 YAML bool keywords (YES, NO, true, false) in string enums
 
@@ -75,9 +75,9 @@ class MyEnum(Enum):
     NOT_APPLICABLE = 'NOT_APPLICABLE'
 ```
 
-This matches the expected behavior when `type: string` is specified in your schema. If you need the previous behavior where YAML bool keywords were converted to Python booleans, please [open an issue](https://github.com/koxudaxi/datamodel-code-generator/issues) describing your use case.
+This matches the expected behavior when `type: string` is specified in your schema. If you need the previous behavior where YAML bool keywords were converted to Python booleans, please [open an issue](https://github.com/datamodel-code-generator/datamodel-code-generator/issues) describing your use case.
 
-📎 Related: [#1653](https://github.com/koxudaxi/datamodel-code-generator/issues/1653), [#1766](https://github.com/koxudaxi/datamodel-code-generator/issues/1766), [#2338](https://github.com/koxudaxi/datamodel-code-generator/issues/2338)
+📎 Related: [#1653](https://github.com/datamodel-code-generator/datamodel-code-generator/issues/1653), [#1766](https://github.com/datamodel-code-generator/datamodel-code-generator/issues/1766), [#2338](https://github.com/datamodel-code-generator/datamodel-code-generator/issues/2338)
 
 ---
 
@@ -227,7 +227,7 @@ datamodel-codegen --output-model-type pydantic_v2.BaseModel ...
 
 See [Output Model Types](output-model-types.md) for more details.
 
-📎 Related: [#803](https://github.com/koxudaxi/datamodel-code-generator/issues/803)
+📎 Related: [#803](https://github.com/datamodel-code-generator/datamodel-code-generator/issues/803)
 
 ### 💥 Generated code doesn't work with my Pydantic version
 
@@ -327,7 +327,7 @@ datamodel-codegen --read-only-write-only-model-type request-response ...
 datamodel-codegen --read-only-write-only-model-type all ...
 ```
 
-📎 Related: [#727](https://github.com/koxudaxi/datamodel-code-generator/issues/727)
+📎 Related: [#727](https://github.com/datamodel-code-generator/datamodel-code-generator/issues/727)
 
 ### ❓ Why are nullable fields not Optional?
 
@@ -337,7 +337,7 @@ Use `--strict-nullable` to treat nullable fields as truly optional:
 datamodel-codegen --strict-nullable ...
 ```
 
-📎 Related: [#327](https://github.com/koxudaxi/datamodel-code-generator/issues/327)
+📎 Related: [#327](https://github.com/datamodel-code-generator/datamodel-code-generator/issues/327)
 
 ---
 
@@ -353,7 +353,7 @@ datamodel-codegen --use-type-alias --output-model-type pydantic_v2.BaseModel ...
 
 See [Root Models and Type Aliases](root-model-and-type-alias.md) for details.
 
-📎 Related: [#2505](https://github.com/koxudaxi/datamodel-code-generator/issues/2505)
+📎 Related: [#2505](https://github.com/datamodel-code-generator/datamodel-code-generator/issues/2505)
 
 ---
 
@@ -361,5 +361,5 @@ See [Root Models and Type Aliases](root-model-and-type-alias.md) for details.
 
 - 🖥️ [CLI Reference](cli-reference/index.md) - Complete option documentation
 - ⚙️ [pyproject.toml Configuration](pyproject_toml.md) - Configure options via file
-- 🐛 [GitHub Issues](https://github.com/koxudaxi/datamodel-code-generator/issues) - Report bugs or request features
-- 💬 [Discussions](https://github.com/koxudaxi/datamodel-code-generator/discussions) - Ask questions and share ideas
+- 🐛 [GitHub Issues](https://github.com/datamodel-code-generator/datamodel-code-generator/issues) - Report bugs or request features
+- 💬 [Discussions](https://github.com/datamodel-code-generator/datamodel-code-generator/discussions) - Ask questions and share ideas
