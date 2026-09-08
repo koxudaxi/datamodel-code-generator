@@ -3922,3 +3922,41 @@ def test_watch_cli_keeps_input_changes_during_generation(
         assert_output(output_file.read_text(encoding="utf-8"), EXPECTED_MAIN_PATH / "watch_file_change.py")
     finally:
         _stop_watch_cli(process, stdout_thread, stderr_thread)
+
+
+def test_watch_cli_tracks_new_reference_after_generation(tmp_path: Path) -> None:
+    """Newly discovered dependencies remain observable after their first generation."""
+    input_file = tmp_path / "schema.json"
+    child_file = tmp_path / "child.json"
+    output_file = tmp_path / "output.py"
+    initial = (WATCH_DATA_PATH / "file_change/initial.json").read_text(encoding="utf-8")
+    changed = (WATCH_DATA_PATH / "file_change/changed.json").read_text(encoding="utf-8")
+    input_file.write_text(initial, encoding="utf-8")
+    child_file.write_text(changed, encoding="utf-8")
+    process, stdout_lines, stderr_lines, stdout_thread, stderr_thread = _start_watch_cli_until_ready(
+        input_file,
+        output_file,
+    )
+    try:
+        _write_watch_cli_input_and_wait(
+            process,
+            stdout_lines,
+            stderr_lines,
+            input_file,
+            (WATCH_DATA_PATH / "file_change/reference.json").read_text(encoding="utf-8"),
+            lambda: _file_contains(output_file, "age: int | None = None"),
+            "the newly referenced child to generate",
+        )
+        assert_output(output_file.read_text(encoding="utf-8"), EXPECTED_MAIN_PATH / "watch_reference_change.py")
+        _write_watch_cli_input_and_wait(
+            process,
+            stdout_lines,
+            stderr_lines,
+            child_file,
+            initial,
+            lambda: _file_contains(output_file, "name: str") and not _file_contains(output_file, "age:"),
+            "an edit to the newly referenced child to regenerate",
+        )
+        assert_output(output_file.read_text(encoding="utf-8"), EXPECTED_MAIN_PATH / "watch_reference_initial.py")
+    finally:
+        _stop_watch_cli(process, stdout_thread, stderr_thread)
