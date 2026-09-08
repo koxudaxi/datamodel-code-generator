@@ -127,7 +127,7 @@ def test_python_generic_reuse_type_binding(entrypoint: str, formatter: str, tmp_
 @pytest.mark.parametrize("case", ["name", "family", "index_type", "index_negative"])
 def test_python_native_field_invalid_path(case: str, tmp_path: Path) -> None:
     """Reject malformed external native paths before generating executable annotations."""
-    record = json.loads((DATA_PATH / "jsonschema/generic_native_fields" / (case + ".json")).read_text())
+    record = json.loads((DATA_PATH / "payloads/generic_native_fields" / (case + ".json")).read_text())
     with pytest.raises((TypeError, ValueError), match=record["message"]):
         generate(
             record["schema"],
