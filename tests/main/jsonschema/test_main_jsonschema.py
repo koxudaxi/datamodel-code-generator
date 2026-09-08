@@ -19421,7 +19421,10 @@ def test_custom_template_dependencies_defer_external_signatures(tmp_path: Path, 
                 expected_file=expected,
             )
         dependencies = model_base._missing_custom_template_state.dependencies[custom_root]
-        snapshots.append(all(signature is not None for signature in dependencies.directories.values()))
+        snapshots.append({
+            "directories": len(dependencies.directories),
+            "captured": all(signature is not None for signature in dependencies.directories.values()),
+        })
     assert_output(
         json.dumps(snapshots, indent=2) + "\n",
         EXPECTED_JSON_SCHEMA_PATH / "custom_template_dependencies/deferred_directories.txt",
