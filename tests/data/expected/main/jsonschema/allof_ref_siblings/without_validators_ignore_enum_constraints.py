@@ -3,14 +3,11 @@
 
 from __future__ import annotations
 
-from enum import Enum
-
-from pydantic import RootModel
+from pydantic import Field, RootModel
 
 
-class Root(Enum):
-    a = 'a'
-    b = 'b'
+class Root(RootModel[str]):
+    root: str = Field(..., title='Root')
 
 
 class Base(RootModel[str]):

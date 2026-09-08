@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 import pytest
 from jsonschema.exceptions import ValidationError as JsonSchemaValidationError
 from jsonschema.validators import validator_for
+from pydantic import VERSION as PYDANTIC_VERSION
 from pydantic import TypeAdapter, ValidationError
 from referencing import Registry, Resource
 
@@ -91,6 +92,45 @@ def test_allof_ref_siblings(
         adapter = TypeAdapter(model)
         generated_schema = adapter.json_schema()
         generated_validator = validator_for(generated_schema)(generated_schema)
+        if not schema_validators:
+            expected = DATA_PATH / "payloads/allof_ref_sibling_outputs" / f"{case['name']}_without_validators.txt"
+            if case["name"] == "enum_null" and PYDANTIC_VERSION.split(".")[:2] == ["2", "0"]:
+                expected = expected.with_name("enum_null_pydantic20_without_validators.txt")
+            actual = []
+            for value, expected_value in zip(
+                [*case["valid"], *case["invalid"]],
+                json.loads(expected.read_text(encoding="utf-8")),
+                strict=True,
+            ):
+                if expected_value["accepted"]:
+                    actual.append({
+                        "accepted": True,
+                        "value": json.loads(adapter.dump_json(adapter.validate_json(json.dumps(value)))),
+                    })
+                else:
+                    with pytest.raises(ValidationError):
+                        adapter.validate_json(json.dumps(value))
+                    actual.append({"accepted": False})
+            assert_output(
+                json.dumps(actual, indent=2) + "\n",
+                expected,
+            )
+            code = output_file.read_text(encoding="utf-8")
+            assert_output(
+                json.dumps({
+                    "custom_validator": any(
+                        marker in code
+                        for marker in (
+                            "@model_validator",
+                            "@field_validator",
+                            "_json_schema_literal_key",
+                        )
+                    )
+                })
+                + "\n",
+                DATA_PATH / "payloads/allof_ref_sibling_outputs/without_validators.txt",
+            )
+            return
         actual = []
         for value in case["valid"]:
             validator.validate(value)
@@ -142,9 +182,14 @@ def test_allof_literal_custom_template(output_file: Path, entrypoint: str) -> No
         run_main_and_assert(
             input_path=schema_path,
             output_path=output_file,
-            extra_args=["--disable-timestamp", "--custom-template-dir", str(template_dir)],
+            extra_args=[
+                "--generate-schema-validators",
+                "--disable-timestamp",
+                "--custom-template-dir",
+                str(template_dir),
+            ],
             assert_func=assert_file_content,
-            expected_file="allof_ref_siblings/enum_length_False_False.py",
+            expected_file="allof_ref_siblings/enum_length_False_True.py",
             force_exec_validation=True,
         )
     else:
@@ -153,9 +198,10 @@ def test_allof_literal_custom_template(output_file: Path, entrypoint: str) -> No
             output_path=output_file,
             input_file_type=InputFileType.JsonSchema,
             disable_timestamp=True,
+            generate_schema_validators=True,
             custom_template_dir=template_dir,
             assert_func=assert_file_content,
-            expected_file="allof_ref_siblings/enum_length_False_False.py",
+            expected_file="allof_ref_siblings/enum_length_False_True.py",
         )
     case = next(
         case
@@ -187,11 +233,16 @@ def test_allof_literal_custom_template_missing_validators(output_file: Path) -> 
     run_main_and_assert(
         input_path=schema_path,
         output_path=output_file,
-        extra_args=["--custom-template-dir", str(template_dir)],
+        extra_args=["--generate-schema-validators", "--custom-template-dir", str(template_dir)],
         expected_exit=Exit.ERROR,
     )
     with pytest.raises(Error, match="must render class_body_lines"):
-        generate(schema_path, input_file_type=InputFileType.JsonSchema, custom_template_dir=template_dir)
+        generate(
+            schema_path,
+            input_file_type=InputFileType.JsonSchema,
+            custom_template_dir=template_dir,
+            generate_schema_validators=True,
+        )
 
 
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
@@ -200,12 +251,12 @@ def test_allof_literal_validated_model_items(output_file: Path, entrypoint: str)
     from tests.data.python.allof_literal_model_inputs import model_inputs
 
     schema_path = JSON_SCHEMA_DATA_PATH / "allof_ref_siblings/enum_model_items.json"
-    expected = "allof_ref_siblings/enum_model_items_False_False.py"
+    expected = "allof_ref_siblings/enum_model_items_False_True.py"
     if entrypoint == "cli":
         run_main_and_assert(
             input_path=schema_path,
             output_path=output_file,
-            extra_args=["--disable-timestamp"],
+            extra_args=["--generate-schema-validators", "--disable-timestamp"],
             assert_func=assert_file_content,
             expected_file=expected,
         )
@@ -215,6 +266,7 @@ def test_allof_literal_validated_model_items(output_file: Path, entrypoint: str)
             output_path=output_file,
             input_file_type=InputFileType.JsonSchema,
             disable_timestamp=True,
+            generate_schema_validators=True,
             assert_func=assert_file_content,
             expected_file=expected,
         )
@@ -262,3 +314,33 @@ def test_allof_literal_validated_model_items(output_file: Path, entrypoint: str)
         json.dumps(actual, indent=2) + "\n",
         DATA_PATH / "payloads/allof_ref_sibling_outputs/validated_model_items.txt",
     )
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("option", ["enum_field_as_literal", "ignore_enum_constraints"])
+def test_allof_literal_options_without_validators(output_file: Path, entrypoint: str, option: str) -> None:
+    """Respect normal enum options without injecting runtime validator methods."""
+    schema_path = JSON_SCHEMA_DATA_PATH / "allof_ref_siblings/enum_sibling.json"
+    expected = f"allof_ref_siblings/without_validators_{option}.py"
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=schema_path,
+            output_path=output_file,
+            extra_args=[
+                "--disable-timestamp",
+                "--" + option.replace("_", "-"),
+                *(["all"] if option == "enum_field_as_literal" else []),
+            ],
+            assert_func=assert_file_content,
+            expected_file=expected,
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=schema_path,
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            disable_timestamp=True,
+            **{option: "all" if option == "enum_field_as_literal" else True},
+            assert_func=assert_file_content,
+            expected_file=expected,
+        )

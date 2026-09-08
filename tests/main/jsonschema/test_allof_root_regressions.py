@@ -51,6 +51,7 @@ def test_allof_root_regressions(
                 "--input-file-type",
                 "jsonschema",
                 "--disable-timestamp",
+                "--generate-schema-validators",
                 "--formatters",
                 *formatters,
                 *(["--field-constraints"] if field_constraints else []),
@@ -63,6 +64,7 @@ def test_allof_root_regressions(
                     output=output,
                     input_file_type=InputFileType.JsonSchema,
                     disable_timestamp=True,
+                    generate_schema_validators=True,
                     field_constraints=field_constraints,
                     formatters=[Formatter(value) for value in formatters],
                     **(

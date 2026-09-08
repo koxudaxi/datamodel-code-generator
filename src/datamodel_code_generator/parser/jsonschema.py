@@ -8196,8 +8196,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return single_ref_result
 
         if merged_root := self._merge_all_of_root_schema(obj):
-            if hasattr(self.data_model_root_type, "add_literal_validation"):
+            if self.generate_schema_validators and hasattr(self.data_model_root_type, "add_literal_validation"):
                 return self._parse_all_of_root_value(name, merged_root, path)
+            if (
+                merged_root.enum
+                and not self.ignore_enum_constraints
+                and not self.should_parse_enum_as_literal(merged_root, property_name=name)
+            ):
+                return self.parse_enum(name, merged_root, path)
             return (
                 self.parse_array(name, merged_root, path)
                 if merged_root.is_array
