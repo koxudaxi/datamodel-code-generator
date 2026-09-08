@@ -469,9 +469,8 @@ def __getattr__(name: str) -> Any:
 
 
 def unescape_json_pointer_segment(segment: str) -> str:
-    """Unescape JSON pointer segment by converting escape sequences and percent-encoding."""
-    # Unescape ~1, ~0, and percent-encoding
-    return unquote(segment.replace("~1", "/").replace("~0", "~"))
+    """Decode one URI-fragment JSON Pointer token in RFC evaluation order."""
+    return unquote(segment).replace("~1", "/").replace("~0", "~")
 
 
 _JSON_POINTER_ARRAY_INDEX = re.compile(r"0|[1-9][0-9]*")
@@ -511,15 +510,20 @@ def _resolve_json_pointer_array_index_or_missing(
 
 
 def get_model_by_path(schema: dict[str, YamlValue] | list[YamlValue], keys: list[str] | list[int]) -> YamlValue:
-    """Retrieve a model from schema by traversing the given path keys."""
+    """Retrieve a model from schema by traversing raw JSON Pointer keys."""
+    return _get_model_by_decoded_path(
+        schema, [unescape_json_pointer_segment(key) if isinstance(key, str) else key for key in keys]
+    )
+
+
+def _get_model_by_decoded_path(schema: dict[str, YamlValue] | list[YamlValue], keys: Sequence[str | int]) -> YamlValue:
+    """Retrieve a model after JSON Pointer tokens have already been decoded."""
     if not keys:
         if isinstance(schema, dict):
             return schema
         msg = f"Does not support json pointer to array. schema={schema}, key={keys}"  # pragma: no cover
         raise NotImplementedError(msg)  # pragma: no cover
     key = keys[0]
-    if isinstance(key, str):  # pragma: no branch
-        key = unescape_json_pointer_segment(key)
     if isinstance(schema, dict):
         value = schema.get(str(key), {})
     elif isinstance(schema, list):
@@ -530,7 +534,7 @@ def get_model_by_path(schema: dict[str, YamlValue] | list[YamlValue], keys: list
     if len(keys) == 1:
         return value
     if isinstance(value, (dict, list)):
-        return get_model_by_path(value, keys[1:])
+        return _get_model_by_decoded_path(value, keys[1:])
     msg = f"Cannot traverse non-container value. schema={schema}, key={keys}"  # pragma: no cover
     raise NotImplementedError(msg)  # pragma: no cover
 
@@ -539,11 +543,10 @@ def _get_model_by_path_or_missing(
     schema: dict[str, YamlValue] | list[YamlValue],
     keys: list[str],
 ) -> YamlValue | object:
-    """Resolve a diagnostic JSON pointer with one lookup per segment and a missing sentinel."""
+    """Resolve decoded JSON Pointer keys with one lookup per segment and a missing sentinel."""
     current: YamlValue = schema
     last_index = len(keys) - 1
-    for index, raw_key in enumerate(keys):
-        key = unescape_json_pointer_segment(raw_key)
+    for index, key in enumerate(keys):
         if isinstance(current, dict):
             value = current.get(key, _MISSING_JSON_POINTER)
             if value is _MISSING_JSON_POINTER:
@@ -571,7 +574,7 @@ def _split_json_pointer(schema: dict[str, YamlValue] | list[YamlValue], pointer:
     """Split a JSON pointer into lookup and reference path parts."""
     raw_parts = pointer.lstrip("/").split("/") if pointer else []
     if "://" not in pointer and "~1" not in pointer:
-        return raw_parts, raw_parts
+        return [unescape_json_pointer_segment(part) for part in raw_parts], raw_parts
 
     parts: list[str] = []
     reference_parts: list[str] = []
@@ -3689,7 +3692,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         target_schema: dict[str, YamlValue] | YamlValue = raw_doc
         if fragment:
             pointer = split_json_pointer(raw_doc, fragment)
-            target_schema = get_model_by_path(raw_doc, pointer)
+            target_schema = _get_model_by_decoded_path(raw_doc, pointer)
         return target_schema
 
     def _ref_schema_exists(self, resolved_ref: str) -> bool:
