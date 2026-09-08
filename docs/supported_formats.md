@@ -224,6 +224,10 @@ datamodel-code-generator automatically detects the JSON Schema version:
 2. **Heuristics**: If no `$schema`, presence of `$defs` suggests 2020-12, `definitions` suggests Draft 7
 3. **Fallback**: Draft 7 (backward-compatible default)
 
+### Embedded Schema Resources
+
+Nested `$id` declarations identify embedded schema resources. References to these resources resolve within the containing document before any file or HTTP lookup. Relative references inside each resource use its own URI as their base, and JSON pointers and anchors are scoped to that resource.
+
 ## OpenAPI Version Support
 
 ### Supported Versions
