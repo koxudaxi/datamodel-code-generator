@@ -4445,7 +4445,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         """Read only explicit type constraints connected by allOf or references."""
         if obj.ref:
             resolved_ref = self.model_resolver.resolve_ref(obj.ref)
-            if resolved_ref not in visited:
+            if self._resolve_external_ref_mapping(obj.ref) is None and resolved_ref not in visited:
                 visited.add(resolved_ref)
                 if (masks := self._allof_ref_type_masks.get(resolved_ref)) is None:
                     referenced = self._load_ref_schema_object(obj.ref)

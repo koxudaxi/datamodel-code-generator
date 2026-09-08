@@ -1,0 +1,22 @@
+[
+  {
+    "native": true,
+    "generated": true
+  },
+  {
+    "native": false,
+    "generated": false
+  },
+  {
+    "native": false,
+    "generated": false
+  },
+  {
+    "native": false,
+    "generated": false
+  },
+  {
+    "local_identity": true,
+    "remote_identity": true
+  }
+]

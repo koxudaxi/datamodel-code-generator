@@ -1,0 +1,6 @@
+[
+  {"local": {"value": "a"}, "remote": {"value": "b"}},
+  {"local": {"value": true}, "remote": {"value": "b"}},
+  {"local": {"value": "a"}, "remote": {}},
+  {}
+]

@@ -1,0 +1,9 @@
+{
+  "title": "MappedModel",
+  "type": "object",
+  "properties": {
+    "local": {"allOf": [{"$ref": "unavailable-mapped.json#/$defs/Value"}]},
+    "remote": {"allOf": [{"$ref": "https://example.invalid/unavailable.json#/$defs/Value"}]}
+  },
+  "required": ["local", "remote"]
+}

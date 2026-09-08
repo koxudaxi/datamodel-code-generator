@@ -12,6 +12,7 @@ from pydantic import ValidationError
 
 from datamodel_code_generator import AllOfMergeMode, InputFileType, SchemaParseError, generate
 from datamodel_code_generator.__main__ import Exit
+from datamodel_code_generator.format import Formatter
 from tests.conftest import assert_inputs_not_mutated, assert_output
 from tests.main.conftest import (
     DATA_PATH,
@@ -147,3 +148,63 @@ def test_compatible_allof_types(
                     accepted = False
             records.append({"payload": payload, "native": validator.is_valid(payload), "generated": accepted})
     assert_output(json.dumps(records, indent=2) + "\n", EXPECTED / f"{case}_runtime.txt")
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("builtin", [False, True])
+def test_allof_external_mappings_preserve_imports(output_file: Path, entrypoint: str, builtin: bool) -> None:
+    """Mapped local and remote refs use the supplied Python model without loading their files."""
+    from referencing import Registry, Resource
+    from referencing.jsonschema import DRAFT202012
+
+    from tests.data.python.disjoint_allof_external import Value
+
+    source = DATA_PATH / "jsonschema" / "disjoint_allof_mapped_refs.json"
+    formatters = [Formatter.BUILTIN] if builtin else [Formatter.BLACK, Formatter.ISORT]
+    module = "tests.data.python.disjoint_allof_external"
+    mapping = {"unavailable-mapped.json": module, "https://example.invalid/unavailable.json": module}
+    if entrypoint == "cli":
+        run_main_with_args([
+            "--input",
+            str(source),
+            "--output",
+            str(output_file),
+            "--input-file-type",
+            "jsonschema",
+            "--disable-timestamp",
+            "--formatters",
+            *(formatter.value for formatter in formatters),
+            "--external-ref-mapping",
+            *(f"{ref}={package}" for ref, package in mapping.items()),
+        ])
+    else:
+        generate(
+            source,
+            **_default_formatter_generate_options({
+                "input_file_type": InputFileType.JsonSchema,
+                "output": output_file,
+                "disable_timestamp": True,
+                "external_ref_mapping": mapping,
+                "formatters": formatters,
+            }),
+        )
+    assert_output(
+        output_file.read_text(encoding="utf-8"), EXPECTED / ("mapped_refs_builtin.py" if builtin else "mapped_refs.py")
+    )
+    resource = Resource(contents={"$defs": {"Value": Value.model_json_schema()}}, specification=DRAFT202012)
+    registry = Registry().with_resources((ref, resource) for ref in mapping)
+    schema = json.loads(source.read_text(encoding="utf-8"))
+    validator = validator_for(schema)(schema, registry=registry)
+    records = []
+    with _generated_model(output_file, "mapped_allof", "MappedModel") as model:
+        for payload in json.loads((EXPECTED / "mapped_payloads.json").read_text(encoding="utf-8")):
+            try:
+                model.model_validate(payload)
+                accepted = True
+            except ValidationError:
+                accepted = False
+            records.append({"native": validator.is_valid(payload), "generated": accepted})
+        value = Value(value="same instance")
+        parsed = model(local=value, remote=value)
+        records.append({"local_identity": parsed.local is value, "remote_identity": parsed.remote is value})
+    assert_output(json.dumps(records, indent=2) + "\n", EXPECTED / "mapped_runtime.txt")
