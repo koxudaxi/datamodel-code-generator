@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import json
 import operator
+from contextlib import nullcontext
 from typing import TYPE_CHECKING
 
 import pytest
 from jsonschema import Draft202012Validator
+from pydantic import VERSION as PYDANTIC_VERSION
 from pydantic import ValidationError
 
 from datamodel_code_generator import GenerateConfig, InputFileType, generate
@@ -34,33 +36,45 @@ def test_pattern_string_adapters(tmp_path: Path, entrypoint: str, formatter: str
     output = tmp_path / "model.py"
     options = {"field_constraints": True, "generate_schema_validators": True, **case["options"]}
     formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
-    if entrypoint == "cli":
-        args = ["--input", str(source), "--input-file-type", "jsonschema", "--output", str(output)]
-        args.extend(["--disable-timestamp", "--formatters", *formatters])
-        if case["custom"]:
-            args.extend(["--custom-template-dir", str(TEMPLATE_DIR)])
-        for key, value in options.items():
-            if value:
-                args.append(
-                    {
-                        "apply_default_values_for_required_fields": "--use-default",
-                        "force_optional_for_required_fields": "--force-optional",
-                    }.get(key, "--" + key.replace("_", "-"))
-                )
-                if isinstance(value, list):
-                    args.extend(value)
-        run_main_with_args(args)
-    else:
-        generate(
-            source,
-            config=GenerateConfig(
-                input_file_type=InputFileType.JsonSchema,
-                output=output,
-                disable_timestamp=True,
-                formatters=[Formatter(value) for value in formatters],
-                custom_template_dir=TEMPLATE_DIR if case["custom"] else None,
-                **options,
-            ),
+    # Pydantic 2.0 emits these same serializer diagnostics before this fix.
+    warning_context = (
+        pytest.warns(UserWarning, match="Pydantic serializer warnings:")
+        if case["name"] == "inherited" and PYDANTIC_VERSION in {"2.0", "2.0.0"}
+        else nullcontext()
+    )
+    with warning_context as recorded_warnings:
+        if entrypoint == "cli":
+            args = ["--input", str(source), "--input-file-type", "jsonschema", "--output", str(output)]
+            args.extend(["--disable-timestamp", "--formatters", *formatters])
+            if case["custom"]:
+                args.extend(["--custom-template-dir", str(TEMPLATE_DIR)])
+            for key, value in options.items():
+                if value:
+                    args.append(
+                        {
+                            "apply_default_values_for_required_fields": "--use-default",
+                            "force_optional_for_required_fields": "--force-optional",
+                        }.get(key, "--" + key.replace("_", "-"))
+                    )
+                    if isinstance(value, list):
+                        args.extend(value)
+            run_main_with_args(args)
+        else:
+            generate(
+                source,
+                config=GenerateConfig(
+                    input_file_type=InputFileType.JsonSchema,
+                    output=output,
+                    disable_timestamp=True,
+                    formatters=[Formatter(value) for value in formatters],
+                    custom_template_dir=TEMPLATE_DIR if case["custom"] else None,
+                    **options,
+                ),
+            )
+    if recorded_warnings is not None:
+        assert_output(
+            json.dumps([str(warning.message) for warning in recorded_warnings], indent=2) + "\n",
+            EXPECTED_JSON_SCHEMA_PATH / f"pattern_string_adapters/inherited_minimum_{entrypoint}_warnings.txt",
         )
     assert_output(output.read_text(), EXPECTED_JSON_SCHEMA_PATH / "pattern_string_adapters" / f"{case['name']}.py")
     results = []
