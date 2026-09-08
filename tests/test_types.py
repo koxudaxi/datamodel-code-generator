@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import json
 from decimal import Decimal
+from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
 import pytest
+from pydantic import TypeAdapter
 
 from datamodel_code_generator.imports import IMPORT_ANY, IMPORT_DECIMAL, IMPORT_TUPLE, Import
 from datamodel_code_generator.python_literal import (
@@ -19,6 +22,7 @@ from datamodel_code_generator.python_literal import (
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import (
     DataType,
+    UnionIntFloat,
     _contains_decimal,
     _remove_none_from_union,
     chain_as_tuple,
@@ -29,9 +33,26 @@ from datamodel_code_generator.types import (
     is_data_model_field,
     normalize_integer_constraint,
 )
+from tests.conftest import assert_output
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+
+def test_union_int_float_conversion_after_json_round_trip() -> None:
+    """Retain explicit float conversion without rounding the serialized integer operands."""
+    data_path = Path(__file__).parent / "data"
+    adapter = TypeAdapter(list[UnionIntFloat])
+    values = adapter.validate_json((data_path / "payloads" / "union_int_float.json").read_text(encoding="utf-8"))
+    round_trip = adapter.validate_json(adapter.dump_json(values))
+    result = {
+        "round_trip": json.loads(adapter.dump_json(round_trip)),
+        "floats": [float(value) for value in round_trip],
+    }
+    assert_output(
+        json.dumps(result, indent=2) + "\n",
+        data_path / "expected" / "types" / "union_int_float.txt",
+    )
 
 
 def test_is_data_model_field_uses_structural_contract() -> None:
