@@ -17983,6 +17983,106 @@ def test_main_circular_ref_with_schema_keywords(output_file: Path) -> None:
     )
 
 
+@pytest.mark.parametrize("entry_point", ["api", "cli"])
+def test_schema_reference_cycles_ignore_instance_values(output_file: Path, entry_point: str) -> None:
+    """Keep ref sibling fields when only instance data or metadata contains apparent cycles."""
+    input_path = JSON_SCHEMA_DATA_PATH / "schema_reference_cycles" / "instance_values.json"
+    if entry_point == "api":
+        schema = json.loads(input_path.read_text(encoding="utf-8"))
+        run_generate_and_assert(
+            input_=schema,
+            expected_file=EXPECTED_JSON_SCHEMA_PATH / "schema_reference_cycles" / "instance_values_api.py",
+            input_file_type=InputFileType.JsonSchema,
+            assert_input_unchanged=True,
+            field_constraints=True,
+            strict_refs=True,
+            disable_timestamp=True,
+            formatters=[Formatter.BUILTIN],
+        )
+        run_generate_file_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            assert_func=assert_file_content,
+            expected_file="schema_reference_cycles/instance_values.py",
+            field_constraints=True,
+            strict_refs=True,
+            disable_timestamp=True,
+            formatters=[Formatter.BUILTIN],
+        )
+    else:
+        run_main_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file="schema_reference_cycles/instance_values.py",
+            extra_args=["--field-constraints", "--strict-refs", "--disable-timestamp", "--formatters", "builtin"],
+            force_exec_validation=True,
+        )
+
+    payloads = json.loads((JSON_DATA_PATH / "schema_reference_cycles" / "payloads.json").read_text(encoding="utf-8"))
+    for field_name, value in payloads.items():
+        invalid_value = {key: item for key, item in value.items() if key != "code"}
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="schema_reference_cycles",
+            model_name="PayloadRoot",
+            valid_json=json.dumps(payloads),
+            invalid_json=json.dumps({**payloads, field_name: invalid_value}),
+            expected_error_type="missing",
+            expected_attribute_path=(field_name, "code"),
+            expected_attribute_value=value["code"],
+        )
+
+
+@pytest.mark.parametrize("fixture", ["ordinary", "schema_names"])
+def test_schema_reference_cycles_preserve_normal_output(output_file: Path, fixture: str) -> None:
+    """Preserve ordinary defaults and real cycles through schemas named like instance keywords."""
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_reference_cycles" / f"{fixture}.json",
+        output_path=output_file,
+        input_file_type=InputFileType.JsonSchema,
+        assert_func=assert_file_content,
+        expected_file=f"schema_reference_cycles/{fixture}.py",
+        field_constraints=True,
+        strict_refs=True,
+        disable_timestamp=True,
+        formatters=[Formatter.BUILTIN],
+    )
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_reference_cycles" / f"{fixture}.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=f"schema_reference_cycles/{fixture}.py",
+        extra_args=["--field-constraints", "--strict-refs", "--disable-timestamp", "--formatters", "builtin"],
+        force_exec_validation=True,
+    )
+    if fixture == "schema_names":
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="schema_reference_names",
+            model_name="SchemaNames",
+            valid_json='{"value":{"default":{"const":{"enum":{"examples":{}}}}},"pair":{"other":{"items":[{}]}}}',
+            invalid_json='{"value":{"default":1},"pair":{}}',
+            expected_error_type="model_type",
+            expected_attribute_path=("value", "default", "const", "enum", "examples", "default"),
+            expected_attribute_value=None,
+        )
+    else:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="ordinary_reference_defaults",
+            model_name="OrdinaryRoot",
+            valid_json='{"value":{"text":"ordinary","code":7}}',
+            invalid_json='{"value":{"text":"ordinary"}}',
+            expected_error_type="missing",
+            expected_attribute_path=("value", "code"),
+            expected_attribute_value=7,
+        )
+
+
 @pytest.mark.benchmark
 def test_main_circular_ref_indirect(output_file: Path) -> None:
     """Test indirect circular $ref (A->B->A) does not cause RecursionError."""

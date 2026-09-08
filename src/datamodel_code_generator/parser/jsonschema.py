@@ -3867,7 +3867,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return self._walk_for_ref(raw_obj, target, visited)
 
     def _walk_for_ref(self, data: dict[str, Any] | list[Any], target: str, visited: set[str]) -> bool:
-        """Recursively walk raw dict/list data looking for a $ref that resolves to target."""
+        """Follow references only in schemas, leaving instance values and metadata unvisited."""
         if isinstance(data, dict):
             ref_value = data.get("$ref")
             if isinstance(ref_value, str):
@@ -3879,8 +3879,22 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     return True
                 if resolved not in visited and self._has_ref_cycle(resolved, target, visited):
                     return True
-            for value in data.values():
-                if isinstance(value, (dict, list)) and self._walk_for_ref(value, target, visited):
+            for keyword, value in data.items():
+                if keyword in _JSON_SCHEMA_MAP_KEYWORDS and isinstance(value, dict):
+                    if any(
+                        isinstance(schema, dict) and self._walk_for_ref(schema, target, visited)
+                        for schema in value.values()
+                    ):
+                        return True
+                elif (
+                    (
+                        keyword in _JSON_SCHEMA_SINGLE_KEYWORDS
+                        or keyword in _JSON_SCHEMA_SEQUENCE_KEYWORDS
+                        or keyword in _JSON_SCHEMA_SINGLE_OR_SEQUENCE_KEYWORDS
+                    )
+                    and isinstance(value, (dict, list))
+                    and self._walk_for_ref(value, target, visited)
+                ):
                     return True
             return False
         return any(isinstance(item, (dict, list)) and self._walk_for_ref(item, target, visited) for item in data)
