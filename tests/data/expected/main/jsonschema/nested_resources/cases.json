@@ -282,5 +282,23 @@
       "root.json"
     ],
     "normal": true
+  },
+  "sequence_reference": {
+    "payloads": [
+      {
+        "value": "ok"
+      },
+      {
+        "value": null
+      },
+      {
+        "value": 7
+      },
+      {}
+    ],
+    "resources": [
+      "root.json"
+    ],
+    "normal": false
   }
 }

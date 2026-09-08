@@ -81,7 +81,7 @@ def test_nested_schema_resources(tmp_path: Path, case: str, entrypoint: str, for
             input_value = urlparse(url)
         expected_error = CASES[case].get("generation_errors", {}).get(entrypoint)
         with (
-            assert_inputs_not_mutated(schema),
+            assert_inputs_not_mutated({"schema": schema}),
             warnings.catch_warnings(record=True) as recorded_warnings,
             pytest.raises(Error) if expected_error else nullcontext() as exception,
         ):
@@ -154,7 +154,7 @@ def test_nested_schema_resources(tmp_path: Path, case: str, entrypoint: str, for
     with _generated_model(output, "generated_nested_resource", "Root") as model:
         for payload in CASES[case]["payloads"]:
             records["native"].append(validator.is_valid(payload))
-            with assert_inputs_not_mutated(payload):
+            with assert_inputs_not_mutated({"payload": payload}):
                 try:
                     value = model.model_validate(payload)
                 except ValidationError:
@@ -200,7 +200,7 @@ def test_missing_embedded_anchor(
             stack.callback(server.shutdown)
             url = f"http://127.0.0.1:{server.server_port}/root.json"
             input_value = urlparse(url)
-        with assert_inputs_not_mutated(schema):
+        with assert_inputs_not_mutated({"schema": schema}):
             if entrypoint.endswith("cli"):
                 run_main_with_args(
                     [
@@ -244,7 +244,6 @@ def test_repeated_schema_documents(tmp_path: Path, formatter: str) -> None:
             [source / "first.json", source / "second.json", source / "first.json"],
             formatters=[Formatter.BUILTIN] if formatter == "builtin" else [Formatter.BLACK, Formatter.ISORT],
         ).parse()
-    assert isinstance(generated, dict)
     assert_output(json.dumps([list(path) for path in generated]), EXPECTED / "duplicate_document_paths.txt")
     for name in ("first", "second"):
         result = generated[f"{name}.py",]

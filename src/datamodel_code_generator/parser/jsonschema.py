@@ -10773,7 +10773,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 if parent[part] is original[part]:
                     parent[part] = copy(original[part])
                 parent, original = parent[part], original[part]
-            parent[path[-1]] = rewritten
+            if isinstance(parent, list):
+                parent[cast("int", path[-1])] = rewritten
+            else:
+                cast("dict[str, Any]", parent)[cast("str", path[-1])] = rewritten
         return result
 
     def _prepare_schema_resources(self, raw: dict[str, Any], path_parts: list[str]) -> dict[str, Any]:
