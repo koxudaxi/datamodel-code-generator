@@ -282,8 +282,10 @@ def _write_watch_cli_input_and_wait(
     condition: Callable[[], bool],
     description: str,
 ) -> None:
-    last_write = 0.0
-    input_file.write_text(content, encoding="utf-8")
+    pending_input = input_file.with_name(f".{input_file.name}.pending")
+    pending_input.write_text(content, encoding="utf-8")
+    pending_input.replace(input_file)
+    last_write = time.monotonic()
 
     def condition_after_write() -> bool:
         nonlocal last_write
@@ -3490,9 +3492,10 @@ def test_batch_watch_nested_dependency_reruns_full_batch_without_output_loop(tmp
         assert_output(
             second_metadata.read_text(encoding="utf-8"), PROJECT_ROOT / "tests/data/expected/main_kr/jobs/stale.py"
         )
-        child_file.write_text(
+        child_file.with_suffix(".pending").write_text(
             (WATCH_DATA_PATH / "nested_ref/child_changed.json").read_text(encoding="utf-8"), encoding="utf-8"
         )
+        child_file.with_suffix(".pending").replace(child_file)
         # Do not open batch destinations until their atomic publication completes. On Windows,
         # a reader can temporarily prevent replacement and make the test race with the watch CLI.
         _wait_for_watch_cli(
@@ -3765,6 +3768,17 @@ def test_watch_cli_reports_generation_error_after_change(tmp_path: Path) -> None
         output_file,
     )
 
+    first_modified_time: int | None = None
+
+    def error_after_retry() -> bool:
+        nonlocal first_modified_time
+
+        modified_time = input_file.stat().st_mtime_ns
+        if first_modified_time is None:
+            first_modified_time = modified_time
+            return False
+        return modified_time != first_modified_time and _lines_contain(stderr_lines, "Error:")
+
     try:
         _write_watch_cli_input_and_wait(
             process,
@@ -3772,8 +3786,9 @@ def test_watch_cli_reports_generation_error_after_change(tmp_path: Path) -> None
             stderr_lines,
             input_file,
             WATCH_SCHEMA_INVALID,
-            lambda: _lines_contain(stderr_lines, "Error:"),
-            "generation error to be reported",
+            error_after_retry,
+            "the invalid input to be retried and its generation error reported",
         )
+        assert_output(output_file.read_text(encoding="utf-8"), EXPECTED_MAIN_PATH / "watch_file_initial.py")
     finally:
         _stop_watch_cli(process, stdout_thread, stderr_thread)
