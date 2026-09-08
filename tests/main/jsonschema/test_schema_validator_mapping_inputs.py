@@ -10,16 +10,16 @@ from typing import TYPE_CHECKING
 import pytest
 from jsonschema import Draft202012Validator
 
-from datamodel_code_generator import InputFileType
+from datamodel_code_generator import Formatter, GenerateConfig, InputFileType, generate
 from tests.conftest import assert_output
 from tests.main.conftest import (
     DATA_PATH,
     JSON_SCHEMA_DATA_PATH,
     _assert_model_json_invalid,
     _generated_model,
-    _uses_external_test_default_formatter,
     run_generate_file_and_assert,
     run_main_and_assert,
+    run_main_with_args,
 )
 from tests.main.jsonschema.conftest import assert_file_content
 
@@ -29,6 +29,7 @@ if TYPE_CHECKING:
     from typing import Any
 
 
+@pytest.mark.parametrize("formatter", ["builtin", "external"])
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
 @pytest.mark.parametrize("container", [dict, UserDict, MappingProxyType])
 @pytest.mark.parametrize(
@@ -48,7 +49,7 @@ if TYPE_CHECKING:
     ],
 )
 def test_schema_validator_mapping_inputs(
-    output_file: Path, entrypoint: str, container: Callable[..., Mapping[str, Any]], case: str
+    output_file: Path, entrypoint: str, container: Callable[..., Mapping[str, Any]], case: str, formatter: str
 ) -> None:
     """Match native schema acceptance and preserve caller mappings, including nested objects."""
     source = JSON_SCHEMA_DATA_PATH / "mapping_schema_validators.json"
@@ -68,28 +69,34 @@ def test_schema_validator_mapping_inputs(
         + "\n",
         payloads / "native.txt",
     )
-    suffix = "" if _uses_external_test_default_formatter() else "_builtin"
+    formatters = [Formatter.BUILTIN] if formatter == "builtin" else [Formatter.BLACK, Formatter.ISORT]
+    suffix = "_builtin" if formatter == "builtin" else ""
     expected = f"mapping_schema_validators{suffix}.py"
     if entrypoint == "cli":
-        run_main_and_assert(
-            input_path=source,
-            output_path=output_file,
-            input_file_type="jsonschema",
-            extra_args=["--generate-schema-validators", "--disable-timestamp"],
-            assert_func=assert_file_content,
-            expected_file=expected,
-            force_exec_validation=True,
-        )
+        run_main_with_args([
+            "--input",
+            str(source),
+            "--output",
+            str(output_file),
+            "--input-file-type",
+            "jsonschema",
+            "--generate-schema-validators",
+            "--disable-timestamp",
+            "--formatters",
+            *(value.value for value in formatters),
+        ])
     else:
-        run_generate_file_and_assert(
-            input_path=source,
-            output_path=output_file,
-            input_file_type=InputFileType.JsonSchema,
-            generate_schema_validators=True,
-            disable_timestamp=True,
-            assert_func=assert_file_content,
-            expected_file=expected,
+        generate(
+            source,
+            config=GenerateConfig(
+                output=output_file,
+                input_file_type=InputFileType.JsonSchema,
+                formatters=formatters,
+                generate_schema_validators=True,
+                disable_timestamp=True,
+            ),
         )
+    assert_file_content(output_file, expected)
     with _generated_model(
         output_file, f"mapping_inputs_{case}", "AnyModel" if schema_case == "Any" else schema_case
     ) as model:
