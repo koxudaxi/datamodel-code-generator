@@ -1,0 +1,113 @@
+{
+  "schema_errors": [],
+  "graphql_errors": [],
+  "graphql_data": {
+    "item": {
+      "__typename": "Item",
+      "camelValue": 3,
+      "typename__": "item",
+      "typename___1": 13
+    },
+    "choice": {
+      "__typename": "Second",
+      "camelValue": 4,
+      "typename__": "second",
+      "typename___1": 14
+    },
+    "cross": {
+      "__typename": "Cross",
+      "value": 6,
+      "typename__": "cross"
+    },
+    "solo": {
+      "__typename": "Solo",
+      "typename__": "solo"
+    }
+  },
+  "models": {
+    "ZNode": {
+      "fields": [
+        "typename__",
+        "camel_value"
+      ],
+      "values": {
+        "typename__": "node",
+        "camelValue": 1
+      }
+    },
+    "ANode": {
+      "fields": [
+        "typename__",
+        "camel_value",
+        "typename___1"
+      ],
+      "values": {
+        "typename__": "child",
+        "camelValue": 2,
+        "typename___1": 12
+      }
+    },
+    "Item": {
+      "fields": [
+        "typename__",
+        "camel_value",
+        "typename___1"
+      ],
+      "values": {
+        "typename__": "item",
+        "camelValue": 3,
+        "typename___1": 13
+      }
+    },
+    "Second": {
+      "fields": [
+        "typename__",
+        "camel_value",
+        "typename___1"
+      ],
+      "values": {
+        "typename__": "second",
+        "camelValue": 4,
+        "typename___1": 14
+      }
+    },
+    "Base": {
+      "fields": [
+        "value"
+      ],
+      "values": {
+        "value": 5
+      }
+    },
+    "Cross": {
+      "fields": [
+        "value",
+        "typename__"
+      ],
+      "values": {
+        "value": 6,
+        "typename__": "cross"
+      }
+    },
+    "Solo": {
+      "fields": [
+        "typename__"
+      ],
+      "values": {
+        "typename__": "solo"
+      }
+    },
+    "ItemInput": {
+      "fields": [
+        "typename__",
+        "typename___1",
+        "camel_value"
+      ],
+      "values": {
+        "typename__": "input",
+        "typename___1": 17,
+        "camelValue": 7
+      }
+    }
+  }
+}

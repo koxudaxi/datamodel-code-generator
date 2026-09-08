@@ -11,6 +11,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     ClassVar,
+    cast,
 )
 
 from typing_extensions import Unpack
@@ -44,7 +45,7 @@ if TYPE_CHECKING:
 
     from datamodel_code_generator._types import GraphQLParserConfigDict
     from datamodel_code_generator.config import GraphQLParserConfig
-    from datamodel_code_generator.model import DataModelFieldBase
+    from datamodel_code_generator.model import DataModel, DataModelFieldBase
     from datamodel_code_generator.parser.schema_version import JsonSchemaFeatures
 
 # graphql-core >=3.2.7 removed TypeResolvers in favor of TypeFields.kind.
@@ -90,6 +91,7 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
     # `graphql.GraphQLNamedType` -- base type for each graphql object
     # see `graphql-core` for more details
     support_graphql_types: dict[graphql.type.introspection.TypeKind, list[graphql.GraphQLNamedType]]
+    _typename_collisions: list[graphql.GraphQLObjectType | graphql.GraphQLInterfaceType] | None
     # graphql types order for render
     # may be as a parameter in the future
     parse_order: list[graphql.type.introspection.TypeKind] = [  # noqa: RUF012
@@ -148,9 +150,14 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
 
                 self.support_graphql_types[resolved_type].append(type_)
 
-    def _typename_field(self, name: str) -> DataModelFieldBase:
+    def _typename_field(self, name: str, excludes: set[str]) -> DataModelFieldBase:
+        field_name = "typename__"
+        if field_name in excludes:
+            field_name = self.model_resolver.get_valid_field_name(
+                field_name, excludes=excludes, model_type=self.field_name_model_type
+            )
         return self.data_model_field_type(
-            name="typename__",
+            name=field_name,
             data_type=DataType(
                 literals=[name],
                 use_union_operator=self.use_union_operator,
@@ -160,7 +167,7 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
             use_annotated=self.use_annotated,
             required=False,
             alias="__typename",
-            serialization_alias=self.get_serialization_alias("__typename", "typename__", name),
+            serialization_alias=self.get_serialization_alias("__typename", field_name, name),
             use_one_literal_as_default=True,
             use_default_kwarg=self.use_default_kwarg,
             has_default=True,
@@ -420,11 +427,20 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
             fields.append(data_model_field_type)
 
         if not self.config.graphql_no_typename:
-            fields.append(self._typename_field(obj.name))
+            fields.append(self._typename_field(obj.name, exclude_field_names))
 
         base_classes = []
         if hasattr(obj, "interfaces"):
             base_classes = [self.references[i.name] for i in obj.interfaces]  # ty: ignore[not-iterable]
+
+        if (
+            not self.config.graphql_no_typename
+            and fields[-1].name != "typename__"
+            and isinstance(obj, graphql.GraphQLObjectType | graphql.GraphQLInterfaceType)
+        ):
+            if self._typename_collisions is None:
+                self._typename_collisions = []
+            self._typename_collisions.append(obj)
 
         data_model_type = self._create_data_model(
             reference=self.references[obj.name],
@@ -478,6 +494,7 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
         """Parse the raw GraphQL schema and generate all data models."""
         self.all_graphql_objects = {}
         self.references: dict[str, Reference] = {}
+        self._typename_collisions = None
 
         self.support_graphql_types = {
             graphql.type.introspection.TypeKind.SCALAR: [],
@@ -519,3 +536,44 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
             for obj in self.support_graphql_types[next_type]:
                 parser_ = mapper_from_graphql_type_to_parser_method[next_type]
                 parser_(obj)  # ty: ignore[invalid-argument-type]
+
+        if not (collisions := self._typename_collisions):
+            return
+        self._typename_collisions = None
+        self._resolve_typename_collisions(schema, collisions)
+
+    def _resolve_typename_collisions(
+        self,
+        schema: graphql.GraphQLSchema,
+        collisions: list[graphql.GraphQLObjectType | graphql.GraphQLInterfaceType],
+    ) -> None:
+        """Keep one synthetic slot throughout each affected inheritance family."""
+        visited: set[graphql.GraphQLObjectType | graphql.GraphQLInterfaceType] = set()
+        for root in collisions:
+            if root in visited:
+                continue
+            pending = [root]
+            excludes: set[str] = set()
+            typename_fields: list[tuple[str, DataModelFieldBase]] = []
+            while pending:
+                obj = pending.pop()
+                if obj in visited or obj.name not in self.references:
+                    continue
+                visited.add(obj)
+                pending.extend(obj.interfaces)
+                if isinstance(obj, graphql.GraphQLInterfaceType):
+                    implementations = schema.get_implementations(obj)
+                    pending.extend(implementations.objects)
+                    pending.extend(implementations.interfaces)
+                source = cast("DataModel", self.references[obj.name].source)
+                for field in source.fields:
+                    if field.alias == "__typename":
+                        typename_fields.append((obj.name, field))
+                    else:
+                        excludes.add(cast("str", field.name))
+            field_name = self.model_resolver.get_valid_field_name(
+                "typename__", excludes=excludes, model_type=self.field_name_model_type
+            )
+            for name, field in typename_fields:
+                field.name = field_name
+                field.serialization_alias = self.get_serialization_alias("__typename", field_name, name)
