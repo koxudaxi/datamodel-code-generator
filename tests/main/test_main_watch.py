@@ -282,8 +282,10 @@ def _write_watch_cli_input_and_wait(
     condition: Callable[[], bool],
     description: str,
 ) -> None:
-    last_write = 0.0
-    input_file.write_text(content, encoding="utf-8")
+    pending_input = input_file.with_name(f".{input_file.name}.pending")
+    pending_input.write_text(content, encoding="utf-8")
+    pending_input.replace(input_file)
+    last_write = time.monotonic()
 
     def condition_after_write() -> bool:
         nonlocal last_write
