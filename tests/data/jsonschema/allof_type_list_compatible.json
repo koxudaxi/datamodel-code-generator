@@ -1,0 +1,24 @@
+{
+  "title": "AllOfTypeList",
+  "type": "object",
+  "properties": {
+    "value": {
+      "allOf": [
+        {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "label": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Root",
+  "$defs": {
+    "Base": {
+      "type": "number"
+    }
+  },
+  "allOf": [
+    {
+      "$ref": "#/$defs/Base",
+      "type": "string"
+    },
+    {}
+  ]
+}

@@ -1,0 +1,1 @@
+Error at schema path 'number_string.json': allOf type constraints have no common value

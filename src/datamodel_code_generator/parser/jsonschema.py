@@ -289,6 +289,19 @@ def _numeric_type_domain(schema_type: str | list[str]) -> frozenset[str] | None:
     return types | _NUMERIC_TYPE_DOMAINS["integer"] if "number" in types else types
 
 
+_JSON_SCHEMA_TYPE_MASKS = {"null": 1, "boolean": 2, "integer": 4, "number": 12, "string": 16, "array": 32, "object": 64}
+
+
+def _json_schema_type_mask(schema_type: str | list[str]) -> int:
+    """Represent explicit JSON types without equating booleans and numbers."""
+    if isinstance(schema_type, str):
+        return _JSON_SCHEMA_TYPE_MASKS.get(schema_type, 127)
+    mask = 0
+    for type_ in schema_type:
+        mask |= _JSON_SCHEMA_TYPE_MASKS.get(type_, 127)
+    return mask
+
+
 def _field_source_name(field: DataModelFieldBase) -> str | None:
     return field.original_name if field.original_name is not None else field.name
 
@@ -4422,6 +4435,49 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             max_depth,
             max_union_elements,
         )
+
+    @cached_property
+    def _allof_ref_type_masks(self) -> dict[str, tuple[int, ...]]:
+        """Cache direct reference type facts only when an allOf traversal needs them."""
+        return {}
+
+    def _iter_allof_type_masks(self, obj: JsonSchemaObject, visited: set[str]) -> Iterator[int]:
+        """Read only explicit type constraints connected by allOf or references."""
+        if obj.ref:
+            resolved_ref = self.model_resolver.resolve_ref(obj.ref)
+            if resolved_ref not in visited:
+                visited.add(resolved_ref)
+                if (masks := self._allof_ref_type_masks.get(resolved_ref)) is None:
+                    referenced = self._load_ref_schema_object(obj.ref)
+                    if not referenced.ref and not referenced.allOf:
+                        masks = (_json_schema_type_mask(referenced.type),) if referenced.type else ()
+                        self._allof_ref_type_masks[resolved_ref] = masks
+                    else:
+                        with self._inherited_ref_context(resolved_ref):
+                            yield from self._iter_allof_type_masks(referenced, visited)
+                if masks is not None:
+                    yield from masks
+            if not self._ref_sibling_keywords_enabled:
+                return
+        if obj.type:
+            yield _json_schema_type_mask(obj.type)
+        for item in obj.allOf:
+            if isinstance(item, JsonSchemaObject):
+                yield from self._iter_allof_type_masks(item, visited)
+
+    def _check_allof_type_intersection(self, obj: JsonSchemaObject, path: list[str]) -> None:
+        """Diagnose an empty JSON Schema type intersection without normalizing unions."""
+        if self._input_file_type != InputFileType.JsonSchema:
+            return
+        domain = 127
+        numeric_only = True
+        for mask in self._iter_allof_type_masks(obj, set()):
+            domain &= mask
+            numeric_only = numeric_only and not mask & ~13
+            if not domain:
+                kind = "numeric/null " if numeric_only else ""
+                message = f"allOf {kind}type constraints have no common value"
+                raise SchemaParseError(message, path=path)
 
     def _raise_unsatisfiable_schema(self, path: list[str], keyword: str) -> None:  # noqa: PLR6301
         raise SchemaParseError(
@@ -9336,6 +9392,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         parent: JsonSchemaObject | None = None,
     ) -> DataType:
         """Parse a single JSON Schema item into a data type."""
+        if item.allOf:
+            self._check_allof_type_intersection(item, path)
         python_type_override = self._get_python_type_override(item)
         if python_type_override:
             return python_type_override
@@ -11091,6 +11149,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         path: list[str],
     ) -> None:
         """Parse a JsonSchemaObject by dispatching to appropriate parse methods."""
+        if obj.allOf:
+            self._check_allof_type_intersection(obj, path)
         if obj.has_ref_with_schema_keywords and not obj.is_ref_with_nullable_only:
             if obj.ref == "#" and self._is_current_root_schema_path(path):
                 obj = self._drop_ref_from_schema(obj)

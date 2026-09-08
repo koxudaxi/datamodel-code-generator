@@ -112,6 +112,9 @@ EXCLUDED_FILES: dict[str, str] = {
 ALLOF_REF_SIBLING_DIAGNOSTICS = json.loads(
     (DATA_PATH / "payloads/allof_ref_sibling_diagnostics.json").read_text(encoding="utf-8")
 )
+DISJOINT_ALLOF_DIAGNOSTIC_CASES: dict[str, str] = json.loads(
+    (DATA_PATH / "payloads/disjoint_allof_types/diagnostics.json").read_text(encoding="utf-8")
+)
 EXCLUDED_CASES: dict[str, str] = {
     **{
         f"jsonschema/allof_ref_siblings/{name}.json": (
@@ -120,6 +123,10 @@ EXCLUDED_CASES: dict[str, str] = {
         )
         for name in ALLOF_REF_SIBLING_DIAGNOSTICS
     },
+    **dict.fromkeys(
+        DISJOINT_ALLOF_DIAGNOSTIC_CASES,
+        "expects SchemaParseError; every listed input is exercised by test_disjoint_allof_diagnostics",
+    ),
     "jsonschema/all_of_any_of_base_class_ref.json": "hypothesis-jsonschema cannot satisfy the allOf/anyOf constraints",
     "jsonschema/additional_properties_schema_with_allof_properties.json": (
         "hypothesis-jsonschema cannot satisfy the allOf object constraints; typed extras are covered by e2e tests"

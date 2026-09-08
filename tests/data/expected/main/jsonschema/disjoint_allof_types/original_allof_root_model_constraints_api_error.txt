@@ -1,0 +1,1 @@
+Error at schema path '#/definitions/MultiRefAllOf': allOf type constraints have no common value

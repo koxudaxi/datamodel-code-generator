@@ -1,0 +1,15 @@
+# multiline custom ;
+# header ;
+# file ;
+
+from __future__ import annotations
+
+from pydantic import Field, RootModel
+
+
+class Root(RootModel[str]):
+    root: str = Field(..., min_length=1)
+
+
+class Base(RootModel[str]):
+    root: str

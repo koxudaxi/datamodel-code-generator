@@ -1,0 +1,685 @@
+{
+  "number_string": {
+    "source": "disjoint_allof_types/number_string.json",
+    "error": true,
+    "payloads": [
+      null,
+      false,
+      true,
+      0,
+      1,
+      1.0,
+      1.5,
+      "text",
+      [],
+      {},
+      {
+        "value": "text"
+      }
+    ],
+    "model": "Root"
+  },
+  "boolean_integer": {
+    "source": "disjoint_allof_types/boolean_integer.json",
+    "error": true,
+    "payloads": [
+      null,
+      false,
+      true,
+      0,
+      1,
+      1.0,
+      1.5,
+      "text",
+      [],
+      {},
+      {
+        "value": "text"
+      }
+    ],
+    "model": "Root"
+  },
+  "integer_boolean": {
+    "source": "disjoint_allof_types/integer_boolean.json",
+    "error": true,
+    "payloads": [
+      null,
+      false,
+      true,
+      0,
+      1,
+      1.0,
+      1.5,
+      "text",
+      [],
+      {},
+      {
+        "value": "text"
+      }
+    ],
+    "model": "Root"
+  },
+  "number_boolean": {
+    "source": "disjoint_allof_types/number_boolean.json",
+    "error": true,
+    "payloads": [
+      null,
+      false,
+      true,
+      0,
+      1,
+      1.0,
+      1.5,
+      "text",
+      [],
+      {},
+      {
+        "value": "text"
+      }
+    ],
+    "model": "Root"
+  },
+  "object_array": {
+    "source": "disjoint_allof_types/object_array.json",
+    "error": true,
+    "payloads": [
+      null,
+      false,
+      true,
+      0,
+      1,
+      1.0,
+      1.5,
+      "text",
+      [],
+      {},
+      {
+        "value": "text"
+      }
+    ],
+    "model": "Root"
+  },
+  "null_string": {
+    "source": "disjoint_allof_types/null_string.json",
+    "error": true,
+    "payloads": [
+      null,
+      false,
+      true,
+      0,
+      1,
+      1.0,
+      1.5,
+      "text",
+      [],
+      {},
+      {
+        "value": "text"
+      }
+    ],
+    "model": "Root"
+  },
+  "optional_field": {
+    "source": "disjoint_allof_types/optional_field.json",
+    "error": true,
+    "payloads": [
+      {},
+      {
+        "value": null
+      },
+      {
+        "value": false
+      },
+      {
+        "value": true
+      },
+      {
+        "value": 0
+      },
+      {
+        "value": 1
+      },
+      {
+        "value": 1.0
+      },
+      {
+        "value": 1.5
+      },
+      {
+        "value": "text"
+      },
+      {
+        "value": []
+      },
+      {
+        "value": {}
+      },
+      {
+        "value": {
+          "value": "text"
+        }
+      }
+    ],
+    "model": "Root"
+  },
+  "required_field": {
+    "source": "disjoint_allof_types/required_field.json",
+    "error": true,
+    "payloads": [
+      {},
+      {
+        "value": null
+      },
+      {
+        "value": false
+      },
+      {
+        "value": true
+      },
+      {
+        "value": 0
+      },
+      {
+        "value": 1
+      },
+      {
+        "value": 1.0
+      },
+      {
+        "value": 1.5
+      },
+      {
+        "value": "text"
+      },
+      {
+        "value": []
+      },
+      {
+        "value": {}
+      },
+      {
+        "value": {
+          "value": "text"
+        }
+      }
+    ],
+    "model": "Root"
+  },
+  "own_type": {
+    "source": "disjoint_allof_types/own_type.json",
+    "error": true,
+    "payloads": [
+      null,
+      false,
+      true,
+      0,
+      1,
+      1.0,
+      1.5,
+      "text",
+      [],
+      {},
+      {
+        "value": "text"
+      }
+    ],
+    "model": "Root"
+  },
+  "disjoint_unions": {
+    "source": "disjoint_allof_types/disjoint_unions.json",
+    "error": true,
+    "payloads": [
+      null,
+      false,
+      true,
+      0,
+      1,
+      1.0,
+      1.5,
+      "text",
+      [],
+      {},
+      {
+        "value": "text"
+      }
+    ],
+    "model": "Root"
+  },
+  "three_way": {
+    "source": "disjoint_allof_types/three_way.json",
+    "error": true,
+    "payloads": [
+      null,
+      false,
+      true,
+      0,
+      1,
+      1.0,
+      1.5,
+      "text",
+      [],
+      {},
+      {
+        "value": "text"
+      }
+    ],
+    "model": "Root"
+  },
+  "nested": {
+    "source": "disjoint_allof_types/nested.json",
+    "error": true,
+    "payloads": [
+      null,
+      false,
+      true,
+      0,
+      1,
+      1.0,
+      1.5,
+      "text",
+      [],
+      {},
+      {
+        "value": "text"
+      }
+    ],
+    "model": "Root"
+  },
+  "multiple_refs": {
+    "source": "disjoint_allof_types/multiple_refs.json",
+    "error": true,
+    "payloads": [
+      null,
+      false,
+      true,
+      0,
+      1,
+      1.0,
+      1.5,
+      "text",
+      [],
+      {},
+      {
+        "value": "text"
+      }
+    ],
+    "model": "Root"
+  },
+  "ref_sibling": {
+    "source": "disjoint_allof_types/ref_sibling.json",
+    "error": true,
+    "payloads": [
+      null,
+      false,
+      true,
+      0,
+      1,
+      1.0,
+      1.5,
+      "text",
+      [],
+      {},
+      {
+        "value": "text"
+      }
+    ],
+    "model": "Root"
+  },
+  "empty_objects": {
+    "source": "disjoint_allof_types/empty_objects.json",
+    "error": false,
+    "payloads": [
+      {},
+      {
+        "free": true
+      }
+    ],
+    "model": "Root",
+    "outputs": {
+      "constraints_0_0": "empty_objects_0.py",
+      "constraints_0_1": "empty_objects_1.py",
+      "constraints_1_0": "empty_objects_0.py",
+      "constraints_1_1": "empty_objects_1.py",
+      "all_0_0": "empty_objects_0.py",
+      "all_0_1": "empty_objects_1.py",
+      "all_1_0": "empty_objects_0.py",
+      "all_1_1": "empty_objects_1.py",
+      "none_0_0": "empty_objects_0.py",
+      "none_0_1": "empty_objects_1.py",
+      "none_1_0": "empty_objects_0.py",
+      "none_1_1": "empty_objects_1.py"
+    }
+  },
+  "optional_control": {
+    "source": "disjoint_allof_types/optional_control.json",
+    "error": false,
+    "payloads": [
+      {},
+      {
+        "value": "text"
+      },
+      {
+        "value": []
+      }
+    ],
+    "model": "Root",
+    "outputs": {
+      "constraints_0_0": "optional_control_0.py",
+      "constraints_0_1": "optional_control_1.py",
+      "constraints_1_0": "optional_control_0.py",
+      "constraints_1_1": "optional_control_1.py",
+      "all_0_0": "optional_control_0.py",
+      "all_0_1": "optional_control_1.py",
+      "all_1_0": "optional_control_0.py",
+      "all_1_1": "optional_control_1.py",
+      "none_0_0": "optional_control_0.py",
+      "none_0_1": "optional_control_1.py",
+      "none_1_0": "optional_control_0.py",
+      "none_1_1": "optional_control_1.py"
+    }
+  },
+  "same_string": {
+    "source": "disjoint_allof_types/same_string.json",
+    "error": false,
+    "payloads": [
+      "text",
+      null,
+      []
+    ],
+    "model": "Root",
+    "outputs": {
+      "constraints_0_0": "same_string_0.py",
+      "constraints_0_1": "same_string_1.py",
+      "constraints_1_0": "same_string_0.py",
+      "constraints_1_1": "same_string_1.py",
+      "all_0_0": "same_string_0.py",
+      "all_0_1": "same_string_1.py",
+      "all_1_0": "same_string_0.py",
+      "all_1_1": "same_string_1.py",
+      "none_0_0": "same_string_0.py",
+      "none_0_1": "same_string_1.py",
+      "none_1_0": "same_string_0.py",
+      "none_1_1": "same_string_1.py"
+    }
+  },
+  "same_integer": {
+    "source": "disjoint_allof_types/same_integer.json",
+    "error": false,
+    "payloads": [
+      1,
+      1.5,
+      null
+    ],
+    "model": "Root",
+    "outputs": {
+      "constraints_0_0": "same_integer_0.py",
+      "constraints_0_1": "same_integer_1.py",
+      "constraints_1_0": "same_integer_0.py",
+      "constraints_1_1": "same_integer_1.py",
+      "all_0_0": "same_integer_0.py",
+      "all_0_1": "same_integer_1.py",
+      "all_1_0": "same_integer_0.py",
+      "all_1_1": "same_integer_1.py",
+      "none_0_0": "same_integer_0.py",
+      "none_0_1": "same_integer_1.py",
+      "none_1_0": "same_integer_0.py",
+      "none_1_1": "same_integer_1.py"
+    }
+  },
+  "same_boolean": {
+    "source": "disjoint_allof_types/same_boolean.json",
+    "error": false,
+    "payloads": [
+      true,
+      false,
+      []
+    ],
+    "model": "Root",
+    "outputs": {
+      "constraints_0_0": "same_boolean_0.py",
+      "constraints_0_1": "same_boolean_1.py",
+      "constraints_1_0": "same_boolean_0.py",
+      "constraints_1_1": "same_boolean_1.py",
+      "all_0_0": "same_boolean_0.py",
+      "all_0_1": "same_boolean_1.py",
+      "all_1_0": "same_boolean_0.py",
+      "all_1_1": "same_boolean_1.py",
+      "none_0_0": "same_boolean_0.py",
+      "none_0_1": "same_boolean_1.py",
+      "none_1_0": "same_boolean_0.py",
+      "none_1_1": "same_boolean_1.py"
+    }
+  },
+  "same_string_number": {
+    "source": "disjoint_allof_types/same_string_number.json",
+    "error": false,
+    "payloads": [
+      "text",
+      2.5,
+      []
+    ],
+    "model": "Root",
+    "outputs": {
+      "constraints_0_0": "same_string_number_0.py",
+      "constraints_0_1": "same_string_number_1.py",
+      "constraints_1_0": "same_string_number_0.py",
+      "constraints_1_1": "same_string_number_1.py",
+      "all_0_0": "same_string_number_0.py",
+      "all_0_1": "same_string_number_1.py",
+      "all_1_0": "same_string_number_0.py",
+      "all_1_1": "same_string_number_1.py",
+      "none_0_0": "same_string_number_0.py",
+      "none_0_1": "same_string_number_1.py",
+      "none_1_0": "same_string_number_0.py",
+      "none_1_1": "same_string_number_1.py"
+    }
+  },
+  "same_number_string": {
+    "source": "disjoint_allof_types/same_number_string.json",
+    "error": false,
+    "payloads": [
+      "text",
+      2.5,
+      []
+    ],
+    "model": "Root",
+    "outputs": {
+      "constraints_0_0": "same_number_string_0.py",
+      "constraints_0_1": "same_number_string_1.py",
+      "constraints_1_0": "same_number_string_0.py",
+      "constraints_1_1": "same_number_string_1.py",
+      "all_0_0": "same_number_string_0.py",
+      "all_0_1": "same_number_string_1.py",
+      "all_1_0": "same_number_string_0.py",
+      "all_1_1": "same_number_string_1.py",
+      "none_0_0": "same_number_string_0.py",
+      "none_0_1": "same_number_string_1.py",
+      "none_1_0": "same_number_string_0.py",
+      "none_1_1": "same_number_string_1.py"
+    }
+  },
+  "same_string_null": {
+    "source": "disjoint_allof_types/same_string_null.json",
+    "error": false,
+    "payloads": [
+      "text",
+      null,
+      []
+    ],
+    "model": "Root",
+    "outputs": {
+      "constraints_0_0": "same_string_null_0.py",
+      "constraints_0_1": "same_string_null_1.py",
+      "constraints_1_0": "same_string_null_0.py",
+      "constraints_1_1": "same_string_null_1.py",
+      "all_0_0": "same_string_null_0.py",
+      "all_0_1": "same_string_null_1.py",
+      "all_1_0": "same_string_null_0.py",
+      "all_1_1": "same_string_null_1.py",
+      "none_0_0": "same_string_null_0.py",
+      "none_0_1": "same_string_null_1.py",
+      "none_1_0": "same_string_null_0.py",
+      "none_1_1": "same_string_null_1.py"
+    }
+  },
+  "repeat_ref": {
+    "source": "disjoint_allof_types/repeat_ref.json",
+    "error": false,
+    "payloads": [
+      {},
+      {
+        "free": 1
+      }
+    ],
+    "model": "Root",
+    "outputs": {
+      "constraints_0_0": "repeat_ref_0.py",
+      "constraints_0_1": "repeat_ref_1.py",
+      "constraints_1_0": "repeat_ref_0.py",
+      "constraints_1_1": "repeat_ref_1.py",
+      "all_0_0": "repeat_ref_0.py",
+      "all_0_1": "repeat_ref_1.py",
+      "all_1_0": "repeat_ref_0.py",
+      "all_1_1": "repeat_ref_1.py",
+      "none_0_0": "repeat_ref_0.py",
+      "none_0_1": "repeat_ref_1.py",
+      "none_1_0": "repeat_ref_0.py",
+      "none_1_1": "repeat_ref_1.py"
+    }
+  },
+  "legacy_ref": {
+    "source": "disjoint_allof_types/legacy_ref.json",
+    "error": false,
+    "payloads": [
+      "text",
+      null,
+      []
+    ],
+    "model": "Root",
+    "outputs": {
+      "constraints_0_0": "legacy_ref_0.py",
+      "constraints_0_1": "legacy_ref_1.py",
+      "constraints_1_0": "legacy_ref_0.py",
+      "constraints_1_1": "legacy_ref_1.py",
+      "all_0_0": "legacy_ref_0.py",
+      "all_0_1": "legacy_ref_1.py",
+      "all_1_0": "legacy_ref_0.py",
+      "all_1_1": "legacy_ref_1.py",
+      "none_0_0": "legacy_ref_0.py",
+      "none_0_1": "legacy_ref_1.py",
+      "none_1_0": "legacy_ref_0.py",
+      "none_1_1": "legacy_ref_1.py"
+    }
+  },
+  "constraint_only": {
+    "source": "disjoint_allof_types/constraint_only.json",
+    "error": false,
+    "payloads": [
+      "text",
+      "",
+      []
+    ],
+    "model": "Root",
+    "outputs": {
+      "constraints_0_0": "constraint_only_0.py",
+      "constraints_0_1": "constraint_only_1.py",
+      "constraints_1_0": "constraint_only_2.py",
+      "constraints_1_1": "constraint_only_3.py",
+      "all_0_0": "constraint_only_0.py",
+      "all_0_1": "constraint_only_1.py",
+      "all_1_0": "constraint_only_2.py",
+      "all_1_1": "constraint_only_3.py",
+      "none_0_0": "constraint_only_0.py",
+      "none_0_1": "constraint_only_1.py",
+      "none_1_0": "constraint_only_2.py",
+      "none_1_1": "constraint_only_3.py"
+    }
+  },
+  "outside_field": {
+    "source": "numeric_allof_types/outside_field.json",
+    "error": true,
+    "payloads": [
+      {
+        "value": 1
+      },
+      {
+        "value": "text"
+      }
+    ],
+    "model": "Root"
+  },
+  "outside_root": {
+    "source": "numeric_allof_types/outside_root.json",
+    "error": true,
+    "payloads": [
+      {},
+      1,
+      null
+    ],
+    "model": "Root"
+  },
+  "outside_null": {
+    "source": "numeric_allof_types/outside_null.json",
+    "error": true,
+    "payloads": [
+      {
+        "value": 1
+      },
+      {
+        "value": "text"
+      }
+    ],
+    "model": "Root"
+  },
+  "original_array_combined.py": {
+    "source": "array_combined.py.json",
+    "error": true,
+    "payloads": [
+      {},
+      {
+        "value": null
+      },
+      {
+        "array_allof": []
+      },
+      {
+        "multi": 1
+      }
+    ],
+    "model": "ArrayCombined"
+  },
+  "original_allof_type_list": {
+    "source": "allof_type_list.json",
+    "error": true,
+    "payloads": [
+      {},
+      {
+        "value": null
+      },
+      {
+        "array_allof": []
+      },
+      {
+        "multi": 1
+      }
+    ],
+    "model": "AllOfTypeList"
+  },
+  "original_allof_root_model_constraints": {
+    "source": "allof_root_model_constraints.json",
+    "error": true,
+    "payloads": [
+      {},
+      {
+        "value": null
+      },
+      {
+        "array_allof": []
+      },
+      {
+        "multi": 1
+      }
+    ],
+    "model": "Model"
+  }
+}

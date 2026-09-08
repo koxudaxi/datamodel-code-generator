@@ -1,0 +1,1 @@
+Error at schema path 'allof_type_list.json/value': allOf type constraints have no common value

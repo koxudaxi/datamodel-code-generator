@@ -1,0 +1,48 @@
+[
+  {
+    "payload": null,
+    "native": false
+  },
+  {
+    "payload": false,
+    "native": false
+  },
+  {
+    "payload": true,
+    "native": false
+  },
+  {
+    "payload": 0,
+    "native": false
+  },
+  {
+    "payload": 1,
+    "native": false
+  },
+  {
+    "payload": 1.0,
+    "native": false
+  },
+  {
+    "payload": 1.5,
+    "native": false
+  },
+  {
+    "payload": "text",
+    "native": false
+  },
+  {
+    "payload": [],
+    "native": false
+  },
+  {
+    "payload": {},
+    "native": false
+  },
+  {
+    "payload": {
+      "value": "text"
+    },
+    "native": false
+  }
+]

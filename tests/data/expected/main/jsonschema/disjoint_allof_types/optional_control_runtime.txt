@@ -1,0 +1,21 @@
+[
+  {
+    "payload": {},
+    "native": true,
+    "generated": true
+  },
+  {
+    "payload": {
+      "value": "text"
+    },
+    "native": true,
+    "generated": true
+  },
+  {
+    "payload": {
+      "value": []
+    },
+    "native": false,
+    "generated": false
+  }
+]

@@ -1,0 +1,1 @@
+Error at schema path 'nested.json': allOf type constraints have no common value

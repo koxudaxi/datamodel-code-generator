@@ -34,7 +34,11 @@ datamodel-codegen --allof-merge-mode none ...
 When primitive `allOf` branches are merged, combining `number` and `integer`
 produces `integer` in every merge mode. Numeric type arrays may also include
 `null`; only types shared by every branch are retained, in their original order.
-An empty numeric/null intersection raises a schema error.
+An empty intersection of explicit JSON Schema types, such as `number` and `string`,
+raises a schema error in every merge mode. This check follows `allOf` and `$ref`
+without reordering compatible type unions or solving other schema constraints.
+An impossible optional property's schema is also diagnosed during generation;
+its containing object can still be valid when that property is absent.
 
 See [CLI Reference: `--allof-merge-mode`](cli-reference/typing-customization.md#allof-merge-mode) for details.
 

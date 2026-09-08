@@ -185,9 +185,6 @@ DATACLASS_FIELD_ORDER_EXCLUDED_CASES: Final[dict[str, str]] = {
     ),
 }
 MSGSPEC_VALIDATION_EXCLUDED_CASES: Final[dict[str, str]] = {
-    "jsonschema/array_combined.py.json": (
-        "msgspec conversion cannot validate generated empty Enum classes from array-valued enum schemas"
-    ),
     "jsonschema/all_of_ref_self.json": (
         "msgspec 0.18 cannot evaluate generated null-only union aliases during conversion"
     ),

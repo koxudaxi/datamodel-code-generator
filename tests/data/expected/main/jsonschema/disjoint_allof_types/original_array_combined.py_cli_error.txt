@@ -1,0 +1,1 @@
+Error at schema path 'array_combined.py.json/array_allof': allOf type constraints have no common value

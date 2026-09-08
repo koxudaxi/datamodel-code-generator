@@ -1,0 +1,24 @@
+[
+  {
+    "payload": {},
+    "native": true
+  },
+  {
+    "payload": {
+      "value": null
+    },
+    "native": false
+  },
+  {
+    "payload": {
+      "array_allof": []
+    },
+    "native": true
+  },
+  {
+    "payload": {
+      "multi": 1
+    },
+    "native": true
+  }
+]

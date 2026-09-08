@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 def test_main_jsonschema_allof_type_list(output_file: Path) -> None:
     """Generate an allOf schema containing a multi-type branch."""
     run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "allof_type_list.json",
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_type_list_compatible.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,

@@ -1,0 +1,22 @@
+{
+  "jsonschema/disjoint_allof_types/number_string.json": "number_string",
+  "jsonschema/disjoint_allof_types/boolean_integer.json": "boolean_integer",
+  "jsonschema/disjoint_allof_types/integer_boolean.json": "integer_boolean",
+  "jsonschema/disjoint_allof_types/number_boolean.json": "number_boolean",
+  "jsonschema/disjoint_allof_types/object_array.json": "object_array",
+  "jsonschema/disjoint_allof_types/null_string.json": "null_string",
+  "jsonschema/disjoint_allof_types/optional_field.json": "optional_field",
+  "jsonschema/disjoint_allof_types/required_field.json": "required_field",
+  "jsonschema/disjoint_allof_types/own_type.json": "own_type",
+  "jsonschema/disjoint_allof_types/disjoint_unions.json": "disjoint_unions",
+  "jsonschema/disjoint_allof_types/three_way.json": "three_way",
+  "jsonschema/disjoint_allof_types/nested.json": "nested",
+  "jsonschema/disjoint_allof_types/multiple_refs.json": "multiple_refs",
+  "jsonschema/disjoint_allof_types/ref_sibling.json": "ref_sibling",
+  "jsonschema/numeric_allof_types/outside_field.json": "outside_field",
+  "jsonschema/numeric_allof_types/outside_root.json": "outside_root",
+  "jsonschema/numeric_allof_types/outside_null.json": "outside_null",
+  "jsonschema/array_combined.py.json": "original_array_combined.py",
+  "jsonschema/allof_type_list.json": "original_allof_type_list",
+  "jsonschema/allof_root_model_constraints.json": "original_allof_root_model_constraints"
+}

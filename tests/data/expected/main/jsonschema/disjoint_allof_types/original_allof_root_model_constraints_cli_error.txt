@@ -1,0 +1,1 @@
+Error at schema path 'allof_root_model_constraints.json/#/definitions/MultiRefAllOf': allOf type constraints have no common value

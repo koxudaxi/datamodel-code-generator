@@ -1,0 +1,74 @@
+[
+  {
+    "payload": {},
+    "native": true
+  },
+  {
+    "payload": {
+      "value": null
+    },
+    "native": false
+  },
+  {
+    "payload": {
+      "value": false
+    },
+    "native": false
+  },
+  {
+    "payload": {
+      "value": true
+    },
+    "native": false
+  },
+  {
+    "payload": {
+      "value": 0
+    },
+    "native": false
+  },
+  {
+    "payload": {
+      "value": 1
+    },
+    "native": false
+  },
+  {
+    "payload": {
+      "value": 1.0
+    },
+    "native": false
+  },
+  {
+    "payload": {
+      "value": 1.5
+    },
+    "native": false
+  },
+  {
+    "payload": {
+      "value": "text"
+    },
+    "native": false
+  },
+  {
+    "payload": {
+      "value": []
+    },
+    "native": false
+  },
+  {
+    "payload": {
+      "value": {}
+    },
+    "native": false
+  },
+  {
+    "payload": {
+      "value": {
+        "value": "text"
+      }
+    },
+    "native": false
+  }
+]

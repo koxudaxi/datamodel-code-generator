@@ -1,0 +1,1 @@
+Error at schema path 'ref_sibling.json': allOf type constraints have no common value

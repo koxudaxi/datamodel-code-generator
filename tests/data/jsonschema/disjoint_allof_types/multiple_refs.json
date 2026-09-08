@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Root",
+  "$defs": {
+    "Left": {
+      "type": "number"
+    },
+    "Right": {
+      "type": "string"
+    }
+  },
+  "allOf": [
+    {
+      "$ref": "#/$defs/Left"
+    },
+    {
+      "$ref": "#/$defs/Right"
+    }
+  ]
+}

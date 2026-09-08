@@ -163,26 +163,5 @@
     2.5,
     9,
     10
-  ],
-  "outside_field": [
-    {
-      "value": 1
-    },
-    {
-      "value": "text"
-    }
-  ],
-  "outside_root": [
-    {},
-    1,
-    null
-  ],
-  "outside_null": [
-    {
-      "value": 1
-    },
-    {
-      "value": "text"
-    }
   ]
 }

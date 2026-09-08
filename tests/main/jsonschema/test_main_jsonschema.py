@@ -13140,7 +13140,7 @@ def test_main_jsonschema_multiple_aliases_serialization_alias_pydantic_v2(output
 def test_main_jsonschema_array_combined_types(output_file: Path) -> None:
     """Test array schemas combined with allOf, object fields, and enum values."""
     run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "array_combined.py.json",
+        input_path=JSON_SCHEMA_DATA_PATH / "array_combined.py_compatible.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
@@ -14347,7 +14347,7 @@ The `--allof-merge-mode constraints` merges only constraint properties
 (minLength, maximum, etc.) from parent schemas referenced in allOf.
 This ensures child schemas inherit validation constraints while keeping
 other properties separate.""",
-    input_schema="jsonschema/allof_root_model_constraints.json",
+    input_schema="jsonschema/allof_root_model_constraints_compatible.json",
     cli_args=["--allof-merge-mode", "constraints"],
     golden_output="main/jsonschema/allof_root_model_constraints_merge.py",
     comparison_output="main/jsonschema/allof_root_model_constraints.py",
@@ -14362,7 +14362,7 @@ def test_main_allof_root_model_constraints_merge(output_file: Path) -> None:
     other properties separate.
     """
     run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "allof_root_model_constraints.json",
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_root_model_constraints_compatible.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
@@ -14379,7 +14379,7 @@ only when there are no property conflicts between parent schemas. Otherwise, pro
 which is then decoupled from the parent classes and no longer inherits from them.
 `--allof-class-hierarchy always` keeps class hierarchy for allOf schemas,
 even in multiple inheritance scenarios where two parent schemas define the same property.""",
-    input_schema="jsonschema/allof_root_model_constraints.json",
+    input_schema="jsonschema/allof_class_hierarchy.json",
     cli_args=["--allof-class-hierarchy", "always"],
     golden_output="main/jsonschema/allof_class_hierarchy.py",
     comparison_output="main/jsonschema/allof_class_hierarchy_ref.py",
@@ -14425,7 +14425,7 @@ def test_main_allof_class_hierarchy(output_file: Path) -> None:
 def test_main_allof_root_model_constraints_none(output_file: Path) -> None:
     """Test allOf with root model reference without merging (issue #1901)."""
     run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "allof_root_model_constraints.json",
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_root_model_constraints_compatible.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
@@ -14497,7 +14497,7 @@ def test_main_allof_root_model_constraints_merge_pydantic_v2(output_file: Path) 
     before model_config with regex_engine='python-re' is processed.
     """
     run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "allof_root_model_constraints.json",
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_root_model_constraints_compatible.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,

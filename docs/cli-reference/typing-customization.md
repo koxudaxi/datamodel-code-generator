@@ -80,214 +80,148 @@ even in multiple inheritance scenarios where two parent schemas define the same 
 
     ```json
     {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "definitions": {
-        "StringDatatype": {
-          "description": "A base string type.",
-          "type": "string",
-          "pattern": "^\\S(.*\\S)?$"
+        "$defs": {
+            "Entity": {
+                "title": "Entity",
+                "type": "object",
+                "required": [
+                    "type"
+                ],
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "default": "playground:Entity"
+                    },
+                    "type_list": {
+                        "type": "array",
+                        "default": [
+                            "playground:Entity"
+                        ],
+                        "items": {
+                            "type": "string",
+                            "options": {
+                                "hidden": true
+                            }
+                        }
+                    },
+                }
+            },
+            "Entity2": {
+                "title": "Entity2",
+                "type": "object",
+                "required": [
+                    "type",
+                    "type_list"
+                ],
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "default": "playground:Entity2"
+                    },
+                    "type_list": {
+                        "type": "array",
+                        "default": [
+                            "playground:Entity2"
+                        ],
+                        "items": {
+                            "type": "string",
+                            "options": {
+                                "hidden": true
+                            }
+                        }
+                    },
+                }
+            },
+            "Thing": {
+                "allOf": [
+                    {
+                        "$ref": "#/$defs/Entity"
+                    }
+                ],
+                "title": "Thing",
+                "type": "object",
+                "required": [
+                    "name"
+                ],
+                "properties": {
+                    "type": {
+                        "default": "playground:Thing",
+                        "options": {
+                            "hidden": true
+                        }
+                    },
+                    "type_list": {
+                        "default": [
+                            "playground:Thing"
+                        ],
+                        "items": {
+                            "title": "Some other title"
+                        }
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "The things name",
+                        "minLength": 1,
+                        "default": "A Thing"
+                    }
+                }
+            },
+            "Location": {
+                "allOf": [
+                    {
+                        "$ref": "#/$defs/Entity2"
+                    }
+                ],
+                "title": "Location",
+                "type": "object",
+                "required": [
+                    "address"
+                ],
+                "properties": {
+                    "type": {
+                        "default": "playground:Location"
+                    },
+                    "type_list": {
+                        "default": [
+                            "playground:Location"
+                        ],
+                        "items": {
+                            "title": "Some other title"
+                        }
+                    },
+                    "address": {
+                        "type": "string",
+                        "description": "The address of the location",
+                        "minLength": 5,
+                        "default": "123 Main St"
+                    }
+                }
+            }
         },
-        "ConstrainedStringDatatype": {
-          "description": "A constrained string.",
-          "allOf": [
-            { "$ref": "#/definitions/StringDatatype" },
-            { "type": "string", "minLength": 1, "pattern": "^[A-Z].*" }
-          ]
-        },
-        "IntegerDatatype": {
-          "description": "A whole number.",
-          "type": "integer"
-        },
-        "NonNegativeIntegerDatatype": {
-          "description": "Non-negative integer.",
-          "allOf": [
-            { "$ref": "#/definitions/IntegerDatatype" },
-            { "minimum": 0 }
-          ]
-        },
-        "BoundedIntegerDatatype": {
-          "description": "Integer between 0 and 100.",
-          "allOf": [
-            { "$ref": "#/definitions/IntegerDatatype" },
-            { "minimum": 0, "maximum": 100 }
-          ]
-        },
-        "EmailDatatype": {
-          "description": "Email with format.",
-          "allOf": [
-            { "$ref": "#/definitions/StringDatatype" },
-            { "format": "email" }
-          ]
-        },
-        "FormattedStringDatatype": {
-          "description": "A string with email format.",
-          "type": "string",
-          "format": "email"
-        },
-        "ObjectBase": {
-          "type": "object",
-          "properties": {
-            "id": { "type": "integer" }
-          }
-        },
-        "ObjectWithAllOf": {
-          "description": "Object inheritance - not a root model.",
-          "allOf": [
-            { "$ref": "#/definitions/ObjectBase" },
-            { "type": "object", "properties": { "name": { "type": "string" } } }
-          ]
-        },
-        "MultiRefAllOf": {
-          "description": "Multiple refs - not handled by new code.",
-          "allOf": [
-            { "$ref": "#/definitions/StringDatatype" },
-            { "$ref": "#/definitions/IntegerDatatype" }
-          ]
-        },
-        "NoConstraintAllOf": {
-          "description": "No constraints added.",
-          "allOf": [
-            { "$ref": "#/definitions/StringDatatype" }
-          ]
-        },
-        "IncompatibleTypeAllOf": {
-          "description": "Incompatible types.",
-          "allOf": [
-            { "$ref": "#/definitions/StringDatatype" },
-            { "type": "boolean" }
-          ]
-        },
-        "ConstraintWithProperties": {
-          "description": "Constraint item has properties.",
-          "allOf": [
-            { "$ref": "#/definitions/StringDatatype" },
-            { "properties": { "extra": { "type": "string" } } }
-          ]
-        },
-        "ConstraintWithItems": {
-          "description": "Constraint item has items.",
-          "allOf": [
-            { "$ref": "#/definitions/StringDatatype" },
-            { "items": { "type": "string" } }
-          ]
-        },
-        "NumberIntegerCompatible": {
-          "description": "Number and integer are compatible.",
-          "allOf": [
-            { "$ref": "#/definitions/IntegerDatatype" },
-            { "type": "number", "minimum": 0 }
-          ]
-        },
-        "RefWithSchemaKeywords": {
-          "description": "Ref with additional schema keywords.",
-          "allOf": [
-            { "$ref": "#/definitions/StringDatatype", "minLength": 5 },
-            { "maxLength": 100 }
-          ]
-        },
-        "ArrayDatatype": {
-          "type": "array",
-          "items": { "type": "string" }
-        },
-        "RefToArrayAllOf": {
-          "description": "Ref to array - not a root model.",
-          "allOf": [
-            { "$ref": "#/definitions/ArrayDatatype" },
-            { "minItems": 1 }
-          ]
-        },
-        "ObjectNoPropsDatatype": {
-          "type": "object"
-        },
-        "RefToObjectNoPropsAllOf": {
-          "description": "Ref to object without properties - not a root model.",
-          "allOf": [
-            { "$ref": "#/definitions/ObjectNoPropsDatatype" },
-            { "minProperties": 1 }
-          ]
-        },
-        "PatternPropsDatatype": {
-          "patternProperties": {
-            "^S_": { "type": "string" }
-          }
-        },
-        "RefToPatternPropsAllOf": {
-          "description": "Ref to patternProperties - not a root model.",
-          "allOf": [
-            { "$ref": "#/definitions/PatternPropsDatatype" },
-            { "minProperties": 1 }
-          ]
-        },
-        "NestedAllOfDatatype": {
-          "allOf": [
-            { "type": "string" },
-            { "minLength": 1 }
-          ]
-        },
-        "RefToNestedAllOfAllOf": {
-          "description": "Ref to nested allOf - not a root model.",
-          "allOf": [
-            { "$ref": "#/definitions/NestedAllOfDatatype" },
-            { "maxLength": 100 }
-          ]
-        },
-        "ConstraintsOnlyDatatype": {
-          "description": "Constraints only, no type.",
-          "minLength": 1,
-          "pattern": "^[A-Z]"
-        },
-        "RefToConstraintsOnlyAllOf": {
-          "description": "Ref to constraints-only schema.",
-          "allOf": [
-            { "$ref": "#/definitions/ConstraintsOnlyDatatype" },
-            { "maxLength": 100 }
-          ]
-        },
-        "NoDescriptionAllOf": {
-          "allOf": [
-            { "$ref": "#/definitions/StringDatatype" },
-            { "minLength": 5 }
-          ]
-        },
-        "EmptyConstraintItemAllOf": {
-          "description": "AllOf with empty constraint item.",
-          "allOf": [
-            { "$ref": "#/definitions/StringDatatype" },
-            {},
-            { "maxLength": 50 }
-          ]
-        },
-        "ConflictingFormatAllOf": {
-          "description": "Conflicting formats - falls back to existing behavior.",
-          "allOf": [
-            { "$ref": "#/definitions/FormattedStringDatatype" },
-            { "format": "date-time" }
-          ]
+        "allOf": [
+            {
+                "$ref": "#/$defs/Thing"
+            },
+            {
+                "$ref": "#/$defs/Location"
+            }
+        ],
+        "title": "Person",
+        "type": "object",
+        "properties": {
+            "name": {
+                "description": "The person's name"
+            },
+            "type": {
+                "$comment": "Already defined in playground:Thing -> we override just the default",
+                "default": "playground:Person"
+            },
+            "type_list": {
+                "default": [
+                    "playground:Person"
+                ]
+            }
         }
-      },
-      "type": "object",
-      "properties": {
-        "name": { "$ref": "#/definitions/ConstrainedStringDatatype" },
-        "count": { "$ref": "#/definitions/NonNegativeIntegerDatatype" },
-        "percentage": { "$ref": "#/definitions/BoundedIntegerDatatype" },
-        "email": { "$ref": "#/definitions/EmailDatatype" },
-        "obj": { "$ref": "#/definitions/ObjectWithAllOf" },
-        "multi": { "$ref": "#/definitions/MultiRefAllOf" },
-        "noconstraint": { "$ref": "#/definitions/NoConstraintAllOf" },
-        "incompatible": { "$ref": "#/definitions/IncompatibleTypeAllOf" },
-        "withprops": { "$ref": "#/definitions/ConstraintWithProperties" },
-        "withitems": { "$ref": "#/definitions/ConstraintWithItems" },
-        "numint": { "$ref": "#/definitions/NumberIntegerCompatible" },
-        "refwithkw": { "$ref": "#/definitions/RefWithSchemaKeywords" },
-        "refarr": { "$ref": "#/definitions/RefToArrayAllOf" },
-        "refobjnoprops": { "$ref": "#/definitions/RefToObjectNoPropsAllOf" },
-        "refpatternprops": { "$ref": "#/definitions/RefToPatternPropsAllOf" },
-        "refnestedallof": { "$ref": "#/definitions/RefToNestedAllOfAllOf" },
-        "refconstraintsonly": { "$ref": "#/definitions/RefToConstraintsOnlyAllOf" },
-        "nodescription": { "$ref": "#/definitions/NoDescriptionAllOf" },
-        "emptyconstraint": { "$ref": "#/definitions/EmptyConstraintItemAllOf" },
-        "conflictingformat": { "$ref": "#/definitions/ConflictingFormatAllOf" }
-      }
     }
     ```
 
@@ -478,8 +412,14 @@ other properties separate.
             "ConstrainedStringDatatype": {
               "description": "A constrained string.",
               "allOf": [
-                { "$ref": "#/definitions/StringDatatype" },
-                { "type": "string", "minLength": 1, "pattern": "^[A-Z].*" }
+                {
+                  "$ref": "#/definitions/StringDatatype"
+                },
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "^[A-Z].*"
+                }
               ]
             },
             "IntegerDatatype": {
@@ -489,22 +429,35 @@ other properties separate.
             "NonNegativeIntegerDatatype": {
               "description": "Non-negative integer.",
               "allOf": [
-                { "$ref": "#/definitions/IntegerDatatype" },
-                { "minimum": 0 }
+                {
+                  "$ref": "#/definitions/IntegerDatatype"
+                },
+                {
+                  "minimum": 0
+                }
               ]
             },
             "BoundedIntegerDatatype": {
               "description": "Integer between 0 and 100.",
               "allOf": [
-                { "$ref": "#/definitions/IntegerDatatype" },
-                { "minimum": 0, "maximum": 100 }
+                {
+                  "$ref": "#/definitions/IntegerDatatype"
+                },
+                {
+                  "minimum": 0,
+                  "maximum": 100
+                }
               ]
             },
             "EmailDatatype": {
               "description": "Email with format.",
               "allOf": [
-                { "$ref": "#/definitions/StringDatatype" },
-                { "format": "email" }
+                {
+                  "$ref": "#/definitions/StringDatatype"
+                },
+                {
+                  "format": "email"
+                }
               ]
             },
             "FormattedStringDatatype": {
@@ -515,73 +468,102 @@ other properties separate.
             "ObjectBase": {
               "type": "object",
               "properties": {
-                "id": { "type": "integer" }
+                "id": {
+                  "type": "integer"
+                }
               }
             },
             "ObjectWithAllOf": {
               "description": "Object inheritance - not a root model.",
               "allOf": [
-                { "$ref": "#/definitions/ObjectBase" },
-                { "type": "object", "properties": { "name": { "type": "string" } } }
-              ]
-            },
-            "MultiRefAllOf": {
-              "description": "Multiple refs - not handled by new code.",
-              "allOf": [
-                { "$ref": "#/definitions/StringDatatype" },
-                { "$ref": "#/definitions/IntegerDatatype" }
+                {
+                  "$ref": "#/definitions/ObjectBase"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    }
+                  }
+                }
               ]
             },
             "NoConstraintAllOf": {
               "description": "No constraints added.",
               "allOf": [
-                { "$ref": "#/definitions/StringDatatype" }
-              ]
-            },
-            "IncompatibleTypeAllOf": {
-              "description": "Incompatible types.",
-              "allOf": [
-                { "$ref": "#/definitions/StringDatatype" },
-                { "type": "boolean" }
+                {
+                  "$ref": "#/definitions/StringDatatype"
+                }
               ]
             },
             "ConstraintWithProperties": {
               "description": "Constraint item has properties.",
               "allOf": [
-                { "$ref": "#/definitions/StringDatatype" },
-                { "properties": { "extra": { "type": "string" } } }
+                {
+                  "$ref": "#/definitions/StringDatatype"
+                },
+                {
+                  "properties": {
+                    "extra": {
+                      "type": "string"
+                    }
+                  }
+                }
               ]
             },
             "ConstraintWithItems": {
               "description": "Constraint item has items.",
               "allOf": [
-                { "$ref": "#/definitions/StringDatatype" },
-                { "items": { "type": "string" } }
+                {
+                  "$ref": "#/definitions/StringDatatype"
+                },
+                {
+                  "items": {
+                    "type": "string"
+                  }
+                }
               ]
             },
             "NumberIntegerCompatible": {
               "description": "Number and integer are compatible.",
               "allOf": [
-                { "$ref": "#/definitions/IntegerDatatype" },
-                { "type": "number", "minimum": 0 }
+                {
+                  "$ref": "#/definitions/IntegerDatatype"
+                },
+                {
+                  "type": "number",
+                  "minimum": 0
+                }
               ]
             },
             "RefWithSchemaKeywords": {
               "description": "Ref with additional schema keywords.",
               "allOf": [
-                { "$ref": "#/definitions/StringDatatype", "minLength": 5 },
-                { "maxLength": 100 }
+                {
+                  "$ref": "#/definitions/StringDatatype",
+                  "minLength": 5
+                },
+                {
+                  "maxLength": 100
+                }
               ]
             },
             "ArrayDatatype": {
               "type": "array",
-              "items": { "type": "string" }
+              "items": {
+                "type": "string"
+              }
             },
             "RefToArrayAllOf": {
               "description": "Ref to array - not a root model.",
               "allOf": [
-                { "$ref": "#/definitions/ArrayDatatype" },
-                { "minItems": 1 }
+                {
+                  "$ref": "#/definitions/ArrayDatatype"
+                },
+                {
+                  "minItems": 1
+                }
               ]
             },
             "ObjectNoPropsDatatype": {
@@ -590,33 +572,51 @@ other properties separate.
             "RefToObjectNoPropsAllOf": {
               "description": "Ref to object without properties - not a root model.",
               "allOf": [
-                { "$ref": "#/definitions/ObjectNoPropsDatatype" },
-                { "minProperties": 1 }
+                {
+                  "$ref": "#/definitions/ObjectNoPropsDatatype"
+                },
+                {
+                  "minProperties": 1
+                }
               ]
             },
             "PatternPropsDatatype": {
               "patternProperties": {
-                "^S_": { "type": "string" }
+                "^S_": {
+                  "type": "string"
+                }
               }
             },
             "RefToPatternPropsAllOf": {
               "description": "Ref to patternProperties - not a root model.",
               "allOf": [
-                { "$ref": "#/definitions/PatternPropsDatatype" },
-                { "minProperties": 1 }
+                {
+                  "$ref": "#/definitions/PatternPropsDatatype"
+                },
+                {
+                  "minProperties": 1
+                }
               ]
             },
             "NestedAllOfDatatype": {
               "allOf": [
-                { "type": "string" },
-                { "minLength": 1 }
+                {
+                  "type": "string"
+                },
+                {
+                  "minLength": 1
+                }
               ]
             },
             "RefToNestedAllOfAllOf": {
               "description": "Ref to nested allOf - not a root model.",
               "allOf": [
-                { "$ref": "#/definitions/NestedAllOfDatatype" },
-                { "maxLength": 100 }
+                {
+                  "$ref": "#/definitions/NestedAllOfDatatype"
+                },
+                {
+                  "maxLength": 100
+                }
               ]
             },
             "ConstraintsOnlyDatatype": {
@@ -627,54 +627,104 @@ other properties separate.
             "RefToConstraintsOnlyAllOf": {
               "description": "Ref to constraints-only schema.",
               "allOf": [
-                { "$ref": "#/definitions/ConstraintsOnlyDatatype" },
-                { "maxLength": 100 }
+                {
+                  "$ref": "#/definitions/ConstraintsOnlyDatatype"
+                },
+                {
+                  "maxLength": 100
+                }
               ]
             },
             "NoDescriptionAllOf": {
               "allOf": [
-                { "$ref": "#/definitions/StringDatatype" },
-                { "minLength": 5 }
+                {
+                  "$ref": "#/definitions/StringDatatype"
+                },
+                {
+                  "minLength": 5
+                }
               ]
             },
             "EmptyConstraintItemAllOf": {
               "description": "AllOf with empty constraint item.",
               "allOf": [
-                { "$ref": "#/definitions/StringDatatype" },
+                {
+                  "$ref": "#/definitions/StringDatatype"
+                },
                 {},
-                { "maxLength": 50 }
+                {
+                  "maxLength": 50
+                }
               ]
             },
             "ConflictingFormatAllOf": {
               "description": "Conflicting formats - falls back to existing behavior.",
               "allOf": [
-                { "$ref": "#/definitions/FormattedStringDatatype" },
-                { "format": "date-time" }
+                {
+                  "$ref": "#/definitions/FormattedStringDatatype"
+                },
+                {
+                  "format": "date-time"
+                }
               ]
             }
           },
           "type": "object",
           "properties": {
-            "name": { "$ref": "#/definitions/ConstrainedStringDatatype" },
-            "count": { "$ref": "#/definitions/NonNegativeIntegerDatatype" },
-            "percentage": { "$ref": "#/definitions/BoundedIntegerDatatype" },
-            "email": { "$ref": "#/definitions/EmailDatatype" },
-            "obj": { "$ref": "#/definitions/ObjectWithAllOf" },
-            "multi": { "$ref": "#/definitions/MultiRefAllOf" },
-            "noconstraint": { "$ref": "#/definitions/NoConstraintAllOf" },
-            "incompatible": { "$ref": "#/definitions/IncompatibleTypeAllOf" },
-            "withprops": { "$ref": "#/definitions/ConstraintWithProperties" },
-            "withitems": { "$ref": "#/definitions/ConstraintWithItems" },
-            "numint": { "$ref": "#/definitions/NumberIntegerCompatible" },
-            "refwithkw": { "$ref": "#/definitions/RefWithSchemaKeywords" },
-            "refarr": { "$ref": "#/definitions/RefToArrayAllOf" },
-            "refobjnoprops": { "$ref": "#/definitions/RefToObjectNoPropsAllOf" },
-            "refpatternprops": { "$ref": "#/definitions/RefToPatternPropsAllOf" },
-            "refnestedallof": { "$ref": "#/definitions/RefToNestedAllOfAllOf" },
-            "refconstraintsonly": { "$ref": "#/definitions/RefToConstraintsOnlyAllOf" },
-            "nodescription": { "$ref": "#/definitions/NoDescriptionAllOf" },
-            "emptyconstraint": { "$ref": "#/definitions/EmptyConstraintItemAllOf" },
-            "conflictingformat": { "$ref": "#/definitions/ConflictingFormatAllOf" }
+            "name": {
+              "$ref": "#/definitions/ConstrainedStringDatatype"
+            },
+            "count": {
+              "$ref": "#/definitions/NonNegativeIntegerDatatype"
+            },
+            "percentage": {
+              "$ref": "#/definitions/BoundedIntegerDatatype"
+            },
+            "email": {
+              "$ref": "#/definitions/EmailDatatype"
+            },
+            "obj": {
+              "$ref": "#/definitions/ObjectWithAllOf"
+            },
+            "noconstraint": {
+              "$ref": "#/definitions/NoConstraintAllOf"
+            },
+            "withprops": {
+              "$ref": "#/definitions/ConstraintWithProperties"
+            },
+            "withitems": {
+              "$ref": "#/definitions/ConstraintWithItems"
+            },
+            "numint": {
+              "$ref": "#/definitions/NumberIntegerCompatible"
+            },
+            "refwithkw": {
+              "$ref": "#/definitions/RefWithSchemaKeywords"
+            },
+            "refarr": {
+              "$ref": "#/definitions/RefToArrayAllOf"
+            },
+            "refobjnoprops": {
+              "$ref": "#/definitions/RefToObjectNoPropsAllOf"
+            },
+            "refpatternprops": {
+              "$ref": "#/definitions/RefToPatternPropsAllOf"
+            },
+            "refnestedallof": {
+              "$ref": "#/definitions/RefToNestedAllOfAllOf"
+            },
+            "refconstraintsonly": {
+              "$ref": "#/definitions/RefToConstraintsOnlyAllOf"
+            },
+            "nodescription": {
+              "$ref": "#/definitions/NoDescriptionAllOf"
+            },
+            "emptyconstraint": {
+              "$ref": "#/definitions/EmptyConstraintItemAllOf"
+            },
+            "conflictingformat": {
+              "$ref": "#/definitions/ConflictingFormatAllOf"
+            }
           }
         }
         ```
@@ -685,7 +735,7 @@ other properties separate.
 
             ```python
             # generated by datamodel-codegen:
-            #   filename:  allof_root_model_constraints.json
+            #   filename:  allof_root_model_constraints_compatible.json
             #   timestamp: 2019-07-26T00:00:00+00:00
 
             from __future__ import annotations
@@ -736,16 +786,8 @@ other properties separate.
                 name: str | None = None
 
 
-            class MultiRefAllOf(BaseModel):
-                pass
-
-
             class NoConstraintAllOf(RootModel[StringDatatype]):
                 root: StringDatatype = Field(..., description='No constraints added.')
-
-
-            class IncompatibleTypeAllOf(BaseModel):
-                pass
 
 
             class ConstraintWithProperties(BaseModel):
@@ -832,9 +874,7 @@ other properties separate.
                 percentage: BoundedIntegerDatatype | None = None
                 email: EmailDatatype | None = None
                 obj: ObjectWithAllOf | None = None
-                multi: MultiRefAllOf | None = None
                 noconstraint: NoConstraintAllOf | None = None
-                incompatible: IncompatibleTypeAllOf | None = None
                 withprops: ConstraintWithProperties | None = None
                 withitems: ConstraintWithItems | None = None
                 numint: NumberIntegerCompatible | None = None
@@ -853,7 +893,7 @@ other properties separate.
 
             ```python
             # generated by datamodel-codegen:
-            #   filename:  allof_root_model_constraints.json
+            #   filename:  allof_root_model_constraints_compatible.json
             #   timestamp: 2019-07-26T00:00:00+00:00
 
             from __future__ import annotations
@@ -901,16 +941,8 @@ other properties separate.
                 name: str | None = None
 
 
-            class MultiRefAllOf(BaseModel):
-                pass
-
-
             class NoConstraintAllOf(RootModel[StringDatatype]):
                 root: StringDatatype = Field(..., description='No constraints added.')
-
-
-            class IncompatibleTypeAllOf(BaseModel):
-                pass
 
 
             class ConstraintWithProperties(BaseModel):
@@ -997,9 +1029,7 @@ other properties separate.
                 percentage: BoundedIntegerDatatype | None = None
                 email: EmailDatatype | None = None
                 obj: ObjectWithAllOf | None = None
-                multi: MultiRefAllOf | None = None
                 noconstraint: NoConstraintAllOf | None = None
-                incompatible: IncompatibleTypeAllOf | None = None
                 withprops: ConstraintWithProperties | None = None
                 withitems: ConstraintWithItems | None = None
                 numint: NumberIntegerCompatible | None = None
