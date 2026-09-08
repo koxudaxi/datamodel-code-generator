@@ -8170,7 +8170,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                         nested
                         for data_type in root_model.fields[0].data_type.all_data_types
                         if (array_ref := data_type.reference) is not None
-                        and (array_model := array_ref.source) is not None
+                        and (array_model := cast("DataModel | None", array_ref.source)) is not None
                         and (array_model.IS_ALIAS or array_model.IS_ROOT_MODEL)
                         for nested in array_model.fields[0].data_type.all_data_types
                         if nested.is_list or nested.is_sequence or nested.is_set or nested.is_tuple
