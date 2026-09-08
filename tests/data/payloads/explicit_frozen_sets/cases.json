@@ -124,5 +124,24 @@
     "payload": 1,
     "safe": false,
     "validators": true
+  },
+  {
+    "name": "inherited_mutable_base",
+    "options": {},
+    "payload": 1,
+    "safe": true,
+    "extra_data": "mutable_base"
+  },
+  {
+    "name": "inherited_mutable_value",
+    "options": {},
+    "payload": 1,
+    "safe": false,
+    "extra_data": "mutable_base",
+    "extra_payload": {
+      "parent": {
+        "value": 1
+      }
+    }
   }
 ]

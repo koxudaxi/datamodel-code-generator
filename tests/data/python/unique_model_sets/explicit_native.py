@@ -55,7 +55,17 @@ class Classvar(Integer):
     shared: ClassVar[list[int]] = []
 
 
+class MutableBase(BaseModel):
+    value: int
+
+
+class FrozenChild(MutableBase):
+    model_config = ConfigDict(frozen=True)
+    label: Optional[str] = 'x'
+
+
 MODELS = {
+    'inherited_mutable_base': FrozenChild,
     'integer': Integer, 'nested': Nested, 'inherited': Inherited,
     'recursive': Recursive, 'tuple': TupleItem, 'literal': LiteralItem,
     'enum': EnumItem, 'classvar': Classvar, 'packaged': Integer,

@@ -38,6 +38,7 @@ def test_explicit_frozen_set_hashes(
     output = tmp_path / "model.py"
     (tmp_path / "pyproject.toml").write_text('[tool.isort]\nknown_first_party = ["tests"]\n')
     options = {"enable_faux_immutability": True, **case["options"]}
+    extra_data = case.get("extra_data") or ("validators" if case.get("validators") else None)
     directory = (
         DATA_PATH / "templates_unique_model_sets_partial"
         if case.get("partial")
@@ -64,8 +65,11 @@ def test_explicit_frozen_set_hashes(
             args.append("--use-unique-items-as-set")
         if directory:
             args.extend(["--custom-template-dir", str(directory)])
-        if case.get("validators"):
-            args.extend(["--extra-template-data", str(DATA_PATH / "payloads/explicit_frozen_sets/validators.json")])
+        if extra_data:
+            args.extend([
+                "--extra-template-data",
+                str(DATA_PATH / "payloads/explicit_frozen_sets" / f"{extra_data}.json"),
+            ])
         for key, value in options.items():
             if value:
                 args.append("--" + key.replace("_", "-"))
@@ -73,9 +77,9 @@ def test_explicit_frozen_set_hashes(
                     args.append(value)
         run_main_with_args(args)
     else:
-        if case.get("validators"):
+        if extra_data:
             options["extra_template_data"] = defaultdict(
-                dict, json.loads((DATA_PATH / "payloads/explicit_frozen_sets/validators.json").read_text())
+                dict, json.loads((DATA_PATH / "payloads/explicit_frozen_sets" / f"{extra_data}.json").read_text())
             )
         generate(
             JSON_SCHEMA_DATA_PATH / "explicit_frozen_sets" / f"{case['name']}.json",
@@ -93,7 +97,7 @@ def test_explicit_frozen_set_hashes(
     assert_output(code, EXPECTED_JSON_SCHEMA_PATH / "explicit_frozen_sets" / f"{case['name']}.py")
     with _generated_model(output, "explicit_set_output", "Container") as container:
         item = sys.modules[container.__module__].Item
-        payload = {"value": case["payload"]}
+        payload = {"value": case["payload"], **case.get("extra_payload", {})}
         first, second = item.model_validate(payload), item.model_validate(payload)
         runtime = {"equal": first == second}
         if not case["safe"]:
@@ -106,14 +110,13 @@ def test_explicit_frozen_set_hashes(
                 EXPECTED_JSON_SCHEMA_PATH / "explicit_frozen_sets/opaque.runtime.txt",
             )
             return
-        native = MODELS[case["name"]]
-        originals = [native.model_validate(payload), native.model_validate(payload)]
+        originals = [MODELS[case["name"]].model_validate(payload), MODELS[case["name"]].model_validate(payload)]
         runtime.update(
-            field_order=list(item.model_fields) == list(native.model_fields),
+            field_order=list(item.model_fields) == list(MODELS[case["name"]].model_fields),
             native_dump=first.model_dump(mode="json") == originals[0].model_dump(mode="json"),
         )
         result = container.model_validate({"items": [payload, payload]})
-        expected = TypeAdapter(set[native]).validate_python([payload, payload])
+        expected = TypeAdapter(set[type(originals[0])]).validate_python([payload, payload])
         runtime.update(
             pairs=[
                 {
@@ -136,7 +139,7 @@ def test_explicit_frozen_set_hashes(
         with pytest.raises(ValidationError):
             item.model_validate({})
         with pytest.raises(ValidationError):
-            native.model_validate({})
+            MODELS[case["name"]].model_validate({})
 
 
 @pytest.mark.parametrize(

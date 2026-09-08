@@ -71,12 +71,12 @@ class SetItemValidator:
         )
 
         field_inspector = None
-        pending = [model]
-        visited: set[str] = set()
+        pending = [(model, True)]
+        visited: set[tuple[str, bool]] = set()
         while pending:
-            current = pending.pop()
+            current, require_frozen = pending.pop()
             path = current.reference.path
-            if path in self.native_hash_models or path in visited:
+            if path in self.native_hash_models or (path, require_frozen) in visited:
                 continue
             if (
                 (type(current) is not BaseModel and type(current) is not RootModel)
@@ -88,12 +88,12 @@ class SetItemValidator:
             if (
                 current.custom_base_class
                 or (current._custom_template_dir and not self._uses_builtin_template_dir)  # ruff: ignore[private-member-access]
-                or not self._is_frozen(current)
+                or (require_frozen and not self._is_frozen(current))
             ):
                 return False
-            visited.add(path)
+            visited.add((path, require_frozen))
             pending.extend(
-                source
+                (source, False)
                 for parent in current.base_classes
                 if parent.reference and isinstance(source := parent.reference.source, DataModel)
             )
@@ -109,7 +109,7 @@ class SetItemValidator:
                             continue
                         if not isinstance(source, DataModel):
                             return False
-                        pending.append(source)
+                        pending.append((source, True))
                     elif (
                         not data_type.data_types
                         and not data_type.literals
@@ -120,7 +120,7 @@ class SetItemValidator:
                         )
                     ):
                         return False
-        self.native_hash_models.update(visited)
+        self.native_hash_models.update(path for path, require_frozen in visited if require_frozen)
         return True
 
     def _field_types(self, model: DataModel) -> Iterator[DataType]:
