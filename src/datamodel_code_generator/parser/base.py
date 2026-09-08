@@ -3606,10 +3606,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         set_item_references = self.__collect_set_item_references(models)
         if not set_item_references and not self.use_unique_items_as_set:
             return
-        from datamodel_code_generator.model._set_item import SetItemValidator  # noqa: PLC0415
-
-        validator = SetItemValidator(self.custom_template_dir)
+        validator = None
         if self.use_unique_items_as_set:
+            from datamodel_code_generator.model._set_item import SetItemValidator  # noqa: PLC0415
+
+            validator = SetItemValidator(self.custom_template_dir)
             for model in models:
                 for field in model.fields:
                     for data_type in field.data_type.all_data_types:
@@ -3620,10 +3621,18 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             set_item_references.difference_update(validator.safe_models)
 
         for model in models:
-            if model.reference.path in set_item_references:
-                if isinstance(model, Enum) or validator.has_native_pydantic_hash(model):
+            if model.reference.path not in set_item_references or isinstance(model, Enum):
+                continue
+            if model.TEMPLATE_FILE_PATH in {"pydantic_v2/BaseModel.jinja2", "pydantic_v2/RootModel.jinja2"}:
+                if validator is None:
+                    from datamodel_code_generator.model._set_item import (  # ruff: ignore[import-outside-top-level]
+                        SetItemValidator,
+                    )
+
+                    validator = SetItemValidator(self.custom_template_dir)
+                if validator.has_native_pydantic_hash(model):
                     continue
-                model._append_internal_template_data("class_body_lines", "__hash__ = object.__hash__")  # noqa: SLF001
+            model._append_internal_template_data("class_body_lines", "__hash__ = object.__hash__")  # noqa: SLF001
 
     @classmethod
     def __set_reference_default_value_to_field(

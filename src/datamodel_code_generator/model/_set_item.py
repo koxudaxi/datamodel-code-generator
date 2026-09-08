@@ -70,7 +70,7 @@ class SetItemValidator:
             RootModel,
         )
 
-        field_inspector = SetItemValidator()
+        field_inspector = None
         pending = [model]
         visited: set[str] = set()
         while pending:
@@ -79,7 +79,7 @@ class SetItemValidator:
             if path in self.native_hash_models or path in visited:
                 continue
             if (
-                type(current) not in {BaseModel, RootModel}
+                (type(current) is not BaseModel and type(current) is not RootModel)
                 or current.methods
                 or current.decorators
                 or current.extra_template_data.get("validators")
@@ -97,6 +97,8 @@ class SetItemValidator:
                 for parent in current.base_classes
                 if parent.reference and isinstance(source := parent.reference.source, DataModel)
             )
+            if field_inspector is None:
+                field_inspector = SetItemValidator()
             for field_type in field_inspector._field_types(current):
                 for data_type in field_type.all_data_types:
                     if self._is_unhashable_container(data_type, in_model=True):

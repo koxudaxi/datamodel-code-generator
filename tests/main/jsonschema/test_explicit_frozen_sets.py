@@ -167,3 +167,63 @@ def test_explicit_set_unresolved_reference() -> None:
         extra_template_data=defaultdict(dict, {"Item": {"config": {"frozen": True}}}),
     )
     assert not SetItemValidator().has_native_pydantic_hash(model)
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("backend", ["dataclasses.dataclass", "typing.TypedDict", "msgspec.Struct"])
+def test_explicit_non_pydantic_set_imports(tmp_path: Path, entrypoint: str, backend: str) -> None:
+    """Non-Pydantic explicit sets retain bytes without loading Pydantic hash analysis."""
+    import subprocess
+
+    from datamodel_code_generator import DataModelType
+
+    source = JSON_SCHEMA_DATA_PATH / "explicit_frozen_sets/integer.json"
+    output = tmp_path / "model.py"
+    if entrypoint == "cli":
+        run_main_with_args([
+            "--input",
+            str(source),
+            "--input-file-type",
+            "jsonschema",
+            "--output-model-type",
+            backend,
+            "--output",
+            str(output),
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+        ])
+    else:
+        generate(
+            source,
+            config=GenerateConfig(
+                input_file_type=InputFileType.JsonSchema,
+                output_model_type=DataModelType(backend),
+                output=output,
+                disable_timestamp=True,
+                formatters=[Formatter.BUILTIN],
+            ),
+        )
+    expected = EXPECTED_JSON_SCHEMA_PATH / "explicit_frozen_sets" / f"backend_{backend}.py"
+    assert_output(output.read_text(encoding="utf-8"), expected)
+    record = tmp_path / "imports.json"
+    subprocess.run(
+        [
+            sys.executable,
+            str(DATA_PATH / "python/unique_model_sets/backend_probe.py"),
+            entrypoint,
+            backend,
+            str(source),
+            str(output),
+            str(record),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+    assert_output(output.read_text(encoding="utf-8"), expected)
+    imported = json.loads(record.read_text(encoding="utf-8"))["modules"]
+    assert "datamodel_code_generator.model._set_item" not in imported
+    if entrypoint == "cli":
+        assert not any(name.startswith("datamodel_code_generator.model.pydantic_v2") for name in imported)
