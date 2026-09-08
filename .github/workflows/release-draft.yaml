@@ -209,7 +209,7 @@ jobs:
             --tools Read
             --allowedTools "Read(/${{ steps.pr-diff.outputs.claude_working_dir }}/**)"
             --permission-mode dontAsk
-            --json-schema '{"type":"object","additionalProperties":false,"properties":{"has_breaking_changes":{"type":"boolean","description":"Whether this PR contains breaking changes"},"breaking_changes_content":{"type":"string","description":"Formatted breaking changes section content (without ## Breaking Changes header), or empty string if none","maxLength":20000},"reasoning":{"type":"string","description":"A non-empty single-line explanation without #, @, square brackets, or angle brackets","minLength":1,"maxLength":4000,"pattern":"^[^\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029\\[\\]<>@#]+$"}},"required":["has_breaking_changes","breaking_changes_content","reasoning"]}'
+            --json-schema '{"type":"object","additionalProperties":false,"properties":{"has_breaking_changes":{"type":"boolean","description":"Whether this PR contains breaking changes"},"breaking_changes_content":{"type":"string","description":"Formatted breaking changes section content (without ## Breaking Changes header), or empty string if none","maxLength":20000},"reasoning":{"type":"string","description":"A non-empty single-line explanation without #, @, square brackets, or angle brackets","minLength":1,"maxLength":4000,"pattern":"^[^\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029\\[\\]<>@#]+(?![\\s\\S])"}},"required":["has_breaking_changes","breaking_changes_content","reasoning"]}'
 
       - name: Report Claude failure category
         if: failure() && steps.claude.outcome == 'failure'

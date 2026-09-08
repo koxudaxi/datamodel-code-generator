@@ -53,5 +53,10 @@
     "has_breaking_changes": true,
     "breaking_changes_content": "### API/CLI Changes\n* Removed option - The old option is removed (#42)",
     "reasoning": "The old option is removed."
+  },
+  "trailing_newline": {
+    "has_breaking_changes": false,
+    "breaking_changes_content": "",
+    "reasoning": "Only internal CI infrastructure changed.\n"
   }
 }

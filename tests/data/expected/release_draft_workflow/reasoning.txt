@@ -9,5 +9,6 @@
   "link": false,
   "control": false,
   "line_separator": false,
-  "breaking_changes": true
+  "breaking_changes": true,
+  "trailing_newline": false
 }
