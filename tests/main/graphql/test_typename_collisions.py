@@ -5,7 +5,7 @@ from __future__ import annotations
 import dataclasses
 import json
 import sys
-from typing import TYPE_CHECKING, Literal, get_origin, get_type_hints
+from typing import TYPE_CHECKING, Literal, get_args, get_origin, get_type_hints
 
 import msgspec
 import pytest
@@ -26,6 +26,13 @@ from tests.main.graphql.conftest import assert_file_content
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+def _has_literal(annotation: object) -> bool:
+    """Find Literal through optional and requiredness annotation wrappers."""
+    if get_origin(annotation) is Literal:
+        return True
+    return any(_has_literal(argument) for argument in get_args(annotation))
 
 
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
@@ -121,11 +128,13 @@ def test_graphql_typename_collisions(
                     if not no_typename:
                         values.update({field: name for field in fields if field not in values})
                     dumped = model(**values)
-            annotations = get_type_hints(model)
+            annotations = get_type_hints(model, include_extras=True)
             inherited_type_roles.extend(
-                (get_origin(annotation) is Literal, get_origin(annotations[field]) is Literal)
+                (_has_literal(annotation), _has_literal(annotations[field]))
                 for interface in getattr(schema.get_type(name), "interfaces", ())
-                for field, annotation in get_type_hints(getattr(sys.modules[item.__module__], interface.name)).items()
+                for field, annotation in get_type_hints(
+                    getattr(sys.modules[item.__module__], interface.name), include_extras=True
+                ).items()
             )
             actual["models"][name] = {"fields": fields, "values": dumped}
     assert_output(
