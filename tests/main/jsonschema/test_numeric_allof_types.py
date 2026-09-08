@@ -175,11 +175,9 @@ def test_numeric_null_custom_template(output_file: Path, entrypoint: str) -> Non
                 "custom_template_dir": template_dir,
             }),
         )
-    filename = (
-        "null_custom_black23.py"
-        if int(black.__version__.split(".")[0]) < 24 and not _uses_builtin_test_default_formatter()
-        else "null_custom.py"
-    )
+    filename = "null_custom.py"
+    if not _uses_builtin_test_default_formatter() and (black_major := int(black.__version__.split(".")[0])) < 24:
+        filename = "null_custom_black22.py" if black_major < 23 else "null_custom_black23.py"
     assert_output(output_file.read_text(encoding="utf-8"), expected / filename)
     try:
         with _generated_model(
