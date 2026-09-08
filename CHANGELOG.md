@@ -5,6 +5,79 @@ This changelog is automatically generated from GitHub Releases.
 
 ---
 
+## [0.77.0](https://github.com/datamodel-code-generator/datamodel-code-generator/releases/tag/0.77.0) - 2026-09-08
+
+## Breaking Changes
+
+
+### Code Generation Changes
+* Nested Avro bytes and fixed defaults are now decoded to bytes - Avro `bytes` and `fixed` defaults nested inside arrays, maps, and records are now converted to Python bytes literals such as `b'\xff'`, whereas previously only top-level bytes and fixed defaults were converted and nested ones remained as strings, so regenerating affected Avro schemas produces different default values across the pydantic v2, dataclass, and msgspec backends (#3896)
+* Dictionary defaults now render as factories for pydantic v2 dataclasses - Fields with a dictionary default now emit `Field(default_factory=...)` and add a `from pydantic import Field` import instead of the previous plain default rendering, so regenerating existing schemas produces different output; `ClassVar` and plain required dictionary fields are additionally kept free of Field statements (#3883)
+* Ruff formatter output changed by pinned ruff upgrade - The pinned ruff dependency was bumped from 0.14.10 to 0.16.6, which changes how generated code is formatted when the ruff formatters are used: blank lines are now inserted between import groups, import statements are regrouped and reordered, and combined aliased imports such as a single line importing several names with an `as` alias are split onto separate lines, so files regenerated from the same input will differ from output produced by earlier versions (#3874)
+* Avro decimal defaults now emit Decimal values - Avro `bytes` and `fixed` fields carrying a `decimal` logical type with a default now decode the default as a signed big-endian coefficient scaled by the declared scale and emit a `Decimal(...)` expression for backends that support deserialized defaults, replacing the previous raw bytes literal output, so regenerating existing models yields different default values (#3902)
+* Avro temporal defaults now emit temporal values - For Avro fields with a temporal logical type such as `date`, `time-millis`, `time-micros`, `timestamp-millis`, `timestamp-micros`, `timestamp-nanos`, or the `local-timestamp` variants, an integer `default` is now rendered as a temporal constructor like `datetime_module.date.fromisoformat` or an ISO-8601 string for backends that map these formats to `str`, instead of the previous raw integer literal, so generated models change for any schema using these defaults; timestamp defaults use UTC while local-timestamp and time defaults are naive (#3901)
+* Avro duration defaults now decode to timedelta - Avro `fixed` fields using the `duration` logical type with a default now emit `timedelta(milliseconds=N)` values instead of the raw bytes previously produced, changing generated output for any schema that relies on such defaults (#3907)
+* XML Schema nillable now recognizes the `1` lexical value - Elements declared with `nillable="1"` are now treated the same as `nillable="true"` and generate a nullable field, so schemas that previously produced a required field for `nillable="1"` will now produce an optional (nullable) field (#3884)
+* Avro unqualified name resolution now prefers the enclosing namespace - When resolving an unqualified Avro reference to a record, enum, or fixed type, the parser previously returned the first matching globally registered name; it now first looks for a matching type in the current enclosing namespace and only falls back to the global name when none exists. For Avro schemas that reuse the same unqualified name in both the null namespace and a nested namespace, generated models now reference the namespaced type instead of the global one, changing the generated output. (#3898)
+* Enum list defaults now preserve unmatched values - Previously, when a field default was a list, only values that matched an enum member were kept and any unmatched entries were silently dropped from the generated default; now unmatched entries such as plain strings, None, nested lists, and dictionaries are retained in place while matching entries are converted to enum members, so generated default lists can differ for the same input (#3887)
+* Multiple enum sources in a union are converted - The generator now inspects every enum branch of a union data type rather than only a single reference, so a value matching any enum member in the union is converted to that member and unmatched values remain literals, changing generated defaults for union-typed fields (#3887)
+* Combined XSD pattern facets change generated regexes - XML Schema restrictions with multiple sibling `xs:pattern` facets previously kept only the last pattern value, and now the parser merges all supported sibling patterns into a single anchored alternation and intersects any inherited base pattern through a nested lookahead, so regenerating from such schemas produces different pattern strings than before (#3908)
+* Pydantic outputs gain a python-re engine setting - Pydantic model output for these combined-pattern types now emits a `regex_engine="python-re"` configuration entry that was not present before, because the generated anchored lookahead requires Pydantic's Python regex engine, changing the generated model configuration for affected fields (#3908)
+* Type-alias defaults for msgspec Struct now build real Struct instances - When generating msgspec Struct models with type aliases enabled, a field whose default is an object or array and whose declared type is an alias that resolves through chained aliases or unions to a Struct model now emits a default factory that calls `convert` to construct the referenced Struct instance, whereas previously such defaults were emitted as plain literal values because only direct Struct references were converted; empty collections, mapping and dict defaults, primitive aliases, and recursive non-model aliases keep their prior output (#3906)
+
+### Error Handling Changes
+* Referenced boolean false definitions now rejected - MCP tool input or output schemas that reference a definition whose value is the boolean `false` now raise an Error reading "Referenced MCP boolean false definition is not supported" instead of emitting a permissive model, so schemas that previously generated code may now fail during conversion (#3890)
+* Invalid Avro decimal defaults now raise errors - Decimal defaults whose scale falls outside Python's Decimal range, whose coefficient exceeds the declared precision, or whose fixed encoding length does not match the declared size now raise an error during generation instead of being emitted, so schemas that previously generated successfully may now fail (#3902)
+* Unrepresentable Avro temporal defaults now raise errors - Temporal defaults outside the Python date or datetime range, time defaults not within a single day, and nanosecond defaults that cannot be represented exactly at microsecond precision now raise an error and abort generation, whereas these schemas previously generated successfully by emitting the raw integer default (#3901)
+* Avro duration defaults with calendar components or wrong size now error - Duration defaults with nonzero months or days, or that are not encoded as exactly 12 bytes with a fixed size of 12, now raise an error during generation instead of decoding to bytes (#3907)
+
+### Default Behavior Changes
+* RootModel metadata now reports the field name and alias as `root` - When emitting model metadata for RootModel classes, the emitted field entry now uses `root` for both its name and alias instead of the previously emitted synthetic field name, so consumers of the emitted metadata for root models will see different name and alias values (#3897)
+* Dynamic extraction now returns root-model type aliases - The `generate_dynamic_models` runtime helper now includes specialized `RootModel` type-alias classes that are assigned at the top level of the generated code, whereas it previously omitted any class whose defining module was not the generated module, so existing callers receive additional entries in the returned mapping while genuine imported dependencies remain excluded (#3904)
+
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+
+## What's Changed
+* Ignore black and isort updates in Dependabot by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3855
+* Refresh PyPI metadata in Docker builds by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3857
+* Improve release benchmark charts by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3860
+* Fix msgspec payload test options by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3863
+* Fix generation cache and loader regressions by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3865
+* Guard shared model boundaries by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3866
+* Test dynamic model cache ordering by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3871
+* Update Ruff to 0.16.6 by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3874
+* Exclude maintenance from release notes by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3877
+* Clarify OpenAPI parameter scopes by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3879
+* Fix relative YAML cache paths by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3880
+* Fix Avro container defaults by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3896
+* Fix MCP definition references by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3890
+* Fix float configuration output by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3882
+* Fix Avro namespace resolution by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3898
+* Fix Avro temporal defaults by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3901
+* Fix Avro decimal defaults by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3902
+* Fix Avro duration defaults by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3907
+* Preserve unmatched enum list defaults by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3887
+* Fix dataclass Field imports by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3883
+* Fix XSD nillable booleans by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3884
+* Fix relative template directories by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3885
+* Fix nullable schema warnings by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3886
+* Preserve disabled CLI options by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3888
+* Fix path list inputs by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3895
+* Fix root model metadata by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3897
+* Fix dynamic RootModel aliases by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3904
+* Fix msgspec alias defaults by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3906
+* Fix XSD pattern alternatives by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3908
+* Fix msgspec GraphQL list defaults by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3909
+* Fix Protobuf input detection by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3913
+* Preserve Protobuf option literals by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3914
+* Reduce test CI overhead by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3968
+* Fix repository references after organization transfer by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3995
+
+
+**Full Changelog**: https://github.com/datamodel-code-generator/datamodel-code-generator/compare/0.76.2...0.77.0
+
+---
+
 ## [0.76.2](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.76.2) - 2026-09-04
 
 ## What's Changed
