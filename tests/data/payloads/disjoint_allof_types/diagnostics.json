@@ -18,5 +18,6 @@
   "jsonschema/numeric_allof_types/outside_null.json": "outside_null",
   "jsonschema/array_combined.py.json": "original_array_combined.py",
   "jsonschema/allof_type_list.json": "original_allof_type_list",
-  "jsonschema/allof_root_model_constraints.json": "original_allof_root_model_constraints"
+  "jsonschema/allof_root_model_constraints.json": "original_allof_root_model_constraints",
+  "jsonschema/combined_array.json": "original_combined_array"
 }

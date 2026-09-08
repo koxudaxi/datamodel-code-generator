@@ -1,0 +1,1 @@
+Error at schema path '#/definitions/CombinedAllOf': allOf type constraints have no common value

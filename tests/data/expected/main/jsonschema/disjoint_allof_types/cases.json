@@ -681,5 +681,25 @@
       }
     ],
     "model": "Model"
+  },
+  "original_combined_array": {
+    "source": "combined_array.json",
+    "error": true,
+    "payloads": [
+      {},
+      [],
+      {
+        "name": "pet"
+      },
+      [
+        {
+          "name": "pet"
+        }
+      ],
+      null,
+      1,
+      "pet"
+    ],
+    "model": "Pet"
   }
 }

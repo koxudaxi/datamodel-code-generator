@@ -1,0 +1,36 @@
+[
+  {
+    "payload": {},
+    "native": true
+  },
+  {
+    "payload": [],
+    "native": true
+  },
+  {
+    "payload": {
+      "name": "pet"
+    },
+    "native": true
+  },
+  {
+    "payload": [
+      {
+        "name": "pet"
+      }
+    ],
+    "native": true
+  },
+  {
+    "payload": null,
+    "native": false
+  },
+  {
+    "payload": 1,
+    "native": false
+  },
+  {
+    "payload": "pet",
+    "native": false
+  }
+]

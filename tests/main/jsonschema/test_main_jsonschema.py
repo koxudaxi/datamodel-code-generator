@@ -3310,18 +3310,14 @@ def test_main_all_of_hierarchy_inline_allof(output_file: Path) -> None:
         )
 
 
-@pytest.mark.skipif(
-    black.__version__.split(".")[0] >= "24",
-    reason="Installed black doesn't support the old style",
-)
 def test_main_combined_array(output_file: Path) -> None:
-    """Test combined array types."""
+    """Reject the fixture's incompatible array, object, and string allOf types."""
     with chdir(JSON_SCHEMA_DATA_PATH):
         run_main_and_assert(
             input_path=Path("combined_array.json"),
             output_path=output_file,
             input_file_type="jsonschema",
-            assert_func=assert_file_content,
+            expected_exit=Exit.ERROR,
         )
 
 

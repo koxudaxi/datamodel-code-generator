@@ -1,0 +1,1 @@
+Error at schema path 'combined_array.json/#/definitions/CombinedAllOf': allOf type constraints have no common value
