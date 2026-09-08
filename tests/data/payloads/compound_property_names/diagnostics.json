@@ -6,5 +6,6 @@
   "jsonschema/compound_property_names/unsupported_mixed.json": "compound_property_names/unsupported_mixed.txt",
   "jsonschema/compound_property_names/unsupported_one_false.json": "compound_property_names/unsupported_one_false.txt",
   "jsonschema/compound_property_names/unsupported_one_constrained.json": "compound_property_names/unsupported_one_constrained.txt",
-  "jsonschema/compound_property_names/unsupported_one_sibling.json": "compound_property_names/unsupported_one_sibling.txt"
+  "jsonschema/compound_property_names/unsupported_one_sibling.json": "compound_property_names/unsupported_one_sibling.txt",
+  "jsonschema/compound_property_names/unsupported_nonstring_union.json": "compound_property_names/unsupported_nonstring_union.txt"
 }

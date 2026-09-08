@@ -18,5 +18,10 @@
   "extra_one_any_false",
   "extra_one_true_false",
   "extra_enum_disjoint",
-  "extra_enum_then_string"
+  "extra_enum_then_string",
+  "root_type_union",
+  "branch_type_union",
+  "nested_type_union",
+  "unrestricted_type_union",
+  "length_type_union"
 ]

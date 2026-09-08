@@ -9330,7 +9330,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             "title",
             "description",
             "default",
-        } or (schema.type is not None and schema.type != "string"):
+        } or (
+            schema.type is not None
+            and schema.type != "string"
+            and (not isinstance(schema.type, list) or "string" not in schema.type)
+        ):
             return None, False
         if not schema.anyOf:
             return self._parse_property_name_key_schema(schema), not schema.has_constraint
@@ -9384,7 +9388,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 key_path = get_special_path("propertyNames/key", path)
                 key_type = self.parse_item(name, property_names, key_path)
                 for data_type in key_type.all_data_types:
-                    if data_type.type == ANY:
+                    if data_type.type == ANY or (unrestricted and data_type.type == "str"):
                         if unrestricted:
                             # JSON keys reach this branch unchanged; later model branches cannot win.
                             break
