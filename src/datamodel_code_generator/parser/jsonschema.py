@@ -1248,6 +1248,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self._python_type_expressions: Mapping[str, PythonTypeExpr] | None = None
         self.remote_object_cache: DefaultPutDict[str, dict[str, YamlValue]] = DefaultPutDict()
         self.raw_obj: dict[str, YamlValue] = {}
+        self._all_of_root_value_ref_stack: set[tuple[str, ...]] | None = None
         self._root_id: Optional[str] = None  # noqa: UP045
         self._root_id_base_path: Optional[str] = None  # noqa: UP045
         self._output_model_context = OutputModelContext.from_generation_types(
@@ -6229,19 +6230,184 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         merged_schema.pop("allOf", None)
         return self.SCHEMA_OBJECT_TYPE.model_validate(merged_schema)
 
-    def _merge_all_of_mapping(self, obj: JsonSchemaObject) -> JsonSchemaObject | None:
-        """Merge mapping-shaped allOf items into one typed dict root schema."""
+    def _merge_all_of_root_validation_keywords(self, merged: dict[str, Any], sources: list[JsonSchemaObject]) -> None:
+        """Preserve literal and item intersections while materializing a value reference."""
+        literal_sets = [values for source in sources if (values := self._schema_literal_values(source)) is not None]
+        if literal_sets:
+            literal_values = [
+                value
+                for value in literal_sets[0]
+                if all(any(_json_literal_values_equal(value, other) for other in values) for values in literal_sets[1:])
+            ]
+            if not literal_values:
+                self._raise_unsatisfiable_schema([], "allOf")
+            merged["enum"] = literal_values
+        item_schemas = [source.items for source in sources if source.items is not None]
+        if len(item_schemas) > 1:
+            if False in item_schemas:
+                merged["items"] = self._merge_all_of_root_value_nodes(
+                    cast("list[JsonSchemaObject | bool]", item_schemas)
+                )
+                return
+            positional_lengths = [len(child) for child in item_schemas if isinstance(child, list)]
+            if positional_lengths:
+                positional_items = []
+                for index in range(max(positional_lengths) + 1):
+                    positional_sources = []
+                    for source in sources:
+                        child = source.items
+                        if isinstance(child, list):
+                            child = child[index] if index < len(child) else source.additionalItems
+                        positional_sources.append(
+                            self.SCHEMA_OBJECT_TYPE.model_validate({"items": True if child is None else child})
+                        )
+                    positional_schema: dict[str, Any] = {}
+                    self._merge_all_of_root_validation_keywords(positional_schema, positional_sources)
+                    positional_items.append(positional_schema["items"])
+                merged["items"] = positional_items[:-1]
+                merged["additionalItems"] = positional_items[-1]
+                return
+            merged["items"] = self._merge_all_of_root_value_nodes(cast("list[JsonSchemaObject | bool]", item_schemas))
+
+    def _merge_all_of_root_value_nodes(self, nodes: list[JsonSchemaObject | bool]) -> dict[str, Any] | bool:
+        """Intersect schema nodes without dropping constraints on nested properties."""
+        first = nodes[0]
+        if len(nodes) == 1:
+            return first.model_dump(exclude_unset=True, by_alias=True) if isinstance(first, JsonSchemaObject) else first
+        if False in nodes:
+            return False
+        references = tuple(
+            self.model_resolver.resolve_ref(node.ref)
+            for node in nodes
+            if isinstance(node, JsonSchemaObject) and node.ref
+        )
+        if not references:
+            return self._merge_all_of_root_value_children(nodes)
+        if self._all_of_root_value_ref_stack is None:
+            self._all_of_root_value_ref_stack = set()
+        if references in self._all_of_root_value_ref_stack:
+            return {
+                "allOf": [
+                    node.model_dump(exclude_unset=True, by_alias=True) if isinstance(node, JsonSchemaObject) else node
+                    for node in nodes
+                ]
+            }
+        self._all_of_root_value_ref_stack.add(references)
+        try:
+            return self._merge_all_of_root_value_children(nodes)
+        finally:
+            self._all_of_root_value_ref_stack.remove(references)
+
+    def _merge_all_of_root_value_children(  # noqa: PLR0912
+        self, nodes: list[JsonSchemaObject | bool]
+    ) -> dict[str, Any] | bool:
+        """Merge acyclic nodes while leaving recursive references for normal reference resolution."""
+        children: list[JsonSchemaObject] = []
+        for child in nodes:
+            if not isinstance(child, JsonSchemaObject):
+                continue
+            child_schema = child
+            if child.ref:
+                resolved = self._load_ref_schema_object(child.ref).model_dump(exclude_unset=True, by_alias=True)
+                self._resolve_schema_refs_in_place(resolved, self.model_resolver.resolve_ref(child.ref))
+                children.append(self.SCHEMA_OBJECT_TYPE.model_validate(resolved))
+                child_schema = child.model_copy(update={"ref": None})
+            children.append(child_schema)
+        merged: dict[str, Any] = {}
+        for child in children:
+            merged.update(child.model_dump(exclude={"ref"}, exclude_unset=True, by_alias=True))
+        allowed_types: set[str] | None = None
+        for child in children:
+            if not child.type:
+                continue
+            child_types = set(child.type) if isinstance(child.type, list) else {child.type}
+            if "number" in child_types:
+                child_types.add("integer")
+            allowed_types = child_types if allowed_types is None else allowed_types & child_types
+        if allowed_types is not None:
+            if not allowed_types:
+                return False
+            if "number" in allowed_types:
+                allowed_types.discard("integer")
+            merged["type"] = next(iter(allowed_types)) if len(allowed_types) == 1 else sorted(allowed_types)
+        self._merge_schema_constraints(merged, children, intersect=self.allof_merge_mode != AllOfMergeMode.NoMerge)
+        self._merge_all_of_root_validation_keywords(merged, children)
+        for keyword in ("properties", "patternProperties"):
+            properties: dict[str, list[JsonSchemaObject | bool]] = {}
+            for source in children:
+                for name, node in (getattr(source, keyword) or {}).items():
+                    properties.setdefault(name, []).append(node)
+            if properties:
+                if keyword == "properties":
+                    forbidden = set()
+                    for source in children:
+                        if source.additionalProperties is False and not source.patternProperties:
+                            forbidden.update(name for name in properties if name not in (source.properties or {}))
+                    if forbidden:
+                        if any(name in source.required for name in forbidden for source in children):
+                            return False
+                        for name in forbidden:
+                            properties.pop(name)
+                merged[keyword] = {
+                    name: self._merge_all_of_root_value_nodes(nodes) for name, nodes in properties.items()
+                }
+        if required := list(dict.fromkeys(name for source in children for name in source.required)):
+            merged["required"] = required
+        return merged
+
+    def _merge_all_of_root_schema(self, obj: JsonSchemaObject) -> JsonSchemaObject | None:  # noqa: PLR0912
+        """Unwrap one value schema or merge mapping-shaped allOf items into a root schema."""
         if obj.properties or obj.patternProperties or obj.propertyNames is not None:
             return None
 
+        supports_literal_validation = hasattr(self.data_model_root_type, "add_literal_validation")
+        single_value = len(obj.allOf) == 1 and not self._schema_requires_model_type(obj)
         mapping_schemas: list[JsonSchemaObject] = []
         for item in obj.allOf:
             match item:
                 case JsonSchemaObject() as schema:
-                    if schema.ref:
-                        schema = self._load_ref_schema_object(schema.ref)
+                    if ref := schema.ref:
+                        schema = self._load_ref_schema_object(ref)
                 case _:
                     return None
+            materialize_siblings = bool(
+                ref
+                and len(item.model_fields_set) > 1
+                and self._ref_sibling_keywords_enabled
+                and (item.has_ref_with_schema_keywords if supports_literal_validation else item.has_constraint)
+            )
+            scalar_or_array = (
+                schema.type
+                and schema.type != "object"
+                and not (schema.enum and not (materialize_siblings and supports_literal_validation))
+            )
+            if (
+                single_value
+                and scalar_or_array
+                and not (schema.allOf or schema.anyOf or schema.oneOf)
+                and not self._schema_requires_model_type(schema)
+            ):
+                merged_root: JsonSchemaObject | None = None
+                if materialize_siblings:
+                    merged = schema.model_dump(exclude_unset=True, by_alias=True)
+                    self._resolve_schema_refs_in_place(merged, self.model_resolver.resolve_ref(ref))
+                    referenced_schema = self.SCHEMA_OBJECT_TYPE.model_validate(merged)
+                    merged.update(item.model_dump(exclude={"ref"}, exclude_unset=True, by_alias=True))
+                    merged.update(obj.model_dump(exclude={"allOf"}, exclude_unset=True, by_alias=True))
+                    self._merge_schema_constraints(
+                        merged, [schema, item, obj], intersect=self.allof_merge_mode != AllOfMergeMode.NoMerge
+                    )
+                    if supports_literal_validation:
+                        self._merge_all_of_root_validation_keywords(merged, [referenced_schema, item, obj])
+                    merged_root = self.SCHEMA_OBJECT_TYPE.model_validate(merged)
+                return merged_root or (
+                    obj.model_copy(update={"ref": ref, "allOf": []})
+                    if ref
+                    else self.SCHEMA_OBJECT_TYPE.model_validate({
+                        **schema.model_dump(exclude_unset=True, by_alias=True),
+                        **obj.model_dump(exclude={"allOf"}, exclude_unset=True, by_alias=True),
+                    })
+                )
             if (
                 schema.properties
                 or schema.patternProperties
@@ -7924,7 +8090,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         single_obj = obj.allOf[0]
         if not (
-            isinstance(single_obj, JsonSchemaObject) and single_obj.ref and single_obj.ref_type == JSONReference.LOCAL
+            isinstance(single_obj, JsonSchemaObject)
+            and single_obj.ref
+            and single_obj.ref_type == JSONReference.LOCAL
+            and not (
+                hasattr(self.data_model_root_type, "add_literal_validation")
+                and self._ref_sibling_keywords_enabled
+                and single_obj.has_ref_with_schema_keywords
+            )
         ):
             return None
 
@@ -7945,7 +8118,69 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         return ref_data_type
 
-    def parse_all_of(
+    def _parse_all_of_root_value(self, name: str, merged_root: JsonSchemaObject, path: list[str]) -> DataType:
+        """Keep literal membership alongside the existing scalar or container representation."""
+        literal_values = merged_root.enum if not self.ignore_enum_constraints else []
+        literal_validation = cast(
+            "Callable[[DataModel, list[object]], None]",
+            getattr(self.data_model_root_type, "add_literal_validation", None),
+        )
+        if literal_values:
+            merged_root = merged_root.model_copy(
+                update={
+                    "enum": [],
+                    "extras": {key: value for key, value in merged_root.extras.items() if key != "const"},
+                }
+            )
+        item_type = None
+        if (
+            merged_root.is_array
+            and not self.ignore_enum_constraints
+            and isinstance(merged_root.items, JsonSchemaObject)
+            and merged_root.items.enum
+        ):
+            item_type = self._parse_all_of_root_value(f"{name}Item", merged_root.items, get_special_path("items", path))
+            merged_root = merged_root.model_copy(update={"items": True})
+        if merged_root.is_array:
+            root_data_type = self.parse_array(name, merged_root, path)
+        else:
+            root_data_type = self.parse_root_type(name, merged_root, path)
+        reference = cast("Reference", root_data_type.reference)
+        variants: tuple[Literal["Request", "Response"] | None, ...] = (
+            (None,) if reference.source is not None else ("Request", "Response")
+        )
+        for variant in variants:
+            root_model = cast(
+                "DataModel",
+                reference.source
+                if variant is None
+                else self._rw_model_variant_references[reference.path, variant].source,
+            )
+            if item_type is not None:
+                array_type = next(
+                    (
+                        data_type
+                        for data_type in root_model.fields[0].data_type.all_data_types
+                        if data_type.is_list or data_type.is_sequence or data_type.is_set or data_type.is_tuple
+                    ),
+                    None,
+                )
+                if array_type is None:
+                    array_type = next(
+                        nested
+                        for data_type in root_model.fields[0].data_type.all_data_types
+                        if (array_ref := data_type.reference) is not None
+                        and (array_model := cast("DataModel | None", array_ref.source)) is not None
+                        and (array_model.IS_ALIAS or array_model.IS_ROOT_MODEL)
+                        for nested in array_model.fields[0].data_type.all_data_types
+                        if nested.is_list or nested.is_sequence or nested.is_set or nested.is_tuple
+                    )
+                array_type.data_types = [item_type]
+            if literal_values:
+                literal_validation(root_model, literal_values)
+        return root_data_type
+
+    def parse_all_of(  # noqa: PLR0911
         self,
         name: str,
         obj: JsonSchemaObject,
@@ -7960,8 +8195,20 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if single_ref_result is not None:
             return single_ref_result
 
-        if merged_mapping := self._merge_all_of_mapping(obj):
-            return self.parse_root_type(name, merged_mapping, path)
+        if merged_root := self._merge_all_of_root_schema(obj):
+            if self.generate_schema_validators and hasattr(self.data_model_root_type, "add_literal_validation"):
+                return self._parse_all_of_root_value(name, merged_root, path)
+            if (
+                merged_root.enum
+                and not self.ignore_enum_constraints
+                and not self.should_parse_enum_as_literal(merged_root, property_name=name)
+            ):
+                return self.parse_enum(name, merged_root, path)
+            return (
+                self.parse_array(name, merged_root, path)
+                if merged_root.is_array
+                else self.parse_root_type(name, merged_root, path)
+            )
 
         merged_all_of_obj = self._merge_all_of_object(obj)
         if merged_all_of_obj:
