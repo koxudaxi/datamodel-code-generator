@@ -144,3 +144,54 @@ SUBCLASS_VALUES = {
     'opaque': UnhashableDate(2024, 1, 2),
     'standard_uuid': UnhashableUUID('550e8400-e29b-41d4-a716-446655440000'),
 }
+
+
+class FixedTupleItem(TupleItem):
+    """Native frozen model for the transported tuple comparison."""
+
+    value: tuple[int, str]
+
+
+class NestedTupleItem(TupleItem):
+    """Native frozen model for the transported tuple comparison."""
+
+    value: tuple[tuple[int, str], frozenset[int]]
+
+
+class OptionalTupleItem(TupleItem):
+    """Native frozen model for the transported tuple comparison."""
+
+    value: tuple[int | None, ...]
+
+
+class EmptyTupleItem(TupleItem):
+    """Native frozen model for the transported tuple comparison."""
+
+    value: tuple[()]
+
+
+class FrozenTupleItem(TupleItem):
+    """Native frozen model for the transported tuple comparison."""
+
+    value: tuple[frozenset[int]]
+
+
+class ScalarTupleItem(TupleItem):
+    """Native frozen model for the transported tuple comparison."""
+
+    value: tuple[float, bool, bytes, None]
+
+
+MODELS.update({
+    "tuple_fixed": FixedTupleItem,
+    "tuple_typing": FixedTupleItem,
+    "tuple_builtin": FixedTupleItem,
+    "tuple_nested": NestedTupleItem,
+    "tuple_optional": OptionalTupleItem,
+    "tuple_empty": EmptyTupleItem,
+    "tuple_frozen_typing": FrozenTupleItem,
+    "tuple_scalars": ScalarTupleItem,
+    "tuple_packaged": TupleItem,
+})
+
+MODELS["tuple_collision"] = TupleItem

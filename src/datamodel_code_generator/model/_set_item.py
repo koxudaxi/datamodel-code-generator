@@ -135,7 +135,12 @@ class SetItemValidator:
     def _has_native_hash_leaf(data_type: DataType) -> bool:
         """Recognize standard value types by existing import identity, never by execution."""
         if data_type.python_type:
-            return False
+            return (
+                not data_type.is_custom_type
+                and not data_type.is_func
+                and not data_type.kwargs
+                and SetItemValidator._has_native_tuple_hash(data_type.python_type)
+            )
         if data_type.import_:
             return (
                 not data_type.is_custom_type
@@ -145,6 +150,59 @@ class SetItemValidator:
                 and data_type.type == data_type.import_.import_
             )
         return data_type.type in {"str", "int", "float", "bool", "bytes", "None"}
+
+    @staticmethod
+    def _has_native_tuple_hash(bound_type: BoundPythonType) -> bool:
+        """Prove transported tuple elements from IR and bound imports without executing types."""
+        from datamodel_code_generator._python_type_annotation import (  # ruff: ignore[import-outside-top-level]
+            PythonTypeBoundName,
+            PythonTypeEllipsis,
+            PythonTypeName,
+            PythonTypeSubscript,
+            PythonTypeUnion,
+        )
+
+        if type(bound_type.expression) is not PythonTypeSubscript:
+            return False
+        variadic_arity = 2
+        bindings = {(item.from_, item.import_, item.binding_name) for item in bound_type.imports}
+        pending = [bound_type.expression]
+        while pending:
+            expression = pending.pop()
+            if type(expression) is PythonTypeUnion and expression.items:
+                pending.extend(expression.items)
+                continue
+            arguments = None
+            root = expression is bound_type.expression
+            if type(expression) is PythonTypeSubscript:
+                arguments = expression.arguments
+                expression = expression.base
+            if type(expression) is PythonTypeName:
+                module, name = "builtins", expression.value
+            elif type(expression) is PythonTypeBoundName:
+                module, name = expression.import_from, expression.import_name
+                if (module, name, expression.value) not in bindings:
+                    return False
+            else:
+                return False
+            if arguments is None:
+                if module != "builtins" or name not in {"int", "str", "float", "bool", "bytes", "None"}:
+                    return False
+                continue
+            if (module, name) in {("builtins", "tuple"), ("typing", "Tuple")}:
+                arguments = (
+                    arguments[:1]
+                    if len(arguments) == variadic_arity and type(arguments[1]) is PythonTypeEllipsis
+                    else arguments
+                )
+            elif (
+                root
+                or (module, name) not in {("builtins", "frozenset"), ("typing", "FrozenSet")}
+                or len(arguments) != 1
+            ):
+                return False
+            pending.extend(arguments)
+        return True
 
     def _field_types(self, model: DataModel) -> Iterator[DataType]:
         if model.reference.path in self.safe_fields:

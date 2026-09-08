@@ -23134,3 +23134,29 @@ def test_standard_frozen_unhashable_subclass(output_file: Path, case: str, value
             )
             with pytest.raises(TypeError, match="unhashable type"):
                 hash(instance)
+
+
+@pytest.mark.parametrize(
+    "case",
+    json.loads((DATA_PATH / "payloads/explicit_frozen_sets/incomplete_tuple_bindings.json").read_text()),
+    ids=operator.itemgetter("name"),
+)
+def test_transported_tuple_incomplete_binding(case: dict) -> None:
+    """Reject malformed extension IR whose claimed builtin lacks a matching bound import."""
+    from datamodel_code_generator._python_type_annotation import (
+        PythonTypeBoundName,
+        PythonTypeName,
+        PythonTypeSubscript,
+    )
+    from datamodel_code_generator._python_type_binding import BoundPythonType
+    from datamodel_code_generator.imports import Import
+    from datamodel_code_generator.model._set_item import SetItemValidator
+
+    expression = PythonTypeSubscript(
+        PythonTypeName("tuple"), (PythonTypeBoundName(case["expression_name"], "builtins", "int"),)
+    )
+    bound = BoundPythonType(expression, tuple(Import(**item) for item in case["imports"]))
+    assert_output(
+        json.dumps(SetItemValidator._has_native_tuple_hash(bound)) + "\n",
+        DATA_PATH / "payloads/explicit_frozen_sets/incomplete_tuple_binding.txt",
+    )

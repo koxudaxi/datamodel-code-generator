@@ -1,0 +1,5 @@
+[
+  {"name": "missing", "expression_name": "int", "imports": []},
+  {"name": "foreign", "expression_name": "int", "imports": [{"from_": "external", "import_": "int"}]},
+  {"name": "wrong_alias", "expression_name": "int", "imports": [{"from_": "builtins", "import_": "int", "alias": "other"}]}
+]

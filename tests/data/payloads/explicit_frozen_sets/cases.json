@@ -39,7 +39,7 @@
     "payload": [
       1
     ],
-    "safe": false
+    "safe": true
   },
   {
     "name": "literal",
@@ -234,6 +234,194 @@
     "name": "standard_constrained",
     "options": {},
     "payload": "1.5",
+    "safe": false
+  },
+  {
+    "name": "tuple_fixed",
+    "options": {},
+    "payload": [
+      1,
+      "x"
+    ],
+    "safe": true
+  },
+  {
+    "name": "tuple_typing",
+    "options": {},
+    "payload": [
+      1,
+      "x"
+    ],
+    "safe": true
+  },
+  {
+    "name": "tuple_builtin",
+    "options": {},
+    "payload": [
+      1,
+      "x"
+    ],
+    "safe": true
+  },
+  {
+    "name": "tuple_nested",
+    "options": {},
+    "payload": [
+      [
+        1,
+        "x"
+      ],
+      [
+        1,
+        2
+      ]
+    ],
+    "safe": true
+  },
+  {
+    "name": "tuple_optional",
+    "options": {},
+    "payload": [
+      1,
+      null
+    ],
+    "safe": true
+  },
+  {
+    "name": "tuple_empty",
+    "options": {},
+    "payload": [],
+    "safe": true
+  },
+  {
+    "name": "tuple_frozen_typing",
+    "options": {},
+    "payload": [
+      [
+        1,
+        2
+      ]
+    ],
+    "safe": true
+  },
+  {
+    "name": "tuple_scalars",
+    "options": {},
+    "payload": [
+      1.5,
+      true,
+      "x",
+      null
+    ],
+    "safe": true
+  },
+  {
+    "name": "tuple_bare",
+    "options": {},
+    "payload": [
+      []
+    ],
+    "safe": false
+  },
+  {
+    "name": "tuple_mutable",
+    "options": {},
+    "payload": [
+      [
+        1
+      ]
+    ],
+    "safe": false
+  },
+  {
+    "name": "tuple_any",
+    "options": {},
+    "payload": [
+      []
+    ],
+    "safe": false
+  },
+  {
+    "name": "tuple_foreign",
+    "options": {},
+    "payload": [
+      1
+    ],
+    "safe": false
+  },
+  {
+    "name": "tuple_forward",
+    "options": {},
+    "payload": [
+      1,
+      2
+    ],
+    "safe": false
+  },
+  {
+    "name": "tuple_literal",
+    "options": {},
+    "payload": [
+      1
+    ],
+    "safe": false
+  },
+  {
+    "name": "tuple_custom",
+    "options": {},
+    "payload": [
+      1,
+      2
+    ],
+    "safe": false,
+    "custom": true
+  },
+  {
+    "name": "tuple_partial",
+    "options": {},
+    "payload": [
+      1,
+      2
+    ],
+    "safe": false,
+    "partial": true
+  },
+  {
+    "name": "tuple_packaged",
+    "options": {},
+    "payload": [
+      1,
+      2
+    ],
+    "safe": true,
+    "packaged": true
+  },
+  {
+    "name": "tuple_collision",
+    "options": {},
+    "payload": [
+      1,
+      2
+    ],
+    "safe": true
+  },
+  {
+    "name": "tuple_custom_base",
+    "options": {
+      "base_class": "tests.data.python.unique_model_sets.explicit_native.IdentityBase"
+    },
+    "payload": [
+      1,
+      2
+    ],
+    "safe": false
+  },
+  {
+    "name": "tuple_date",
+    "options": {},
+    "payload": [
+      "2026-09-08"
+    ],
     "safe": false
   },
   {
