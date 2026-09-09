@@ -83,7 +83,10 @@ class Root(_JsonSchemaRuntimeValidationBase):
         {
             'declared_properties': ('x',),
             'rejected_patterns': (),
-            'pattern_properties': (('^x', Root1),),
+            'pattern_properties': (
+                ('^x', Root1),
+                ('x$', Any),
+            ),
             'additional_property_type': None,
             'allow_unmatched': True,
         },
