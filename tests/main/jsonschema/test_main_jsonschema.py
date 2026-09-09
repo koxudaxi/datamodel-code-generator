@@ -23973,3 +23973,98 @@ def test_additional_pattern_intersections(
             f"{enabled}_{field_constraints}", f"{case}_{enabled}_{field_constraints}_runtime.txt"
         ),
     )
+
+
+UNDECLARED_REQUIRED_FIXTURES = JSON_SCHEMA_DATA_PATH / "undeclared_required"
+
+
+UNDECLARED_REQUIRED_CASES = json.loads((UNDECLARED_REQUIRED_FIXTURES / "cases.json").read_text())
+
+
+UNDECLARED_REQUIRED_EXPECTED = EXPECTED_JSON_SCHEMA_PATH / "undeclared_required"
+
+
+@pytest.mark.parametrize("case", UNDECLARED_REQUIRED_CASES)
+@pytest.mark.parametrize("enabled", [False, True])
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("formatter", ["builtin", "external"])
+def test_undeclared_required(tmp_path: Path, case: str, enabled: bool, entrypoint: str, formatter: str) -> None:
+    """Compare native validity, Python/JSON validation, full output and model field order."""
+    source = UNDECLARED_REQUIRED_FIXTURES / f"{case}.json"
+    record = UNDECLARED_REQUIRED_CASES[case]
+    options = dict(record["options"])
+    if record["custom"]:
+        options["custom_template_dir"] = JSON_SCHEMA_DATA_PATH.parent / "templates" / "additional_pattern_context"
+    output = tmp_path / "output.py"
+    formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
+    if entrypoint == "cli":
+        args = []
+        for key, value in options.items():
+            argument_value = value
+            if isinstance(value, dict):
+                value_path = tmp_path / f"{key}.json"
+                value_path.write_text(json.dumps(value))
+                argument_value = value_path
+            option = {
+                "force_optional_for_required_fields": "force-optional",
+                "apply_default_values_for_required_fields": "use-default",
+            }.get(key, key.replace("_", "-"))
+            args.extend([f"--{option}", *([] if argument_value is True else [str(argument_value)])])
+        run_main_with_args([
+            "--input",
+            str(source),
+            "--output",
+            str(output),
+            "--input-file-type",
+            "jsonschema",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+            "--formatters",
+            *formatters,
+            *(["--generate-schema-validators"] if enabled else []),
+            *args,
+        ])
+    else:
+        if "extra_template_data" in options:
+            options["extra_template_data"] = defaultdict(dict, options["extra_template_data"])
+        generate(
+            source,
+            config=GenerateConfig(
+                output=output,
+                input_file_type=InputFileType.JsonSchema,
+                output_model_type=DataModelType.PydanticV2BaseModel,
+                disable_timestamp=True,
+                generate_schema_validators=enabled,
+                formatters=[Formatter(value) for value in formatters],
+                **options,
+            ),
+        )
+    assert_output(output.read_text(), UNDECLARED_REQUIRED_EXPECTED / record["code_names"][f"{enabled}_{formatter}"])
+    schema = json.loads(source.read_text())
+    Draft202012Validator.check_schema(schema)
+    native = Draft202012Validator(schema)
+    results = []
+    with _generated_model(output, "undeclared_required_generated", "Root") as model:
+        for payload in record["payloads"]:
+            result = {"native": native.is_valid(payload), "fields": list(model.model_fields)}
+            with assert_inputs_not_mutated({"payload": payload}):
+                try:
+                    value = model.model_validate(payload)
+                    result["python"] = value.model_dump(mode="json", by_alias=True)
+                    result["identity"] = type(value).__name__
+                except ValidationError:
+                    result["python"] = "rejected"
+                try:
+                    result["json"] = model.model_validate_json(json.dumps(payload)).model_dump(
+                        mode="json", by_alias=True
+                    )
+                except ValidationError:
+                    result["json"] = "rejected"
+            results.append(result)
+    runtime_expected = (
+        UNDECLARED_REQUIRED_EXPECTED / "pydantic20"
+        if not enabled and "objects" in case and PYDANTIC_VERSION.split(".")[:2] == ["2", "0"]
+        else UNDECLARED_REQUIRED_EXPECTED
+    )
+    assert_output(json.dumps(results, indent=2), runtime_expected / f"{case}_{enabled}_runtime.txt")
