@@ -3723,7 +3723,11 @@ def test_watch_cli_catches_up_changes_queued_while_restarting_roots(
 @pytest.mark.allow_direct_assert
 def test_watch_dependencies_handle_path_resolution_errors(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Defensive path resolution falls back to the lexical path."""
-    from datamodel_code_generator.watch_dependencies import _logical_working_directory, _path_variants
+    from datamodel_code_generator.watch_dependencies import (
+        WatchDependencies,
+        _logical_working_directory,
+        _path_variants,
+    )
 
     unresolved_path = tmp_path / "unresolved.json"
     resolution_error = "unresolvable"
@@ -3739,6 +3743,11 @@ def test_watch_dependencies_handle_path_resolution_errors(monkeypatch: pytest.Mo
 
     monkeypatch.setattr(Path, "samefile", raise_samefile_error)
     assert _logical_working_directory() == Path.cwd()
+
+    dependencies = WatchDependencies()
+    monkeypatch.setattr(Path, "expanduser", raise_resolution_error)
+    dependencies.add_file(unresolved_path)
+    assert dependencies.files == frozenset()
 
 
 @pytest.mark.skipif(os.name == "nt", reason="requires POSIX symlinks")
