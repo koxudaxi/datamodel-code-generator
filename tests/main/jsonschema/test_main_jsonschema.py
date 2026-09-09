@@ -23557,7 +23557,8 @@ TYPE_UNION_CASES = json.loads((TYPE_UNION_PAYLOADS / "cases.json").read_text())
 def test_type_union_constraints(name: str, constraints: bool, entry: str, output_file: Path) -> None:
     """Validate branches without changing normal order or disabled-option behavior."""
     input_path = TYPE_UNION_INPUTS / f"{name}.json"
-    expected_file = f"type_union_constraints/{name}_{int(constraints)}.py"
+    expected_file = TYPE_UNION_CASES[name].get(f"{name}_{int(constraints)}.py", f"{name}_{int(constraints)}.py")
+    expected_file = f"type_union_constraints/{expected_file}"
     if entry == "cli":
         run_main_and_assert(
             input_path=input_path,
@@ -23587,9 +23588,10 @@ def test_type_union_constraints(name: str, constraints: bool, entry: str, output
     payloads = json.loads((TYPE_UNION_PAYLOADS / f"{name}.json").read_text())
     assert_output(
         json.dumps([validator.is_valid(value) for value in payloads], indent=2) + "\n",
-        TYPE_UNION_EXPECTED / f"{name}_native.txt",
+        TYPE_UNION_EXPECTED / TYPE_UNION_CASES[name].get(f"{name}_native.txt", f"{name}_native.txt"),
     )
-    runtime_path = TYPE_UNION_EXPECTED / (f"{name}_native.txt" if constraints else f"{name}_0_runtime.txt")
+    runtime_name = f"{name}_native.txt" if constraints else f"{name}_0_runtime.txt"
+    runtime_path = TYPE_UNION_EXPECTED / TYPE_UNION_CASES[name].get(runtime_name, runtime_name)
     acceptance = json.loads(runtime_path.read_text())
     context = (
         nullcontext(
@@ -23644,7 +23646,8 @@ def test_type_union_constraint_options(name: str, mode: str, entry: str, output_
         "msgspec_plain": ["--output-model-type", "msgspec.Struct", "--no-use-annotated"],
     }[mode]
     input_path = TYPE_UNION_INPUTS / f"{name}.json"
-    expected_file = f"type_union_constraints/{name}_{mode}.py"
+    expected_file = TYPE_UNION_CASES[name].get(f"{name}_{mode}.py", f"{name}_{mode}.py")
+    expected_file = f"type_union_constraints/{expected_file}"
     if entry == "cli":
         run_main_and_assert(
             input_path=input_path,
@@ -23666,9 +23669,8 @@ def test_type_union_constraint_options(name: str, mode: str, entry: str, output_
             **options,
         )
     payloads = json.loads((TYPE_UNION_PAYLOADS / f"{name}.json").read_text())
-    expected_runtime = TYPE_UNION_EXPECTED / (
-        f"{name}_{mode}_runtime.txt" if mode == "msgspec_plain" else f"{name}_native.txt"
-    )
+    runtime_name = f"{name}_{mode}_runtime.txt" if mode == "msgspec_plain" else f"{name}_native.txt"
+    expected_runtime = TYPE_UNION_EXPECTED / TYPE_UNION_CASES[name].get(runtime_name, runtime_name)
     acceptance = json.loads(expected_runtime.read_text())
     actual = []
     with _generated_model(output_file, "type_union_options", "Root") as model:
@@ -23684,3 +23686,50 @@ def test_type_union_constraint_options(name: str, mode: str, entry: str, output_
                     validate(value)
                 actual.append(False)
     assert_output(json.dumps(actual, indent=2) + "\n", expected_runtime)
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("schema_validators", [False, True])
+def test_type_union_pattern_properties(output_file: Path, entrypoint: str, *, schema_validators: bool) -> None:
+    """Retain pattern value types and scalar alternatives through existing object parsing."""
+    source = TYPE_UNION_INPUTS / "pattern_properties.json"
+    expected = f"type_union_constraints/pattern_properties_{int(schema_validators)}.py"
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=source,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            extra_args=[
+                "--disable-timestamp",
+                "--field-constraints",
+                "--formatters",
+                "builtin",
+                *(["--generate-schema-validators"] if schema_validators else []),
+            ],
+            assert_func=assert_file_content,
+            expected_file=expected,
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=source,
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            disable_timestamp=True,
+            field_constraints=True,
+            generate_schema_validators=schema_validators,
+            formatters=[Formatter.BUILTIN],
+            assert_func=assert_file_content,
+            expected_file=expected,
+        )
+    payload = json.loads((TYPE_UNION_PAYLOADS / "pattern_properties.json").read_text())
+    native = Draft202012Validator(json.loads(source.read_text()))
+    for valid in payload["valid"]:
+        native.validate(valid)
+        assert_generated_model_json_validation(
+            output_file,
+            module_name=f"type_union_patterns_{entrypoint}_{schema_validators}",
+            model_name="Root",
+            valid_json=json.dumps(valid),
+            invalid_json=json.dumps(payload["invalid"]),
+            expected_error_type="int_parsing",
+        )

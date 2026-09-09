@@ -9753,17 +9753,20 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         for type_ in obj.type:
             if type_ == "null":
                 continue
-            if type_ == "object" and obj.propertyNames is not None:
+            if type_ == "object" and (obj.propertyNames is not None or obj.patternProperties):
                 branch_schema = self._get_array_union_branch_schema(obj, type_)
                 branch_path = get_special_path("type-union-object", path)
-                data_type = self._parse_root_type_with_context(
-                    f"{name}Object",
-                    branch_schema,
-                    branch_path,
-                    data_model_root_type=self._nested_constrained_model_type,
-                    preserve_constraints=True,
-                    use_annotated=True,
-                )
+                if obj.patternProperties:
+                    data_type = self.parse_item(f"{name}Object", branch_schema, branch_path)
+                else:
+                    data_type = self._parse_root_type_with_context(
+                        f"{name}Object",
+                        branch_schema,
+                        branch_path,
+                        data_model_root_type=self._nested_constrained_model_type,
+                        preserve_constraints=True,
+                        use_annotated=True,
+                    )
             else:
                 data_type = self._parse_array_union_constrained_branch(name, obj, path, type_)
             data_types.append(data_type)
