@@ -785,7 +785,7 @@ class _XMLSchemaConverter:
                 used_names.add(candidate)
 
     def _build_definitions(self) -> dict[str, JsonSchema]:
-        definitions: dict[str, JsonSchema] = {}
+        definitions = self._definitions
         for key in sorted(self.simple_types, key=self._sort_key):
             definition_key = self._type_definition_key(key)
             definitions[self._definition_name(definition_key)] = self._build_definition(definition_key)
@@ -1170,9 +1170,40 @@ class _XMLSchemaConverter:
     def _has_explicit_content(owner: ET.Element) -> bool:
         return _first_xsd_child(owner, "sequence", "all", "choice", "group") is not None
 
+    def _inherited_simple_content_schema(self, child: ET.Element, owner: ET.Element) -> JsonSchema | None:
+        """Copy only generated simple-content objects, preserving the ordinary scalar path."""
+        if not (base := child.get("base")) or self._qname_namespace(base, child) == XML_SCHEMA_NAMESPACE:
+            return None
+        base_key = self._resolve_key(base, self.simple_types, self.complex_types, element=child)
+        base_type = self.complex_types.get(base_key)
+        if base_type is None or _first_xsd_child(base_type, "simpleContent") is None:
+            return None
+        if base_type is owner and (original := self._redefined_base_complex_types.get(base_key)) is not None:
+            return _copy_schema(self._convert_complex_type(original))
+        definition_key = self._type_definition_key(base_key)
+        if definition_key in self._building_definitions:
+            return None
+        schema = _copy_schema(self._build_definition(definition_key))
+        schema.pop("title", None)
+        return schema
+
+    def _inherited_content_restriction(self, child: ET.Element, value_schema: JsonSchema) -> JsonSchema:
+        """Apply derived facets to the scalar behind an inherited named simple type."""
+        if (simple_type := _first_xsd_child(child, "simpleType")) is not None:
+            return self._convert_simple_type(simple_type)
+        if (ref := value_schema.get("$ref")) and (
+            resolved := self._definitions.get(ref.removeprefix("#/definitions/"))
+        ) is not None:
+            value_schema = _copy_schema(resolved)
+            value_schema.pop("title", None)
+        return value_schema
+
     def _convert_simple_content(self, simple_content: ET.Element, owner: ET.Element) -> JsonSchema:
         child = _first_xsd_child(simple_content, "extension", "restriction")
-        if child is None:
+        inherited = self._inherited_simple_content_schema(child, owner) if child is not None else None
+        if inherited is not None:
+            value_schema = inherited["properties"]["value"]
+        elif child is None:
             value_schema = _copy_schema(STRING_SCHEMA)
         elif base := child.get("base"):
             value_schema = self._schema_for_qname(base, child)
@@ -1181,14 +1212,21 @@ class _XMLSchemaConverter:
         else:
             value_schema = _copy_schema(STRING_SCHEMA)
         if child is not None and _local_name(child.tag) == "restriction":
+            if inherited is not None:
+                value_schema = self._inherited_content_restriction(child, value_schema)
             value_schema = self._apply_restriction_facets(child, value_schema)
 
-        schema: JsonSchema = {"type": "object", "properties": {"value": value_schema}, "required": ["value"]}
+        if inherited is None:
+            schema: JsonSchema = {"type": "object", "properties": {"value": value_schema}, "required": ["value"]}
+        else:
+            schema = inherited
+            schema["properties"]["value"] = value_schema
+        inherited_required = frozenset(schema["required"]) if inherited is not None else None
         with self._property_scope():
             self._property_sources["value"] = simple_content
-            self._apply_attributes(owner, schema)
+            self._apply_attributes(owner, schema, inherited_required=inherited_required)
             if child is not None:
-                self._apply_attributes(child, schema)
+                self._apply_attributes(child, schema, inherited_required=inherited_required)
         return schema
 
     def _apply_model_group(
@@ -1383,19 +1421,26 @@ class _XMLSchemaConverter:
         if occurrence.required and element.get("minOccurs", "1") != "0":
             schema.setdefault("required", []).append(name)
 
-    def _apply_attributes(self, owner: ET.Element, schema: JsonSchema) -> None:
+    def _apply_attributes(
+        self, owner: ET.Element, schema: JsonSchema, *, inherited_required: frozenset[str] | None = None
+    ) -> None:
         for child in owner:
             if _is_xsd_element(child, "attribute"):
-                self._add_attribute(child, schema)
+                if inherited_required is not None and child.get("use") == "prohibited":
+                    name = child.get("name") or _local_name(child.get("ref", ""))
+                    schema.get("properties", {}).pop(name, None)
+                self._add_attribute(child, schema, inherited_required=inherited_required)
             elif _is_xsd_element(child, "attributeGroup"):
-                self._apply_attribute_group(child, schema)
+                self._apply_attribute_group(child, schema, inherited_required=inherited_required)
             elif _is_xsd_element(child, "anyAttribute"):
                 schema["additionalProperties"] = True
 
-    def _apply_attribute_group(self, attribute_group: ET.Element, schema: JsonSchema) -> None:
+    def _apply_attribute_group(
+        self, attribute_group: ET.Element, schema: JsonSchema, *, inherited_required: frozenset[str] | None = None
+    ) -> None:
         ref = attribute_group.get("ref")
         if not ref:
-            self._apply_attributes(attribute_group, schema)
+            self._apply_attributes(attribute_group, schema, inherited_required=inherited_required)
             return
         target_key = self._resolve_key(ref, self.attribute_groups, element=attribute_group)
         target = self.attribute_groups.get(target_key)
@@ -1406,12 +1451,14 @@ class _XMLSchemaConverter:
             if not already_active:
                 self._active_attribute_groups.add(target_key)
             try:
-                self._apply_attributes(target, schema)
+                self._apply_attributes(target, schema, inherited_required=inherited_required)
             finally:
                 if not already_active:
                     self._active_attribute_groups.remove(target_key)
 
-    def _add_attribute(self, attribute: ET.Element, schema: JsonSchema) -> None:
+    def _add_attribute(
+        self, attribute: ET.Element, schema: JsonSchema, *, inherited_required: frozenset[str] | None = None
+    ) -> None:
         if attribute.get("use") == "prohibited":
             return
         ref = attribute.get("ref")
@@ -1423,6 +1470,7 @@ class _XMLSchemaConverter:
         name = attribute.get("name") or source_attribute.get("name") or _local_name(ref or "")
         if not name:
             return
+        use = attribute.get("use") or source_attribute.get("use")
         if type_name := attribute.get("type") or source_attribute.get("type"):
             attribute_schema = self._schema_for_qname(type_name, attribute)
         else:
@@ -1444,7 +1492,7 @@ class _XMLSchemaConverter:
         if fixed is not None:
             self._apply_fixed_value(attribute_schema, self._parse_literal(fixed, attribute_schema))
         self._set_property(schema.setdefault("properties", {}), name, attribute_schema, attribute)
-        if (attribute.get("use") or source_attribute.get("use")) == "required":
+        if use == "required" and (inherited_required is None or name not in inherited_required):
             schema.setdefault("required", []).append(name)
 
     def _apply_mixed_content(

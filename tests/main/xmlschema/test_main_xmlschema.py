@@ -8,7 +8,6 @@ import re
 import shutil
 import subprocess
 import sys
-from operator import itemgetter
 from pathlib import Path
 
 import msgspec
@@ -1266,16 +1265,21 @@ def test_w3c_xmlschema_collision_diagnostics(tmp_path: Path, case: str, crlf: bo
     )
 
 
-XSD_OCCURRENCE_CASES = json.loads((DATA_PATH / "payloads/xmlschema_occurrence_bounds/cases.json").read_text())
-
-
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
-@pytest.mark.parametrize("case", XSD_OCCURRENCE_CASES, ids=itemgetter("name"))
-def test_xmlschema_occurrence_bounds(output_file: Path, entrypoint: str, case: dict) -> None:
-    """Validate repeated elements without flattening their list-valued item types."""
+@pytest.mark.parametrize(
+    ("schema_group", "case"),
+    [
+        (schema_group, case)
+        for schema_group in ("occurrence_bounds", "simple_content_inheritance")
+        for case in json.loads((DATA_PATH / f"payloads/xmlschema_{schema_group}/cases.json").read_text())
+    ],
+    ids=lambda value: value["name"] if isinstance(value, dict) else value,
+)
+def test_xmlschema_composed_content(output_file: Path, entrypoint: str, schema_group: str, case: dict) -> None:
+    """Preserve occurrence limits and inherited scalar content through real generation."""
     name = case["name"]
-    source = XML_SCHEMA_DATA_PATH / "occurrence_bounds" / f"{name}.xsd"
-    expected = f"occurrence_bounds/{name}.py"
+    source = XML_SCHEMA_DATA_PATH / schema_group / f"{name}.xsd"
+    expected = f"{schema_group}/{name}.py"
     if entrypoint == "cli":
         run_main_and_assert(
             input_path=source,
@@ -1304,10 +1308,18 @@ def test_xmlschema_occurrence_bounds(output_file: Path, entrypoint: str, case: d
             assert_func=assert_file_content,
             expected_file=expected,
         )
-    with _generated_model(output_file, f"generated_occurrences_{name}", "Root") as model:
+    with _generated_model(output_file, f"generated_{schema_group}_{name}", "Root") as model:
+        results = []
         for sample in case["samples"]:
             if sample["valid"]:
-                model.model_validate(sample["data"])
+                value = model.model_validate(sample["data"])
+                if schema_group == "simple_content_inheritance":
+                    results.append(value.model_dump(mode="json"))
             else:
                 with pytest.raises(ValidationError):
                     model.model_validate(sample["data"])
+        if schema_group == "simple_content_inheritance":
+            assert_output(
+                json.dumps(results, indent=2) + "\n",
+                EXPECTED_XML_SCHEMA_PATH / schema_group / f"{case.get('expected', name)}.txt",
+            )
