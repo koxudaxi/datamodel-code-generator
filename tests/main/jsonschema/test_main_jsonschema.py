@@ -45,6 +45,7 @@ from referencing.exceptions import Unresolvable
 
 from datamodel_code_generator import (
     MIN_VERSION,
+    AllOfMergeMode,
     DanglingRefWarning,
     DataModelType,
     DefaultValueType,
@@ -54,6 +55,7 @@ from datamodel_code_generator import (
     InvalidFileFormatError,
     PythonVersion,
     PythonVersionMin,
+    SchemaParseError,
     SchemaValidatorType,
     TargetPydanticVersion,
     _clear_parser_source_data_cache,
@@ -22546,3 +22548,188 @@ def test_root_alias_null_constraints(
             invalid_json=json.dumps(value),
             expected_error_type="none_required",
         )
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("case", json.loads((DATA_PATH / "python/numeric_allof_types/cases.json").read_text()))
+@pytest.mark.parametrize("merge_mode", list(AllOfMergeMode))
+@pytest.mark.parametrize("field_constraints", [False, True])
+def test_numeric_allof_types(
+    output_file: Path, entrypoint: str, case: str, merge_mode: AllOfMergeMode, *, field_constraints: bool
+) -> None:
+    """Preserve order and intersect numeric types independently of constraint merge mode."""
+    source = JSON_SCHEMA_DATA_PATH / "numeric_allof_types" / f"{case}.json"
+    expected = EXPECTED_JSON_SCHEMA_PATH / "numeric_allof_types"
+    expected_constraints = field_constraints and case not in {
+        "field",
+        "format_decimal",
+        "format_double",
+        "format_float",
+        "format_int32",
+        "null_first_nullable",
+        "null_same",
+        "null_scalar_nullable",
+        "outside_field",
+        "outside_null",
+        "outside_root",
+        "string_nullable_same",
+        "string_same",
+    }
+    filename = f"{case}_all_{int(expected_constraints)}.py"
+    schema = json.loads(source.read_text())
+    with warnings.catch_warnings(record=True) as captured:
+        warnings.simplefilter("always", UserWarning)
+        if entrypoint == "cli":
+            args = ["--disable-timestamp", "--allof-merge-mode", merge_mode.value]
+            if field_constraints:
+                args.append("--field-constraints")
+            run_main_with_args([
+                "--input",
+                str(source),
+                "--output",
+                str(output_file),
+                "--input-file-type",
+                "jsonschema",
+                *args,
+            ])
+        else:
+            with assert_inputs_not_mutated({"schema": schema}):
+                generate(
+                    schema,
+                    **_default_formatter_generate_options({
+                        "input_file_type": InputFileType.JsonSchema,
+                        "input_filename": source.name,
+                        "output": output_file,
+                        "disable_timestamp": True,
+                        "allof_merge_mode": merge_mode,
+                        "field_constraints": field_constraints,
+                    }),
+                )
+        assert_output(output_file.read_text(encoding="utf-8"), expected / filename)
+    assert_output(
+        json.dumps([str(item.message) for item in captured], indent=2) + "\n", expected / f"{case}_warnings.txt"
+    )
+    payloads = json.loads((DATA_PATH / "python/numeric_allof_types/cases.json").read_text())[case]
+    validator = Draft7Validator(schema)
+    if case in json.loads((DATA_PATH / "python/numeric_allof_types/native_null_cases.json").read_text()):
+        try:
+            with _generated_model(
+                DATA_PATH / "python/numeric_allof_types/native_null.py", "native_null_control", "NativeNull"
+            ) as native_model:
+                native_model.model_validate(None)
+        except AssertionError as native_error:
+            assert_output(str(native_error) + "\n", expected / "native_null_error.txt")
+            with ExitStack() as stack, pytest.raises(AssertionError) as generated_error:
+                stack.enter_context(_generated_model(output_file, "numeric_allof_type_probe", "Root"))
+            assert_output(str(generated_error.value) + "\n", expected / "native_null_error.txt")
+            assert_output(
+                json.dumps([{"payload": p, "native": validator.is_valid(p)} for p in payloads], indent=2) + "\n",
+                expected / f"{case}_native.txt",
+            )
+            return
+    results = []
+    with _generated_model(output_file, "numeric_allof_type_probe", "Root") as model:
+        for payload in payloads:
+            try:
+                model.model_validate(payload)
+                accepted = True
+            except ValidationError:
+                accepted = False
+            results.append({"payload": payload, "native": validator.is_valid(payload), "generated": accepted})
+    assert_output(json.dumps(results, indent=2) + "\n", expected / f"{case}_runtime.txt")
+    if (base_schema := schema.get("$defs", {}).get("Base")) is not None:
+        base_validator = Draft7Validator(base_schema)
+        results = []
+        with _generated_model(output_file, "numeric_allof_base_probe", "Base") as model:
+            for payload in payloads:
+                try:
+                    model.model_validate(payload)
+                    accepted = True
+                except ValidationError:
+                    accepted = False
+                results.append({"payload": payload, "native": base_validator.is_valid(payload), "generated": accepted})
+        assert_output(json.dumps(results, indent=2) + "\n", expected / f"{case}_base_runtime.txt")
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("case", json.loads((DATA_PATH / "python/numeric_allof_types/errors.json").read_text()))
+@pytest.mark.parametrize("merge_mode", list(AllOfMergeMode))
+def test_numeric_allof_empty_intersection(
+    output_file: Path, capsys: pytest.CaptureFixture[str], entrypoint: str, case: str, merge_mode: AllOfMergeMode
+) -> None:
+    """Reject an empty numeric/null intersection instead of widening its type."""
+    source = JSON_SCHEMA_DATA_PATH / "numeric_allof_types" / f"{case}.json"
+    schema = json.loads(source.read_text())
+    validator = Draft7Validator(schema)
+    payloads = json.loads((DATA_PATH / "python/numeric_allof_types/errors.json").read_text())[case]
+    assert_output(
+        json.dumps([{"payload": payload, "native": validator.is_valid(payload)} for payload in payloads], indent=2)
+        + "\n",
+        EXPECTED_JSON_SCHEMA_PATH / "numeric_allof_types" / f"{case}_runtime.txt",
+    )
+    message = "allOf numeric/null type constraints have no common value"
+    if entrypoint == "cli":
+        run_main_with_args(
+            ["--input", str(source), "--output", str(output_file), "--allof-merge-mode", merge_mode.value],
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr_contains=message,
+        )
+    else:
+        with assert_inputs_not_mutated({"schema": schema}), pytest.raises(SchemaParseError, match=message):
+            generate(schema, input_file_type=InputFileType.JsonSchema, output=output_file, allof_merge_mode=merge_mode)
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+def test_numeric_null_custom_template(output_file: Path, entrypoint: str) -> None:
+    """Preserve valid custom rendering, including raw constraints and existing imports."""
+    source = JSON_SCHEMA_DATA_PATH / "numeric_allof_types/null_template.json"
+    expected = EXPECTED_JSON_SCHEMA_PATH / "numeric_allof_types"
+    template_dir = DATA_PATH / "templates_numeric_null"
+    if entrypoint == "cli":
+        run_main_with_args([
+            "--input",
+            str(source),
+            "--output",
+            str(output_file),
+            "--input-file-type",
+            "jsonschema",
+            "--disable-timestamp",
+            "--field-constraints",
+            "--custom-template-dir",
+            str(template_dir),
+        ])
+    else:
+        generate(
+            source,
+            **_default_formatter_generate_options({
+                "input_file_type": InputFileType.JsonSchema,
+                "output": output_file,
+                "disable_timestamp": True,
+                "field_constraints": True,
+                "custom_template_dir": template_dir,
+            }),
+        )
+    filename = "null_custom.py"
+    if not _uses_builtin_test_default_formatter() and (black_major := int(black.__version__.split(".")[0])) < 24:
+        filename = "null_custom_black22.py" if black_major < 23 else "null_custom_black23.py"
+    assert_output(output_file.read_text(encoding="utf-8"), expected / filename)
+    try:
+        with _generated_model(
+            DATA_PATH / "python/numeric_allof_types/native_null.py", "native_null_control", "NativeNull"
+        ):
+            pass
+    except AssertionError as native_error:
+        assert_output(str(native_error) + "\n", expected / "native_null_error.txt")
+        with ExitStack() as stack, pytest.raises(AssertionError) as generated_error:
+            stack.enter_context(_generated_model(output_file, "numeric_custom_null", "Root"))
+        assert_output(str(generated_error.value) + "\n", expected / "native_null_error.txt")
+        return
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="numeric_custom_null",
+        model_name="Root",
+        valid_json="null",
+        invalid_json="2",
+        expected_error_type="none_required",
+    )
