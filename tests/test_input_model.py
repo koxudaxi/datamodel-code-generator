@@ -2537,7 +2537,6 @@ def test_input_model_nested_reuse(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, entrypoint: str, formatter: str, strategy: str, case: str
 ) -> None:
     """Reuse exact nested identities without importing their owners as modules."""
-
     from pydantic import ValidationError
 
     from datamodel_code_generator import DataModelType, GenerateConfig, InputFileType, generate
