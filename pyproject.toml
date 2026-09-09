@@ -41,14 +41,17 @@ dependencies = [
   "tomli>=2.2.1,<3; python_version<'3.11'",
 ]
 optional-dependencies.all = [
+  "datamodel-code-generator[black]",
   "datamodel-code-generator[debug]",
   "datamodel-code-generator[graphql]",
   "datamodel-code-generator[http]",
+  "datamodel-code-generator[isort]",
   "datamodel-code-generator[protobuf]",
   "datamodel-code-generator[ruff]",
   "datamodel-code-generator[validation]",
   "datamodel-code-generator[watch]",
 ]
+optional-dependencies.black = [ "black>=19.10b0; sys_platform!='emscripten'" ]
 optional-dependencies.debug = [
   "pysnooper>=0.4.1,<2",
 ]
@@ -61,6 +64,7 @@ optional-dependencies.http = [
 optional-dependencies.httpx2 = [
   "httpx2>=2,<3",
 ]
+optional-dependencies.isort = [ "isort>=4.3.21,<9; sys_platform!='emscripten'" ]
 optional-dependencies.protobuf = [
   "grpcio-tools>=1.62,<2",
 ]
@@ -267,6 +271,7 @@ ini_options.filterwarnings = [
   "ignore:^.*No schemas found in components/schemas.*",
   "ignore:^.*Pydantic v2 with --use-annotated is recommended.*:DeprecationWarning",
   "ignore:^.*unclosed file.*",
+  "ignore:^Black/isort will become optional.*:FutureWarning",
 ]
 ini_options.verbosity_assertions = 2
 ini_options.assert_helper_direct_assert_exempt_files = [

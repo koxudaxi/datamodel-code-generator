@@ -16,6 +16,7 @@ This page lists deprecations and scheduled breaking changes.
 | `cli.validation` | active | cli-option | `--validation` | 0.24.0 | TBD | --field-constraints |
 | `config.json-config-strict-validation` | active | config | `JSON configuration values accepted by legacy validation` | 0.64.2 | TBD | Update the JSON configuration to match --output-format-json-schema config. |
 | `config.yaml-non-lowercase-bool` | active | config | `YAML bool values True, False, TRUE, FALSE` | 0.48.0 | TBD | Use lowercase true or false. |
+| `dependency.external-formatters-optional` | active | dependency | `Black/isort installation` | 0.78.0 | TBD | Declare the black/isort extras for the external formatters you select. |
 | `python-api.python-version-has-type-alias` | active | python-api | `PythonVersion.has_type_alias` | 0.52.1 | TBD | - |
 | `schema.jsonschema-items-array` | active | schema | `JSON Schema Draft 2020-12 items array tuple validation` | 0.53.0 | TBD | Use prefixItems. |
 | `schema.openapi-nullable` | active | schema | `OpenAPI 3.1 nullable keyword` | 0.53.0 | TBD | Use type arrays such as type: ["string", "null"]. |
@@ -145,6 +146,20 @@ JSON configuration values that do not match the documented schema are deprecated
 - **Replacement:** Use lowercase true or false.
 
 Non-lowercase YAML bool values are deprecated. Use lowercase true or false instead.
+
+### `dependency.external-formatters-optional`
+
+- **Status:** active
+- **Kind:** dependency
+- **Target:** `Black/isort installation`
+- **Since:** 0.78.0
+- **Planned removal:** TBD
+- **Warning category:** `FutureWarning`
+- **Replacement:** Declare the black/isort extras for the external formatters you select.
+
+Black/isort will become optional. Declare the corresponding extras; see --help.
+
+This is advance notice only. Current dependency ranges and compatibility remain unchanged.
 
 ### `python-api.python-version-has-type-alias`
 

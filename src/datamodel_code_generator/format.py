@@ -538,6 +538,8 @@ class CodeFormatter:
                 stacklevel=2,
             )
             formatters = list(DEFAULT_FORMATTERS)
+        elif Formatter.BLACK in formatters or Formatter.ISORT in formatters:
+            warn_deprecated("dependency.external-formatters-optional", stacklevel=2)
 
         if not settings_path:
             settings_path = Path.cwd()

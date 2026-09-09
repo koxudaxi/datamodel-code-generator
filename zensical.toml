@@ -89,6 +89,7 @@ nav = [
   { "Conformance Dashboard" = "conformance.md" },
   { "Performance Benchmarks" = "performance-benchmarks.md" },
   { "Deprecations" = "deprecations.md" },
+  { "Dependency Migration" = "dependency-migration.md" },
   { "Experimental Features" = "experimental.md" },
   { "FAQ" = "faq.md" },
   { "Architecture" = "architecture.md" },

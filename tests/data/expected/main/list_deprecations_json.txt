@@ -108,6 +108,18 @@
     "warning_since": "0.48.0"
   },
   {
+    "id": "dependency.external-formatters-optional",
+    "kind": "dependency",
+    "message": "Black/isort will become optional. Declare the corresponding extras; see --help.",
+    "note": "This is advance notice only. Current dependency ranges and compatibility remain unchanged.",
+    "removal_version": null,
+    "replacement": "Declare the black/isort extras for the external formatters you select.",
+    "status": "active",
+    "target": "Black/isort installation",
+    "warning_category": "FutureWarning",
+    "warning_since": "0.78.0"
+  },
+  {
     "id": "python-api.python-version-has-type-alias",
     "kind": "python-api",
     "message": "has_type_alias is deprecated and will be removed in a future version.",

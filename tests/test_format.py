@@ -2856,11 +2856,12 @@ def test_code_formatter_warns_when_formatters_is_none(tmp_path: Path, monkeypatc
         CodeFormatter(PythonVersionMin)
 
 
-def test_code_formatter_no_warning_when_formatters_explicit(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Test that no warning is emitted when formatters is explicitly specified."""
+def test_code_formatter_optional_warning_when_formatters_explicit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Explicit external formatters receive the separate optional-installation notice."""
     monkeypatch.chdir(tmp_path)
-    with warnings.catch_warnings():
-        warnings.simplefilter("error")
+    with pytest.warns(FutureWarning, match="^Black/isort will become optional"):
         CodeFormatter(PythonVersionMin, formatters=[Formatter.BLACK, Formatter.ISORT])
 
 

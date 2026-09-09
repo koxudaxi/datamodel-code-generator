@@ -1245,6 +1245,7 @@ base_options.add_argument(
     "Keep --formatters black isort to preserve existing formatting. "
     "New 20260909 presets include builtin; explicit formatters override presets. "
     "The future builtin default reduces installation dependencies and version constraints. "
+    "Black/isort remain required today; declare [black,isort] extras for their later optional installation. "
     "Review custom-template output with builtin. "
     "Details: https://datamodel-code-generator.koxudaxi.dev/formatter-behavior/",
     choices=[f.value for f in Formatter],

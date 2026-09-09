@@ -76,7 +76,11 @@ def test_allof_root_regressions(
             )
     if recorded_warnings is not None:
         assert_output(
-            json.dumps([str(warning.message) for warning in recorded_warnings], indent=2) + "\n",
+            json.dumps(
+                [str(warning.message) for warning in recorded_warnings if issubclass(warning.category, UserWarning)],
+                indent=2,
+            )
+            + "\n",
             EXPECTED / f"{case}_{entrypoint}_{field_constraints}_minimum_warnings.txt",
         )
     assert_output(output.read_text(), EXPECTED / f"{case}_{field_constraints}_{formatter}.py")
