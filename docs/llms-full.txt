@@ -41236,9 +41236,8 @@ compatibility boundaries; no version selection is inferred from string ordering.
 numeric release components and distinguish prereleases at the final-release boundary without relying on an
 undeclared packaging dependency.
 
-No removal version or date has been committed. The direction is to publish notice first and assess a subsequent
-minor release. One to two weeks has been discussed as an approximate interval, not a confirmed schedule. There is
-no fixed 60/90-day grace period and no date-based removal or automatic requirement change.
+No removal version, date, or transition period has been specified. This release only announces the proposed
+changes; there is no date-based removal or automatic requirement change.
 
 Public lock searches included many old DCG versions and false-positive mentions in other packages' extras. Counts
 from those searches are not user counts or impact estimates. Recent public usage includes explicit Black/isort,
