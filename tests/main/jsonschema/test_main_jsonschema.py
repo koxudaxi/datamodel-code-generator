@@ -23915,52 +23915,13 @@ def test_additional_pattern_intersections(
             ),
         )
     mode = f"{enabled}_{field_constraints}_{formatter}"
-    code_name = record["code_names"][mode]
-    if (
-        formatter == "external"
-        and int(black.__version__.split(".")[0]) < 24
-        and code_name
-        in {
-            "minimum_float_False_False_builtin.py",
-            "anchored_disjoint_False_False_builtin.py",
-            "minimum_float_False_True_builtin.py",
-            "suffix_prefix_False_False_builtin.py",
-            "minimum_custom_False_True_external.py",
-            "minimum_null_False_False_builtin.py",
-            "minimum_shared_False_True_builtin.py",
-            "minimum_maximum_False_False_builtin.py",
-            "minimum_large_False_False_external.py",
-            "prefix_suffix_False_False_builtin.py",
-            "minimum_number_False_False_builtin.py",
-            "minimum_custom_False_False_external.py",
-            "prefix_suffix_custom_False_False_external.py",
-            "minimum_maximum_False_True_builtin.py",
-            "minimum_large_False_True_builtin.py",
-            "minimum_shared_False_False_builtin.py",
-            "minimum_number_False_True_builtin.py",
-            "minimum_False_True_builtin.py",
-            "minimum_False_False_builtin.py",
-        }
-    ):
-        version_suffix = (
-            "_black22.py"
-            if black.__version__.startswith("22.")
-            and code_name
-            in {
-                "minimum_custom_False_True_external.py",
-                "prefix_suffix_custom_False_False_external.py",
-                "minimum_custom_False_False_external.py",
-            }
-            else "_black23.py"
-        )
-        code_name = code_name.removesuffix(".py") + version_suffix
-    if (
-        formatter == "external"
-        and black.__version__.startswith("23.")
-        and code_name == "boolean_custom_False_False_external.py"
-    ):
-        code_name = "boolean_custom_False_False_external_black23.py"
-    assert_output(output.read_text(), ADDITIONAL_PATTERN_EXPECTED / code_name)
+    assert_output(
+        output.read_text(),
+        ADDITIONAL_PATTERN_EXPECTED
+        / record.get("legacy_code_names", {}).get(
+            f"{mode}_{black.__version__.split('.')[0]}", record["code_names"][mode]
+        ),
+    )
     schema = json.loads(source.read_text())
     if record.get("invalid_schema"):
         with pytest.raises(JsonSchemaError):
