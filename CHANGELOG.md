@@ -5,6 +5,77 @@ This changelog is automatically generated from GitHub Releases.
 
 ---
 
+## [0.78.0](https://github.com/datamodel-code-generator/datamodel-code-generator/releases/tag/0.78.0) - 2026-09-09
+
+## Breaking Changes
+
+
+### Code Generation Changes
+* MCP tools schema-instance values preserved verbatim - Converting MCP tools inputs now keeps values under `default`, `const`, `enum`, and `examples` unchanged instead of rewriting internal definition references contained within them, so generated model defaults for MCP tools schemas that embed ref-like values inside these instance keywords can differ from previously generated output (#3891)
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+* JSON Pointer decoding order changed - URI-fragment JSON Pointer tokens are now percent-decoded before the `~0` and `~1` tilde escapes are unescaped, following RFC evaluation order, so a `$ref` fragment that combines percent-encoding with tilde escapes such as `a%7E1b` now resolves to a different definition than before and can change the generated models for those schemas (#3893)
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+* Exact numeric bounds in allOf intersection - The `_intersect_constraint` logic no longer coerces `minimum`, `maximum`, `exclusiveMinimum`, and `exclusiveMaximum` operands to float before comparing them, so integer bounds beyond the 2^53 exact-float precision limit are now intersected exactly instead of after lossy float rounding, changing the generated `ge`, `le`, `gt`, and `lt` values for schemas that merge such large integer bounds via allOf (#3900)
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+* Numeric constraint precision preserved for large integers - Constraint keywords `multipleOf`, `exclusiveMinimum`, and `exclusiveMaximum` now retain exact integer values instead of coercing them to floats, so regenerated models for schemas containing integers beyond float precision emit different constraint literals and validate differently than before (#3903)
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+* allOf merge modes now intersect bounds and enums - When `allof_merge_mode` is any value other than none, overlapping numeric, length, item, and property-count bounds from allOf subschemas are intersected to the tightest value and enum values are reduced to their intersection, instead of the previous deep-merge or concatenation behavior, so generated constraints and enum members differ from prior releases (#3961)
+* Retain string length bounds on root-array pattern property adapters - With `field_constraints` and `generate_schema_validators` both enabled and builtin types in use, a root-level array whose items declare a single ASCII-alphanumeric patternProperties key mapping to a length-bounded string now generates a `constr` adapter carrying `min_length`/`max_length` instead of a plain `str`, so regenerated models change output and enforce those bounds, rejecting values that previously passed validation (#3992)
+* GraphQL root operation types referenced by unions are now emitted - When a GraphQL schema defines a union that references the query, mutation, or subscription root operation type, the parser now removes that type from the excluded root set and emits it as a concrete model so the union resolves correctly, changing the generated output for such schemas across all output backends (#3910)
+* XML Schema occurrence bound combination corrected - When generating models from XSD inputs with nested or combined `maxOccurs`, an unbounded maximum is now propagated instead of computing a finite upper bound, so an unbounded parent combined with a finite child (and similar nesting) no longer emits a `max_length` constraint, changing the generated output for affected schemas (#3939)
+
+### Error Handling Changes
+* Empty allOf enum intersections now raise an error - When merging allOf subschemas whose enum values do not overlap, generation now raises a `SchemaParseError` and aborts instead of producing a widened or concatenated enum, so schemas that previously generated successfully can now fail (#3961)
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+
+### Default Behavior Changes
+* New FutureWarning when Black or isort formatters are explicitly selected - Choosing `black` or `isort` formatters through the CLI, resolved configuration, or the Python API now emits a FutureWarning announcing that Black/isort will become optional in a future release; previously explicit formatter selection produced no warning. Black and isort remain required dependencies and generated output is unchanged, but strict setups that treat FutureWarning as an error may now fail unless the warning is filtered or disable-warnings is used (#4009)
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+
+## What's Changed
+* Update CHANGELOG for 0.77.0 by @dcg-generated-docs[bot] in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3998
+* Preserve MCP schema values by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3891
+* Fix JSON Pointer decoding by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3893
+* Fix schema reference cycle detection by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3894
+* Preserve integer bound precision by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3900
+* Preserve numeric constraint precision by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3903
+* Fix scalar and array allOf roots by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3905
+* Intersect allOf bounds and enums by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3961
+* Preserve string bounds in pattern adapters by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3992
+* Fix GraphQL root union references by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3910
+* Fix GraphQL typename collisions by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3911
+* Avoid unused template dependency scans by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3919
+* Isolate inflection type checks by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3920
+* Fix dataclass aliases on older Pydantic runtimes by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/4005
+* Clarify formatter selection and default warning by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/4006
+* Add builtin formatter presets by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/4008
+* Warn about legacy dependency support by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/4002
+* Prepare optional Black and isort dependencies by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/4009
+* Reject conflicting XSD field names by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3933
+* Preserve unbounded XSD occurrences by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3939
+* Preserve XSD simple content inheritance by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3940
+* Fix discriminator field aliases by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3922
+* Fix external discriminator mappings by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3923
+
+
+**Full Changelog**: https://github.com/datamodel-code-generator/datamodel-code-generator/compare/0.77.0...0.78.0
+
+---
+
 ## [0.77.0](https://github.com/datamodel-code-generator/datamodel-code-generator/releases/tag/0.77.0) - 2026-09-08
 
 ## Breaking Changes
