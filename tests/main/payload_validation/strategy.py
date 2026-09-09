@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import json
-import sys
 import re
+import sys
 from copy import deepcopy
 from fractions import Fraction
 from typing import TYPE_CHECKING, Any

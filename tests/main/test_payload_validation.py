@@ -12,6 +12,7 @@ from typing import Any, Literal, TypeAlias
 import pytest
 from hypothesis import HealthCheck, assume, given, settings
 from hypothesis import strategies as st
+from jsonschema import ValidationError as JsonSchemaValidationError
 from packaging.version import Version
 from pydantic import VERSION as PYDANTIC_VERSION
 from pydantic import ValidationError
@@ -1024,3 +1025,44 @@ def test_generated_payload_backend_rejects_representative_schema_invalid_payload
 
     runtime = load_generated_payload_runtime(case, generated_model_cache, backend)
     runtime.assert_rejects_python(mutation.payload)
+
+
+LITERAL_DATA_PATH = Path(__file__).parents[1] / "data" / "payloads" / "literal_witnesses_schemas.json"
+
+
+LITERAL_SCHEMAS = json.loads(LITERAL_DATA_PATH.read_text(encoding="utf-8"))
+
+
+LITERAL_CASES = {
+    name: SchemaCase(name, "jsonschema", LITERAL_DATA_PATH, schema, schema, ".json")
+    for name, schema in LITERAL_SCHEMAS.items()
+}
+
+
+@pytest.mark.parametrize("name", LITERAL_CASES)
+@settings(
+    database=None,
+    deadline=None,
+    derandomize=True,
+    max_examples=20,
+    suppress_health_check=[HealthCheck.filter_too_much, HealthCheck.too_slow],
+)
+@given(data=st.data())
+def test_literal_source_payloads(name: str, data: st.DataObject) -> None:
+    """Sample literal intersections, nonliteral regexes, nested schemas and ordinary primitives."""
+    case = LITERAL_CASES[name]
+    with assert_inputs_not_mutated({"schema": case.source_schema}):
+        validate_with_source_schema(case, data.draw(payload_strategy(case)))
+
+
+def test_literal_source_witnesses() -> None:
+    """The unchanged source proves both literal orders and rejects incomplete intersections."""
+    witnesses = json.loads(LITERAL_DATA_PATH.with_name("literal_witnesses_values.json").read_text(encoding="utf-8"))[
+        "unicode"
+    ]
+    with assert_inputs_not_mutated({"schema": LITERAL_CASES["unicode"].source_schema, "witnesses": witnesses}):
+        for payload in witnesses["valid"]:
+            validate_with_source_schema(LITERAL_CASES["unicode"], payload)
+        for payload in witnesses["invalid"]:
+            with pytest.raises(JsonSchemaValidationError):
+                validate_with_source_schema(LITERAL_CASES["unicode"], payload)
