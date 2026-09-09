@@ -535,11 +535,6 @@ class CodeFormatter:
         if formatters is None:
             warn_deprecated(
                 "format.default-formatters",
-                details=(
-                    "To keep the current behavior, specify formatters=[Formatter.BLACK, Formatter.ISORT]. "
-                    "To prepare for dependency-free formatting, use formatters=[Formatter.BUILTIN]. "
-                    "To suppress this warning, specify formatters explicitly."
-                ),
                 stacklevel=2,
             )
             formatters = list(DEFAULT_FORMATTERS)

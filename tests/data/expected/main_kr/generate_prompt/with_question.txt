@@ -267,8 +267,18 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         points to a mapped file, an import statement is
                         generated instead of a class definition.
   --formatters {builtin,black,isort,ruff-check,ruff-format} [{builtin,black,isort,ruff-check,ruff-format} ...]
-                        Formatters for output (default: [black, isort]; use
-                        builtin for dependency-free formatting)
+                        Formatters (current default: black, isort; future
+                        default: builtin). For Ruff projects, use --formatters
+                        ruff-check ruff-format (install with pip install
+                        'datamodel-code-generator[ruff]'). Use --formatters
+                        builtin when no external formatter is used or
+                        generation speed takes priority. Keep --formatters
+                        black isort to preserve existing formatting. The
+                        future builtin default reduces installation
+                        dependencies and version constraints. Review custom-
+                        template output with builtin. Details:
+                        https://datamodel-code-
+                        generator.koxudaxi.dev/formatter-behavior/
   --http-backend {auto,httpx,httpx2}
                         Select the HTTP client backend. 'auto' (default)
                         selects stable HTTPX when its client module is
