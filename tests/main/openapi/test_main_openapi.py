@@ -25,6 +25,7 @@ from datamodel_code_generator import (
     MIN_VERSION,
     DanglingRefWarning,
     DataModelType,
+    Error,
     InputFileType,
     OpenAPIScope,
     PythonVersionMin,
@@ -9802,6 +9803,7 @@ def test_main_openapi_discriminated_oneof_allof_cycle(output_file: Path) -> None
 )
 def test_discriminator_final_field_aliases(
     output_file: Path,
+    capsys: pytest.CaptureFixture[str],
     entrypoint: str,
     case: str,
     source: str,
@@ -9814,6 +9816,31 @@ def test_discriminator_final_field_aliases(
     fixture_dir = OPEN_API_DATA_PATH / "discriminator_field_aliases"
     aliases_path = fixture_dir / f"{alias_file}_aliases.json"
     expected = EXPECTED_OPENAPI_PATH / "discriminator_field_aliases" / f"{case}.py"
+    if case.startswith("wire_collision"):
+        expected = EXPECTED_OPENAPI_PATH / "discriminator_field_aliases/wire_collision_error.txt"
+        if entrypoint == "cli":
+            run_main_and_assert(
+                input_path=fixture_dir / f"{source}.json",
+                output_path=output_file,
+                input_file_type="openapi",
+                extra_args=["--aliases", str(aliases_path)],
+                expected_exit=Exit.ERROR,
+                capsys=capsys,
+                expected_stderr=expected.read_text() + "\n",
+                output_should_not_exist=True,
+            )
+        else:
+            with pytest.raises(Error) as exc_info:
+                run_generate_file_and_assert(
+                    input_path=fixture_dir / f"{source}.json",
+                    output_path=output_file,
+                    input_file_type=InputFileType.OpenAPI,
+                    aliases=json.loads(aliases_path.read_text()),
+                    assert_func=assert_file_content,
+                    **options,
+                )
+            assert_output(str(exc_info.value), expected)
+        return
     if entrypoint == "cli":
         args = ["--aliases", str(aliases_path), "--disable-timestamp"]
         for key, value in options.items():
@@ -9853,17 +9880,6 @@ def test_discriminator_final_field_aliases(
             expected_attribute_path=("root", field_name),
             expected_attribute_value=tag,
         )
-        if case == "wire_collision_global_missing":
-            assert_generated_model_json_validation(
-                output_file,
-                module_name=f"generated_discriminator_missing_{tag}",
-                model_name=model_name,
-                valid_json=json.dumps({"petType": tag}),
-                invalid_json="{}",
-                expected_error_type="union_tag_not_found",
-                expected_attribute_path=("root", field_name),
-                expected_attribute_value=tag,
-            )
         with _generated_model(output_file, f"generated_discriminator_dump_{case}_{tag}", model_name) as model:
             value = model.model_validate({"petType": tag, detail: "yes"})
             wire_name = "wireKind" if "serialization_aliases" in options else "petType"
@@ -9872,15 +9888,6 @@ def test_discriminator_final_field_aliases(
                 json.dumps(value.model_dump(by_alias=True, exclude_none=True), sort_keys=True) + "\n",
                 payload_dir / f"{wire_name}_{tag}.txt",
             )
-            if case.startswith("wire_collision"):
-                bare = model.model_validate({"petType": tag})
-                assert_output(json.dumps(bare.root.other) + "\n", payload_dir / "missing.txt")
-                ordinary = type(bare.root).model_validate({"petType": tag, "kind": "ordinary"})
-                assert_output(
-                    json.dumps(ordinary.model_dump(mode="json", by_alias=True, exclude_none=True), sort_keys=True)
-                    + "\n",
-                    payload_dir / f"{wire_name}_{tag}_ordinary.txt",
-                )
 
 
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
@@ -9911,8 +9918,6 @@ def test_discriminator_different_field_aliases(
         )
         assert_error_message(capsys, message)
     else:
-        from datamodel_code_generator import Error
-
         with pytest.raises(Error, match=re.escape(message)):
             generate(
                 fixture_dir / "direct.json",
