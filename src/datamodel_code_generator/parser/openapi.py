@@ -248,6 +248,7 @@ class OpenAPIParser(JsonSchemaParser):
                 "--openapi-include-paths has no effect without --openapi-scopes paths",
                 stacklevel=2,
             )
+        self._discriminator_documents: set[str] = set()
         self._discriminator_schemas: dict[str, dict[str, Any]] = {}
         self._discriminator_subtypes: dict[str, list[str]] = defaultdict(list)
 
@@ -452,6 +453,11 @@ class OpenAPIParser(JsonSchemaParser):
             }
         return result
 
+    def _get_discriminator_subtype_data_type(self, ref: str) -> DataType:
+        """Resolve one subtype without recursively expanding its discriminator."""
+        self.resolve_ref(ref)
+        return super().get_ref_data_type(ref)
+
     def _get_discriminator_union_type(self, ref: str) -> DataType | None:
         """Create a union type for discriminator subtypes if available.
 
@@ -459,6 +465,7 @@ class OpenAPIParser(JsonSchemaParser):
         the discriminator mapping to create the union type. This handles cases
         where schemas don't use allOf inheritance but have explicit discriminator mappings.
         """
+        current_document = "/".join(self.model_resolver.current_root)
         subtypes = self._discriminator_subtypes.get(ref, [])
         if not subtypes:
             discriminator = self._discriminator_schemas[ref]
@@ -467,19 +474,42 @@ class OpenAPIParser(JsonSchemaParser):
                 subtypes = [
                     self._normalize_discriminator_mapping_ref(v) for v in mapping.values() if isinstance(v, str)
                 ]
+                if subtypes and ref.partition("#")[0] == current_document:
+                    return self.data_type(data_types=[self._get_discriminator_subtype_data_type(v) for v in subtypes])
+                subtypes = [self._resolve_inherited_child_ref(v, ref) for v in subtypes]
         if not subtypes:
             return None
         data_types: list[DataType] = []
         for subtype in subtypes:
-            self.resolve_ref(subtype)
-            data_types.append(super().get_ref_data_type(subtype))
+            document, _, fragment = subtype.partition("#")
+            if document != current_document:
+                with (
+                    self.model_resolver.current_base_path_context(self.base_path),
+                    self.model_resolver.base_url_context(None),
+                    self.root_id_context({}),
+                ):
+                    data_types.append(self._get_discriminator_subtype_data_type(subtype))
+            else:
+                local_ref = f"#{fragment}"
+                data_types.append(self._get_discriminator_subtype_data_type(local_ref))
         return self.data_type(data_types=data_types)
 
     def get_ref_data_type(self, ref: str) -> DataType:
         """Get data type for a reference, handling discriminator polymorphism."""
-        if ref in self._discriminator_schemas and (union_type := self._get_discriminator_union_type(ref)):
-            return union_type
-        return super().get_ref_data_type(ref)
+        if (
+            self._discriminator_schemas
+            and (resolved_ref := self.model_resolver.resolve_ref(ref)) in self._discriminator_schemas
+        ):
+            return self._get_discriminator_union_type(resolved_ref) or super().get_ref_data_type(ref)
+        document_count = len(self._discriminator_documents)
+        data_type = super().get_ref_data_type(ref)
+        if (
+            len(self._discriminator_documents) != document_count
+            and self._discriminator_schemas
+            and (resolved_ref := self.model_resolver.resolve_ref(ref)) in self._discriminator_schemas
+        ):
+            return self._get_discriminator_union_type(resolved_ref) or data_type
+        return data_type
 
     def parse_object_fields(
         self,
@@ -499,9 +529,14 @@ class OpenAPIParser(JsonSchemaParser):
             if (
                 isinstance(field, JsonSchemaObject)
                 and field.ref
-                and (discriminator := self._discriminator_schemas.get(field.ref))
+                and self._discriminator_schemas
+                and (
+                    discriminator := self._discriminator_schemas.get(
+                        resolved_ref := self.model_resolver.resolve_ref(field.ref)
+                    )
+                )
             ):
-                new_field_type = self._get_discriminator_union_type(field.ref)
+                new_field_type = self._get_discriminator_union_type(resolved_ref)
                 if new_field_type is None:
                     result_fields.append(field_obj)
                     continue
@@ -961,6 +996,9 @@ class OpenAPIParser(JsonSchemaParser):
 
     def parse_raw(self) -> None:
         """Parse OpenAPI specification including schemas, paths, and operations."""
+        self._discriminator_documents.clear()
+        self._discriminator_schemas.clear()
+        self._discriminator_subtypes.clear()
         try:
             for source, path_parts in self._get_context_source_path_parts():
                 if self.validation:
@@ -1002,11 +1040,26 @@ class OpenAPIParser(JsonSchemaParser):
             self._clear_inherited_field_caches()
             self._reset_local_source_cache()
 
+    def _get_ref_body(self, resolved_ref: str) -> dict[str, YamlValue]:
+        """Index discriminator metadata when the existing loader reads an external document."""
+        raw = super()._get_ref_body(resolved_ref)
+        if f"{resolved_ref}#" not in self._discriminator_documents:
+            with self._inherited_ref_context(resolved_ref):
+                self._collect_discriminator_document(raw)
+        return raw
+
     def _collect_discriminator_schemas(self) -> None:
-        """Collect schemas with discriminators but no oneOf/anyOf, and find their subtypes."""
-        self._discriminator_schemas.clear()
-        self._discriminator_subtypes.clear()
-        schemas: dict[str, Any] = self.raw_obj.get("components", {}).get("schemas", {})
+        """Collect discriminator metadata for the current input specification."""
+        self._collect_discriminator_document(self.raw_obj)
+
+    def _collect_discriminator_document(self, raw: dict[str, Any]) -> None:
+        """Collect discriminator definitions once per document, preserving subtype order."""
+        document = f"{'/'.join(self.model_resolver.current_root)}#"
+        if document in self._discriminator_documents:
+            return
+        self._discriminator_documents.add(document)
+        self._register_discriminator_schema("#", raw)
+        schemas: dict[str, Any] = raw.get("components", {}).get("schemas", {})
         potential_subtypes: dict[str, list[str]] = {}
 
         for schema_name, schema in schemas.items():
@@ -1021,7 +1074,7 @@ class OpenAPIParser(JsonSchemaParser):
                         [*self.model_resolver.current_root, "#/components", "schemas", schema_name],
                     )
                     continue  # pragma: no cover - validation always raises for non-schema values
-            self._register_discriminator_schema(schema_name, schema)
+            self._register_discriminator_schema(f"#/components/schemas/{schema_name}", schema)
 
             all_of = schema.get("allOf")
             if all_of:
@@ -1031,11 +1084,17 @@ class OpenAPIParser(JsonSchemaParser):
 
         for schema_name, refs in potential_subtypes.items():
             for ref_in_allof in refs:
-                if ref_in_allof in self._discriminator_schemas:
-                    subtype_ref = f"#/components/schemas/{schema_name}"
-                    self._discriminator_subtypes[ref_in_allof].append(subtype_ref)
+                resolved_ref = (
+                    f"{document}{ref_in_allof[1:]}"
+                    if ref_in_allof.startswith("#")
+                    else self.model_resolver.resolve_ref(ref_in_allof)
+                )
+                # External parents may be registered after this child document is read.
+                if resolved_ref in self._discriminator_schemas or resolved_ref.partition("#")[0] != document[:-1]:
+                    subtype_ref = self.model_resolver.resolve_ref(f"#/components/schemas/{schema_name}")
+                    self._discriminator_subtypes[resolved_ref].append(subtype_ref)
 
-    def _register_discriminator_schema(self, schema_name: str, schema: dict[str, Any]) -> None:
+    def _register_discriminator_schema(self, ref: str, schema: dict[str, Any]) -> None:
         discriminator = schema.get("discriminator")
         if discriminator and not schema.get("oneOf") and not schema.get("anyOf"):
-            self._discriminator_schemas[f"#/components/schemas/{schema_name}"] = discriminator
+            self._discriminator_schemas[self.model_resolver.resolve_ref(ref)] = discriminator

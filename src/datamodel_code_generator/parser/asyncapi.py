@@ -260,15 +260,21 @@ class AsyncAPIParser(OpenAPIParser):
 
     def _collect_discriminator_schemas(self) -> None:
         """Collect discriminator metadata from component schemas."""
+        self._discriminator_documents.clear()
         self._discriminator_schemas.clear()
         self._discriminator_subtypes.clear()
-        schemas = self.raw_obj.get("components", {}).get("schemas", {})
+        self._collect_discriminator_document(self.raw_obj)
+
+    def _collect_discriminator_document(self, raw: dict[str, Any]) -> None:
+        """Retain AsyncAPI's component-only policy when reference loading indexes documents."""
+        self._discriminator_documents.add(f"{'/'.join(self.model_resolver.current_root)}#")
+        schemas = raw.get("components", {}).get("schemas", {})
         if not isinstance(schemas, dict):
             return
         for schema_name, schema in schemas.items():
             if not isinstance(schema, dict):
                 continue
-            self._register_discriminator_schema(schema_name, schema)
+            self._register_discriminator_schema(f"#/components/schemas/{schema_name}", schema)
 
     def _current_asyncapi_context(self) -> AsyncAPIContext:
         return AsyncAPIContext(
