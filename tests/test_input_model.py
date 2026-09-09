@@ -3066,7 +3066,7 @@ def test_python_root_model_inputs(
         if input_format == "module"
         else f"tests/data/python/input_model/root_models.py:{name}"
     )
-    expected = PYTHON_ROOT_EXPECTED / f"{name}_{strategy}{'_file' if input_format == 'file' else ''}.py"
+    expected = PYTHON_ROOT_EXPECTED / case["expected"][input_format]
     if entrypoint == "cli":
         run_main_with_args(
             [
@@ -3128,7 +3128,7 @@ def test_python_root_model_inputs(
             with pytest.raises(ValidationError):
                 native.model_validate({})
             result["rejects_object"] = True
-        expected_result = PYTHON_ROOT_EXPECTED / f"{name}_{strategy}.txt"
+        expected_result = PYTHON_ROOT_EXPECTED / case["expected"]["runtime"]
         assert_output(json.dumps(result, indent=2) + "\n", expected_result)
         result["dump"] = native_value.model_dump(mode="json")
         result["root_model"] = native.__pydantic_root_model__
