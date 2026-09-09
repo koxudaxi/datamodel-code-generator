@@ -20,7 +20,11 @@
       }
     ],
     "fixed": true,
-    "changed": true
+    "changed": true,
+    "legacy_code_names": {
+      "external_22_False": "overlap_disabled_black23.py",
+      "external_23_False": "overlap_disabled_black23.py"
+    }
   },
   "declared": {
     "payloads": [
@@ -100,7 +104,11 @@
       }
     ],
     "fixed": true,
-    "changed": false
+    "changed": false,
+    "legacy_code_names": {
+      "external_22_False": "disjoint_disabled_black23.py",
+      "external_23_False": "disjoint_disabled_black23.py"
+    }
   },
   "shared": {
     "payloads": [
@@ -145,7 +153,11 @@
       }
     ],
     "fixed": false,
-    "changed": false
+    "changed": false,
+    "legacy_code_names": {
+      "external_22_False": "complex_disabled_black23.py",
+      "external_23_False": "complex_disabled_black23.py"
+    }
   },
   "any_declared": {
     "payloads": [
@@ -491,7 +503,11 @@
         }
       }
     ],
-    "normal": true
+    "normal": true,
+    "legacy_code_names": {
+      "external_22_False": "incompatible_objects_disabled_black23.py",
+      "external_23_False": "incompatible_objects_disabled_black23.py"
+    }
   },
   "third_rejected_pattern": {
     "payloads": [
@@ -503,7 +519,11 @@
         }
       }
     ],
-    "normal": true
+    "normal": true,
+    "legacy_code_names": {
+      "external_22_False": "third_rejected_pattern_disabled_black23.py",
+      "external_23_False": "third_rejected_pattern_disabled_black23.py"
+    }
   },
   "constrained_objects": {
     "payloads": [
@@ -515,7 +535,11 @@
         }
       }
     ],
-    "unresolved": true
+    "unresolved": true,
+    "legacy_code_names": {
+      "external_22_False": "constrained_objects_disabled_black23.py",
+      "external_23_False": "constrained_objects_disabled_black23.py"
+    }
   },
   "equivalent_objects": {
     "payloads": [
@@ -526,7 +550,11 @@
         }
       }
     ],
-    "normal": true
+    "normal": true,
+    "legacy_code_names": {
+      "external_22_False": "equivalent_objects_disabled_black23.py",
+      "external_23_False": "equivalent_objects_disabled_black23.py"
+    }
   },
   "closed_objects": {
     "payloads": [
@@ -538,7 +566,11 @@
         }
       }
     ],
-    "normal": true
+    "normal": true,
+    "legacy_code_names": {
+      "external_22_False": "closed_objects_disabled_black23.py",
+      "external_23_False": "closed_objects_disabled_black23.py"
+    }
   },
   "redundant_objects": {
     "payloads": [
@@ -564,7 +596,11 @@
         }
       }
     ],
-    "unresolved": true
+    "unresolved": true,
+    "legacy_code_names": {
+      "external_22_False": "annotated_objects_disabled_black23.py",
+      "external_23_False": "annotated_objects_disabled_black23.py"
+    }
   },
   "different_literals": {
     "payloads": [
@@ -576,7 +612,11 @@
         }
       }
     ],
-    "unresolved": true
+    "unresolved": true,
+    "legacy_code_names": {
+      "external_22_False": "different_literals_disabled_black23.py",
+      "external_23_False": "different_literals_disabled_black23.py"
+    }
   },
   "inherited_patterns": {
     "payloads": [
@@ -600,7 +640,11 @@
         }
       }
     ],
-    "unresolved": true
+    "unresolved": true,
+    "legacy_code_names": {
+      "external_22_False": "undeclared_required_object_disabled_black23.py",
+      "external_23_False": "undeclared_required_object_disabled_black23.py"
+    }
   },
   "boolean_declared_schema": {
     "payloads": [
@@ -692,7 +736,11 @@
         }
       }
     ],
-    "normal": true
+    "normal": true,
+    "legacy_code_names": {
+      "external_22_False": "unreachable_nested_disabled_black23.py",
+      "external_23_False": "unreachable_nested_disabled_black23.py"
+    }
   },
   "undeclared_root_required": {
     "payloads": [
@@ -717,7 +765,11 @@
         }
       }
     ],
-    "unresolved": true
+    "unresolved": true,
+    "legacy_code_names": {
+      "external_22_False": "opaque_root_disabled_black23.py",
+      "external_23_False": "opaque_root_disabled_black23.py"
+    }
   },
   "custom_base": {
     "payloads": [
@@ -740,10 +792,17 @@
       }
     ],
     "base_class": "tests.data.python.pattern_intersection_base.AttributeBase",
-    "normal": true
+    "normal": true,
+    "legacy_code_names": {
+      "external_22_False": "custom_base_disabled_black23.py",
+      "external_23_False": "custom_base_disabled_black23.py"
+    }
   },
   "single_custom": {
     "source": "single",
-    "custom_template": "pattern_intersection_context"
+    "custom_template": "pattern_intersection_context",
+    "legacy_code_names": {
+      "external_23_False": "single_custom_disabled_black23.py"
+    }
   }
 }
