@@ -341,7 +341,7 @@ def _serialize_python_type_full(
 
 
 def _get_input_model_json_schema_class(
-    definition_types: dict[str, type | str] | None = None,
+    definition_types: dict[str, type | str],
     model_classes: Sequence[type] | None = None,
     *,
     preserve_type_identity: bool = False,
@@ -449,9 +449,6 @@ def _get_input_model_json_schema_class(
                 "type": "string",
                 _UNSERIALIZABLE_MARKER: id(schema),
             }
-
-    if definition_types is None:
-        return InputModelJsonSchema
 
     class IdentifiedInputModelJsonSchema(
         cast("Any", GenerateJsonSchema if use_standard_schema else InputModelJsonSchema)
