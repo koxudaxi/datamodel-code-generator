@@ -897,37 +897,41 @@ def test_generated_pydantic_v2_model_accepts_schema_derived_payloads(
 
 
 @pytest.mark.parametrize("case", PYDANTIC_V2_ROUND_TRIP_CASES)
-@settings(
-    database=None,
-    deadline=None,
-    derandomize=True,
-    max_examples=MAX_EXAMPLES,
-    suppress_health_check=[
-        HealthCheck.filter_too_much,
-        HealthCheck.function_scoped_fixture,
-        HealthCheck.too_slow,
-    ],
-)
-@given(data=st.data())
 def test_generated_pydantic_v2_model_dumps_schema_valid_payloads(
     case: SchemaCase,
     generated_model_cache: dict[str, Any],
-    data: st.DataObject,
 ) -> None:
-    """Payloads accepted by generated pydantic v2 code should dump back to source-valid JSON."""
-    payload = data.draw(payload_strategy(case), label=f"{case.id}:round_trip")
-    validate_with_source_schema(case, payload)
-    adapter = load_generated_payload_adapter(case, generated_model_cache)
-    expected_errors = native_float_multiple_errors(case, payload) or []
-    validated_payload, errors = pydantic_payload_result(adapter, payload)
-    assert_output(
-        json.dumps([] if errors == expected_errors else {"expected": expected_errors, "actual": errors}, indent=2),
-        NATIVE_NUMERIC_EMPTY_ERRORS,
+    """Check every schema with fresh Hypothesis settings, avoiding parametrization parent chains."""
+
+    @settings(
+        database=None,
+        deadline=None,
+        derandomize=True,
+        max_examples=MAX_EXAMPLES,
+        suppress_health_check=[
+            HealthCheck.filter_too_much,
+            HealthCheck.function_scoped_fixture,
+            HealthCheck.too_slow,
+        ],
     )
-    if errors:
-        return
-    dumped_payload = adapter.dump_python(validated_payload, mode="json", by_alias=True, exclude_unset=True)
-    validate_with_source_schema(case, dumped_payload)
+    @given(data=st.data())
+    def check_round_trip(data: st.DataObject) -> None:
+        """Payloads accepted by generated models should dump back to source-valid JSON."""
+        payload = data.draw(payload_strategy(case), label=f"{case.id}:round_trip")
+        validate_with_source_schema(case, payload)
+        adapter = load_generated_payload_adapter(case, generated_model_cache)
+        expected_errors = native_float_multiple_errors(case, payload) or []
+        validated_payload, errors = pydantic_payload_result(adapter, payload)
+        assert_output(
+            json.dumps([] if errors == expected_errors else {"expected": expected_errors, "actual": errors}, indent=2),
+            NATIVE_NUMERIC_EMPTY_ERRORS,
+        )
+        if errors:
+            return
+        dumped_payload = adapter.dump_python(validated_payload, mode="json", by_alias=True, exclude_unset=True)
+        validate_with_source_schema(case, dumped_payload)
+
+    check_round_trip()
 
 
 @pytest.mark.parametrize("case", PYDANTIC_V2_REJECTION_CASES)
