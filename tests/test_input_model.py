@@ -2805,14 +2805,10 @@ def test_python_generic_reuse(record: dict, strategy: str, entrypoint: str, form
     source_expected = INPUT_GENERIC_EXPECTED / formatter if record.get("formatter_goldens") else INPUT_GENERIC_EXPECTED
     if record.get("pydantic20_goldens") and PYDANTIC_VERSION.split(".")[:2] == ["2", "0"]:
         source_expected = INPUT_GENERIC_EXPECTED / "pydantic20" / formatter
-    code_stem = (
-        stem + "_black23"
-        if formatter == "external"
-        and int(black.__version__.split(".")[0]) < 24
-        and stem in {"annotated_repeated_reuse-all", "annotated_future_union_regenerate-all"}
-        else stem
+    code_name = record.get("legacy_code_names", {}).get(
+        f"{formatter}_{black.__version__.split('.')[0]}_{expected_strategy}", stem + ".py"
     )
-    assert_output(output.read_text(), source_expected / (code_stem + ".py"))
+    assert_output(output.read_text(), source_expected / code_name)
     runtime = subprocess.run(
         [sys.executable, str(INPUT_GENERIC_FIXTURES / "generic_reuse_runtime.py"), str(output), json.dumps(record)],
         capture_output=True,

@@ -782,7 +782,11 @@
         }
       }
     ],
-    "formatter_goldens": true
+    "formatter_goldens": true,
+    "legacy_code_names": {
+      "external_22_reuse-all": "annotated_repeated_reuse-all_black23.py",
+      "external_23_reuse-all": "annotated_repeated_reuse-all_black23.py"
+    }
   },
   {
     "name": "annotated_dataclass",
@@ -937,7 +941,11 @@
         }
       }
     ],
-    "formatter_goldens": true
+    "formatter_goldens": true,
+    "legacy_code_names": {
+      "external_22_regenerate-all": "annotated_future_union_regenerate-all_black23.py",
+      "external_23_regenerate-all": "annotated_future_union_regenerate-all_black23.py"
+    }
   },
   {
     "name": "annotated_future_inline",
