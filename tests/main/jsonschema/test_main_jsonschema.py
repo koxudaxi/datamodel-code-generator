@@ -22809,9 +22809,9 @@ def test_unique_model_set_template_sources(
     source = JSON_SCHEMA_DATA_PATH / "unique_model_sets/object.json"
     expected = EXPECTED_JSON_SCHEMA_PATH / "unique_model_sets"
     frozen = case["frozen"]
+    directory = None
+    error = ""
     match case["mode"]:
-        case "default":
-            directory = None
         case "builtin":
             directory = TEMPLATE_DIR
         case "custom":
@@ -22824,7 +22824,7 @@ def test_unique_model_set_template_sources(
                 TEMPLATE_DIR if case["mode"] == "builtin_symlink" else DATA_PATH / "templates_unique_model_sets",
                 target_is_directory=True,
             )
-        case _:
+        case "missing":
             directory = tmp_path / "missing-templates"
     if entrypoint == "cli":
         run_main_with_args(
