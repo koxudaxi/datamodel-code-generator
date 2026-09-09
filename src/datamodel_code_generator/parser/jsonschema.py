@@ -3305,7 +3305,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             rewrite_python_type_expr,
         )
 
-        expression = self._get_x_python_type(self.SCHEMA_OBJECT_TYPE.model_validate(x_python_import))
+        expression = cast(
+            "PythonTypeExpr", self._get_x_python_type(self.SCHEMA_OBJECT_TYPE.model_validate(x_python_import))
+        )
         if symbol_definitions := x_python_import.get("symbols"):
             symbols = {
                 name: PythonTypeRuntimeSymbol(
@@ -3315,7 +3317,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 for name, symbol in symbol_definitions.items()
             }
             expression = rewrite_python_type_expr(
-                cast("PythonTypeExpr", expression),
+                expression,
                 lambda item: (
                     symbols.get(".".join(item.parts), item) if isinstance(item, PythonTypeQualifiedName) else item
                 ),
