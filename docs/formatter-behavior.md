@@ -175,5 +175,6 @@ Generated output may differ from Black or isort output in places outside the bui
 
 ## Dependency migration
 
-See [Dependency migration notices](dependency-migration.md) for Black/isort extras, optional-installation warnings,
-and unchanged current requirements. Old presets without formatters retain the implicit-default warning.
+See [Dependency migration notices](dependency-migration.md) for Black/isort extras, separate optional-installation
+and old-version warnings, unchanged current requirements, and the distinction between DCG runtime Pydantic and
+generated-code compatibility. Old presets without formatters retain the implicit-default warning.

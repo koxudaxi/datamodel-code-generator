@@ -3,6 +3,8 @@
   "prepared": [
     ".coverage.httpx-e2e-ubuntu-24.04",
     ".coverage.httpx2-min-e2e-ubuntu-24.04",
+    ".coverage.migration-boundary-ubuntu-24.04",
+    ".coverage.migration-legacy-ubuntu-24.04",
     ".coverage.py310-parallel-shard1-ubuntu-24.04",
     ".coverage.py310-parallel-shard2-ubuntu-24.04",
     ".coverage.py310-parallel-shard3-ubuntu-24.04",
@@ -25,5 +27,5 @@
     ".coverage.pydantic25-ubuntu-24.04"
   ],
   "stderr": "",
-  "stdout": "Validated 22 coverage artifacts\n"
+  "stdout": "Validated 24 coverage artifacts\n"
 }

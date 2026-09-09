@@ -7,7 +7,11 @@ import shutil
 import warnings
 from pathlib import Path
 
+import black
+import isort
+import pydantic
 import pytest
+from packaging.version import Version
 
 from datamodel_code_generator import chdir, generate
 from datamodel_code_generator.__main__ import generate_cli_command
@@ -63,6 +67,9 @@ def test_migration_notices_real_generation(selection: str, entry: str, tmp_path:
     notices = (
         ("Default formatters", "default", implicit),
         ("Black/isort", "optional", not implicit and (uses_black or uses_isort)),
+        ("Support for Black", "black", uses_black and Version(black.__version__) < Version("24.3.0")),
+        ("Support for isort", "isort", uses_isort and Version(isort.__version__) < Version("6")),
+        ("Support for DCG", "pydantic", Version(pydantic.VERSION) < Version("2.8.2")),
     )
     for prefix, name, expected in notices:
         assert_output(
@@ -89,7 +96,15 @@ def test_migration_notices_batch_deduplicated(selection: str, tmp_path: Path) ->
         warnings.simplefilter("always", FutureWarning)
         run_main_with_args(["--all-jobs"], use_builtin_default_formatter=False)
     messages = [str(item.message) for item in recorded if item.category is FutureWarning]
-    assert_output("\n".join(messages), EXPECTED / f"batch-{selection}.txt")
+    versions = "-".join(
+        f"{'old-' if Version(installed) < Version(minimum) else ''}{name}"
+        for name, installed, minimum in (
+            ("pydantic", pydantic.VERSION, "2.8.2"),
+            ("black", black.__version__, "24.3.0"),
+            ("isort", isort.__version__, "6"),
+        )
+    )
+    assert_output("\n".join(messages), EXPECTED / f"batch-{selection}-{versions}.txt")
     assert_output((tmp_path / "output.py").read_text(encoding="utf-8"), EXPECTED / "model.py")
     assert_output((tmp_path / "second.py").read_text(encoding="utf-8"), EXPECTED / "model.py")
 

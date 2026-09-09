@@ -24,7 +24,7 @@ from warnings import warn
 from weakref import ReferenceType, WeakKeyDictionary, ref
 
 from datamodel_code_generator import _format_types
-from datamodel_code_generator.deprecations import warn_deprecated
+from datamodel_code_generator.deprecations import warn_deprecated, warn_legacy_dependency
 from datamodel_code_generator.util import load_toml
 
 if TYPE_CHECKING:
@@ -622,6 +622,7 @@ class CodeFormatter:
                 config = {}
 
             black = _get_black()
+            warn_legacy_dependency("dependency.black-minimum", black.__version__, (24, 3, 0))
             black_mode = _get_black_mode()
 
             black_kwargs: dict[str, Any] = {}
@@ -659,6 +660,7 @@ class CodeFormatter:
 
         if use_isort:
             isort = _get_isort()
+            warn_legacy_dependency("dependency.isort-minimum", isort.__version__, (6, 0, 0))
             self.isort_config_kwargs: dict[str, Any] = {}
             if known_third_party:
                 self.isort_config_kwargs["known_third_party"] = known_third_party
