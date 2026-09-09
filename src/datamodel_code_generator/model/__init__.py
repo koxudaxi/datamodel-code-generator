@@ -88,8 +88,13 @@ def get_data_model_types(  # noqa: PLR0912, PLR0913, PLR0917
         case DataModelType.PydanticV2Dataclass:
             from . import pydantic_v2  # noqa: PLC0415
             from .pydantic_v2 import dataclass as pydantic_v2_dataclass  # noqa: PLC0415
+            from .pydantic_v2.version import PYDANTIC_V2_DATACLASS_TYPE_ALIAS_NEEDS_FALLBACK  # noqa: PLC0415
 
             type_alias_class, scalar_class, union_class = get_auxiliary_model_types()
+            if PYDANTIC_V2_DATACLASS_TYPE_ALIAS_NEEDS_FALLBACK:
+                from .pydantic_v2.type_alias import TypeAlias as CompatibleTypeAlias  # noqa: PLC0415
+
+                type_alias_class = CompatibleTypeAlias
             return DataModelSet(
                 data_model=pydantic_v2_dataclass.DataClass,
                 root_model=type_alias_class,

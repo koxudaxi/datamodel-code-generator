@@ -53,6 +53,7 @@ from datamodel_code_generator.model.base import TEMPLATE_DIR
 from datamodel_code_generator.model.msgspec import DataModelField as MsgspecDataModelField
 from datamodel_code_generator.model.pydantic_v2.version import (
     PYDANTIC_V2_DATACLASS_ALIAS_NEEDS_FALLBACK,
+    PYDANTIC_V2_DATACLASS_TYPE_ALIAS_NEEDS_FALLBACK,
     PYDANTIC_V2_ROOT_MODEL_DICT_KEY_FORWARD_REF_NEEDS_SORTING,
 )
 from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
@@ -3698,6 +3699,41 @@ def test_main_generate_pydantic_v2_dataclass_extra_ignore(output_file: Path) -> 
         expected_file="pydantic_v2_dataclass_extra_ignore.py",
         output_model_type=DataModelType.PydanticV2Dataclass,
         extra_fields="ignore",
+    )
+
+
+@pytest.mark.parametrize("extra_args", [[], ["--use-type-alias-type"]], ids=["default", "explicit"])
+def test_main_pydantic_v2_dataclass_reference_alias_defaults(output_file: Path, extra_args: list[str]) -> None:
+    """Validate reference aliases and their defaults on supported Pydantic runtimes."""
+    suffix = "legacy" if PYDANTIC_V2_DATACLASS_TYPE_ALIAS_NEEDS_FALLBACK else "modern"
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "msgspec_alias_defaults.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=f"pydantic_v2_dataclass_reference_alias_defaults_{suffix}.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.dataclass",
+            "--target-python-version",
+            "3.10",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+            *extra_args,
+        ],
+        force_exec_validation=True,
+    )
+    payloads = json.loads((JSON_DATA_PATH / "pydantic_v2_dataclass_reference_alias_defaults.json").read_text())
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="generated_dataclass_reference_alias_defaults",
+        model_name="AliasDefaults",
+        valid_json=json.dumps(payloads["valid"]),
+        invalid_json=json.dumps(payloads["invalid"]),
+        expected_error_type="missing",
+        expected_attribute_path=("chained", "id"),
+        expected_attribute_value=3,
     )
 
 
