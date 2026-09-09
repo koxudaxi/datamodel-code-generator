@@ -1806,9 +1806,7 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0915
                 generic_definitions=definition_types,
             )
 
-            if ref_strategy and ref_strategy != InputModelRefStrategy.RegenerateAll:
-                if nested_models is None:
-                    nested_models = _collect_nested_models(obj)
+            if ref_strategy and nested_models is not None:
                 if identified_types:
                     nested_models.update(identified_types)
                 model_name = getattr(obj, "__name__", None)
