@@ -1,7 +1,0 @@
-[
-  {
-    "value": "text",
-    "id": 1,
-    "label": "label"
-  }
-]

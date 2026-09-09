@@ -49,7 +49,8 @@
         "valid": true
       }
     ],
-    "native": true
+    "native": true,
+    "expected": "extension"
   },
   {
     "name": "three_levels",
@@ -194,7 +195,8 @@
         "valid": false
       }
     ],
-    "native": true
+    "native": true,
+    "expected": "normal_builtin"
   },
   {
     "name": "named_inherited",
@@ -228,7 +230,8 @@
         "valid": false
       }
     ],
-    "native": true
+    "native": true,
+    "expected": "extension"
   },
   {
     "name": "restriction_integer",
@@ -300,7 +303,8 @@
         "valid": false
       }
     ],
-    "native": true
+    "native": true,
+    "expected": "attribute_groups"
   },
   {
     "name": "restriction_defaults",
@@ -337,7 +341,8 @@
         "valid": true
       }
     ],
-    "native": true
+    "native": true,
+    "expected": "attribute_groups"
   },
   {
     "name": "optional_to_required",
@@ -365,7 +370,8 @@
         "valid": false
       }
     ],
-    "native": true
+    "native": true,
+    "expected": "attribute_groups"
   },
   {
     "name": "attribute_groups",
@@ -437,7 +443,8 @@
         "valid": false
       }
     ],
-    "native": true
+    "native": true,
+    "expected": "integer"
   },
   {
     "name": "restriction_inline",
@@ -467,7 +474,8 @@
         "valid": false
       }
     ],
-    "native": true
+    "native": true,
+    "expected": "attribute_groups"
   },
   {
     "name": "restriction_named_integer",
@@ -497,7 +505,8 @@
         "valid": false
       }
     ],
-    "native": true
+    "native": true,
+    "expected": "restriction_integer"
   },
   {
     "name": "redefined",
@@ -517,7 +526,8 @@
         "valid": true
       }
     ],
-    "native": true
+    "native": true,
+    "expected": "extension"
   },
   {
     "name": "cyclic_invalid",
@@ -527,7 +537,8 @@
   {
     "name": "non_simple_base_invalid",
     "samples": [],
-    "native": false
+    "native": false,
+    "expected": "cyclic_invalid"
   },
   {
     "name": "imported",
@@ -547,7 +558,8 @@
         "valid": true
       }
     ],
-    "native": true
+    "native": true,
+    "expected": "extension"
   },
   {
     "name": "list_inherited",
@@ -599,7 +611,8 @@
         "valid": true
       }
     ],
-    "native": true
+    "native": true,
+    "expected": "list_inherited"
   },
   {
     "name": "restriction_list",
@@ -676,6 +689,7 @@
   {
     "name": "cyclic_restriction_invalid",
     "samples": [],
-    "native": false
+    "native": false,
+    "expected": "cyclic_invalid"
   }
 ]
