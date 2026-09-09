@@ -24173,7 +24173,10 @@ def test_unknown_pattern_root_annotations(
         }
     assert_output(
         json.dumps({"values": records, "metadata": metadata}, indent=2),
-        UNKNOWN_PATTERN_EXPECTED / f"{case}_{enabled}_{field_constraints}_runtime.txt",
+        UNKNOWN_PATTERN_EXPECTED
+        / record.get("runtime_names", {}).get(
+            f"{enabled}_{field_constraints}", f"{case}_{enabled}_{field_constraints}_runtime.txt"
+        ),
     )
 
 

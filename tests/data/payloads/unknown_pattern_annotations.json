@@ -36,6 +36,11 @@
       "False_False_external_23": "code_00_black23.py",
       "False_True_external_22": "code_00_black23.py",
       "False_True_external_23": "code_00_black23.py"
+    },
+    "runtime_names": {
+      "False_False": "classvar_False_True_runtime.txt",
+      "False_True": "classvar_False_True_runtime.txt",
+      "True_False": "annotation_True_True_runtime.txt"
     }
   },
   "other_annotation": {
@@ -75,6 +80,12 @@
       "False_False_external_23": "code_02_black23.py",
       "False_True_external_22": "code_02_black23.py",
       "False_True_external_23": "code_02_black23.py"
+    },
+    "runtime_names": {
+      "False_False": "classvar_False_True_runtime.txt",
+      "False_True": "classvar_False_True_runtime.txt",
+      "True_False": "annotation_True_True_runtime.txt",
+      "True_True": "annotation_True_True_runtime.txt"
     }
   },
   "unknown_keyword": {
@@ -114,6 +125,12 @@
       "False_False_external_23": "code_04_black23.py",
       "False_True_external_22": "code_04_black23.py",
       "False_True_external_23": "code_04_black23.py"
+    },
+    "runtime_names": {
+      "False_False": "classvar_False_True_runtime.txt",
+      "False_True": "classvar_False_True_runtime.txt",
+      "True_False": "classvar_True_True_runtime.txt",
+      "True_True": "classvar_True_True_runtime.txt"
     }
   },
   "python_type": {
@@ -153,6 +170,12 @@
       "False_False_external_23": "code_06_black23.py",
       "False_True_external_22": "code_06_black23.py",
       "False_True_external_23": "code_06_black23.py"
+    },
+    "runtime_names": {
+      "False_False": "classvar_False_True_runtime.txt",
+      "False_True": "classvar_False_True_runtime.txt",
+      "True_False": "classvar_True_True_runtime.txt",
+      "True_True": "classvar_True_True_runtime.txt"
     }
   },
   "classvar": {
@@ -192,6 +215,10 @@
       "False_False_external_23": "code_08_black23.py",
       "False_True_external_22": "code_08_black23.py",
       "False_True_external_23": "code_08_black23.py"
+    },
+    "runtime_names": {
+      "False_False": "classvar_False_True_runtime.txt",
+      "True_False": "classvar_True_True_runtime.txt"
     }
   },
   "base_class_extension": {
@@ -231,6 +258,12 @@
       "False_False_external_23": "code_10_black23.py",
       "False_True_external_22": "code_10_black23.py",
       "False_True_external_23": "code_10_black23.py"
+    },
+    "runtime_names": {
+      "False_False": "classvar_False_True_runtime.txt",
+      "False_True": "classvar_False_True_runtime.txt",
+      "True_False": "classvar_True_True_runtime.txt",
+      "True_True": "classvar_True_True_runtime.txt"
     }
   },
   "model_extras": {
@@ -274,6 +307,11 @@
       "False_False_external_23": "code_00_black23.py",
       "False_True_external_22": "code_00_black23.py",
       "False_True_external_23": "code_00_black23.py"
+    },
+    "runtime_names": {
+      "False_False": "classvar_False_True_runtime.txt",
+      "False_True": "classvar_False_True_runtime.txt",
+      "True_False": "model_extras_True_True_runtime.txt"
     }
   },
   "model_extras_stripped": {
@@ -317,6 +355,11 @@
       "False_False_external_23": "code_00_black23.py",
       "False_True_external_22": "code_00_black23.py",
       "False_True_external_23": "code_00_black23.py"
+    },
+    "runtime_names": {
+      "False_False": "classvar_False_True_runtime.txt",
+      "False_True": "classvar_False_True_runtime.txt",
+      "True_False": "model_extras_stripped_True_True_runtime.txt"
     }
   },
   "custom_base": {
@@ -358,6 +401,11 @@
       "False_False_external_23": "code_15_black23.py",
       "False_True_external_22": "code_15_black23.py",
       "False_True_external_23": "code_15_black23.py"
+    },
+    "runtime_names": {
+      "False_False": "classvar_False_True_runtime.txt",
+      "False_True": "classvar_False_True_runtime.txt",
+      "True_False": "custom_base_True_True_runtime.txt"
     }
   },
   "declared": {
@@ -386,6 +434,10 @@
       "True_False_external": "code_19.py",
       "True_True_builtin": "code_19.py",
       "True_True_external": "code_19.py"
+    },
+    "runtime_names": {
+      "False_False": "declared_False_True_runtime.txt",
+      "True_False": "declared_True_True_runtime.txt"
     }
   },
   "enum": {
@@ -409,6 +461,11 @@
       "True_False_external": "code_21.py",
       "True_True_builtin": "code_21.py",
       "True_True_external": "code_21.py"
+    },
+    "runtime_names": {
+      "False_False": "enum_True_True_runtime.txt",
+      "False_True": "enum_True_True_runtime.txt",
+      "True_False": "enum_True_True_runtime.txt"
     }
   }
 }
