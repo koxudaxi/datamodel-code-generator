@@ -24089,7 +24089,7 @@ def test_undeclared_required(
 UNKNOWN_PATTERN_FIXTURES = JSON_SCHEMA_DATA_PATH / "unknown_pattern_annotations"
 
 
-UNKNOWN_PATTERN_CASES = json.loads((UNKNOWN_PATTERN_FIXTURES / "cases.json").read_text())
+UNKNOWN_PATTERN_CASES = json.loads((DATA_PATH / "payloads/unknown_pattern_annotations.json").read_text())
 
 
 UNKNOWN_PATTERN_EXPECTED = EXPECTED_JSON_SCHEMA_PATH / "unknown_pattern_annotations"
