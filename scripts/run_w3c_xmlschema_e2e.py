@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import argparse
 import ast
+import hashlib
 import importlib
+import json
 import sys
 import tempfile
 import time
@@ -193,10 +195,16 @@ def main() -> int:
         )
         return 1
 
+    diagnostic_path = (
+        Path(__file__).resolve().parents[1] / "tests/data/payloads/w3c_xmlschema/expected_diagnostics.json"
+    )
+    expected_diagnostics = json.loads(diagnostic_path.read_text(encoding="utf-8"))
+    diagnostics = 0
     failures: list[str] = []
     started_at = time.monotonic()
     for index, schema_path in enumerate(unique_paths, start=1):
-        relative_schema_path = schema_path.relative_to(suite_root)
+        relative_schema_path = schema_path.relative_to(suite_root).as_posix()
+        expected_diagnostic = expected_diagnostics.get(relative_schema_path)
         try:
             generated = generate(
                 schema_path,
@@ -205,7 +213,18 @@ def main() -> int:
                 formatters=[],
             )
         except Exception as exc:  # noqa: BLE001
-            failures.append(f"{relative_schema_path}: generate failed with {type(exc).__name__}: {exc}")
+            if (
+                expected_diagnostic is not None
+                and f"{type(exc).__name__}: {exc}" == expected_diagnostic["error"]
+                and hashlib.sha256(schema_path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+                == expected_diagnostic["sha256"]
+            ):
+                diagnostics += 1
+            else:
+                failures.append(f"{relative_schema_path}: generate failed with {type(exc).__name__}: {exc}")
+            continue
+        if expected_diagnostic is not None:
+            failures.append(f"{relative_schema_path}: expected collision diagnostic was not raised")
             continue
 
         generated_modules = list(iter_generated_modules(generated))
@@ -243,6 +262,8 @@ def main() -> int:
 
     elapsed = time.monotonic() - started_at
     print(f"checked {len(documents)} valid schemaDocument entries ({len(unique_paths)} unique paths) in {elapsed:.1f}s")
+    if diagnostics:
+        print(f"validated {diagnostics} expected collision diagnostics")
     if failures:
         print(f"{len(failures)} W3C XML Schema e2e failures:", file=sys.stderr)
         for failure in failures[: args.max_failures]:

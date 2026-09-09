@@ -1,0 +1,1 @@
+XML Schema cannot represent both element 'value' and mixed content 'value' as property 'value'.
