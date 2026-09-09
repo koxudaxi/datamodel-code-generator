@@ -89,7 +89,6 @@ from tests.main.conftest import (
     TIMESTAMP,
     _assert_model_json_invalid,
     _assert_python_module_importable,
-    _default_formatter_generate_options,
     _generated_model,
     _generated_package_module,
     _model_json_validator,
@@ -12233,22 +12232,20 @@ def test_reuse_tree_single_module_imports(
             extra_args=extra_args,
         )
     else:
-        generate(
-            JSON_SCHEMA_DATA_PATH / "reuse_scope_tree",
-            **_default_formatter_generate_options({
-                "input_file_type": InputFileType.JsonSchema,
-                "output": output_dir,
-                "reuse_model": True,
-                "reuse_scope": "tree",
-                "module_split_mode": "single",
-                "output_model_type": "pydantic_v2.BaseModel",
-                "disable_timestamp": True,
-                "collapse_reuse_models": collapse,
-                "use_exact_imports": exact,
-                "emit_model_metadata": metadata_path if metadata else None,
-            }),
+        run_generate_file_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree",
+            output_path=output_dir,
+            input_file_type=InputFileType.JsonSchema,
+            expected_directory=expected_directory,
+            reuse_model=True,
+            reuse_scope="tree",
+            module_split_mode="single",
+            output_model_type="pydantic_v2.BaseModel",
+            disable_timestamp=True,
+            collapse_reuse_models=collapse,
+            use_exact_imports=exact,
+            emit_model_metadata=metadata_path if metadata else None,
         )
-        assert_directory_content(output_dir, expected_directory)
     if metadata:
         assert_output(
             metadata_path.read_text(encoding="utf-8"),
@@ -12304,22 +12301,20 @@ def test_reuse_tree_single_first_root_validation(
             extra_args=extra_args,
         )
     else:
-        generate(
-            JSON_SCHEMA_DATA_PATH / fixture,
-            **_default_formatter_generate_options({
-                "input_file_type": InputFileType.JsonSchema,
-                "output": output_dir,
-                "reuse_model": True,
-                "reuse_scope": "tree",
-                "module_split_mode": "single",
-                "output_model_type": "pydantic_v2.BaseModel",
-                "disable_timestamp": True,
-                "collapse_reuse_models": collapse,
-                "use_exact_imports": exact,
-                "emit_model_metadata": metadata_path,
-            }),
+        run_generate_file_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / fixture,
+            output_path=output_dir,
+            input_file_type=InputFileType.JsonSchema,
+            expected_directory=expected_directory,
+            reuse_model=True,
+            reuse_scope="tree",
+            module_split_mode="single",
+            output_model_type="pydantic_v2.BaseModel",
+            disable_timestamp=True,
+            collapse_reuse_models=collapse,
+            use_exact_imports=exact,
+            emit_model_metadata=metadata_path,
         )
-        assert_directory_content(output_dir, expected_directory)
     assert_output(metadata_path.read_text(), expected_directory.with_name(f"{expected}_metadata.txt"))
     for order, payload in itertools.product(("[0,1,2]", "[2,0,1]"), ("nested", "empty")):
         result = subprocess.run(

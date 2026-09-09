@@ -761,14 +761,15 @@ def run_generate_file_and_assert(
     input_path: Path,
     output_path: Path,
     input_file_type: InputFileType | None = None,
-    assert_func: AssertFileContent,
+    assert_func: AssertFileContent | None = None,
     expected_file: str | Path | None = None,
+    expected_directory: Path | None = None,
     transform: Callable[[str], str] | None = None,
     expected_warnings: Sequence[str] | None = None,
     unchanged_inputs: Mapping[str, object] | None = None,
     **generate_kwargs: Any,
 ) -> None:
-    """Execute generate() for a file input and assert the generated output."""
+    """Execute generate() for a path input and assert file or directory output."""
     __tracebackhide__ = True
 
     input_: Path = input_path
@@ -802,14 +803,18 @@ def run_generate_file_and_assert(
                 )
             assert_warnings_contain(warning_records, *expected_warnings)
 
-    if expected_file is None:
-        frame = inspect.currentframe()
-        assert frame is not None
-        assert frame.f_back is not None
-        expected_file = _infer_expected_file(frame.f_back.f_code.co_name)
-        del frame
+    if expected_directory is not None:
+        assert_directory_content(output_path, expected_directory)
+    else:
+        if expected_file is None:
+            frame = inspect.currentframe()
+            assert frame is not None
+            assert frame.f_back is not None
+            expected_file = _infer_expected_file(frame.f_back.f_code.co_name)
+            del frame
 
-    assert_func(output_path, expected_file, transform=transform)
+        assert assert_func is not None
+        assert_func(output_path, expected_file, transform=transform)
     with _enable_test_parsed_source_cache(), assert_inputs_not_mutated(unchanged_inputs):
         _assert_builtin_generate_formatter_parity(
             input_=input_,
