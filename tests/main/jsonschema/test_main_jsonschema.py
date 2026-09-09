@@ -23948,4 +23948,10 @@ def test_additional_pattern_intersections(
         if case in {"minimum_number", "minimum_shared"} and PYDANTIC_VERSION.split(".")[:2] == ["2", "0"]
         else ADDITIONAL_PATTERN_EXPECTED
     )
-    assert_output(json.dumps(records, indent=2), runtime_expected / f"{case}_{enabled}_{field_constraints}_runtime.txt")
+    assert_output(
+        json.dumps(records, indent=2),
+        runtime_expected
+        / record.get("runtime_names", {}).get(
+            f"{enabled}_{field_constraints}", f"{case}_{enabled}_{field_constraints}_runtime.txt"
+        ),
+    )

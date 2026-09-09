@@ -24,6 +24,10 @@
       "True_False_external": "boolean_True_False_builtin.py",
       "True_True_builtin": "boolean_True_False_builtin.py",
       "True_True_external": "boolean_True_False_builtin.py"
+    },
+    "runtime_names": {
+      "False_True": "boolean_False_False_runtime.txt",
+      "True_True": "boolean_True_False_runtime.txt"
     }
   },
   "boolean_custom": {
@@ -55,6 +59,12 @@
     "legacy_code_names": {
       "False_False_external_23": "boolean_custom_False_False_external_black23.py",
       "False_True_external_23": "boolean_custom_False_False_external_black23.py"
+    },
+    "runtime_names": {
+      "False_False": "boolean_False_False_runtime.txt",
+      "False_True": "boolean_False_False_runtime.txt",
+      "True_False": "boolean_False_False_runtime.txt",
+      "True_True": "boolean_False_False_runtime.txt"
     }
   },
   "minimum": {
@@ -94,6 +104,10 @@
       "False_False_external_23": "minimum_False_False_builtin_black23.py",
       "False_True_external_22": "minimum_False_True_builtin_black23.py",
       "False_True_external_23": "minimum_False_True_builtin_black23.py"
+    },
+    "runtime_names": {
+      "False_True": "minimum_False_False_runtime.txt",
+      "True_True": "minimum_True_False_runtime.txt"
     }
   },
   "minimum_custom": {
@@ -133,6 +147,11 @@
       "False_False_external_23": "minimum_custom_False_False_external_black23.py",
       "False_True_external_22": "minimum_custom_False_True_external_black22.py",
       "False_True_external_23": "minimum_custom_False_True_external_black23.py"
+    },
+    "runtime_names": {
+      "False_False": "minimum_False_False_runtime.txt",
+      "False_True": "minimum_False_False_runtime.txt",
+      "True_True": "minimum_custom_True_False_runtime.txt"
     }
   },
   "prefix_suffix": {
@@ -176,6 +195,10 @@
       "False_False_external_23": "prefix_suffix_False_False_builtin_black23.py",
       "False_True_external_22": "prefix_suffix_False_False_builtin_black23.py",
       "False_True_external_23": "prefix_suffix_False_False_builtin_black23.py"
+    },
+    "runtime_names": {
+      "False_True": "prefix_suffix_False_False_runtime.txt",
+      "True_True": "prefix_suffix_True_False_runtime.txt"
     }
   },
   "prefix_suffix_custom": {
@@ -219,6 +242,11 @@
       "False_False_external_23": "prefix_suffix_custom_False_False_external_black23.py",
       "False_True_external_22": "prefix_suffix_custom_False_False_external_black22.py",
       "False_True_external_23": "prefix_suffix_custom_False_False_external_black23.py"
+    },
+    "runtime_names": {
+      "False_False": "prefix_suffix_False_False_runtime.txt",
+      "False_True": "prefix_suffix_False_False_runtime.txt",
+      "True_True": "prefix_suffix_custom_True_False_runtime.txt"
     }
   },
   "boolean_optional": {
@@ -246,6 +274,11 @@
       "True_False_external": "boolean_optional_True_False_builtin.py",
       "True_True_builtin": "boolean_optional_True_False_builtin.py",
       "True_True_external": "boolean_optional_True_False_builtin.py"
+    },
+    "runtime_names": {
+      "False_True": "boolean_optional_False_False_runtime.txt",
+      "True_False": "boolean_optional_False_False_runtime.txt",
+      "True_True": "boolean_optional_False_False_runtime.txt"
     }
   },
   "boolean_integer": {
@@ -268,6 +301,11 @@
       "True_False_external": "boolean_integer_True_False_builtin.py",
       "True_True_builtin": "boolean_integer_True_False_builtin.py",
       "True_True_external": "boolean_integer_True_False_builtin.py"
+    },
+    "runtime_names": {
+      "False_True": "boolean_integer_False_False_runtime.txt",
+      "True_False": "boolean_integer_False_False_runtime.txt",
+      "True_True": "boolean_integer_False_False_runtime.txt"
     }
   },
   "minimum_float": {
@@ -307,6 +345,12 @@
       "False_False_external_23": "minimum_float_False_False_builtin_black23.py",
       "False_True_external_22": "minimum_float_False_True_builtin_black23.py",
       "False_True_external_23": "minimum_float_False_True_builtin_black23.py"
+    },
+    "runtime_names": {
+      "False_False": "minimum_False_False_runtime.txt",
+      "False_True": "minimum_False_False_runtime.txt",
+      "True_False": "minimum_True_False_runtime.txt",
+      "True_True": "minimum_True_False_runtime.txt"
     }
   },
   "minimum_large": {
@@ -335,6 +379,10 @@
       "False_False_external_23": "minimum_large_False_False_external_black23.py",
       "False_True_external_22": "minimum_large_False_True_builtin_black23.py",
       "False_True_external_23": "minimum_large_False_True_builtin_black23.py"
+    },
+    "runtime_names": {
+      "False_True": "minimum_large_False_False_runtime.txt",
+      "True_True": "minimum_large_True_False_runtime.txt"
     }
   },
   "minimum_maximum": {
@@ -374,6 +422,12 @@
       "False_False_external_23": "minimum_maximum_False_False_builtin_black23.py",
       "False_True_external_22": "minimum_maximum_False_True_builtin_black23.py",
       "False_True_external_23": "minimum_maximum_False_True_builtin_black23.py"
+    },
+    "runtime_names": {
+      "False_False": "minimum_False_False_runtime.txt",
+      "False_True": "minimum_False_False_runtime.txt",
+      "True_False": "minimum_custom_True_False_runtime.txt",
+      "True_True": "minimum_custom_True_False_runtime.txt"
     }
   },
   "minimum_number": {
@@ -495,6 +549,10 @@
       "False_False_external_23": "suffix_prefix_False_False_builtin_black23.py",
       "False_True_external_22": "suffix_prefix_False_False_builtin_black23.py",
       "False_True_external_23": "suffix_prefix_False_False_builtin_black23.py"
+    },
+    "runtime_names": {
+      "False_True": "suffix_prefix_False_False_runtime.txt",
+      "True_True": "suffix_prefix_True_False_runtime.txt"
     }
   },
   "declared_witness": {
@@ -532,6 +590,10 @@
       "True_False_external": "declared_witness_True_False_builtin.py",
       "True_True_builtin": "declared_witness_True_False_builtin.py",
       "True_True_external": "declared_witness_True_False_builtin.py"
+    },
+    "runtime_names": {
+      "False_True": "declared_witness_False_False_runtime.txt",
+      "True_True": "declared_witness_True_False_runtime.txt"
     }
   },
   "anchored_disjoint": {
@@ -564,6 +626,11 @@
       "False_False_external_23": "anchored_disjoint_False_False_builtin_black23.py",
       "False_True_external_22": "anchored_disjoint_False_False_builtin_black23.py",
       "False_True_external_23": "anchored_disjoint_False_False_builtin_black23.py"
+    },
+    "runtime_names": {
+      "False_True": "anchored_disjoint_False_False_runtime.txt",
+      "True_False": "anchored_disjoint_False_False_runtime.txt",
+      "True_True": "anchored_disjoint_False_False_runtime.txt"
     }
   },
   "minimum_null": {
@@ -587,6 +654,11 @@
       "False_False_external_23": "minimum_null_False_False_builtin_black23.py",
       "False_True_external_22": "minimum_null_False_False_builtin_black23.py",
       "False_True_external_23": "minimum_null_False_False_builtin_black23.py"
+    },
+    "runtime_names": {
+      "False_True": "minimum_null_False_False_runtime.txt",
+      "True_False": "minimum_null_False_False_runtime.txt",
+      "True_True": "minimum_null_False_False_runtime.txt"
     }
   }
 }
