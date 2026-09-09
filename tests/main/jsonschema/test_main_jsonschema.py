@@ -24073,4 +24073,7 @@ def test_undeclared_required(tmp_path: Path, case: str, enabled: bool, entrypoin
         if not enabled and "objects" in case and PYDANTIC_VERSION.split(".")[:2] == ["2", "0"]
         else UNDECLARED_REQUIRED_EXPECTED
     )
-    assert_output(json.dumps(results, indent=2), runtime_expected / f"{case}_{enabled}_runtime.txt")
+    assert_output(
+        json.dumps(results, indent=2),
+        runtime_expected / record.get("runtime_names", {}).get(str(enabled), f"{case}_{enabled}_runtime.txt"),
+    )

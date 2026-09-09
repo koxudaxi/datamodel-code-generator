@@ -48,6 +48,9 @@
     "legacy_code_names": {
       "False_external_22": "objects_False_builtin_black23.py",
       "False_external_23": "objects_False_builtin_black23.py"
+    },
+    "runtime_names": {
+      "True": "default_objects_True_runtime.txt"
     }
   },
   "closed": {
@@ -102,6 +105,9 @@
       "False_external": "open_False_builtin.py",
       "True_builtin": "open_True_builtin.py",
       "True_external": "open_True_builtin.py"
+    },
+    "runtime_names": {
+      "False": "custom_open_False_runtime.txt"
     }
   },
   "declared": {
@@ -129,6 +135,9 @@
       "False_external": "declared_False_builtin.py",
       "True_builtin": "declared_False_builtin.py",
       "True_external": "declared_False_builtin.py"
+    },
+    "runtime_names": {
+      "True": "declared_False_runtime.txt"
     }
   },
   "optional_objects": {
@@ -182,6 +191,9 @@
     "legacy_code_names": {
       "False_external_22": "optional_objects_False_external_black23.py",
       "False_external_23": "optional_objects_False_external_black23.py"
+    },
+    "runtime_names": {
+      "True": "custom_objects_True_runtime.txt"
     }
   },
   "optional_open": {
@@ -211,6 +223,10 @@
       "False_external": "optional_open_False_builtin.py",
       "True_builtin": "optional_open_False_builtin.py",
       "True_external": "optional_open_False_builtin.py"
+    },
+    "runtime_names": {
+      "False": "custom_open_False_runtime.txt",
+      "True": "custom_open_False_runtime.txt"
     }
   },
   "default_objects": {
@@ -293,6 +309,9 @@
       "False_external": "default_declared_False_builtin.py",
       "True_builtin": "default_declared_False_builtin.py",
       "True_external": "default_declared_False_builtin.py"
+    },
+    "runtime_names": {
+      "True": "default_declared_False_runtime.txt"
     }
   },
   "alias_open": {
@@ -404,6 +423,9 @@
       "False_external": "custom_open_False_builtin.py",
       "True_builtin": "custom_open_False_builtin.py",
       "True_external": "custom_open_False_builtin.py"
+    },
+    "runtime_names": {
+      "True": "custom_open_False_runtime.txt"
     }
   },
   "extra_objects": {
@@ -457,6 +479,9 @@
     "legacy_code_names": {
       "False_external_22": "extra_objects_False_builtin_black23.py",
       "False_external_23": "extra_objects_False_builtin_black23.py"
+    },
+    "runtime_names": {
+      "True": "custom_objects_True_runtime.txt"
     }
   },
   "base_objects": {
@@ -537,6 +562,10 @@
       "False_external": "schema_base_open_external.py",
       "True_builtin": "schema_base_open_builtin.py",
       "True_external": "schema_base_open_external.py"
+    },
+    "runtime_names": {
+      "False": "custom_open_False_runtime.txt",
+      "True": "custom_open_False_runtime.txt"
     }
   }
 }
