@@ -1,5 +1,6 @@
-template count: 22
+template count: 23
 Enum.jinja2
+PydanticV2TypeAlias.jinja2
 ScalarTypeAliasAnnotation.jinja2
 ScalarTypeAliasType.jinja2
 ScalarTypeStatement.jinja2
@@ -30,7 +31,7 @@ loop_attributes: last
 assignments: NSRef, Name
 for_targets: Name, Tuple[Name, Name]
 macros: get_type_annotation(_field); defaults=0; caller=False; kwargs=False; varargs=False, get_type_hint(_fields, use_base_type); defaults=0; caller=False; kwargs=False; varargs=False
-includes: ConfigDict.jinja2, TypedDictClass.jinja2, TypedDictFunction.jinja2, schema_runtime_validation.jinja2
+includes: ConfigDict.jinja2, TypeAliasAnnotation.jinja2, TypeAliasType.jinja2, TypedDictClass.jinja2, TypedDictFunction.jinja2, schema_runtime_validation.jinja2
 imports_and_inheritance:
 undefined_usage: default filter, defined test
 namespaces: attribute mutation, creation

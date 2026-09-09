@@ -8,6 +8,7 @@ from os import PathLike
 
 _RENDERER_MODULES: dict[str, str] = {
     "Enum.jinja2": ".enum",
+    "PydanticV2TypeAlias.jinja2": ".pydanticv2typealias",
     "ScalarTypeAliasAnnotation.jinja2": ".scalartypealiasannotation",
     "ScalarTypeAliasType.jinja2": ".scalartypealiastype",
     "ScalarTypeStatement.jinja2": ".scalartypestatement",

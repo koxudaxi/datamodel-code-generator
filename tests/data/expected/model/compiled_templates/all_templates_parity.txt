@@ -12,6 +12,13 @@ next"""
     """field \ \" quote
 next"""
 === end Enum.jinja2 ===
+=== PydanticV2TypeAlias.jinja2
+
+Unicodeモデル = TypeAliasType("Unicodeモデル", str)  # comment \ " {braces}
+next
+"""description こんにちは \ \" {braces}
+next"""
+=== end PydanticV2TypeAlias.jinja2 ===
 === ScalarTypeAliasAnnotation.jinja2
 Unicodeモデル: TypeAlias = str
 """description こんにちは \ \" {braces}
