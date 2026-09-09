@@ -2976,7 +2976,6 @@ def test_nested_family_python_types(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, entrypoint: str, formatter: str, strategy: str, case: str
 ) -> None:
     """Supplement exact nested definitions without losing native collection behavior."""
-
     from pydantic import TypeAdapter
 
     from datamodel_code_generator import DataModelType, GenerateConfig, InputFileType, generate
