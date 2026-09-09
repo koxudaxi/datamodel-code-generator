@@ -23840,7 +23840,7 @@ def test_pattern_property_intersections(
 def test_invalid_pattern_does_not_change_generation(tmp_path: Path, formatter: str) -> None:
     """Keep unsupported regex generation unchanged while limiting intersection detection."""
     source = JSON_SCHEMA_DATA_PATH / "pattern_intersections_invalid_regex.json"
-    with pytest.raises(SchemaError):
+    with pytest.raises(JsonSchemaError):
         Draft202012Validator.check_schema(json.loads(source.read_text()))
     output = tmp_path / "output.py"
     run_main_and_assert(
