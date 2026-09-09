@@ -137,3 +137,16 @@ def test_warn_deprecated_default_stacklevel_points_to_caller() -> None:
 
     assert len(recorded_warnings) == 1
     assert Path(recorded_warnings[0].filename).name == "test_deprecations.py"
+
+
+def test_dependency_notice_release_comparisons() -> None:
+    """Numeric boundaries include prereleases without changing local/postrelease ordering."""
+    from datamodel_code_generator.deprecations import _dependency_version_is_legacy
+
+    cases = json.loads(
+        (Path(__file__).parent / "data" / "config" / "migration_versions.json").read_text(encoding="utf-8")
+    )
+    assert_output(
+        "\n".join(f"{version}: {_dependency_version_is_legacy(version, tuple(minimum))}" for version, minimum in cases),
+        EXPECTED_DEPRECATIONS_PATH / "dependency_versions.txt",
+    )

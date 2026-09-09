@@ -99,6 +99,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - tox_env: migration-legacy
+            name: migration-legacy
+            coverage_name: migration-legacy
+          - tox_env: migration-boundary
+            name: migration-boundary
+            coverage_name: migration-boundary
           - tox_env: pydantic200
             name: pydantic200
             coverage_name: pydantic200

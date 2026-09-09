@@ -6,6 +6,7 @@ import warnings
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import asdict, dataclass
+from functools import lru_cache
 from typing import TYPE_CHECKING, Literal
 
 from datamodel_code_generator._registry_render import _render_registry_json, _render_registry_table
@@ -26,6 +27,9 @@ DeprecationId = Literal[
     "config.yaml-non-lowercase-bool",
     "config.json-config-strict-validation",
     "dependency.external-formatters-optional",
+    "dependency.black-minimum",
+    "dependency.isort-minimum",
+    "dependency.pydantic-runtime-minimum",
     "format.default-formatters",
     "python-api.python-version-has-type-alias",
     "schema.jsonschema-items-array",
@@ -141,6 +145,39 @@ DEPRECATIONS: dict[DeprecationId, Deprecation] = {
         warning_category="FutureWarning",
         note="This is advance notice only. Current dependency ranges and compatibility remain unchanged.",
     ),
+    "dependency.black-minimum": Deprecation(
+        id="dependency.black-minimum",
+        kind="dependency",
+        target="Black <24.3.0",
+        message="Support for Black <24.3.0 will end in a future release.",
+        warning_since="0.78.0",
+        removal_version=None,
+        replacement="Upgrade Black to >=24.3.0 before the later support change.",
+        warning_category="FutureWarning",
+        note="This is advance notice only. Current dependency ranges and compatibility remain unchanged.",
+    ),
+    "dependency.isort-minimum": Deprecation(
+        id="dependency.isort-minimum",
+        kind="dependency",
+        target="isort <6",
+        message="Support for isort <6 will end in a future release.",
+        warning_since="0.78.0",
+        removal_version=None,
+        replacement="Upgrade isort to >=6,<9 before the later support change.",
+        warning_category="FutureWarning",
+        note="This is advance notice only. Current dependency ranges and compatibility remain unchanged.",
+    ),
+    "dependency.pydantic-runtime-minimum": Deprecation(
+        id="dependency.pydantic-runtime-minimum",
+        kind="dependency",
+        target="DCG runtime Pydantic <2.8.2",
+        message="Support for DCG runtime Pydantic <2.8.2 will end in a future release.",
+        warning_since="0.78.0",
+        removal_version=None,
+        replacement="Upgrade DCG runtime Pydantic to >=2.8.2; generated-code targets are unchanged.",
+        warning_category="FutureWarning",
+        note="This is advance notice only. Current dependency ranges and compatibility remain unchanged.",
+    ),
     "config.yaml-non-lowercase-bool": Deprecation(
         id="config.yaml-non-lowercase-bool",
         kind="config",
@@ -204,6 +241,9 @@ _WARNING_CATEGORIES: dict[str, type[Warning]] = {
 _MIGRATION_WARNINGS = frozenset({
     "format.default-formatters",
     "dependency.external-formatters-optional",
+    "dependency.black-minimum",
+    "dependency.isort-minimum",
+    "dependency.pydantic-runtime-minimum",
 })
 _CLI_MIGRATION_WARNINGS: ContextVar[set[DeprecationId] | None] = ContextVar("cli_migration_warnings", default=None)
 
@@ -216,6 +256,24 @@ def cli_migration_warning_scope() -> Iterator[None]:
         yield
     finally:
         _CLI_MIGRATION_WARNINGS.reset(token)
+
+
+@lru_cache(maxsize=16)
+def _dependency_version_is_legacy(version: str, minimum: tuple[int, int, int]) -> bool:
+    """Compare release numbers and prereleases without a transitive packaging dependency."""
+    import re  # ruff: ignore[import-outside-top-level]
+
+    if (match := re.fullmatch(r"(\d+)\.(\d+)(?:\.(\d+))?(.*)", version.partition("+")[0])) is None:
+        return False
+    major, minor, patch, suffix = match.groups(default="0")
+    release = (int(major), int(minor), int(patch))
+    return release < minimum or (release == minimum and re.match(r"(?:a|b|rc|\.?dev)", suffix) is not None)
+
+
+def warn_legacy_dependency(deprecation_id: DeprecationId, version: str, minimum: tuple[int, int, int]) -> None:
+    """Warn only when the dependency actually used is below its future runtime floor."""
+    if _dependency_version_is_legacy(version, minimum):
+        warn_deprecated(deprecation_id, stacklevel=2)
 
 
 def iter_deprecations() -> tuple[Deprecation, ...]:

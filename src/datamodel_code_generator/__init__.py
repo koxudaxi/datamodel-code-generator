@@ -1698,6 +1698,11 @@ def generate(
 
         _rebuild_generate_config()
         config = _GenerateConfig.model_validate(options)
+    from pydantic import VERSION as PYDANTIC_VERSION  # ruff: ignore[import-outside-top-level]
+
+    from datamodel_code_generator.deprecations import warn_legacy_dependency  # ruff: ignore[import-outside-top-level]
+
+    warn_legacy_dependency("dependency.pydantic-runtime-minimum", PYDANTIC_VERSION, (2, 8, 2))
     config = _apply_generate_config_preset(config)
     config = _apply_missing_sentinel_config(config)
 
