@@ -3795,3 +3795,49 @@ def test_watch_cli_reports_generation_error_after_change(tmp_path: Path) -> None
         assert_output(output_file.read_text(encoding="utf-8"), EXPECTED_MAIN_PATH / "watch_file_initial.py")
     finally:
         _stop_watch_cli(process, stdout_thread, stderr_thread)
+
+
+@pytest.mark.parametrize("notice", ["default", "optional"])
+def test_watch_migration_notice_is_not_repeated(notice: str, tmp_path: Path) -> None:
+    """Real watch regeneration reports each migration once even with an always warning filter."""
+    input_file = tmp_path / "schema.json"
+    output_file = tmp_path / "output.py"
+    shutil.copyfile(JSON_SCHEMA_DATA_PATH / "migration_notice.json", input_file)
+    command = _watch_cli_command(
+        input_file,
+        output_file,
+        [
+            "--target-python-version",
+            "3.10",
+            "--output-model-type",
+            "dataclasses.dataclass",
+        ],
+    )
+    formatter_index = command.index("--formatters")
+    command[formatter_index : formatter_index + 2] = [] if notice == "default" else ["--formatters", "black", "isort"]
+    command.insert(1, "-Walways::FutureWarning")
+    process, stdout_lines, stderr_lines, stdout_thread, stderr_thread = _wait_for_watch_cli_ready(
+        *_start_watch_process(command, tmp_path),
+    )
+    try:
+        _write_watch_cli_input_and_wait(
+            process,
+            stdout_lines,
+            stderr_lines,
+            input_file,
+            (JSON_SCHEMA_DATA_PATH / "migration_notice_changed.json").read_text(encoding="utf-8"),
+            lambda: _file_contains(output_file, "age: int | None = None"),
+            "changed model output",
+        )
+        prefix = "Default formatters" if notice == "default" else "Black/isort"
+        assert_output(
+            "\n".join(
+                line.partition("FutureWarning: ")[2].strip()
+                for line in stderr_lines
+                if f"FutureWarning: {prefix}" in line
+            ),
+            EXPECTED_MAIN_PATH / "migration_warnings" / f"{notice}.txt",
+        )
+        assert_output(output_file.read_text(encoding="utf-8"), EXPECTED_MAIN_PATH / "migration_warnings" / "watched.py")
+    finally:
+        _stop_watch_cli(process, stdout_thread, stderr_thread)

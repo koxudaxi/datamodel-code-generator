@@ -183,3 +183,8 @@ You can create custom formatters for specialized formatting needs. See [Custom F
 - 💬 [CLI Reference: `--use-double-quotes`](cli-reference/template-customization.md#use-double-quotes) - Force double quotes
 - 🎨 [Custom Formatters](custom-formatters.md) - Create your own formatters
 - ⚙️ [pyproject.toml Configuration](pyproject_toml.md) - Configure datamodel-codegen options
+
+## Dependency migration
+
+See [Dependency migration notices](dependency-migration.md) for Black/isort extras, optional-installation warnings,
+and unchanged current requirements. Old presets without formatters retain the implicit-default warning.

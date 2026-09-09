@@ -73,7 +73,11 @@ def test_pattern_string_adapters(tmp_path: Path, entrypoint: str, formatter: str
             )
     if recorded_warnings is not None:
         assert_output(
-            json.dumps([str(warning.message) for warning in recorded_warnings], indent=2) + "\n",
+            json.dumps(
+                [str(warning.message) for warning in recorded_warnings if issubclass(warning.category, UserWarning)],
+                indent=2,
+            )
+            + "\n",
             EXPECTED_JSON_SCHEMA_PATH / f"pattern_string_adapters/inherited_minimum_{entrypoint}_warnings.txt",
         )
     assert_output(output.read_text(), EXPECTED_JSON_SCHEMA_PATH / "pattern_string_adapters" / f"{case['name']}.py")

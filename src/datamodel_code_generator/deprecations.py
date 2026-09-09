@@ -3,12 +3,17 @@
 from __future__ import annotations
 
 import warnings
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import asdict, dataclass
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from datamodel_code_generator._registry_render import _render_registry_json, _render_registry_table
 
-DeprecationKind = Literal["cli-option", "python-api", "config", "behavior", "schema"]
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+DeprecationKind = Literal["cli-option", "python-api", "config", "behavior", "schema", "dependency"]
 DeprecationStatus = Literal["active", "scheduled"]
 DeprecationFormat = Literal["table", "json", "markdown"]
 DeprecationId = Literal[
@@ -20,6 +25,7 @@ DeprecationId = Literal[
     "cli.validation",
     "config.yaml-non-lowercase-bool",
     "config.json-config-strict-validation",
+    "dependency.external-formatters-optional",
     "format.default-formatters",
     "python-api.python-version-has-type-alias",
     "schema.jsonschema-items-array",
@@ -124,6 +130,17 @@ DEPRECATIONS: dict[DeprecationId, Deprecation] = {
         replacement="Set formatters explicitly, for example black and isort or builtin.",
         warning_category="FutureWarning",
     ),
+    "dependency.external-formatters-optional": Deprecation(
+        id="dependency.external-formatters-optional",
+        kind="dependency",
+        target="Black/isort installation",
+        message="Black/isort will become optional. Declare the corresponding extras; see --help.",
+        warning_since="0.78.0",
+        removal_version=None,
+        replacement="Declare the black/isort extras for the external formatters you select.",
+        warning_category="FutureWarning",
+        note="This is advance notice only. Current dependency ranges and compatibility remain unchanged.",
+    ),
     "config.yaml-non-lowercase-bool": Deprecation(
         id="config.yaml-non-lowercase-bool",
         kind="config",
@@ -184,6 +201,23 @@ _WARNING_CATEGORIES: dict[str, type[Warning]] = {
 }
 
 
+_MIGRATION_WARNINGS = frozenset({
+    "format.default-formatters",
+    "dependency.external-formatters-optional",
+})
+_CLI_MIGRATION_WARNINGS: ContextVar[set[DeprecationId] | None] = ContextVar("cli_migration_warnings", default=None)
+
+
+@contextmanager
+def cli_migration_warning_scope() -> Iterator[None]:
+    """Deduplicate migration notices within one CLI invocation, including batch/watch."""
+    token = _CLI_MIGRATION_WARNINGS.set(set())
+    try:
+        yield
+    finally:
+        _CLI_MIGRATION_WARNINGS.reset(token)
+
+
 def iter_deprecations() -> tuple[Deprecation, ...]:
     """Return all deprecations in stable display order."""
     return tuple(sorted(DEPRECATIONS.values(), key=lambda item: (item.removal_version or "", item.kind, item.target)))
@@ -198,12 +232,17 @@ def warn_deprecated(deprecation_id: DeprecationId, *, stacklevel: int = 2, detai
     """Emit a warning from the central registry."""
     if (deprecation := get_deprecation(deprecation_id)).status == "scheduled":
         return
+    seen = _CLI_MIGRATION_WARNINGS.get() if deprecation_id in _MIGRATION_WARNINGS else None
+    if seen is not None and deprecation_id in seen:
+        return
     message = deprecation.message if details is None else f"{deprecation.message} {details}"
     warnings.warn(
         message,
         _WARNING_CATEGORIES[deprecation.warning_category],
         stacklevel=stacklevel,
     )
+    if seen is not None:
+        seen.add(deprecation_id)
 
 
 def deprecation_message(deprecation_id: DeprecationId) -> str:

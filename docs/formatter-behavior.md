@@ -172,3 +172,8 @@ datamodel-codegen \
 ```
 
 Generated output may differ from Black or isort output in places outside the built-in formatter scope. Treat those differences as expected unless they change Python semantics or produce invalid code.
+
+## Dependency migration
+
+See [Dependency migration notices](dependency-migration.md) for Black/isort extras, optional-installation warnings,
+and unchanged current requirements. Old presets without formatters retain the implicit-default warning.

@@ -116,3 +116,17 @@ def test_sdist_includes_test_support_imports() -> None:
         + "\n".join(f"  - /{root}" for root in missing_roots),
         pytrace=False,
     )
+
+
+def test_formatter_extras_preserve_required_ranges_and_markers() -> None:
+    """The migration extras exactly duplicate the current required formatter constraints."""
+    project = _load_pyproject()["project"]
+    assert_output(
+        "\n".join(
+            f"{name}: required={next(item for item in project['dependencies'] if item.startswith(name + '>='))}; "
+            f"extra={','.join(project['optional-dependencies'][name])}; "
+            f"all={f'datamodel-code-generator[{name}]' in project['optional-dependencies']['all']}"
+            for name in ("black", "isort")
+        ),
+        EXPECTED_PACKAGE_METADATA_PATH / "formatter_extras.txt",
+    )

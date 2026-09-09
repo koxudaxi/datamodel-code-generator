@@ -99,7 +99,8 @@ FORMATTER_SELECTION_GUIDE = """Choose a formatter to match your project and gene
 The current default remains Black/isort, which are still required dependencies. Omitting formatter options continues
 normal generation. The future builtin default is intended to reduce required installation dependencies and version
 constraints; Ruff will still be recommended for projects that use Ruff. Formatters are never selected automatically
-based on installed packages or Ruff configuration.
+based on installed packages or Ruff configuration. The new `[black]` and `[isort]` extras prepare for later
+optional installation; their ranges and environment markers match the current required dependencies.
 Selecting only a formatter preserves your other generation settings; a preset also supplies model-generation options.
 Explicit formatter selection does not pin formatter versions or guarantee byte-for-byte output stability."""
 
