@@ -1823,12 +1823,19 @@ def _get_discriminator_field_value(discriminator_field: DataModelFieldBase) -> D
     return None
 
 
-def _find_discriminator_value(fields: Iterable[DataModelFieldBase], field_name: str) -> DiscriminatorValue | None:
+def _find_discriminator_value(
+    fields: Iterable[DataModelFieldBase],
+    field_name: str,
+    *,
+    field_name_mode: Literal["original", "resolved", "either"] = "either",
+) -> DiscriminatorValue | None:
     for field in fields:
-        if (
-            field_name in {field.original_name, field.name}
-            and (value := _get_discriminator_field_value(field)) is not None
-        ):
+        if field_name_mode == "original":
+            source_name = field.original_name if field.original_name is not None else field.alias or field.name
+            matches = source_name == field_name
+        else:
+            matches = field.name == field_name or (field_name_mode == "either" and field.original_name == field_name)
+        if matches and (value := _get_discriminator_field_value(field)) is not None:
             return value
     return None
 
@@ -1839,14 +1846,21 @@ def _get_discriminator_values(
     mapping: dict[str, str],
     *,
     require_literal: bool = False,
+    field_name_mode: Literal["original", "resolved", "either"] = "either",
 ) -> list[DiscriminatorValue]:
-    if (value := _find_discriminator_value(discriminator_model.fields, field_name)) is not None:
+    if (
+        value := _find_discriminator_value(discriminator_model.fields, field_name, field_name_mode=field_name_mode)
+    ) is not None:
         return [value]
 
     # Reuse models are created as empty subclasses with a "/reuse" path suffix.
     # Nested choices cannot be updated later, so also accept inherited literals.
     if (require_literal or discriminator_model.path.endswith("/reuse")) and (
-        value := _find_discriminator_value(discriminator_model.iter_all_fields(), field_name)
+        value := _find_discriminator_value(
+            discriminator_model.iter_all_fields(),
+            field_name,
+            field_name_mode=field_name_mode,
+        )
     ) is not None:
         return [value]
     if require_literal:
@@ -1928,6 +1942,8 @@ def _discriminator_variants_are_valid(
     data_types: Iterable[DataType],
     field_name: str,
     mapping: dict[str, str],
+    *,
+    original_name: str | None = None,
 ) -> bool:
     discriminator_value_owners: dict[DiscriminatorValue, int] = {}
     for data_type, can_update_discriminator, owner in _iter_discriminator_data_types(data_types):
@@ -1945,9 +1961,10 @@ def _discriminator_variants_are_valid(
 
         discriminator_values = _get_discriminator_values(
             discriminator_model,
-            field_name,
+            original_name if original_name is not None else field_name,
             mapping,
             require_literal=not can_update_discriminator,
+            field_name_mode="original" if original_name is not None else "either",
         )
         if not discriminator_values:
             return False
@@ -1958,7 +1975,9 @@ def _discriminator_variants_are_valid(
     return True
 
 
-def _get_enum_from_base(discriminator_model: DataModel, field_name: str) -> Enum | None:
+def _get_enum_from_base(
+    discriminator_model: DataModel, field_name: str, *, use_field_name: bool = False
+) -> Enum | None:
     for base_class in discriminator_model.base_classes:
         if not base_class.reference or not base_class.reference.source:  # pragma: no cover
             continue
@@ -1966,7 +1985,7 @@ def _get_enum_from_base(discriminator_model: DataModel, field_name: str) -> Enum
         if not isinstance(base_model, DataModel) or not base_model.SUPPORTS_INHERITED_DISCRIMINATOR_ENUM:
             continue
         for base_field in base_model.fields:  # pragma: no branch
-            if field_name not in {base_field.original_name, base_field.name}:  # pragma: no cover
+            if base_field.name != field_name and (use_field_name or base_field.original_name != field_name):
                 continue
             if enum_from_base := base_field.data_type.find_source(Enum):  # pragma: no branch
                 return enum_from_base
@@ -3157,6 +3176,44 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         discriminator_field.nullable = False
         _clear_model_imports_cache_if_retained(model, can_retain_cache=can_retain_cache)
 
+    def _get_discriminator_field_name(
+        self, data_types: Iterable[DataType], property_name: str, default_name: str
+    ) -> str:
+        """Resolve the shared Python field name without changing wire aliases."""
+        common_name: str | None = None
+        for data_type, _, _ in _iter_discriminator_data_types(data_types):
+            if not data_type.reference:
+                continue
+            variant = cast("DataModel", data_type.reference.source)
+            for variant_field in chain(variant.fields, variant.iter_all_fields()):
+                if property_name == variant_field.original_name or (
+                    variant_field.original_name is None and default_name == variant_field.name
+                ):
+                    variant_name = variant_field.name
+                    break
+            else:
+                variant_name, _ = self.model_resolver.get_valid_field_name_and_alias(
+                    property_name, model_type=self.field_name_model_type, class_name=variant.class_name
+                )
+            if variant_name != property_name and any(
+                (candidate.alias or candidate.name) == variant_name
+                for candidate in variant.iter_all_fields()
+                if candidate.original_name != property_name
+            ):
+                msg = (
+                    f"Discriminator {property_name!r} resolves to field name {variant_name!r}, "
+                    "which conflicts with another field's input alias; use a distinct discriminator field alias."
+                )
+                raise Error(msg)
+            if common_name is not None and common_name != variant_name:
+                msg = (
+                    f"Discriminator {property_name!r} resolves to different field names "
+                    f"{common_name!r} and {variant_name!r}; use the same alias for all variants."
+                )
+                raise Error(msg)
+            common_name = variant_name
+        return common_name or default_name
+
     def __apply_discriminator_type(  # noqa: PLR0912, PLR0914, PLR0915
         self,
         models: list[DataModel],
@@ -3186,10 +3243,19 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     field.data_type.data_types,
                     field_name,
                     mapping,
+                    original_name=property_name if field.SUPPORTS_DISCRIMINATOR else None,
                 ):
                     _remove_discriminator(field)
                     _clear_model_imports_cache_if_retained(model, can_retain_cache=can_retain_cache)
                     continue
+
+                if field.SUPPORTS_DISCRIMINATOR:
+                    field_name = self._get_discriminator_field_name(
+                        field.data_type.data_types, property_name, field_name
+                    )
+                    discriminator["propertyName"] = field_name
+                    if field_name != property_name and alias is None:
+                        alias = property_name
 
                 for data_type in field.data_type.data_types:
                     if not data_type.reference:  # pragma: no cover
@@ -3202,10 +3268,18 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     ):  # pragma: no cover
                         continue
 
-                    discriminator_values = _get_discriminator_values(discriminator_model, field_name, mapping)
+                    # A resolved Python name can equal a different field's wire name.
+                    discriminator_values = _get_discriminator_values(
+                        discriminator_model,
+                        field_name,
+                        mapping,
+                        field_name_mode="resolved" if field.SUPPORTS_DISCRIMINATOR else "either",
+                    )
                     has_one_literal = False
                     for discriminator_field in discriminator_model.fields:
-                        if field_name not in {discriminator_field.original_name, discriminator_field.name}:
+                        if discriminator_field.name != field_name and (
+                            field.SUPPORTS_DISCRIMINATOR or discriminator_field.original_name != field_name
+                        ):
                             continue
                         const_value = discriminator_field.extras.get("const")
                         expected_value = discriminator_values[0] if discriminator_values else None
@@ -3252,7 +3326,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
                         enum_source = discriminator_field.data_type.find_source(Enum)
                         if self.use_enum_values_in_discriminator:
-                            enum_source = enum_source or _get_enum_from_base(discriminator_model, field_name)
+                            enum_source = enum_source or _get_enum_from_base(
+                                discriminator_model, field_name, use_field_name=field.SUPPORTS_DISCRIMINATOR
+                            )
 
                         for field_data_type in discriminator_field.data_type.all_data_types:
                             if field_data_type.reference:  # pragma: no cover
@@ -3288,7 +3364,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                         has_one_literal = True
                     if not has_one_literal:
                         new_data_type = self._create_discriminator_data_type(
-                            _get_enum_from_base(discriminator_model, field_name),
+                            _get_enum_from_base(
+                                discriminator_model, field_name, use_field_name=field.SUPPORTS_DISCRIMINATOR
+                            ),
                             discriminator_values,
                             discriminator_model,
                             imports,

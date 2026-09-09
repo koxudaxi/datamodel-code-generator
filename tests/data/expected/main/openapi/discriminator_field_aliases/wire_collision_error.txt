@@ -1,0 +1,1 @@
+Discriminator 'petType' resolves to field name 'kind', which conflicts with another field's input alias; use a distinct discriminator field alias.
