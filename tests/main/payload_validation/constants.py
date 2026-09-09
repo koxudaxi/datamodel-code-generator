@@ -116,6 +116,9 @@ DISJOINT_ALLOF_DIAGNOSTIC_CASES: dict[str, str] = json.loads(
     (DATA_PATH / "payloads/disjoint_allof_types/diagnostics.json").read_text(encoding="utf-8")
 )
 EXCLUDED_CASES: dict[str, str] = {
+    "openapi/allof_type_boundary/empty.json::components.schemas.Root": (
+        "expects SchemaParseError; CLI/API diagnostics are exercised by test_openapi_allof_type_boundary"
+    ),
     **{
         f"jsonschema/allof_ref_siblings/{name}.json": (
             "empty literal intersection; CLI/API diagnostics and native rejection are exercised by "
