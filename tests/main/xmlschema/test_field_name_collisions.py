@@ -28,6 +28,8 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 COLLISIONS = (
+    "mixed_element",
+    "mixed_attribute",
     "element_attribute",
     "namespaced_elements",
     "namespaced_attributes",

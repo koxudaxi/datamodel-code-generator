@@ -1325,6 +1325,8 @@ class _XMLSchemaConverter:
         kind = _local_name(declaration.tag)
         if kind == "simpleContent":
             return "simple content", (None, "value")
+        if declaration.get("mixed") == "true":
+            return "mixed content", (None, "value")
         if ref := declaration.get("ref"):
             if ":" not in ref and (namespace := self._namespaces_for(declaration).get("")):
                 return kind, (namespace, ref)
@@ -1445,15 +1447,16 @@ class _XMLSchemaConverter:
         if (attribute.get("use") or source_attribute.get("use")) == "required":
             schema.setdefault("required", []).append(name)
 
-    @staticmethod
     def _apply_mixed_content(
+        self,
         owner: ET.Element,
         schema: JsonSchema,
         *additional_owners: ET.Element,
     ) -> None:
-        if not any(candidate.get("mixed") == "true" for candidate in (owner, *additional_owners)):
-            return
-        schema.setdefault("properties", {}).setdefault("value", _copy_schema(STRING_SCHEMA))
+        for candidate in (owner, *additional_owners):
+            if candidate.get("mixed") == "true":
+                self._set_property(schema.setdefault("properties", {}), "value", _copy_schema(STRING_SCHEMA), candidate)
+                return
 
     def _schema_for_substitution_group(self, head_key: QNameKey) -> JsonSchema | None:
         member_keys = self.substitution_groups.get(head_key)
