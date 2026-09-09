@@ -91,6 +91,7 @@ from tests.main.conftest import (
     _generated_model,
     _generated_package_module,
     _model_json_validator,
+    _uses_builtin_test_default_formatter,
     _uses_external_test_default_formatter,
     assert_generated_model_json_invalid,
     assert_generated_model_json_validation,
@@ -20147,3 +20148,147 @@ def test_msgspec_inheritance_preserve_mixed_opaque_layout(output_file: Path, ent
     with pytest.raises(TypeError) as error:
         _assert_python_module_importable(output_file, "generated_mixed_opaque", "Payload")
     assert_output(f"{error.value}\n", MSGSPEC_INHERITANCE_EXPECTED / "dry_opaque.txt")
+
+
+_EXPORT_CASES = [
+    ("dotted_module_exports", "children", None, None, False, "plain", "children"),
+    ("dotted_module_exports", "recursive", None, None, False, "plain", "recursive"),
+    ("dotted_module_exports", "children", "single", None, False, "single", "children_single"),
+    ("dotted_module_exports", "recursive", "single", None, False, "single", "recursive_single"),
+    (
+        "dotted_module_exports_collision",
+        "recursive",
+        "single",
+        "minimal-prefix",
+        False,
+        "collision",
+        "collision_minimal",
+    ),
+    (
+        "dotted_module_exports_collision",
+        "recursive",
+        "single",
+        "full-prefix",
+        False,
+        "collision",
+        "collision_full",
+    ),
+    ("dotted_module_exports_reuse", "recursive", "single", "minimal-prefix", True, "reuse", "reuse"),
+    ("dotted_module_exports_cycle", "children", None, None, False, "cycle", "cycle_children"),
+    ("dotted_module_exports_cycle", "recursive", None, None, False, "cycle", "cycle_recursive"),
+    ("dotted_module_exports_cycle", "children", "single", None, False, "cycle_single", "cycle_children_single"),
+    (
+        "dotted_module_exports_cycle",
+        "recursive",
+        "single",
+        None,
+        False,
+        "cycle_single",
+        "cycle_recursive_single",
+    ),
+    (
+        "dotted_module_exports_cycle_collision",
+        "recursive",
+        None,
+        "minimal-prefix",
+        False,
+        "cycle",
+        "cycle_minimal",
+    ),
+    ("dotted_module_exports_cycle_collision", "recursive", None, "full-prefix", False, "cycle", "cycle_full"),
+]
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize(
+    ("fixture", "scope", "split", "strategy", "reuse", "runtime_case", "expected", "target_version"),
+    [
+        (*case, version)
+        for case in _EXPORT_CASES
+        for version in (list(PythonVersion) if "_cycle" in case[0] else [PythonVersion.PY_310])
+    ],
+)
+def test_dotted_module_exports(
+    output_dir: Path,
+    entrypoint: str,
+    target_version: PythonVersion,
+    fixture: str,
+    scope: str,
+    split: str | None,
+    strategy: str | None,
+    reuse: bool,
+    runtime_case: str,
+    expected: str,
+) -> None:
+    """Keep each export local to its final package and preserve model identities."""
+    if target_version == PythonVersion.PY_314:
+        expected += "_py314"
+    output_dir = output_dir.with_name(f"{expected}_{target_version.name.lower()}_{entrypoint}")
+    expected_directory = EXPECTED_MAIN_PATH / "jsonschema" / f"dotted_module_exports_{expected}"
+    formatters = (
+        [Formatter.BUILTIN]
+        if _uses_builtin_test_default_formatter() or not is_supported_in_black(target_version)
+        else [Formatter.BLACK, Formatter.ISORT]
+    )
+    if entrypoint == "cli":
+        extra_args = [
+            "--target-python-version",
+            target_version.value,
+            "--treat-dot-as-module",
+            "--all-exports-scope",
+            scope,
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-exact-imports",
+            "--disable-timestamp",
+            "--formatters",
+            *(formatter.value for formatter in formatters),
+        ]
+        if split:
+            extra_args.extend(["--module-split-mode", split])
+        if strategy:
+            extra_args.extend(["--all-exports-collision-strategy", strategy])
+        if reuse:
+            extra_args.extend(["--reuse-model", "--reuse-scope", "tree"])
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / fixture,
+            output_path=output_dir,
+            input_file_type="jsonschema",
+            expected_directory=expected_directory,
+            extra_args=extra_args,
+        )
+    else:
+        generate(
+            JSON_SCHEMA_DATA_PATH / fixture,
+            **_default_formatter_generate_options({
+                "input_file_type": InputFileType.JsonSchema,
+                "target_python_version": target_version,
+                "output": output_dir,
+                "treat_dot_as_module": True,
+                "all_exports_scope": scope,
+                "module_split_mode": split,
+                "all_exports_collision_strategy": strategy,
+                "reuse_model": reuse,
+                "reuse_scope": "tree" if reuse else "module",
+                "output_model_type": "pydantic_v2.BaseModel",
+                "use_exact_imports": True,
+                "disable_timestamp": True,
+                "formatters": formatters,
+            }),
+        )
+        assert_directory_content(output_dir, expected_directory)
+    if "_cycle" in fixture and target_version.value != f"{sys.version_info.major}.{sys.version_info.minor}":
+        return
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(DATA_PATH / "python" / "dotted_module_exports_runtime.py"),
+            str(output_dir),
+            runtime_case,
+            target_version.value,
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert_output(result.stdout, expected_directory.with_name(f"{expected_directory.name}_runtime.txt"))
