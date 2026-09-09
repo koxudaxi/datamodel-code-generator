@@ -20288,7 +20288,7 @@ def test_dotted_module_exports(
             target_version.value,
         ],
         check=True,
-        capture_output=True,
+        stdout=subprocess.PIPE,
         text=True,
     )
     assert_output(result.stdout, expected_directory.with_name(f"{expected_directory.name}_runtime.txt"))
