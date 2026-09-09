@@ -22624,6 +22624,7 @@ def test_unique_model_set_hash_contract(
     if case.get("custom_template"):
         options["custom_template_dir"] = TEMPLATE_DIR
         extra_args.extend(["--custom-template-dir", str(TEMPLATE_DIR)])
+    error = ""
     if entrypoint == "cli":
         args = [
             "--input",
