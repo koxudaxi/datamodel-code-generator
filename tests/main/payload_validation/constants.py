@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import json
+
 from datamodel_code_generator.format import PythonVersion, is_supported_in_black
-from tests.main.conftest import CURRENT_PYTHON_VERSION
+from tests.main.conftest import CURRENT_PYTHON_VERSION, DATA_PATH
 from tests.main.payload_validation.models import PayloadBackend
 
 PAYLOAD_CLASS_NAME = "Payload"
@@ -103,7 +105,17 @@ EXCLUDED_FILES: dict[str, str] = {
     "openapi/not.json": "intentionally invalid JSON fixture",
     "openapi/subclass_enum.json": "intentionally invalid JSON fixture",
 }
+ALLOF_REF_SIBLING_DIAGNOSTICS = json.loads(
+    (DATA_PATH / "payloads/allof_ref_sibling_diagnostics.json").read_text(encoding="utf-8")
+)
 EXCLUDED_CASES: dict[str, str] = {
+    **{
+        f"jsonschema/allof_ref_siblings/{name}.json": (
+            "empty literal intersection; CLI/API diagnostics and native rejection are exercised by "
+            "test_allof_ref_sibling_empty_intersection"
+        )
+        for name in ALLOF_REF_SIBLING_DIAGNOSTICS
+    },
     "jsonschema/all_of_any_of_base_class_ref.json": "hypothesis-jsonschema cannot satisfy the allOf/anyOf constraints",
     "jsonschema/additional_properties_schema_with_allof_properties.json": (
         "hypothesis-jsonschema cannot satisfy the allOf object constraints; typed extras are covered by e2e tests"

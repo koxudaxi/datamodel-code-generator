@@ -67,11 +67,11 @@ datamodel-codegen \
   --input schema.json \
   --input-file-type jsonschema \
   --output-model-type pydantic_v2.BaseModel \
-  --preset standard-py312-20260826 \
+  --preset standard-py312-20260909 \
   --output model.py
 ```
 
-This quick start uses `standard-py312-20260826` as the modern Python 3.12 baseline.
+This quick start uses `standard-py312-20260909` as the modern Python 3.12 baseline.
 Preset names include the target Python version: `py312` means Python 3.12.
 
 See [CLI Reference](cli-reference/index.md) for all options. See [Presets](presets.md),
@@ -79,7 +79,7 @@ See [CLI Reference](cli-reference/index.md) for all options. See [Presets](prese
 [`--output-model-type`](cli-reference/model-customization.md#output-model-type) for this command.
 
 For more schema-aware output that preserves schema-authored names, reuses models, and embeds generated
-documentation, use [`practical-py312-20260826`](presets.md#practical-py312-20260826).
+documentation, use [`practical-py312-20260909`](presets.md#practical-py312-20260909).
 
 <details>
 <summary>Input (<code>schema.json</code>)</summary>
@@ -148,14 +148,24 @@ class Pet(BaseModel):
 
 🎉 That's it! Your schema is now a fully-typed Python model.
 
-### ⚡ Speed up generation
+### Choose a formatter
 
-By default, generated Python is currently formatted with `black` and `isort`. For faster generation without external
-formatter dependencies, add `--formatters builtin` for standard generated model modules. In a future version, the
-Black/isort dependencies will become opt-in and the default formatter will change to `builtin`.
+Choose a formatter to match your project and generation priorities:
 
-If you prefer Ruff, install it with `pip install 'datamodel-code-generator[ruff]'` and use
-`--formatters ruff-check ruff-format` for a fast external formatter.
+- **Projects using Ruff:** use `--formatters ruff-check ruff-format` to keep generated code consistent with the
+  project's formatting and lint policy. Install it with `pip install 'datamodel-code-generator[ruff]'`.
+- **No Ruff, Black, or isort, or generation speed is the priority:** use `--formatters builtin` to avoid running
+  external formatters on standard generated model modules.
+- **Projects using Black/isort:** keep `--formatters black isort` to preserve the project's formatting and existing
+  generated output.
+
+The current default remains Black/isort, which are still required dependencies. Omitting formatter options continues
+normal generation. The future builtin default is intended to reduce required installation dependencies and version
+constraints; Ruff will still be recommended for projects that use Ruff. Formatters are never selected automatically
+based on installed packages or Ruff configuration. The new `[black]` and `[isort]` extras prepare for later
+optional installation; their ranges and environment markers match the current required dependencies.
+Selecting only a formatter preserves your other generation settings; a preset also supplies model-generation options.
+Explicit formatter selection does not pin formatter versions or guarantee byte-for-byte output stability.
 
 Custom templates can emit Python outside the standard generated model patterns covered by `builtin`, so
 custom-template output is not exhaustively validated. If `--formatters builtin` produces invalid or poorly formatted

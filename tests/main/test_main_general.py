@@ -66,6 +66,7 @@ from tests.conftest import (
     assert_generated_modules_output,
     assert_httpx_get_kwargs,
     assert_inputs_not_mutated,
+    assert_mutable_copy_is_isolated,
     assert_no_uncommented_generated_code,
     assert_output,
     assert_runtime_import_package,
@@ -1699,6 +1700,100 @@ def test_mcp_tools_referenced_false_definition_api(input_name: str) -> None:
     """Reject unsupported false definitions instead of emitting a permissive model."""
     with pytest.raises(Error, match="Referenced MCP boolean false definition is not supported: Denied"):
         generate(DATA_PATH / "mcp_tools" / f"{input_name}.json", input_file_type=InputFileType.MCPTools)
+
+
+@pytest.mark.parametrize("input_name", ["schema_value_references", "schema_reference_positions"])
+def test_mcp_tools_schema_value_references_conversion(input_name: str) -> None:
+    """Keep schema-instance values unchanged while normalizing MCP definitions."""
+    source = json.loads((DATA_PATH / "mcp_tools" / f"{input_name}.json").read_text())
+    with assert_inputs_not_mutated({"source": source}):
+        converted = convert_mcp_tools_to_jsonschema(source)
+    assert_output(
+        f"{json.dumps(converted, indent=2)}\n",
+        EXPECTED_MAIN_PATH / "mcp_tools" / f"{input_name}.txt",
+    )
+
+
+def test_mcp_tools_schema_value_references_isolated() -> None:
+    """Keep converted instance values independently mutable from the source."""
+    source = json.loads((DATA_PATH / "mcp_tools" / "schema_value_references.json").read_text())
+    converted = convert_mcp_tools_to_jsonschema(source)
+    assert_mutable_copy_is_isolated(
+        original=source["inputSchema"]["properties"]["item"]["default"],
+        copied=converted["$defs"]["SchemaValuesInput"]["properties"]["item"]["default"],
+        mutate_copied=lambda value: value["nested"].append({"$ref": "changed"}),
+        label="MCP default payload",
+    )
+
+
+@pytest.mark.parametrize("input_name", ["schema_value_references", "schema_value_references_compact"])
+def test_mcp_tools_schema_value_references_cli(output_file: Path, input_name: str) -> None:
+    """Keep MCP schema-instance values in strict CLI-generated model defaults."""
+    run_main_and_assert(
+        input_path=DATA_PATH / "mcp_tools" / f"{input_name}.json",
+        output_path=output_file,
+        input_file_type="mcp-tools",
+        assert_func=assert_file_content,
+        expected_file=f"mcp_tools/{input_name}.py",
+        extra_args=[
+            "--strict-refs",
+            "--disable-timestamp",
+            *(["--formatters", "builtin"] if input_name == "schema_value_references" else []),
+        ],
+    )
+    source = json.loads((DATA_PATH / "mcp_tools" / f"{input_name}.json").read_text())
+    for model_name, field_name in (
+        ("SchemaValuesInput", "item"),
+        ("SchemaValuesInput", "sequence"),
+        ("SchemaValuesOutput", "item"),
+        ("SchemaValuesOutput", "sequence"),
+    ):
+        assert_generated_model_json_validation(
+            output_file,
+            module_name=f"mcp_schema_value_references_cli_{model_name}",
+            model_name=model_name,
+            valid_json="{}",
+            invalid_json=json.dumps({field_name: ["not-an-object"] if field_name == "sequence" else "not-an-object"}),
+            expected_error_type="dict_type",
+            expected_attribute_path=(field_name,),
+            expected_attribute_value=source["outputSchema" if model_name == "SchemaValuesOutput" else "inputSchema"][
+                "properties"
+            ][field_name]["default"],
+        )
+
+
+@pytest.mark.parametrize("input_name", ["schema_value_references", "schema_value_references_compact"])
+def test_mcp_tools_schema_value_references_api(output_file: Path, input_name: str) -> None:
+    """Keep MCP schema-instance values in strict API-generated model defaults."""
+    run_generate_file_and_assert(
+        input_path=DATA_PATH / "mcp_tools" / f"{input_name}.json",
+        output_path=output_file,
+        input_file_type=InputFileType.MCPTools,
+        assert_func=assert_file_content,
+        expected_file=f"mcp_tools/{input_name}.py",
+        strict_refs=True,
+        disable_timestamp=True,
+        **({"formatters": [Formatter.BUILTIN]} if input_name == "schema_value_references" else {}),
+    )
+    source = json.loads((DATA_PATH / "mcp_tools" / f"{input_name}.json").read_text())
+    for model_name, field_name in (
+        ("SchemaValuesInput", "item"),
+        ("SchemaValuesInput", "sequence"),
+        ("SchemaValuesOutput", "item"),
+        ("SchemaValuesOutput", "sequence"),
+    ):
+        assert_generated_model_json_validation(
+            output_file,
+            module_name=f"mcp_schema_value_references_api_{model_name}",
+            model_name=model_name,
+            valid_json="{}",
+            invalid_json=json.dumps({field_name: ["not-an-object"] if field_name == "sequence" else "not-an-object"}),
+            expected_error_type="dict_type",
+            expected_attribute_path=(field_name,),
+            expected_attribute_value=source["outputSchema" if model_name == "SchemaValuesOutput" else "inputSchema"][
+                "properties"
+            ][field_name]["default"],
+        )
 
 
 @pytest.mark.parametrize(argnames="input_kind", argvalues=["mapping", "list", "string"])
@@ -5817,3 +5912,136 @@ def test_config_models_allow_internal_model_extra_options() -> None:
 def test_all_exports_includes_generate_config() -> None:
     """Test that __all__ includes GenerateConfig."""
     assert "GenerateConfig" in datamodel_code_generator.__all__
+
+
+@pytest.mark.parametrize(
+    ("family", "target", "formatters"),
+    [
+        pytest.param(
+            family,
+            target,
+            formatters,
+            marks=pytest.mark.skipif(
+                formatters == ["black", "isort"]
+                and not datamodel_code_generator.format.is_supported_in_black(PythonVersion(f"3.{target[1:]}")),
+                reason="Installed Black does not support this target",
+            ),
+        )
+        for family in ("standard", "practical")
+        for target in ("310", "311", "312", "313", "314")
+        for formatters in ([], ["black", "isort"], ["ruff-check", "ruff-format"])
+    ],
+)
+def test_builtin_preset_formatter_selection(
+    family: str,
+    target: str,
+    formatters: list[str],
+    output_file: Path,
+) -> None:
+    """New presets support builtin and explicit project formatter pipelines."""
+    with warnings.catch_warnings(record=True) as recorded:
+        warnings.simplefilter("always", FutureWarning)
+        run_main_with_args(
+            [
+                "--input",
+                str(JSON_SCHEMA_DATA_PATH / "person.json"),
+                "--input-file-type",
+                "jsonschema",
+                "--output",
+                str(output_file),
+                "--preset",
+                f"{family}-py{target}-20260909",
+                *(["--formatters", *formatters] if formatters else []),
+            ],
+            use_builtin_default_formatter=False,
+        )
+    assert_output(
+        output_file.read_text(encoding="utf-8"),
+        EXPECTED_MAIN_PATH / "formatter_policy" / f"{family}-{target}-{formatters[0] if formatters else 'builtin'}.py",
+    )
+    assert_output(
+        "\n".join(str(item.message) for item in recorded if "Default formatters" in str(item.message)),
+        EXPECTED_MAIN_PATH / "formatter_policy" / "no_warning.txt",
+    )
+
+
+@pytest.mark.parametrize("mode", ["implicit", "explicit", "old-preset", "new-preset", "disabled"])
+@pytest.mark.parametrize("api", [False, True])
+def test_formatter_policy_warning(mode: str, api: bool, output_file: Path) -> None:
+    """Generation keeps its defaults and emits only the agreed short warning."""
+    preset = {"old-preset": "standard-py310-20260826", "new-preset": "standard-py310-20260909"}.get(mode)
+    with warnings.catch_warnings(record=True) as recorded:
+        warnings.simplefilter("always", FutureWarning)
+        if api:
+            generate(
+                JSON_SCHEMA_DATA_PATH / "person.json",
+                input_file_type=InputFileType.JsonSchema,
+                output=output_file,
+                preset=preset,
+                disable_timestamp=True,
+                **(
+                    {"formatters": [Formatter.BLACK, Formatter.ISORT]}
+                    if mode == "explicit"
+                    else {"formatters": []}
+                    if mode == "disabled"
+                    else {}
+                ),
+            )
+        else:
+            run_main_with_args(
+                [
+                    "--input",
+                    str(JSON_SCHEMA_DATA_PATH / "person.json"),
+                    "--input-file-type",
+                    "jsonschema",
+                    "--output",
+                    str(output_file),
+                    "--disable-timestamp",
+                    *(["--preset", preset] if preset else []),
+                    *(["--formatters", "black", "isort"] if mode == "explicit" else []),
+                    *(["--disable-warnings"] if mode == "disabled" else []),
+                ],
+                use_builtin_default_formatter=False,
+            )
+    formatter_warnings = "\n".join(str(item.message) for item in recorded if "Default formatters" in str(item.message))
+    assert_output(
+        formatter_warnings,
+        EXPECTED_MAIN_PATH
+        / "formatter_policy"
+        / ("warning.txt" if mode in {"implicit", "old-preset"} else "no_warning.txt"),
+    )
+    assert_output(
+        output_file.read_text(encoding="utf-8"),
+        EXPECTED_MAIN_PATH / "formatter_policy" / f"{mode}-{'api' if api else 'cli'}.py",
+    )
+
+
+@pytest.mark.parametrize("mode", ["builtin", "ruff", "black", "empty", "implicit"])
+@pytest.mark.parametrize("override", [False, True])
+def test_formatter_policy_pyproject(mode: str, override: bool, output_file: Path, tmp_path: Path) -> None:
+    """Respect configured formatters, empty lists and CLI overrides without automatic Ruff selection."""
+    shutil.copyfile(DATA_PATH / "config" / "formatter_policy" / f"{mode}.toml", tmp_path / "pyproject.toml")
+    with chdir(tmp_path), warnings.catch_warnings(record=True) as recorded:
+        warnings.simplefilter("always", FutureWarning)
+        run_main_with_args(
+            [
+                "--input",
+                str(JSON_SCHEMA_DATA_PATH / "person.json"),
+                "--input-file-type",
+                "jsonschema",
+                "--output",
+                str(output_file),
+                *(["--formatters", "ruff-check", "ruff-format"] if override else []),
+            ],
+            use_builtin_default_formatter=False,
+        )
+    assert_output(
+        "\n".join(str(item.message) for item in recorded if "Default formatters" in str(item.message)),
+        EXPECTED_MAIN_PATH
+        / "formatter_policy"
+        / ("warning.txt" if mode == "implicit" and not override else "no_warning.txt"),
+    )
+    assert_output(
+        output_file.read_text(encoding="utf-8"),
+        EXPECTED_MAIN_PATH / "formatter_policy" / f"pyproject-{mode}-{'override' if override else 'configured'}.py",
+    )

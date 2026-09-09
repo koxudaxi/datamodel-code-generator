@@ -16,6 +16,10 @@ This page lists deprecations and scheduled breaking changes.
 | `cli.validation` | active | cli-option | `--validation` | 0.24.0 | TBD | --field-constraints |
 | `config.json-config-strict-validation` | active | config | `JSON configuration values accepted by legacy validation` | 0.64.2 | TBD | Update the JSON configuration to match --output-format-json-schema config. |
 | `config.yaml-non-lowercase-bool` | active | config | `YAML bool values True, False, TRUE, FALSE` | 0.48.0 | TBD | Use lowercase true or false. |
+| `dependency.black-minimum` | active | dependency | `Black <24.3.0` | 0.78.0 | TBD | Upgrade Black to >=24.3.0 before the later support change. |
+| `dependency.external-formatters-optional` | active | dependency | `Black/isort installation` | 0.78.0 | TBD | Declare the black/isort extras for the external formatters you select. |
+| `dependency.pydantic-runtime-minimum` | active | dependency | `DCG runtime Pydantic <2.8.2` | 0.78.0 | TBD | Upgrade DCG runtime Pydantic to >=2.8.2; generated-code targets are unchanged. |
+| `dependency.isort-minimum` | active | dependency | `isort <6` | 0.78.0 | TBD | Upgrade isort to >=6,<9 before the later support change. |
 | `python-api.python-version-has-type-alias` | active | python-api | `PythonVersion.has_type_alias` | 0.52.1 | TBD | - |
 | `schema.jsonschema-items-array` | active | schema | `JSON Schema Draft 2020-12 items array tuple validation` | 0.53.0 | TBD | Use prefixItems. |
 | `schema.openapi-nullable` | active | schema | `OpenAPI 3.1 nullable keyword` | 0.53.0 | TBD | Use type arrays such as type: ["string", "null"]. |
@@ -32,7 +36,7 @@ This page lists deprecations and scheduled breaking changes.
 - **Warning category:** `FutureWarning`
 - **Replacement:** Set formatters explicitly, for example black and isort or builtin.
 
-The default external formatters (black, isort) will become opt-in in a future version.
+Default formatters will change to builtin. Set --formatters or --preset explicitly; see --help.
 
 ### `behavior.pydantic-v2-use-annotated-default`
 
@@ -145,6 +149,62 @@ JSON configuration values that do not match the documented schema are deprecated
 - **Replacement:** Use lowercase true or false.
 
 Non-lowercase YAML bool values are deprecated. Use lowercase true or false instead.
+
+### `dependency.black-minimum`
+
+- **Status:** active
+- **Kind:** dependency
+- **Target:** `Black <24.3.0`
+- **Since:** 0.78.0
+- **Planned removal:** TBD
+- **Warning category:** `FutureWarning`
+- **Replacement:** Upgrade Black to >=24.3.0 before the later support change.
+
+Support for Black <24.3.0 will end in a future release.
+
+This is advance notice only. Current dependency ranges and compatibility remain unchanged.
+
+### `dependency.external-formatters-optional`
+
+- **Status:** active
+- **Kind:** dependency
+- **Target:** `Black/isort installation`
+- **Since:** 0.78.0
+- **Planned removal:** TBD
+- **Warning category:** `FutureWarning`
+- **Replacement:** Declare the black/isort extras for the external formatters you select.
+
+Black/isort will become optional. Declare the corresponding extras; see --help.
+
+This is advance notice only. Current dependency ranges and compatibility remain unchanged.
+
+### `dependency.pydantic-runtime-minimum`
+
+- **Status:** active
+- **Kind:** dependency
+- **Target:** `DCG runtime Pydantic <2.8.2`
+- **Since:** 0.78.0
+- **Planned removal:** TBD
+- **Warning category:** `FutureWarning`
+- **Replacement:** Upgrade DCG runtime Pydantic to >=2.8.2; generated-code targets are unchanged.
+
+Support for DCG runtime Pydantic <2.8.2 will end in a future release.
+
+This is advance notice only. Current dependency ranges and compatibility remain unchanged.
+
+### `dependency.isort-minimum`
+
+- **Status:** active
+- **Kind:** dependency
+- **Target:** `isort <6`
+- **Since:** 0.78.0
+- **Planned removal:** TBD
+- **Warning category:** `FutureWarning`
+- **Replacement:** Upgrade isort to >=6,<9 before the later support change.
+
+Support for isort <6 will end in a future release.
+
+This is advance notice only. Current dependency ranges and compatibility remain unchanged.
 
 ### `python-api.python-version-has-type-alias`
 

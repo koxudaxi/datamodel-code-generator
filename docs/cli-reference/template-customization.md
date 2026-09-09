@@ -2608,8 +2608,12 @@ Specify code formatters to apply to generated output.
 
 The `--formatters` flag specifies which code formatters to apply to
 the generated Python code. Available formatters are: builtin, black,
-isort, ruff-check, ruff-format. Default is [black, isort].
-Use this to customize formatting or disable formatters entirely.
+isort, ruff-check, ruff-format. The current default is [black, isort].
+For projects using Ruff, select --formatters ruff-check ruff-format to match project lint and formatting settings.
+Use --formatters builtin when you use no external formatter or prioritize generation speed.
+Keep --formatters black isort to preserve existing formatting. Explicit formatters override presets.
+The future builtin default reduces installation dependencies and version constraints; Black/isort remain required today.
+See the formatter guides for installation and custom-template limitations.
 
 **See also:** [CI/CD Integration](../ci-cd.md), [Formatter behavior](../formatter-behavior.md), [Code Formatting](../formatting.md)
 

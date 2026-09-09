@@ -87,6 +87,24 @@ README_OUTPUT_TYPE_LABELS: dict[DataModelType, str] = {
 }
 
 
+FORMATTER_SELECTION_GUIDE = """Choose a formatter to match your project and generation priorities:
+
+- **Projects using Ruff:** use `--formatters ruff-check ruff-format` to keep generated code consistent with the
+  project's formatting and lint policy. Install it with `pip install 'datamodel-code-generator[ruff]'`.
+- **No Ruff, Black, or isort, or generation speed is the priority:** use `--formatters builtin` to avoid running
+  external formatters on standard generated model modules.
+- **Projects using Black/isort:** keep `--formatters black isort` to preserve the project's formatting and existing
+  generated output.
+
+The current default remains Black/isort, which are still required dependencies. Omitting formatter options continues
+normal generation. The future builtin default is intended to reduce required installation dependencies and version
+constraints; Ruff will still be recommended for projects that use Ruff. Formatters are never selected automatically
+based on installed packages or Ruff configuration. The new `[black]` and `[isort]` extras prepare for later
+optional installation; their ranges and environment markers match the current required dependencies.
+Selecting only a formatter preserves your other generation settings; a preset also supplies model-generation options.
+Explicit formatter selection does not pin formatter versions or guarantee byte-for-byte output stability."""
+
+
 @dataclass(frozen=True, slots=True)
 class GeneratedDoc:
     """Generated file content."""
@@ -383,14 +401,9 @@ documentation, use [`{practical_preset_name}`]({practical_preset_url}).
 {model_output}
 ```
 
-### ⚡ Speed up generation
+### Choose a formatter
 
-By default, generated Python is currently formatted with `black` and `isort`. For faster generation without external
-formatter dependencies, add `--formatters builtin` for standard generated model modules. In a future version, the
-Black/isort dependencies will become opt-in and the default formatter will change to `builtin`.
-
-If you prefer Ruff, install it with `pip install 'datamodel-code-generator[ruff]'` and use
-`--formatters ruff-check ruff-format` for a fast external formatter.
+{FORMATTER_SELECTION_GUIDE}
 
 Custom templates can emit Python outside the standard generated model patterns covered by `builtin`, so
 custom-template output is not exhaustively validated. If `--formatters builtin` produces invalid or poorly formatted
@@ -442,14 +455,9 @@ documentation, use [`{practical_preset_name}`]({practical_preset_link}).
 
 🎉 That's it! Your schema is now a fully-typed Python model.
 
-### ⚡ Speed up generation
+### Choose a formatter
 
-By default, generated Python is currently formatted with `black` and `isort`. For faster generation without external
-formatter dependencies, add `--formatters builtin` for standard generated model modules. In a future version, the
-Black/isort dependencies will become opt-in and the default formatter will change to `builtin`.
-
-If you prefer Ruff, install it with `pip install 'datamodel-code-generator[ruff]'` and use
-`--formatters ruff-check ruff-format` for a fast external formatter.
+{FORMATTER_SELECTION_GUIDE}
 
 Custom templates can emit Python outside the standard generated model patterns covered by `builtin`, so
 custom-template output is not exhaustively validated. If `--formatters builtin` produces invalid or poorly formatted

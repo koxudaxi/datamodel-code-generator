@@ -14,8 +14,8 @@ Source: https://datamodel-code-generator.koxudaxi.dev/
 [![Conda-forge](https://img.shields.io/conda/v/conda-forge/datamodel-code-generator)](https://anaconda.org/conda-forge/datamodel-code-generator)
 [![Downloads](https://api.pepy.tech/badge/datamodel-code-generator/month)](https://pepy.tech/projects/datamodel-code-generator)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/datamodel-code-generator)](https://pypi.python.org/pypi/datamodel-code-generator)
-[![codecov](https://codecov.io/gh/koxudaxi/datamodel-code-generator/graph/badge.svg?token=plzSSFb9Li)](https://codecov.io/gh/koxudaxi/datamodel-code-generator)
-![license](https://img.shields.io/github/license/koxudaxi/datamodel-code-generator.svg)
+[![codecov](https://codecov.io/gh/datamodel-code-generator/datamodel-code-generator/graph/badge.svg?token=plzSSFb9Li)](https://codecov.io/gh/datamodel-code-generator/datamodel-code-generator)
+![license](https://img.shields.io/github/license/datamodel-code-generator/datamodel-code-generator.svg)
 [![Pydantic v2](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/pydantic/pydantic/main/docs/badge/v2.json)](https://pydantic.dev)
 
 ---
@@ -166,7 +166,7 @@ Validate generated models in your CI pipeline:
 
 ```yaml title=".github/workflows/validate-models.yml"
 # Replace vX.Y.Z with a released action version.
-- uses: koxudaxi/datamodel-code-generator@vX.Y.Z
+- uses: datamodel-code-generator/datamodel-code-generator@vX.Y.Z
   with:
     input: schemas/api.yaml
     output: src/models/api.py
@@ -230,7 +230,7 @@ These public examples are grouped by how each project uses datamodel-code-genera
 - [vllm-project/vllm](https://github.com/vllm-project/vllm) - *[Test dependency for MiniCPM3 tests](https://github.com/vllm-project/vllm/blob/46f01a50acd6862806ed67b88176c96c2b161142/requirements/test/cuda.in#L40)*
 - [stanfordnlp/dspy](https://github.com/stanfordnlp/dspy) - *[Generate Pydantic models from JSON Schema for reliability tests](https://github.com/stanfordnlp/dspy/blob/main/tests/reliability/generate/utils.py)*
 
-[See all dependents →](https://github.com/koxudaxi/datamodel-code-generator/network/dependents)
+[See all dependents →](https://github.com/datamodel-code-generator/datamodel-code-generator/network/dependents)
 
 ---
 
@@ -313,11 +313,11 @@ datamodel-codegen \
   --input schema.json \
   --input-file-type jsonschema \
   --output-model-type pydantic_v2.BaseModel \
-  --preset standard-py312-20260826 \
+  --preset standard-py312-20260909 \
   --output model.py
 ```
 
-This quick start uses `standard-py312-20260826` as the modern Python 3.12 baseline.
+This quick start uses `standard-py312-20260909` as the modern Python 3.12 baseline.
 Preset names include the target Python version: `py312` means Python 3.12.
 
 See [CLI Reference](cli-reference/index.md) for all options. See [Presets](presets.md),
@@ -325,7 +325,7 @@ See [CLI Reference](cli-reference/index.md) for all options. See [Presets](prese
 [`--output-model-type`](cli-reference/model-customization.md#output-model-type) for this command.
 
 For more schema-aware output that preserves schema-authored names, reuses models, and embeds generated
-documentation, use [`practical-py312-20260826`](presets.md#practical-py312-20260826).
+documentation, use [`practical-py312-20260909`](presets.md#practical-py312-20260909).
 
 <details>
 <summary>Input (<code>schema.json</code>)</summary>
@@ -394,14 +394,24 @@ class Pet(BaseModel):
 
 🎉 That's it! Your schema is now a fully-typed Python model.
 
-### ⚡ Speed up generation
+### Choose a formatter
 
-By default, generated Python is currently formatted with `black` and `isort`. For faster generation without external
-formatter dependencies, add `--formatters builtin` for standard generated model modules. In a future version, the
-Black/isort dependencies will become opt-in and the default formatter will change to `builtin`.
+Choose a formatter to match your project and generation priorities:
 
-If you prefer Ruff, install it with `pip install 'datamodel-code-generator[ruff]'` and use
-`--formatters ruff-check ruff-format` for a fast external formatter.
+- **Projects using Ruff:** use `--formatters ruff-check ruff-format` to keep generated code consistent with the
+  project's formatting and lint policy. Install it with `pip install 'datamodel-code-generator[ruff]'`.
+- **No Ruff, Black, or isort, or generation speed is the priority:** use `--formatters builtin` to avoid running
+  external formatters on standard generated model modules.
+- **Projects using Black/isort:** keep `--formatters black isort` to preserve the project's formatting and existing
+  generated output.
+
+The current default remains Black/isort, which are still required dependencies. Omitting formatter options continues
+normal generation. The future builtin default is intended to reduce required installation dependencies and version
+constraints; Ruff will still be recommended for projects that use Ruff. Formatters are never selected automatically
+based on installed packages or Ruff configuration. The new `[black]` and `[isort]` extras prepare for later
+optional installation; their ranges and environment markers match the current required dependencies.
+Selecting only a formatter preserves your other generation settings; a preset also supplies model-generation options.
+Explicit formatter selection does not pin formatter versions or guarantee byte-for-byte output stability.
 
 Custom templates can emit Python outside the standard generated model patterns covered by `builtin`, so
 custom-template output is not exhaustively validated. If `--formatters builtin` produces invalid or poorly formatted
@@ -442,11 +452,13 @@ datamodel-codegen \
   --input schema.json \
   --input-file-type jsonschema \
   --output-model-type pydantic_v2.BaseModel \
-  --preset standard-py312-20260826 \
+  --preset standard-py312-20260909 \
   --output model.py
 ```
 
-Use `standard-py312-20260826` for the project-recommended modern Python 3.12 baseline. Use `practical-py312-20260826` when you also want schema-authored names, model reuse, and schema descriptions embedded in the generated code.
+Use `standard-py312-20260909` for the project-recommended modern Python 3.12 baseline. Use `practical-py312-20260909` when you also want schema-authored names, model reuse, and schema descriptions embedded in the generated code.
+
+The 20260909 presets select builtin to avoid running external formatters. For project-wide Ruff consistency, use the preset with `--formatters ruff-check ruff-format`. Keep `--formatters black isort` to preserve existing Black/isort output. Earlier dated presets are unchanged. Black and isort remain required installation dependencies.
 
 ## Override Preset Options
 
@@ -455,7 +467,7 @@ Preset options are defaults, not locks. Explicit options override preset-supplie
 ```bash
 datamodel-codegen \
   --input schema.json \
-  --preset standard-py312-20260826 \
+  --preset standard-py312-20260909 \
   --no-snake-case-field \
   --no-use-annotated \
   --enum-field-as-literal none
@@ -470,7 +482,7 @@ You can add any normal CLI option to a preset command. This is the recommended w
 ```bash
 datamodel-codegen \
   --input schema.json \
-  --preset standard-py312-20260826 \
+  --preset standard-py312-20260909 \
   --extra-fields forbid \
   --use-title-as-name \
   --output model.py
@@ -483,12 +495,12 @@ Presets can live in `[tool.datamodel-codegen]` or in a named profile. Profiles a
 ```toml title="pyproject.toml"
 [tool.datamodel-codegen]
 output-model-type = "pydantic_v2.BaseModel"
-preset = "standard-py312-20260826"
+preset = "standard-py312-20260909"
 
 [tool.datamodel-codegen.profiles.api]
 input = "schemas/api.json"
 output = "src/models/api.py"
-preset = "practical-py312-20260826"
+preset = "practical-py312-20260909"
 extra-fields = "forbid"
 
 [tool.datamodel-codegen.profiles.events]
@@ -513,7 +525,7 @@ datamodel-codegen \
   --input schema.json \
   --output model.py \
   --output-model-type pydantic_v2.BaseModel \
-  --preset practical-py312-20260826 \
+  --preset practical-py312-20260909 \
   --extra-fields forbid \
   --generate-pyproject-config
 ```
@@ -532,11 +544,11 @@ Use `--ignore-pyproject` when you want to test a preset command without loading 
 
 | Python target | Standard preset | Practical preset |
 |---------------|-----------------|------------------|
-| 3.10 | `standard-py310-20260826` | `practical-py310-20260826` |
-| 3.11 | `standard-py311-20260826` | `practical-py311-20260826` |
-| 3.12 | `standard-py312-20260826` | `practical-py312-20260826` |
-| 3.13 | `standard-py313-20260826` | `practical-py313-20260826` |
-| 3.14 | `standard-py314-20260826` | `practical-py314-20260826` |
+| 3.10 | `standard-py310-20260909` | `practical-py310-20260909` |
+| 3.11 | `standard-py311-20260909` | `practical-py311-20260909` |
+| 3.12 | `standard-py312-20260909` | `practical-py312-20260909` |
+| 3.13 | `standard-py313-20260909` | `practical-py313-20260909` |
+| 3.14 | `standard-py314-20260909` | `practical-py314-20260909` |
 
 Each preset name includes its Python target. Do not add `--target-python-version` just to use a preset; only expanded configuration without `--preset` needs a separate target option.
 
@@ -1730,6 +1742,627 @@ These snippets show the equivalent expanded configuration without `--preset` for
 | stdlib dataclass output | `--use-standard-primitive-types` | Use stdlib primitive types without renaming input keys because dataclasses do not carry aliases. |
 | TypedDict output | `--use-standard-primitive-types`, `--use-frozen-field` | Use stdlib primitive types and ReadOnly metadata without renaming dictionary keys. |
 | Serialized defaults | `--deserialize-default-values decimal enum` | Deserialize compatible serialized Decimal and enum defaults into generated Python values while preserving defaults that cannot be converted safely. |
+| Practical model structure and names | `--reuse-model`, `--collapse-reuse-models`, `--use-title-as-name`, `--naming-strategy primary-first` | Deduplicate identical models without empty inheritance wrappers, prefer schema titles for class names, and keep primary definitions ahead of inline duplicate names. |
+| Practical typing and defaults | `--use-default-kwarg`, `--use-object-type`, `--use-tuple-for-fixed-items`, `--use-unique-items-as-set`, `--use-single-line-docstring` | Render defaults explicitly, prefer object for unconstrained values, preserve fixed and unique arrays, and keep short docstrings concise. |
+| Schema documentation | `--use-schema-description`, `--use-field-description`, `--use-field-description-example` | Preserve schema and field descriptions, including examples, in generated model documentation. |
+
+### `standard-py310-20260909`
+
+Recommended modern Python 3.10 output for new projects.
+
+This immutable preset enables the project-recommended Python output style for new code targeting Python 3.10. It is output-model aware and keeps stdlib dataclass and TypedDict keys compatible with their input names.
+
+- **Requires separate target Python version:** no
+- **Target Python version:** 3.10
+
+#### Included Options
+
+These snippets show the equivalent expanded configuration without `--preset` for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.10. Replace the input and output paths for your project.
+
+=== "pyproject.toml"
+
+    ```toml
+    [tool.datamodel-codegen]
+    allow-population-by-field-name = true
+    collapse-root-models = true
+    deserialize-default-values = ["decimal", "enum"]
+    disable-timestamp = true
+    enum-field-as-literal = "one"
+    formatters = ["builtin"]
+    input = "schema.json"
+    input-file-type = "jsonschema"
+    output = "model.py"
+    output-model-type = "pydantic_v2.BaseModel"
+    snake-case-field = true
+    strict-nullable = true
+    target-python-version = "3.10"
+    use-annotated = true
+    use-frozen-field = true
+    use-standard-collections = true
+    use-subclass-enum = true
+    use-union-operator = true
+    ```
+
+=== "CLI"
+
+    ```bash
+    datamodel-codegen --allow-population-by-field-name --collapse-root-models --deserialize-default-values decimal enum --disable-timestamp --enum-field-as-literal one --formatters builtin --input schema.json --input-file-type jsonschema --output model.py --output-model-type pydantic_v2.BaseModel --snake-case-field --strict-nullable --target-python-version 3.10 --use-annotated --use-frozen-field --use-standard-collections --use-subclass-enum --use-union-operator
+    ```
+
+| Scope | Options | Notes |
+|-------|---------|-------|
+| All output model types | `--use-standard-collections`, `--use-union-operator`, `--use-annotated`, `--enum-field-as-literal one`, `--use-subclass-enum`, `--collapse-root-models`, `--strict-nullable`, `--disable-timestamp` | Use built-in collection syntax, PEP 604 unions, Annotated constraints, single-value enum Literals, typed enum subclasses, inline root wrappers, schema-accurate nullability, and reproducible file headers. |
+| Pydantic v2 BaseModel and dataclass output | `--snake-case-field`, `--allow-population-by-field-name`, `--use-frozen-field` | Generate Pythonic field names while preserving input aliases and readOnly immutability metadata. |
+| msgspec Struct output | `--snake-case-field`, `--use-standard-primitive-types` | Generate Pythonic field names with aliases and stdlib primitive types for schema formats. |
+| stdlib dataclass output | `--use-standard-primitive-types` | Use stdlib primitive types without renaming input keys because dataclasses do not carry aliases. |
+| TypedDict output | `--use-standard-primitive-types`, `--use-frozen-field` | Use stdlib primitive types and ReadOnly metadata without renaming dictionary keys. |
+| Serialized defaults | `--deserialize-default-values decimal enum` | Deserialize compatible serialized Decimal and enum defaults into generated Python values while preserving defaults that cannot be converted safely. |
+| Built-in formatting | `--formatters builtin` | Format generated models without running an external formatter. For projects using Ruff, override with --formatters ruff-check ruff-format. To preserve Black/isort formatting, override with --formatters black isort. |
+
+### `standard-py311-20260909`
+
+Recommended modern Python 3.11 output for new projects.
+
+This immutable preset enables the project-recommended Python output style for new code targeting Python 3.11. It is output-model aware and keeps stdlib dataclass and TypedDict keys compatible with their input names.
+
+- **Requires separate target Python version:** no
+- **Target Python version:** 3.11
+
+#### Included Options
+
+These snippets show the equivalent expanded configuration without `--preset` for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.11. Replace the input and output paths for your project.
+
+=== "pyproject.toml"
+
+    ```toml
+    [tool.datamodel-codegen]
+    allow-population-by-field-name = true
+    collapse-root-models = true
+    deserialize-default-values = ["decimal", "enum"]
+    disable-timestamp = true
+    enum-field-as-literal = "one"
+    formatters = ["builtin"]
+    input = "schema.json"
+    input-file-type = "jsonschema"
+    output = "model.py"
+    output-model-type = "pydantic_v2.BaseModel"
+    snake-case-field = true
+    strict-nullable = true
+    target-python-version = "3.11"
+    use-annotated = true
+    use-frozen-field = true
+    use-specialized-enum = true
+    use-standard-collections = true
+    use-subclass-enum = true
+    use-union-operator = true
+    ```
+
+=== "CLI"
+
+    ```bash
+    datamodel-codegen --allow-population-by-field-name --collapse-root-models --deserialize-default-values decimal enum --disable-timestamp --enum-field-as-literal one --formatters builtin --input schema.json --input-file-type jsonschema --output model.py --output-model-type pydantic_v2.BaseModel --snake-case-field --strict-nullable --target-python-version 3.11 --use-annotated --use-frozen-field --use-specialized-enum --use-standard-collections --use-subclass-enum --use-union-operator
+    ```
+
+| Scope | Options | Notes |
+|-------|---------|-------|
+| All output model types | `--use-standard-collections`, `--use-union-operator`, `--use-annotated`, `--enum-field-as-literal one`, `--use-subclass-enum`, `--collapse-root-models`, `--strict-nullable`, `--disable-timestamp` | Use built-in collection syntax, PEP 604 unions, Annotated constraints, single-value enum Literals, typed enum subclasses, inline root wrappers, schema-accurate nullability, and reproducible file headers. |
+| Python 3.11+ targets | `--use-specialized-enum` | Use StrEnum or IntEnum only when the selected target Python version supports it. |
+| Pydantic v2 BaseModel and dataclass output | `--snake-case-field`, `--allow-population-by-field-name`, `--use-frozen-field` | Generate Pythonic field names while preserving input aliases and readOnly immutability metadata. |
+| msgspec Struct output | `--snake-case-field`, `--use-standard-primitive-types` | Generate Pythonic field names with aliases and stdlib primitive types for schema formats. |
+| stdlib dataclass output | `--use-standard-primitive-types` | Use stdlib primitive types without renaming input keys because dataclasses do not carry aliases. |
+| TypedDict output | `--use-standard-primitive-types`, `--use-frozen-field` | Use stdlib primitive types and ReadOnly metadata without renaming dictionary keys. |
+| Serialized defaults | `--deserialize-default-values decimal enum` | Deserialize compatible serialized Decimal and enum defaults into generated Python values while preserving defaults that cannot be converted safely. |
+| Built-in formatting | `--formatters builtin` | Format generated models without running an external formatter. For projects using Ruff, override with --formatters ruff-check ruff-format. To preserve Black/isort formatting, override with --formatters black isort. |
+
+### `standard-py312-20260909`
+
+Recommended modern Python 3.12 output for new projects.
+
+This immutable preset enables the project-recommended Python output style for new code targeting Python 3.12. It is output-model aware and keeps stdlib dataclass and TypedDict keys compatible with their input names.
+
+- **Requires separate target Python version:** no
+- **Target Python version:** 3.12
+
+#### Included Options
+
+These snippets show the equivalent expanded configuration without `--preset` for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.12. Replace the input and output paths for your project.
+
+=== "pyproject.toml"
+
+    ```toml
+    [tool.datamodel-codegen]
+    allow-population-by-field-name = true
+    collapse-root-models = true
+    deserialize-default-values = ["decimal", "enum"]
+    disable-timestamp = true
+    enum-field-as-literal = "one"
+    formatters = ["builtin"]
+    input = "schema.json"
+    input-file-type = "jsonschema"
+    output = "model.py"
+    output-model-type = "pydantic_v2.BaseModel"
+    snake-case-field = true
+    strict-nullable = true
+    target-python-version = "3.12"
+    use-annotated = true
+    use-frozen-field = true
+    use-specialized-enum = true
+    use-standard-collections = true
+    use-subclass-enum = true
+    use-union-operator = true
+    ```
+
+=== "CLI"
+
+    ```bash
+    datamodel-codegen --allow-population-by-field-name --collapse-root-models --deserialize-default-values decimal enum --disable-timestamp --enum-field-as-literal one --formatters builtin --input schema.json --input-file-type jsonschema --output model.py --output-model-type pydantic_v2.BaseModel --snake-case-field --strict-nullable --target-python-version 3.12 --use-annotated --use-frozen-field --use-specialized-enum --use-standard-collections --use-subclass-enum --use-union-operator
+    ```
+
+| Scope | Options | Notes |
+|-------|---------|-------|
+| All output model types | `--use-standard-collections`, `--use-union-operator`, `--use-annotated`, `--enum-field-as-literal one`, `--use-subclass-enum`, `--collapse-root-models`, `--strict-nullable`, `--disable-timestamp` | Use built-in collection syntax, PEP 604 unions, Annotated constraints, single-value enum Literals, typed enum subclasses, inline root wrappers, schema-accurate nullability, and reproducible file headers. |
+| Python 3.11+ targets | `--use-specialized-enum` | Use StrEnum or IntEnum only when the selected target Python version supports it. |
+| Pydantic v2 BaseModel and dataclass output | `--snake-case-field`, `--allow-population-by-field-name`, `--use-frozen-field` | Generate Pythonic field names while preserving input aliases and readOnly immutability metadata. |
+| msgspec Struct output | `--snake-case-field`, `--use-standard-primitive-types` | Generate Pythonic field names with aliases and stdlib primitive types for schema formats. |
+| stdlib dataclass output | `--use-standard-primitive-types` | Use stdlib primitive types without renaming input keys because dataclasses do not carry aliases. |
+| TypedDict output | `--use-standard-primitive-types`, `--use-frozen-field` | Use stdlib primitive types and ReadOnly metadata without renaming dictionary keys. |
+| Serialized defaults | `--deserialize-default-values decimal enum` | Deserialize compatible serialized Decimal and enum defaults into generated Python values while preserving defaults that cannot be converted safely. |
+| Built-in formatting | `--formatters builtin` | Format generated models without running an external formatter. For projects using Ruff, override with --formatters ruff-check ruff-format. To preserve Black/isort formatting, override with --formatters black isort. |
+
+### `standard-py313-20260909`
+
+Recommended modern Python 3.13 output for new projects.
+
+This immutable preset enables the project-recommended Python output style for new code targeting Python 3.13. It is output-model aware and keeps stdlib dataclass and TypedDict keys compatible with their input names.
+
+- **Requires separate target Python version:** no
+- **Target Python version:** 3.13
+
+#### Included Options
+
+These snippets show the equivalent expanded configuration without `--preset` for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.13. Replace the input and output paths for your project.
+
+=== "pyproject.toml"
+
+    ```toml
+    [tool.datamodel-codegen]
+    allow-population-by-field-name = true
+    collapse-root-models = true
+    deserialize-default-values = ["decimal", "enum"]
+    disable-timestamp = true
+    enum-field-as-literal = "one"
+    formatters = ["builtin"]
+    input = "schema.json"
+    input-file-type = "jsonschema"
+    output = "model.py"
+    output-model-type = "pydantic_v2.BaseModel"
+    snake-case-field = true
+    strict-nullable = true
+    target-python-version = "3.13"
+    use-annotated = true
+    use-frozen-field = true
+    use-specialized-enum = true
+    use-standard-collections = true
+    use-subclass-enum = true
+    use-union-operator = true
+    ```
+
+=== "CLI"
+
+    ```bash
+    datamodel-codegen --allow-population-by-field-name --collapse-root-models --deserialize-default-values decimal enum --disable-timestamp --enum-field-as-literal one --formatters builtin --input schema.json --input-file-type jsonschema --output model.py --output-model-type pydantic_v2.BaseModel --snake-case-field --strict-nullable --target-python-version 3.13 --use-annotated --use-frozen-field --use-specialized-enum --use-standard-collections --use-subclass-enum --use-union-operator
+    ```
+
+| Scope | Options | Notes |
+|-------|---------|-------|
+| All output model types | `--use-standard-collections`, `--use-union-operator`, `--use-annotated`, `--enum-field-as-literal one`, `--use-subclass-enum`, `--collapse-root-models`, `--strict-nullable`, `--disable-timestamp` | Use built-in collection syntax, PEP 604 unions, Annotated constraints, single-value enum Literals, typed enum subclasses, inline root wrappers, schema-accurate nullability, and reproducible file headers. |
+| Python 3.11+ targets | `--use-specialized-enum` | Use StrEnum or IntEnum only when the selected target Python version supports it. |
+| Pydantic v2 BaseModel and dataclass output | `--snake-case-field`, `--allow-population-by-field-name`, `--use-frozen-field` | Generate Pythonic field names while preserving input aliases and readOnly immutability metadata. |
+| msgspec Struct output | `--snake-case-field`, `--use-standard-primitive-types` | Generate Pythonic field names with aliases and stdlib primitive types for schema formats. |
+| stdlib dataclass output | `--use-standard-primitive-types` | Use stdlib primitive types without renaming input keys because dataclasses do not carry aliases. |
+| TypedDict output | `--use-standard-primitive-types`, `--use-frozen-field` | Use stdlib primitive types and ReadOnly metadata without renaming dictionary keys. |
+| Serialized defaults | `--deserialize-default-values decimal enum` | Deserialize compatible serialized Decimal and enum defaults into generated Python values while preserving defaults that cannot be converted safely. |
+| Built-in formatting | `--formatters builtin` | Format generated models without running an external formatter. For projects using Ruff, override with --formatters ruff-check ruff-format. To preserve Black/isort formatting, override with --formatters black isort. |
+
+### `standard-py314-20260909`
+
+Recommended modern Python 3.14 output for new projects.
+
+This immutable preset enables the project-recommended Python output style for new code targeting Python 3.14. It is output-model aware and keeps stdlib dataclass and TypedDict keys compatible with their input names.
+
+- **Requires separate target Python version:** no
+- **Target Python version:** 3.14
+
+#### Included Options
+
+These snippets show the equivalent expanded configuration without `--preset` for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.14. Replace the input and output paths for your project.
+
+=== "pyproject.toml"
+
+    ```toml
+    [tool.datamodel-codegen]
+    allow-population-by-field-name = true
+    collapse-root-models = true
+    deserialize-default-values = ["decimal", "enum"]
+    disable-timestamp = true
+    enum-field-as-literal = "one"
+    formatters = ["builtin"]
+    input = "schema.json"
+    input-file-type = "jsonschema"
+    output = "model.py"
+    output-model-type = "pydantic_v2.BaseModel"
+    snake-case-field = true
+    strict-nullable = true
+    target-python-version = "3.14"
+    use-annotated = true
+    use-frozen-field = true
+    use-specialized-enum = true
+    use-standard-collections = true
+    use-subclass-enum = true
+    use-union-operator = true
+    ```
+
+=== "CLI"
+
+    ```bash
+    datamodel-codegen --allow-population-by-field-name --collapse-root-models --deserialize-default-values decimal enum --disable-timestamp --enum-field-as-literal one --formatters builtin --input schema.json --input-file-type jsonschema --output model.py --output-model-type pydantic_v2.BaseModel --snake-case-field --strict-nullable --target-python-version 3.14 --use-annotated --use-frozen-field --use-specialized-enum --use-standard-collections --use-subclass-enum --use-union-operator
+    ```
+
+| Scope | Options | Notes |
+|-------|---------|-------|
+| All output model types | `--use-standard-collections`, `--use-union-operator`, `--use-annotated`, `--enum-field-as-literal one`, `--use-subclass-enum`, `--collapse-root-models`, `--strict-nullable`, `--disable-timestamp` | Use built-in collection syntax, PEP 604 unions, Annotated constraints, single-value enum Literals, typed enum subclasses, inline root wrappers, schema-accurate nullability, and reproducible file headers. |
+| Python 3.11+ targets | `--use-specialized-enum` | Use StrEnum or IntEnum only when the selected target Python version supports it. |
+| Pydantic v2 BaseModel and dataclass output | `--snake-case-field`, `--allow-population-by-field-name`, `--use-frozen-field` | Generate Pythonic field names while preserving input aliases and readOnly immutability metadata. |
+| msgspec Struct output | `--snake-case-field`, `--use-standard-primitive-types` | Generate Pythonic field names with aliases and stdlib primitive types for schema formats. |
+| stdlib dataclass output | `--use-standard-primitive-types` | Use stdlib primitive types without renaming input keys because dataclasses do not carry aliases. |
+| TypedDict output | `--use-standard-primitive-types`, `--use-frozen-field` | Use stdlib primitive types and ReadOnly metadata without renaming dictionary keys. |
+| Serialized defaults | `--deserialize-default-values decimal enum` | Deserialize compatible serialized Decimal and enum defaults into generated Python values while preserving defaults that cannot be converted safely. |
+| Built-in formatting | `--formatters builtin` | Format generated models without running an external formatter. For projects using Ruff, override with --formatters ruff-check ruff-format. To preserve Black/isort formatting, override with --formatters black isort. |
+
+### `practical-py310-20260909`
+
+Standard Python 3.10 output plus practical naming, deduplication, and schema documentation.
+
+This immutable preset extends `standard-py310-20260909` with options that make generated models easier to read and use in real projects. It favors schema-authored names, model reuse, and embedded schema documentation over the most conservative output-shape stability.
+
+- **Requires separate target Python version:** no
+- **Target Python version:** 3.10
+
+#### Included Options
+
+These snippets show the equivalent expanded configuration without `--preset` for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.10. Replace the input and output paths for your project.
+
+=== "pyproject.toml"
+
+    ```toml
+    [tool.datamodel-codegen]
+    allow-population-by-field-name = true
+    collapse-reuse-models = true
+    collapse-root-models = true
+    deserialize-default-values = ["decimal", "enum"]
+    disable-timestamp = true
+    enum-field-as-literal = "one"
+    formatters = ["builtin"]
+    input = "schema.json"
+    input-file-type = "jsonschema"
+    naming-strategy = "primary-first"
+    output = "model.py"
+    output-model-type = "pydantic_v2.BaseModel"
+    reuse-model = true
+    snake-case-field = true
+    strict-nullable = true
+    target-python-version = "3.10"
+    use-annotated = true
+    use-default-kwarg = true
+    use-field-description = true
+    use-field-description-example = true
+    use-frozen-field = true
+    use-object-type = true
+    use-schema-description = true
+    use-single-line-docstring = true
+    use-standard-collections = true
+    use-subclass-enum = true
+    use-title-as-name = true
+    use-tuple-for-fixed-items = true
+    use-union-operator = true
+    use-unique-items-as-set = true
+    ```
+
+=== "CLI"
+
+    ```bash
+    datamodel-codegen --allow-population-by-field-name --collapse-reuse-models --collapse-root-models --deserialize-default-values decimal enum --disable-timestamp --enum-field-as-literal one --formatters builtin --input schema.json --input-file-type jsonschema --naming-strategy primary-first --output model.py --output-model-type pydantic_v2.BaseModel --reuse-model --snake-case-field --strict-nullable --target-python-version 3.10 --use-annotated --use-default-kwarg --use-field-description --use-field-description-example --use-frozen-field --use-object-type --use-schema-description --use-single-line-docstring --use-standard-collections --use-subclass-enum --use-title-as-name --use-tuple-for-fixed-items --use-union-operator --use-unique-items-as-set
+    ```
+
+| Scope | Options | Notes |
+|-------|---------|-------|
+| All output model types | `--use-standard-collections`, `--use-union-operator`, `--use-annotated`, `--enum-field-as-literal one`, `--use-subclass-enum`, `--collapse-root-models`, `--strict-nullable`, `--disable-timestamp` | Use built-in collection syntax, PEP 604 unions, Annotated constraints, single-value enum Literals, typed enum subclasses, inline root wrappers, schema-accurate nullability, and reproducible file headers. |
+| Pydantic v2 BaseModel and dataclass output | `--snake-case-field`, `--allow-population-by-field-name`, `--use-frozen-field` | Generate Pythonic field names while preserving input aliases and readOnly immutability metadata. |
+| msgspec Struct output | `--snake-case-field`, `--use-standard-primitive-types` | Generate Pythonic field names with aliases and stdlib primitive types for schema formats. |
+| stdlib dataclass output | `--use-standard-primitive-types` | Use stdlib primitive types without renaming input keys because dataclasses do not carry aliases. |
+| TypedDict output | `--use-standard-primitive-types`, `--use-frozen-field` | Use stdlib primitive types and ReadOnly metadata without renaming dictionary keys. |
+| Serialized defaults | `--deserialize-default-values decimal enum` | Deserialize compatible serialized Decimal and enum defaults into generated Python values while preserving defaults that cannot be converted safely. |
+| Built-in formatting | `--formatters builtin` | Format generated models without running an external formatter. For projects using Ruff, override with --formatters ruff-check ruff-format. To preserve Black/isort formatting, override with --formatters black isort. |
+| Practical model structure and names | `--reuse-model`, `--collapse-reuse-models`, `--use-title-as-name`, `--naming-strategy primary-first` | Deduplicate identical models without empty inheritance wrappers, prefer schema titles for class names, and keep primary definitions ahead of inline duplicate names. |
+| Practical typing and defaults | `--use-default-kwarg`, `--use-object-type`, `--use-tuple-for-fixed-items`, `--use-unique-items-as-set`, `--use-single-line-docstring` | Render defaults explicitly, prefer object for unconstrained values, preserve fixed and unique arrays, and keep short docstrings concise. |
+| Schema documentation | `--use-schema-description`, `--use-field-description`, `--use-field-description-example` | Preserve schema and field descriptions, including examples, in generated model documentation. |
+
+### `practical-py311-20260909`
+
+Standard Python 3.11 output plus practical naming, deduplication, and schema documentation.
+
+This immutable preset extends `standard-py311-20260909` with options that make generated models easier to read and use in real projects. It favors schema-authored names, model reuse, and embedded schema documentation over the most conservative output-shape stability.
+
+- **Requires separate target Python version:** no
+- **Target Python version:** 3.11
+
+#### Included Options
+
+These snippets show the equivalent expanded configuration without `--preset` for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.11. Replace the input and output paths for your project.
+
+=== "pyproject.toml"
+
+    ```toml
+    [tool.datamodel-codegen]
+    allow-population-by-field-name = true
+    collapse-reuse-models = true
+    collapse-root-models = true
+    deserialize-default-values = ["decimal", "enum"]
+    disable-timestamp = true
+    enum-field-as-literal = "one"
+    formatters = ["builtin"]
+    input = "schema.json"
+    input-file-type = "jsonschema"
+    naming-strategy = "primary-first"
+    output = "model.py"
+    output-model-type = "pydantic_v2.BaseModel"
+    reuse-model = true
+    snake-case-field = true
+    strict-nullable = true
+    target-python-version = "3.11"
+    use-annotated = true
+    use-default-kwarg = true
+    use-field-description = true
+    use-field-description-example = true
+    use-frozen-field = true
+    use-object-type = true
+    use-schema-description = true
+    use-single-line-docstring = true
+    use-specialized-enum = true
+    use-standard-collections = true
+    use-subclass-enum = true
+    use-title-as-name = true
+    use-tuple-for-fixed-items = true
+    use-union-operator = true
+    use-unique-items-as-set = true
+    ```
+
+=== "CLI"
+
+    ```bash
+    datamodel-codegen --allow-population-by-field-name --collapse-reuse-models --collapse-root-models --deserialize-default-values decimal enum --disable-timestamp --enum-field-as-literal one --formatters builtin --input schema.json --input-file-type jsonschema --naming-strategy primary-first --output model.py --output-model-type pydantic_v2.BaseModel --reuse-model --snake-case-field --strict-nullable --target-python-version 3.11 --use-annotated --use-default-kwarg --use-field-description --use-field-description-example --use-frozen-field --use-object-type --use-schema-description --use-single-line-docstring --use-specialized-enum --use-standard-collections --use-subclass-enum --use-title-as-name --use-tuple-for-fixed-items --use-union-operator --use-unique-items-as-set
+    ```
+
+| Scope | Options | Notes |
+|-------|---------|-------|
+| All output model types | `--use-standard-collections`, `--use-union-operator`, `--use-annotated`, `--enum-field-as-literal one`, `--use-subclass-enum`, `--collapse-root-models`, `--strict-nullable`, `--disable-timestamp` | Use built-in collection syntax, PEP 604 unions, Annotated constraints, single-value enum Literals, typed enum subclasses, inline root wrappers, schema-accurate nullability, and reproducible file headers. |
+| Python 3.11+ targets | `--use-specialized-enum` | Use StrEnum or IntEnum only when the selected target Python version supports it. |
+| Pydantic v2 BaseModel and dataclass output | `--snake-case-field`, `--allow-population-by-field-name`, `--use-frozen-field` | Generate Pythonic field names while preserving input aliases and readOnly immutability metadata. |
+| msgspec Struct output | `--snake-case-field`, `--use-standard-primitive-types` | Generate Pythonic field names with aliases and stdlib primitive types for schema formats. |
+| stdlib dataclass output | `--use-standard-primitive-types` | Use stdlib primitive types without renaming input keys because dataclasses do not carry aliases. |
+| TypedDict output | `--use-standard-primitive-types`, `--use-frozen-field` | Use stdlib primitive types and ReadOnly metadata without renaming dictionary keys. |
+| Serialized defaults | `--deserialize-default-values decimal enum` | Deserialize compatible serialized Decimal and enum defaults into generated Python values while preserving defaults that cannot be converted safely. |
+| Built-in formatting | `--formatters builtin` | Format generated models without running an external formatter. For projects using Ruff, override with --formatters ruff-check ruff-format. To preserve Black/isort formatting, override with --formatters black isort. |
+| Practical model structure and names | `--reuse-model`, `--collapse-reuse-models`, `--use-title-as-name`, `--naming-strategy primary-first` | Deduplicate identical models without empty inheritance wrappers, prefer schema titles for class names, and keep primary definitions ahead of inline duplicate names. |
+| Practical typing and defaults | `--use-default-kwarg`, `--use-object-type`, `--use-tuple-for-fixed-items`, `--use-unique-items-as-set`, `--use-single-line-docstring` | Render defaults explicitly, prefer object for unconstrained values, preserve fixed and unique arrays, and keep short docstrings concise. |
+| Schema documentation | `--use-schema-description`, `--use-field-description`, `--use-field-description-example` | Preserve schema and field descriptions, including examples, in generated model documentation. |
+
+### `practical-py312-20260909`
+
+Standard Python 3.12 output plus practical naming, deduplication, and schema documentation.
+
+This immutable preset extends `standard-py312-20260909` with options that make generated models easier to read and use in real projects. It favors schema-authored names, model reuse, and embedded schema documentation over the most conservative output-shape stability.
+
+- **Requires separate target Python version:** no
+- **Target Python version:** 3.12
+
+#### Included Options
+
+These snippets show the equivalent expanded configuration without `--preset` for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.12. Replace the input and output paths for your project.
+
+=== "pyproject.toml"
+
+    ```toml
+    [tool.datamodel-codegen]
+    allow-population-by-field-name = true
+    collapse-reuse-models = true
+    collapse-root-models = true
+    deserialize-default-values = ["decimal", "enum"]
+    disable-timestamp = true
+    enum-field-as-literal = "one"
+    formatters = ["builtin"]
+    input = "schema.json"
+    input-file-type = "jsonschema"
+    naming-strategy = "primary-first"
+    output = "model.py"
+    output-model-type = "pydantic_v2.BaseModel"
+    reuse-model = true
+    snake-case-field = true
+    strict-nullable = true
+    target-python-version = "3.12"
+    use-annotated = true
+    use-default-kwarg = true
+    use-field-description = true
+    use-field-description-example = true
+    use-frozen-field = true
+    use-object-type = true
+    use-schema-description = true
+    use-single-line-docstring = true
+    use-specialized-enum = true
+    use-standard-collections = true
+    use-subclass-enum = true
+    use-title-as-name = true
+    use-tuple-for-fixed-items = true
+    use-union-operator = true
+    use-unique-items-as-set = true
+    ```
+
+=== "CLI"
+
+    ```bash
+    datamodel-codegen --allow-population-by-field-name --collapse-reuse-models --collapse-root-models --deserialize-default-values decimal enum --disable-timestamp --enum-field-as-literal one --formatters builtin --input schema.json --input-file-type jsonschema --naming-strategy primary-first --output model.py --output-model-type pydantic_v2.BaseModel --reuse-model --snake-case-field --strict-nullable --target-python-version 3.12 --use-annotated --use-default-kwarg --use-field-description --use-field-description-example --use-frozen-field --use-object-type --use-schema-description --use-single-line-docstring --use-specialized-enum --use-standard-collections --use-subclass-enum --use-title-as-name --use-tuple-for-fixed-items --use-union-operator --use-unique-items-as-set
+    ```
+
+| Scope | Options | Notes |
+|-------|---------|-------|
+| All output model types | `--use-standard-collections`, `--use-union-operator`, `--use-annotated`, `--enum-field-as-literal one`, `--use-subclass-enum`, `--collapse-root-models`, `--strict-nullable`, `--disable-timestamp` | Use built-in collection syntax, PEP 604 unions, Annotated constraints, single-value enum Literals, typed enum subclasses, inline root wrappers, schema-accurate nullability, and reproducible file headers. |
+| Python 3.11+ targets | `--use-specialized-enum` | Use StrEnum or IntEnum only when the selected target Python version supports it. |
+| Pydantic v2 BaseModel and dataclass output | `--snake-case-field`, `--allow-population-by-field-name`, `--use-frozen-field` | Generate Pythonic field names while preserving input aliases and readOnly immutability metadata. |
+| msgspec Struct output | `--snake-case-field`, `--use-standard-primitive-types` | Generate Pythonic field names with aliases and stdlib primitive types for schema formats. |
+| stdlib dataclass output | `--use-standard-primitive-types` | Use stdlib primitive types without renaming input keys because dataclasses do not carry aliases. |
+| TypedDict output | `--use-standard-primitive-types`, `--use-frozen-field` | Use stdlib primitive types and ReadOnly metadata without renaming dictionary keys. |
+| Serialized defaults | `--deserialize-default-values decimal enum` | Deserialize compatible serialized Decimal and enum defaults into generated Python values while preserving defaults that cannot be converted safely. |
+| Built-in formatting | `--formatters builtin` | Format generated models without running an external formatter. For projects using Ruff, override with --formatters ruff-check ruff-format. To preserve Black/isort formatting, override with --formatters black isort. |
+| Practical model structure and names | `--reuse-model`, `--collapse-reuse-models`, `--use-title-as-name`, `--naming-strategy primary-first` | Deduplicate identical models without empty inheritance wrappers, prefer schema titles for class names, and keep primary definitions ahead of inline duplicate names. |
+| Practical typing and defaults | `--use-default-kwarg`, `--use-object-type`, `--use-tuple-for-fixed-items`, `--use-unique-items-as-set`, `--use-single-line-docstring` | Render defaults explicitly, prefer object for unconstrained values, preserve fixed and unique arrays, and keep short docstrings concise. |
+| Schema documentation | `--use-schema-description`, `--use-field-description`, `--use-field-description-example` | Preserve schema and field descriptions, including examples, in generated model documentation. |
+
+### `practical-py313-20260909`
+
+Standard Python 3.13 output plus practical naming, deduplication, and schema documentation.
+
+This immutable preset extends `standard-py313-20260909` with options that make generated models easier to read and use in real projects. It favors schema-authored names, model reuse, and embedded schema documentation over the most conservative output-shape stability.
+
+- **Requires separate target Python version:** no
+- **Target Python version:** 3.13
+
+#### Included Options
+
+These snippets show the equivalent expanded configuration without `--preset` for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.13. Replace the input and output paths for your project.
+
+=== "pyproject.toml"
+
+    ```toml
+    [tool.datamodel-codegen]
+    allow-population-by-field-name = true
+    collapse-reuse-models = true
+    collapse-root-models = true
+    deserialize-default-values = ["decimal", "enum"]
+    disable-timestamp = true
+    enum-field-as-literal = "one"
+    formatters = ["builtin"]
+    input = "schema.json"
+    input-file-type = "jsonschema"
+    naming-strategy = "primary-first"
+    output = "model.py"
+    output-model-type = "pydantic_v2.BaseModel"
+    reuse-model = true
+    snake-case-field = true
+    strict-nullable = true
+    target-python-version = "3.13"
+    use-annotated = true
+    use-default-kwarg = true
+    use-field-description = true
+    use-field-description-example = true
+    use-frozen-field = true
+    use-object-type = true
+    use-schema-description = true
+    use-single-line-docstring = true
+    use-specialized-enum = true
+    use-standard-collections = true
+    use-subclass-enum = true
+    use-title-as-name = true
+    use-tuple-for-fixed-items = true
+    use-union-operator = true
+    use-unique-items-as-set = true
+    ```
+
+=== "CLI"
+
+    ```bash
+    datamodel-codegen --allow-population-by-field-name --collapse-reuse-models --collapse-root-models --deserialize-default-values decimal enum --disable-timestamp --enum-field-as-literal one --formatters builtin --input schema.json --input-file-type jsonschema --naming-strategy primary-first --output model.py --output-model-type pydantic_v2.BaseModel --reuse-model --snake-case-field --strict-nullable --target-python-version 3.13 --use-annotated --use-default-kwarg --use-field-description --use-field-description-example --use-frozen-field --use-object-type --use-schema-description --use-single-line-docstring --use-specialized-enum --use-standard-collections --use-subclass-enum --use-title-as-name --use-tuple-for-fixed-items --use-union-operator --use-unique-items-as-set
+    ```
+
+| Scope | Options | Notes |
+|-------|---------|-------|
+| All output model types | `--use-standard-collections`, `--use-union-operator`, `--use-annotated`, `--enum-field-as-literal one`, `--use-subclass-enum`, `--collapse-root-models`, `--strict-nullable`, `--disable-timestamp` | Use built-in collection syntax, PEP 604 unions, Annotated constraints, single-value enum Literals, typed enum subclasses, inline root wrappers, schema-accurate nullability, and reproducible file headers. |
+| Python 3.11+ targets | `--use-specialized-enum` | Use StrEnum or IntEnum only when the selected target Python version supports it. |
+| Pydantic v2 BaseModel and dataclass output | `--snake-case-field`, `--allow-population-by-field-name`, `--use-frozen-field` | Generate Pythonic field names while preserving input aliases and readOnly immutability metadata. |
+| msgspec Struct output | `--snake-case-field`, `--use-standard-primitive-types` | Generate Pythonic field names with aliases and stdlib primitive types for schema formats. |
+| stdlib dataclass output | `--use-standard-primitive-types` | Use stdlib primitive types without renaming input keys because dataclasses do not carry aliases. |
+| TypedDict output | `--use-standard-primitive-types`, `--use-frozen-field` | Use stdlib primitive types and ReadOnly metadata without renaming dictionary keys. |
+| Serialized defaults | `--deserialize-default-values decimal enum` | Deserialize compatible serialized Decimal and enum defaults into generated Python values while preserving defaults that cannot be converted safely. |
+| Built-in formatting | `--formatters builtin` | Format generated models without running an external formatter. For projects using Ruff, override with --formatters ruff-check ruff-format. To preserve Black/isort formatting, override with --formatters black isort. |
+| Practical model structure and names | `--reuse-model`, `--collapse-reuse-models`, `--use-title-as-name`, `--naming-strategy primary-first` | Deduplicate identical models without empty inheritance wrappers, prefer schema titles for class names, and keep primary definitions ahead of inline duplicate names. |
+| Practical typing and defaults | `--use-default-kwarg`, `--use-object-type`, `--use-tuple-for-fixed-items`, `--use-unique-items-as-set`, `--use-single-line-docstring` | Render defaults explicitly, prefer object for unconstrained values, preserve fixed and unique arrays, and keep short docstrings concise. |
+| Schema documentation | `--use-schema-description`, `--use-field-description`, `--use-field-description-example` | Preserve schema and field descriptions, including examples, in generated model documentation. |
+
+### `practical-py314-20260909`
+
+Standard Python 3.14 output plus practical naming, deduplication, and schema documentation.
+
+This immutable preset extends `standard-py314-20260909` with options that make generated models easier to read and use in real projects. It favors schema-authored names, model reuse, and embedded schema documentation over the most conservative output-shape stability.
+
+- **Requires separate target Python version:** no
+- **Target Python version:** 3.14
+
+#### Included Options
+
+These snippets show the equivalent expanded configuration without `--preset` for JSON Schema input, Pydantic v2 BaseModel output, and Python 3.14. Replace the input and output paths for your project.
+
+=== "pyproject.toml"
+
+    ```toml
+    [tool.datamodel-codegen]
+    allow-population-by-field-name = true
+    collapse-reuse-models = true
+    collapse-root-models = true
+    deserialize-default-values = ["decimal", "enum"]
+    disable-timestamp = true
+    enum-field-as-literal = "one"
+    formatters = ["builtin"]
+    input = "schema.json"
+    input-file-type = "jsonschema"
+    naming-strategy = "primary-first"
+    output = "model.py"
+    output-model-type = "pydantic_v2.BaseModel"
+    reuse-model = true
+    snake-case-field = true
+    strict-nullable = true
+    target-python-version = "3.14"
+    use-annotated = true
+    use-default-kwarg = true
+    use-field-description = true
+    use-field-description-example = true
+    use-frozen-field = true
+    use-object-type = true
+    use-schema-description = true
+    use-single-line-docstring = true
+    use-specialized-enum = true
+    use-standard-collections = true
+    use-subclass-enum = true
+    use-title-as-name = true
+    use-tuple-for-fixed-items = true
+    use-union-operator = true
+    use-unique-items-as-set = true
+    ```
+
+=== "CLI"
+
+    ```bash
+    datamodel-codegen --allow-population-by-field-name --collapse-reuse-models --collapse-root-models --deserialize-default-values decimal enum --disable-timestamp --enum-field-as-literal one --formatters builtin --input schema.json --input-file-type jsonschema --naming-strategy primary-first --output model.py --output-model-type pydantic_v2.BaseModel --reuse-model --snake-case-field --strict-nullable --target-python-version 3.14 --use-annotated --use-default-kwarg --use-field-description --use-field-description-example --use-frozen-field --use-object-type --use-schema-description --use-single-line-docstring --use-specialized-enum --use-standard-collections --use-subclass-enum --use-title-as-name --use-tuple-for-fixed-items --use-union-operator --use-unique-items-as-set
+    ```
+
+| Scope | Options | Notes |
+|-------|---------|-------|
+| All output model types | `--use-standard-collections`, `--use-union-operator`, `--use-annotated`, `--enum-field-as-literal one`, `--use-subclass-enum`, `--collapse-root-models`, `--strict-nullable`, `--disable-timestamp` | Use built-in collection syntax, PEP 604 unions, Annotated constraints, single-value enum Literals, typed enum subclasses, inline root wrappers, schema-accurate nullability, and reproducible file headers. |
+| Python 3.11+ targets | `--use-specialized-enum` | Use StrEnum or IntEnum only when the selected target Python version supports it. |
+| Pydantic v2 BaseModel and dataclass output | `--snake-case-field`, `--allow-population-by-field-name`, `--use-frozen-field` | Generate Pythonic field names while preserving input aliases and readOnly immutability metadata. |
+| msgspec Struct output | `--snake-case-field`, `--use-standard-primitive-types` | Generate Pythonic field names with aliases and stdlib primitive types for schema formats. |
+| stdlib dataclass output | `--use-standard-primitive-types` | Use stdlib primitive types without renaming input keys because dataclasses do not carry aliases. |
+| TypedDict output | `--use-standard-primitive-types`, `--use-frozen-field` | Use stdlib primitive types and ReadOnly metadata without renaming dictionary keys. |
+| Serialized defaults | `--deserialize-default-values decimal enum` | Deserialize compatible serialized Decimal and enum defaults into generated Python values while preserving defaults that cannot be converted safely. |
+| Built-in formatting | `--formatters builtin` | Format generated models without running an external formatter. For projects using Ruff, override with --formatters ruff-check ruff-format. To preserve Black/isort formatting, override with --formatters black isort. |
 | Practical model structure and names | `--reuse-model`, `--collapse-reuse-models`, `--use-title-as-name`, `--naming-strategy primary-first` | Deduplicate identical models without empty inheritance wrappers, prefer schema titles for class names, and keep primary definitions ahead of inline duplicate names. |
 | Practical typing and defaults | `--use-default-kwarg`, `--use-object-type`, `--use-tuple-for-fixed-items`, `--use-unique-items-as-set`, `--use-single-line-docstring` | Render defaults explicitly, prefer object for unconstrained values, preserve fixed and unique arrays, and keep short docstrings concise. |
 | Schema documentation | `--use-schema-description`, `--use-field-description`, `--use-field-description-example` | Preserve schema and field descriptions, including examples, in generated model documentation. |
@@ -7734,7 +8367,7 @@ The `--class-decorators` option works with any output model type:
 
 ## Related Issues
 
-- [#2358](https://github.com/koxudaxi/datamodel-code-generator/issues/2358) - Feature request for dataclasses_json support
+- [#2358](https://github.com/datamodel-code-generator/datamodel-code-generator/issues/2358) - Feature request for dataclasses_json support
 
 ---
 
@@ -7815,7 +8448,7 @@ class Model(BaseModel):
 
 ## 📚 Template Reference
 
-You can create more complex custom templates by copying [the default templates](https://github.com/koxudaxi/datamodel-code-generator/tree/main/src/datamodel_code_generator/model/template). Use them as a reference for understanding the structure and available variables, and customize the code generation process according to your specific requirements.
+You can create more complex custom templates by copying [the default templates](https://github.com/datamodel-code-generator/datamodel-code-generator/tree/main/src/datamodel_code_generator/model/template). Use them as a reference for understanding the structure and available variables, and customize the code generation process according to your specific requirements.
 
 ---
 
@@ -7990,13 +8623,12 @@ configuration precedence, see [Formatter Behavior](formatter-behavior.md).
 ## 🎯 Default Behavior
 
 !!! warning "Future Change"
-    In a future version, the default formatter will change to `builtin`, and the external formatter dependencies
-    (`black` and `isort`) will become opt-in. To prepare for dependency-free formatting, try the built-in formatter
-    with `--formatters builtin`.
+    In a future version, builtin will become the default to reduce required installation dependencies and
+    version constraints. Black/isort remain the default and required dependencies today.
 
-    **CLI users**: To suppress this warning, use `--disable-warnings` or explicitly specify `--formatters black isort`.
+    **CLI users**: Select `--formatters` or a new preset that supplies formatters to suppress the default-change warning, or use `--disable-warnings`.
 
-    **Library users**: Explicitly pass `formatters=[Formatter.BLACK, Formatter.ISORT]` to suppress this warning.
+    **Library users**: Explicitly pass `formatters` or a preset that supplies formatters. Older presets retain the default-change warning.
 
 ```bash
 datamodel-codegen \
@@ -8020,14 +8652,21 @@ This runs the following formatters in order:
 | `ruff-check` | Linting with auto-fix |
 | `ruff-format` | Fast code formatting (black alternative) |
 
-### ⚡ Speed up generation
+### Choose a formatter
 
-The default formatter list is currently `black` and `isort`. For standard generated model modules,
-`--formatters builtin` is the recommended dependency-free choice. In a future version, the Black/isort dependencies
-will become opt-in and the default formatter will change to `builtin`.
+Choose a formatter to match your project and generation priorities:
 
-If you prefer Ruff, install it with `pip install 'datamodel-code-generator[ruff]'` and use
-`--formatters ruff-check ruff-format` for a fast external formatter.
+- **Projects using Ruff:** use `--formatters ruff-check ruff-format` to keep generated code consistent with the
+  project's formatting and lint policy. Install it with `pip install 'datamodel-code-generator[ruff]'`.
+- **No Ruff, Black, or isort, or generation speed is the priority:** use `--formatters builtin` to avoid running
+  external formatters on standard generated model modules.
+- **Projects using Black/isort:** keep `--formatters black isort` to preserve the project's formatting and existing
+  generated output.
+
+The current default remains Black/isort, which are still required dependencies. Omitting formatter options continues
+normal generation. The future builtin default is intended to reduce required installation dependencies and version
+constraints; Ruff will still be recommended for projects that use Ruff. Formatters are never selected automatically
+based on installed packages or Ruff configuration.
 
 Custom templates can emit Python outside the standard generated model patterns covered by `builtin`, so
 custom-template output is not exhaustively validated. If `--formatters builtin` produces invalid or poorly formatted
@@ -8154,6 +8793,12 @@ You can create custom formatters for specialized formatting needs. See [Custom F
 - 🎨 [Custom Formatters](custom-formatters.md) - Create your own formatters
 - ⚙️ [pyproject.toml Configuration](pyproject_toml.md) - Configure datamodel-codegen options
 
+## Dependency migration
+
+See [Dependency migration notices](dependency-migration.md) for Black/isort extras, separate optional-installation
+and old-version warnings, unchanged current requirements, and the distinction between DCG runtime Pydantic and
+generated-code compatibility. Old presets without formatters retain the implicit-default warning.
+
 ---
 
 # Formatter behavior
@@ -8203,14 +8848,21 @@ selected.
 The built-in formatter is an alternative to external formatting, not a pre-formatter.
 If `builtin` is passed together with `black`, `isort`, `ruff-check`, or `ruff-format`, `builtin` is ignored.
 
-### ⚡ Speed up generation
+### Choose a formatter
 
-The default formatter list is currently `black` and `isort`. For faster generation with no extra formatter dependency,
-prefer `--formatters builtin` for standard generated model modules. In a future version, the default formatter will
-change to `builtin` and the Black/isort dependencies will become opt-in.
+Choose a formatter to match your project and generation priorities:
 
-If you prefer Ruff, install it with `pip install 'datamodel-code-generator[ruff]'` and use
-`--formatters ruff-check ruff-format` for a fast external formatter.
+- **Projects using Ruff:** use `--formatters ruff-check ruff-format` to keep generated code consistent with the
+  project's formatting and lint policy. Install it with `pip install 'datamodel-code-generator[ruff]'`.
+- **No Ruff, Black, or isort, or generation speed is the priority:** use `--formatters builtin` to avoid running
+  external formatters on standard generated model modules.
+- **Projects using Black/isort:** keep `--formatters black isort` to preserve the project's formatting and existing
+  generated output.
+
+The current default remains Black/isort, which are still required dependencies. Omitting formatter options continues
+normal generation. The future builtin default is intended to reduce required installation dependencies and version
+constraints; Ruff will still be recommended for projects that use Ruff. Formatters are never selected automatically
+based on installed packages or Ruff configuration.
 
 Custom templates can emit Python outside the standard generated model patterns covered by `builtin`, so
 custom-template output is not exhaustively validated. If `--formatters builtin` produces invalid or poorly formatted
@@ -8327,6 +8979,12 @@ datamodel-codegen \
 ```
 
 Generated output may differ from Black or isort output in places outside the built-in formatter scope. Treat those differences as expected unless they change Python semantics or produce invalid code.
+
+## Dependency migration
+
+See [Dependency migration notices](dependency-migration.md) for Black/isort extras, separate optional-installation
+and old-version warnings, unchanged current requirements, and the distinction between DCG runtime Pydantic and
+generated-code compatibility. Old presets without formatters retain the implicit-default warning.
 
 ---
 
@@ -9432,7 +10090,7 @@ The official GitHub Action provides a simple way to validate generated models in
 ### Basic Usage
 
 ```yaml
-- uses: koxudaxi/datamodel-code-generator@vX.Y.Z
+- uses: datamodel-code-generator/datamodel-code-generator@vX.Y.Z
   with:
     input: schema.yaml
     output: src/models.py
@@ -9476,7 +10134,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: koxudaxi/datamodel-code-generator@vX.Y.Z
+      - uses: datamodel-code-generator/datamodel-code-generator@vX.Y.Z
         with:
           input: schemas/api.yaml
           output: src/models/api.py
@@ -9504,7 +10162,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: koxudaxi/datamodel-code-generator@vX.Y.Z
+      - uses: datamodel-code-generator/datamodel-code-generator@vX.Y.Z
         with:
           input: ${{ matrix.input }}
           output: ${{ matrix.output }}
@@ -9516,7 +10174,7 @@ jobs:
 ### Example: Using Profiles
 
 ```yaml
-- uses: koxudaxi/datamodel-code-generator@vX.Y.Z
+- uses: datamodel-code-generator/datamodel-code-generator@vX.Y.Z
   with:
     input: schemas/api.yaml
     output: src/models.py
@@ -9530,7 +10188,7 @@ jobs:
 Set `check: 'false'` to actually generate the models:
 
 ```yaml
-- uses: koxudaxi/datamodel-code-generator@vX.Y.Z
+- uses: datamodel-code-generator/datamodel-code-generator@vX.Y.Z
   with:
     input: schema.yaml
     output: src/models.py
@@ -9544,7 +10202,7 @@ Set `check: 'false'` to actually generate the models:
 For GraphQL schemas, use the `extras` input to install the required dependency:
 
 ```yaml
-- uses: koxudaxi/datamodel-code-generator@vX.Y.Z
+- uses: datamodel-code-generator/datamodel-code-generator@vX.Y.Z
   with:
     input: schema.graphql
     output: src/models.py
@@ -9556,7 +10214,7 @@ For GraphQL schemas, use the `extras` input to install the required dependency:
 ### Example: Apache Avro Schema
 
 ```yaml
-- uses: koxudaxi/datamodel-code-generator@vX.Y.Z
+- uses: datamodel-code-generator/datamodel-code-generator@vX.Y.Z
   with:
     input: schema.avsc
     output: src/models.py
@@ -9569,7 +10227,7 @@ For GraphQL schemas, use the `extras` input to install the required dependency:
 You can install multiple extras with comma-separated values:
 
 ```yaml
-- uses: koxudaxi/datamodel-code-generator@vX.Y.Z
+- uses: datamodel-code-generator/datamodel-code-generator@vX.Y.Z
   with:
     input: schema.yaml
     output: src/models.py
@@ -9583,7 +10241,7 @@ You can install multiple extras with comma-separated values:
 Use `extra-args` for CLI options not covered by the inputs:
 
 ```yaml
-- uses: koxudaxi/datamodel-code-generator@vX.Y.Z
+- uses: datamodel-code-generator/datamodel-code-generator@vX.Y.Z
   with:
     input: schema.yaml
     output: src/models.py
@@ -9742,7 +10400,7 @@ Configure settings in `pyproject.toml` and use a simple pre-commit hook:
 
 ```yaml title=".pre-commit-config.yaml"
 repos:
-  - repo: https://github.com/koxudaxi/datamodel-code-generator
+  - repo: https://github.com/datamodel-code-generator/datamodel-code-generator
     rev: vX.Y.Z
     hooks:
       - id: datamodel-code-generator
@@ -9756,7 +10414,7 @@ For projects with multiple schemas using [named profiles](pyproject_toml.md#name
 
 ```yaml title=".pre-commit-config.yaml"
 repos:
-  - repo: https://github.com/koxudaxi/datamodel-code-generator
+  - repo: https://github.com/datamodel-code-generator/datamodel-code-generator
     rev: vX.Y.Z
     hooks:
       - id: datamodel-code-generator
@@ -9775,7 +10433,7 @@ This configuration automatically regenerates models when schema files change:
 
 ```yaml title=".pre-commit-config.yaml"
 repos:
-  - repo: https://github.com/koxudaxi/datamodel-code-generator
+  - repo: https://github.com/datamodel-code-generator/datamodel-code-generator
     rev: vX.Y.Z
     hooks:
       - id: datamodel-code-generator
@@ -23633,8 +24291,8 @@ other properties separate.
                 pass
 
 
-            class NoConstraintAllOf(BaseModel):
-                pass
+            class NoConstraintAllOf(RootModel[StringDatatype]):
+                root: StringDatatype = Field(..., description='No constraints added.')
 
 
             class IncompatibleTypeAllOf(BaseModel):
@@ -23798,8 +24456,8 @@ other properties separate.
                 pass
 
 
-            class NoConstraintAllOf(BaseModel):
-                pass
+            class NoConstraintAllOf(RootModel[StringDatatype]):
+                root: StringDatatype = Field(..., description='No constraints added.')
 
 
             class IncompatibleTypeAllOf(BaseModel):
@@ -31205,8 +31863,12 @@ Specify code formatters to apply to generated output.
 
 The `--formatters` flag specifies which code formatters to apply to
 the generated Python code. Available formatters are: builtin, black,
-isort, ruff-check, ruff-format. Default is [black, isort].
-Use this to customize formatting or disable formatters entirely.
+isort, ruff-check, ruff-format. The current default is [black, isort].
+For projects using Ruff, select --formatters ruff-check ruff-format to match project lint and formatting settings.
+Use --formatters builtin when you use no external formatter or prioritize generation speed.
+Keep --formatters black isort to preserve existing formatting. Explicit formatters override presets.
+The future builtin default reduces installation dependencies and version constraints; Black/isort remain required today.
+See the formatter guides for installation and custom-template limitations.
 
 **See also:** [CI/CD Integration](../ci-cd.md), [Formatter behavior](../formatter-behavior.md), [Code Formatting](../formatting.md)
 
@@ -40266,6 +40928,10 @@ This page lists deprecations and scheduled breaking changes.
 | `cli.validation` | active | cli-option | `--validation` | 0.24.0 | TBD | --field-constraints |
 | `config.json-config-strict-validation` | active | config | `JSON configuration values accepted by legacy validation` | 0.64.2 | TBD | Update the JSON configuration to match --output-format-json-schema config. |
 | `config.yaml-non-lowercase-bool` | active | config | `YAML bool values True, False, TRUE, FALSE` | 0.48.0 | TBD | Use lowercase true or false. |
+| `dependency.black-minimum` | active | dependency | `Black <24.3.0` | 0.78.0 | TBD | Upgrade Black to >=24.3.0 before the later support change. |
+| `dependency.external-formatters-optional` | active | dependency | `Black/isort installation` | 0.78.0 | TBD | Declare the black/isort extras for the external formatters you select. |
+| `dependency.pydantic-runtime-minimum` | active | dependency | `DCG runtime Pydantic <2.8.2` | 0.78.0 | TBD | Upgrade DCG runtime Pydantic to >=2.8.2; generated-code targets are unchanged. |
+| `dependency.isort-minimum` | active | dependency | `isort <6` | 0.78.0 | TBD | Upgrade isort to >=6,<9 before the later support change. |
 | `python-api.python-version-has-type-alias` | active | python-api | `PythonVersion.has_type_alias` | 0.52.1 | TBD | - |
 | `schema.jsonschema-items-array` | active | schema | `JSON Schema Draft 2020-12 items array tuple validation` | 0.53.0 | TBD | Use prefixItems. |
 | `schema.openapi-nullable` | active | schema | `OpenAPI 3.1 nullable keyword` | 0.53.0 | TBD | Use type arrays such as type: ["string", "null"]. |
@@ -40282,7 +40948,7 @@ This page lists deprecations and scheduled breaking changes.
 - **Warning category:** `FutureWarning`
 - **Replacement:** Set formatters explicitly, for example black and isort or builtin.
 
-The default external formatters (black, isort) will become opt-in in a future version.
+Default formatters will change to builtin. Set --formatters or --preset explicitly; see --help.
 
 ### `behavior.pydantic-v2-use-annotated-default`
 
@@ -40384,6 +41050,62 @@ JSON configuration values that do not match the documented schema are deprecated
 
 Non-lowercase YAML bool values are deprecated. Use lowercase true or false instead.
 
+### `dependency.black-minimum`
+
+- **Status:** active
+- **Kind:** dependency
+- **Target:** `Black <24.3.0`
+- **Since:** 0.78.0
+- **Planned removal:** TBD
+- **Warning category:** `FutureWarning`
+- **Replacement:** Upgrade Black to >=24.3.0 before the later support change.
+
+Support for Black <24.3.0 will end in a future release.
+
+This is advance notice only. Current dependency ranges and compatibility remain unchanged.
+
+### `dependency.external-formatters-optional`
+
+- **Status:** active
+- **Kind:** dependency
+- **Target:** `Black/isort installation`
+- **Since:** 0.78.0
+- **Planned removal:** TBD
+- **Warning category:** `FutureWarning`
+- **Replacement:** Declare the black/isort extras for the external formatters you select.
+
+Black/isort will become optional. Declare the corresponding extras; see --help.
+
+This is advance notice only. Current dependency ranges and compatibility remain unchanged.
+
+### `dependency.pydantic-runtime-minimum`
+
+- **Status:** active
+- **Kind:** dependency
+- **Target:** `DCG runtime Pydantic <2.8.2`
+- **Since:** 0.78.0
+- **Planned removal:** TBD
+- **Warning category:** `FutureWarning`
+- **Replacement:** Upgrade DCG runtime Pydantic to >=2.8.2; generated-code targets are unchanged.
+
+Support for DCG runtime Pydantic <2.8.2 will end in a future release.
+
+This is advance notice only. Current dependency ranges and compatibility remain unchanged.
+
+### `dependency.isort-minimum`
+
+- **Status:** active
+- **Kind:** dependency
+- **Target:** `isort <6`
+- **Since:** 0.78.0
+- **Planned removal:** TBD
+- **Warning category:** `FutureWarning`
+- **Replacement:** Upgrade isort to >=6,<9 before the later support change.
+
+Support for isort <6 will end in a future release.
+
+This is advance notice only. Current dependency ranges and compatibility remain unchanged.
+
 ### `python-api.python-version-has-type-alias`
 
 - **Status:** active
@@ -40420,6 +41142,146 @@ items as array tuple validation is deprecated in Draft 2020-12. Use prefixItems 
 - **Replacement:** Use type arrays such as type: ["string", "null"].
 
 nullable keyword is deprecated in OpenAPI 3.1, use type: ["string", "null"] instead.
+
+---
+
+# Dependency migration notices
+
+Source: https://datamodel-code-generator.koxudaxi.dev/dependency-migration/
+
+This release prepares later changes. Black and isort remain the default formatters and required dependencies;
+all current dependency ranges, compatibility code and minimum-version tests remain in place. Generation still
+continues when formatters are omitted. The built-in formatter remains experimental.
+
+## Choose formatting independently of the default
+
+- Use `--formatters ruff-check ruff-format` when your project uses Ruff and generated code should follow its lint
+  and formatting settings. Install `datamodel-code-generator[ruff]` when needed.
+- Use `--formatters builtin` when you use no external formatter or prioritize generation speed and avoiding
+  external formatter execution.
+- Keep `--formatters black isort` to preserve your existing Black/isort policy and generated formatting.
+
+The future builtin default is intended to reduce mandatory installation dependencies and version constraints.
+It does not change the recommendation to use Ruff in projects standardized on Ruff. Packages and Ruff configuration
+never trigger automatic formatter selection.
+
+Configure the formatter once in `pyproject.toml` to avoid repeating CLI options:
+
+```toml
+[tool.datamodel-codegen]
+formatters = ["ruff-check", "ruff-format"]
+```
+
+The new `standard-py310-20260909` through `standard-py314-20260909` and corresponding `practical` presets include
+builtin. Presets also change other generation settings, so explicitly selecting only a formatter is the smallest
+migration when you want to preserve those settings. Override a new preset with
+`--formatters ruff-check ruff-format` or `--formatters black isort` as appropriate. Earlier dated presets do not
+supply a formatter and continue to use the implicit Black/isort default and its warning unless overridden.
+An explicit empty formatter list in pyproject or the Python API disables standard formatting.
+
+Explicit formatter selection does not pin formatter versions, configuration or every byte of generated output.
+Custom templates can continue using Black/isort or Ruff; builtin does not exhaustively validate custom-template
+output. See [Formatter behavior](formatter-behavior.md) for scope and configuration details.
+
+## Separate notices
+
+| Notice | When it is emitted |
+| --- | --- |
+| Default formatter change | Effective formatters are unspecified, including older presets and custom formatters added to the implicit pipeline. |
+| Black/isort optional installation | Black or isort is explicitly selected, including through resolved configuration or a formatter-supplying preset. Not also emitted for an implicit pipeline. |
+| Old Black/isort support | A selected formatter is below its proposed future minimum, whether the pipeline was implicit or explicit. Merely having it installed does not warn. |
+| Old runtime Pydantic support | DCG generates code using Pydantic below 2.8.2 in its own runtime, even when generating dataclasses, TypedDict or msgspec models. |
+
+Each notice is registered separately as an active `FutureWarning`. The default formatter notice retains its
+original 0.52.0 history; the new notices are recorded for the planned 0.78.0 release. The registry contains the
+[exact short messages](deprecations.md). Migration warnings are deduplicated within one CLI invocation, including
+batch and watch regeneration. Non-generation operations such as help, version and listings do not emit them or
+load dependency modules just to check versions. The Python API respects standard warning filters, including
+`always`, `ignore` and `error`; the CLI continues to support `--disable-warnings`. Warnings do not enter stdout or
+generated code.
+
+## Prepare for optional Black/isort installation
+
+The new `[black]` and `[isort]` extras currently repeat the mandatory dependency ranges and Emscripten markers;
+`[all]` includes them. They prepare a stable installation spelling for the later optionalization. You do not need
+to reinstall these currently mandatory dependencies merely because of this release.
+
+For continued Black/isort use after the future default and installation changes, select both the dependencies and
+formatter pipeline:
+
+```bash
+uvx --from 'datamodel-code-generator[black,isort]' \
+  datamodel-codegen --input schema.json --output models.py \
+  --formatters black isort
+```
+
+For a Python API or shared environment, declare `datamodel-code-generator[black,isort]` in your environment's
+dependencies and pass `formatters=[Formatter.BLACK, Formatter.ISORT]`. Declare only the extras you actually use.
+`uvx` can isolate the CLI's dependencies from application dependencies. Shared environments and API use remain
+supported migration scenarios; application constraints alone do not imply a fixed long transition period.
+
+## Proposed future dependency floors
+
+These are follow-up targets, not changes to this release's requirements:
+
+| Dependency | Current requirement | Proposed later requirement |
+| --- | --- | --- |
+| isort | `>=4.3.21,<9` | `>=6,<9` (keep 6, 7 and 8) |
+| Black | `>=19.10b0` | `>=24.3.0` |
+| Runtime Pydantic, Python <3.14 | `>=2,<3` | `>=2.8.2,<3` |
+| Runtime Pydantic, Python >=3.14 | `>=2.12,<3` | Unchanged |
+
+No other dependency floor changes are proposed here. The generator continues using its existing numeric runtime
+compatibility boundaries; no version selection is inferred from string ordering. The notice comparisons use
+numeric release components and distinguish prereleases at the final-release boundary without relying on an
+undeclared packaging dependency.
+
+No removal version, date, or transition period has been specified. This release only announces the proposed
+changes; there is no date-based removal or automatic requirement change.
+
+Public lock searches included many old DCG versions and false-positive mentions in other packages' extras. Counts
+from those searches are not user counts or impact estimates. Recent public usage includes explicit Black/isort,
+builtin and Ruff. This is a migration policy informed by public examples and maintenance cost, not evidence that
+almost nobody will be affected.
+
+## Runtime Pydantic versus generated-code Pydantic
+
+The proposed 2.8.2 floor applies to **DCG's runtime**, not the environment that consumes generated code.
+`--target-pydantic-version` values such as 2, 2.11 and 2.12 remain unchanged. Raising the runtime floor alone is not
+a reason to delete every existing compatibility branch.
+
+The following classification reflects the current source. Runtime feature switches in
+`model/pydantic_v2/version.py` are often used to choose emitted code, so their effects span both environments.
+
+| Area | Classification and current effect | Follow-up test responsibility |
+| --- | --- | --- |
+| DCG configuration/internal Pydantic models | Internal runtime compatibility: validating generator configuration and constructing internal model/field objects relies on the installed Pydantic. | Keep the minimum DCG-runtime configuration and generation tests; reassess only when the actual floor changes. |
+| Dataclass alias, 2.4 boundary | Both: `dataclass.py` constructs internal fields with an alias fallback and changes emitted `Field` assignments/validation and serialization aliases so generated dataclasses work on old Pydantic. | Generate alias cases on the new DCG runtime and execute them separately on supported consumer versions before removing fallback behavior. |
+| `deprecated` / `json_schema_extra`, 2.7 boundary | Both: `base_model.py` selects recognized field keys using the runtime version, changing whether generated metadata is emitted as a direct field argument or JSON Schema extras. | Check emitted metadata and execute/schema-inspect generated models in consumer environments. |
+| `regex_engine`, 2.5 boundary | Generated-code compatibility: the version module retains the unsupported capability flag; the current emitter adds `python-re` for lookaround patterns. Removing an unused flag does not establish that old generated models support those expressions. | Retain regex pattern generation and consumer-runtime validation/known exclusions, independent of the DCG runtime floor. |
+| RootModel, dictionary keys, forward references, 2.8 boundary | Both: the installed runtime selects `_INCLUDE_DICT_KEY_REFERENCE_CLASSES`, affecting dependency sorting and emitted model order for dictionary-key references. | Retain recursive RootModel and dictionary-key import/execution cases across generator and consumer environments. |
+| Discriminator / Union | Both: internal schema/model construction and emitted union/discriminator annotations must agree; existing force-optional and payload cases exercise runtime-sensitive behavior. | Keep generation assertions and instantiate generated union cases on separately pinned consumer versions. |
+| `additionalProperties` | Both: schema interpretation plus emitted typed extras, recursive references and runtime validators affect consumer behavior. | Preserve schema/alias/recursive extra-property tests and verify generated validation, rather than treating all failures as DCG-runtime-only. |
+| Payload and generated-code execution | Both are currently exercised together in pinned environments: generated code is imported and validated using the same environment's Pydantic. | Split producer and consumer environments where necessary to retain old consumer coverage after raising DCG's own minimum. |
+
+Current dedicated environments include `pydantic200` (2.0.0), `pydantic20` (2.0.3), `pydantic25` (2.5.3), and
+`pydantic213` (2.13.4). Separate payload environments include `py311-payload-runtime-min` (Pydantic 2.0.3 and msgspec
+0.18), `py314-payload-runtime-min` (Pydantic 2.12 and msgspec 0.20), and their latest counterparts. The payload and
+execution suites contain runtime-specific exclusions and boundary expectations; they cannot be dropped just
+because the generator's own floor increases. These environments and compatibility implementations are retained.
+
+Future work should distinguish a minimum **producer** test running DCG from **consumer** tests that execute its
+saved output in another Pydantic environment. First preserve alias, metadata, regex, recursive RootModel,
+discriminator/Union, additional-properties and payload behavior; then identify which internal-only branches can
+actually be removed. Changing target-version semantics would require a separate, explicit decision.
+
+## Follow-up changes remain separate
+
+1. Change the implicit default to builtin, retaining explicit Ruff and Black/isort choices.
+2. Remove Black/isort from mandatory dependencies, retaining the extras and explicit dependency errors.
+3. Raise the runtime dependency floors and reassess compatibility code and producer/consumer tests.
+
+None of these three changes is performed by this preparation release.
 
 ---
 
@@ -40640,7 +41502,7 @@ datamodel-codegen --allof-merge-mode none ...
 
 See [CLI Reference: `--allof-merge-mode`](cli-reference/typing-customization.md#allof-merge-mode) for details.
 
-📎 Related: [#399](https://github.com/koxudaxi/datamodel-code-generator/issues/399)
+📎 Related: [#399](https://github.com/datamodel-code-generator/datamodel-code-generator/issues/399)
 
 ### 📁 How to generate from multiple schema files?
 
@@ -40660,7 +41522,7 @@ pip install 'datamodel-code-generator[http]'
 See [HTTP backend selection](#http-backend-selection) for the stable and
 experimental choices.
 
-📎 Related: [#215](https://github.com/koxudaxi/datamodel-code-generator/issues/215)
+📎 Related: [#215](https://github.com/datamodel-code-generator/datamodel-code-generator/issues/215)
 
 ### 🔤 YAML bool keywords (YES, NO, true, false) in string enums
 
@@ -40682,9 +41544,9 @@ class MyEnum(Enum):
     NOT_APPLICABLE = 'NOT_APPLICABLE'
 ```
 
-This matches the expected behavior when `type: string` is specified in your schema. If you need the previous behavior where YAML bool keywords were converted to Python booleans, please [open an issue](https://github.com/koxudaxi/datamodel-code-generator/issues) describing your use case.
+This matches the expected behavior when `type: string` is specified in your schema. If you need the previous behavior where YAML bool keywords were converted to Python booleans, please [open an issue](https://github.com/datamodel-code-generator/datamodel-code-generator/issues) describing your use case.
 
-📎 Related: [#1653](https://github.com/koxudaxi/datamodel-code-generator/issues/1653), [#1766](https://github.com/koxudaxi/datamodel-code-generator/issues/1766), [#2338](https://github.com/koxudaxi/datamodel-code-generator/issues/2338)
+📎 Related: [#1653](https://github.com/datamodel-code-generator/datamodel-code-generator/issues/1653), [#1766](https://github.com/datamodel-code-generator/datamodel-code-generator/issues/1766), [#2338](https://github.com/datamodel-code-generator/datamodel-code-generator/issues/2338)
 
 ---
 
@@ -40834,7 +41696,7 @@ datamodel-codegen --output-model-type pydantic_v2.BaseModel ...
 
 See [Output Model Types](output-model-types.md) for more details.
 
-📎 Related: [#803](https://github.com/koxudaxi/datamodel-code-generator/issues/803)
+📎 Related: [#803](https://github.com/datamodel-code-generator/datamodel-code-generator/issues/803)
 
 ### 💥 Generated code doesn't work with my Pydantic version
 
@@ -40934,7 +41796,7 @@ datamodel-codegen --read-only-write-only-model-type request-response ...
 datamodel-codegen --read-only-write-only-model-type all ...
 ```
 
-📎 Related: [#727](https://github.com/koxudaxi/datamodel-code-generator/issues/727)
+📎 Related: [#727](https://github.com/datamodel-code-generator/datamodel-code-generator/issues/727)
 
 ### ❓ Why are nullable fields not Optional?
 
@@ -40944,7 +41806,7 @@ Use `--strict-nullable` to treat nullable fields as truly optional:
 datamodel-codegen --strict-nullable ...
 ```
 
-📎 Related: [#327](https://github.com/koxudaxi/datamodel-code-generator/issues/327)
+📎 Related: [#327](https://github.com/datamodel-code-generator/datamodel-code-generator/issues/327)
 
 ---
 
@@ -40960,7 +41822,7 @@ datamodel-codegen --use-type-alias --output-model-type pydantic_v2.BaseModel ...
 
 See [Root Models and Type Aliases](root-model-and-type-alias.md) for details.
 
-📎 Related: [#2505](https://github.com/koxudaxi/datamodel-code-generator/issues/2505)
+📎 Related: [#2505](https://github.com/datamodel-code-generator/datamodel-code-generator/issues/2505)
 
 ---
 
@@ -40968,8 +41830,8 @@ See [Root Models and Type Aliases](root-model-and-type-alias.md) for details.
 
 - 🖥️ [CLI Reference](cli-reference/index.md) - Complete option documentation
 - ⚙️ [pyproject.toml Configuration](pyproject_toml.md) - Configure options via file
-- 🐛 [GitHub Issues](https://github.com/koxudaxi/datamodel-code-generator/issues) - Report bugs or request features
-- 💬 [Discussions](https://github.com/koxudaxi/datamodel-code-generator/discussions) - Ask questions and share ideas
+- 🐛 [GitHub Issues](https://github.com/datamodel-code-generator/datamodel-code-generator/issues) - Report bugs or request features
+- 💬 [Discussions](https://github.com/datamodel-code-generator/datamodel-code-generator/discussions) - Ask questions and share ideas
 
 ---
 
@@ -41317,7 +42179,7 @@ Source: https://datamodel-code-generator.koxudaxi.dev/development-contributing/
 Install the package in editable mode:
 
 ```sh
-$ git clone git@github.com:koxudaxi/datamodel-code-generator.git
+$ git clone git@github.com:datamodel-code-generator/datamodel-code-generator.git
 $ pip install -e datamodel-code-generator
 ```
 

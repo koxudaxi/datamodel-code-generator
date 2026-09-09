@@ -29,6 +29,7 @@ from datamodel_code_generator.model.base import (
     DataModel,
     DataModelFieldBase,
     _get_template_with_custom_dir,
+    _uses_original_template_loader,
 )
 from datamodel_code_generator.model.field_name import PydanticFieldNameResolver
 from datamodel_code_generator.model.imports import IMPORT_CLASSVAR
@@ -277,6 +278,7 @@ class _LegacyPydanticExtraTemplate:
         return adapted
 
 
+@_uses_original_template_loader
 def _adapt_legacy_pydantic_extra_template(template: Template) -> Template:
     """Wrap only custom templates that use the removed typed-extra property."""
     match template.filename:

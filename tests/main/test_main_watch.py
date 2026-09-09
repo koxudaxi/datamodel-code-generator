@@ -282,8 +282,10 @@ def _write_watch_cli_input_and_wait(
     condition: Callable[[], bool],
     description: str,
 ) -> None:
-    last_write = 0.0
-    input_file.write_text(content, encoding="utf-8")
+    pending_input = input_file.with_name(f".{input_file.name}.pending")
+    pending_input.write_text(content, encoding="utf-8")
+    pending_input.replace(input_file)
+    last_write = time.monotonic()
 
     def condition_after_write() -> bool:
         nonlocal last_write
@@ -3257,7 +3259,7 @@ input-file-type = "jsonschema"
             stderr_lines,
             project_file,
             project_content(lock_path=alternate_lockfile),
-            lambda: len(stderr_lines) > replan_error_count,
+            lambda: _lines_contain(stderr_lines[replan_error_count:], "HTTP 404 error fetching"),
             "the alternate existing lock to be verified by the failed replan",
         )
         alternate_lockfile.unlink()
@@ -3490,9 +3492,8 @@ def test_batch_watch_nested_dependency_reruns_full_batch_without_output_loop(tmp
         assert_output(
             second_metadata.read_text(encoding="utf-8"), PROJECT_ROOT / "tests/data/expected/main_kr/jobs/stale.py"
         )
-        child_file.write_text(
-            (WATCH_DATA_PATH / "nested_ref/child_changed.json").read_text(encoding="utf-8"), encoding="utf-8"
-        )
+        shutil.copyfile(WATCH_DATA_PATH / "nested_ref/child_changed.json", child_file.with_suffix(".pending"))
+        child_file.with_suffix(".pending").replace(child_file)
         # Do not open batch destinations until their atomic publication completes. On Windows,
         # a reader can temporarily prevent replacement and make the test race with the watch CLI.
         _wait_for_watch_cli(
@@ -3517,7 +3518,6 @@ def test_batch_watch_failed_cycle_preserves_outputs_and_recovers_from_new_depend
     nested_dir = tmp_path / "nested"
     nested_dir.mkdir()
     root_file = nested_dir / "root.json"
-    child_file = nested_dir / "child.json"
     missing_file = nested_dir / "missing.json"
     second_input = tmp_path / "second.json"
     first_output = tmp_path / "first.py"
@@ -3525,7 +3525,7 @@ def test_batch_watch_failed_cycle_preserves_outputs_and_recovers_from_new_depend
     first_expected = tmp_path / "first.expected.py"
     second_expected = tmp_path / "second.expected.py"
     shutil.copyfile(WATCH_DATA_PATH / "nested_ref/root.json", root_file)
-    shutil.copyfile(WATCH_DATA_PATH / "nested_ref/child.json", child_file)
+    shutil.copyfile(WATCH_DATA_PATH / "nested_ref/child.json", nested_dir / "child.json")
     second_input.write_text(WATCH_SCHEMA_INITIAL, encoding="utf-8")
     (tmp_path / "pyproject.toml").write_text(
         _batch_pyproject([
@@ -3552,13 +3552,14 @@ def test_batch_watch_failed_cycle_preserves_outputs_and_recovers_from_new_depend
         assert_output(first_output.read_text(encoding="utf-8"), first_expected)
         assert_output(second_output.read_text(encoding="utf-8"), second_expected)
 
+        completed_before_recovery = sum(line.strip() == "Done." for line in stdout_lines)
         _write_watch_cli_input_and_wait(
             process,
             stdout_lines,
             stderr_lines,
             missing_file,
             (WATCH_DATA_PATH / "nested_ref/child_changed.json").read_text(encoding="utf-8"),
-            lambda: _file_contains(first_output, "age: int | None = None"),
+            lambda: sum(line.strip() == "Done." for line in stdout_lines) > completed_before_recovery,
             "the failed batch to recover from its newly created dependency",
         )
         assert_output(first_output.read_text(encoding="utf-8"), EXPECTED_MAIN_PATH / "watch_missing_ref_recovery.py")
@@ -3765,6 +3766,22 @@ def test_watch_cli_reports_generation_error_after_change(tmp_path: Path) -> None
         output_file,
     )
 
+    first_modified_time: int | None = None
+    first_error_count = 0
+
+    def error_after_retry() -> bool:
+        nonlocal first_modified_time, first_error_count
+
+        modified_time = input_file.stat().st_mtime_ns
+        if first_modified_time is None:
+            first_modified_time = modified_time
+            return False
+        error_count = sum("Error:" in line for line in stderr_lines)
+        if not first_error_count:
+            first_error_count = error_count
+            return False
+        return modified_time != first_modified_time and error_count > first_error_count
+
     try:
         _write_watch_cli_input_and_wait(
             process,
@@ -3772,8 +3789,55 @@ def test_watch_cli_reports_generation_error_after_change(tmp_path: Path) -> None
             stderr_lines,
             input_file,
             WATCH_SCHEMA_INVALID,
-            lambda: _lines_contain(stderr_lines, "Error:"),
-            "generation error to be reported",
+            error_after_retry,
+            "the invalid input to be retried and its generation error reported",
         )
+        assert_output(output_file.read_text(encoding="utf-8"), EXPECTED_MAIN_PATH / "watch_file_initial.py")
+    finally:
+        _stop_watch_cli(process, stdout_thread, stderr_thread)
+
+
+@pytest.mark.parametrize("notice", ["default", "optional"])
+def test_watch_migration_notice_is_not_repeated(notice: str, tmp_path: Path) -> None:
+    """Real watch regeneration reports each migration once even with an always warning filter."""
+    input_file = tmp_path / "schema.json"
+    output_file = tmp_path / "output.py"
+    shutil.copyfile(JSON_SCHEMA_DATA_PATH / "migration_notice.json", input_file)
+    command = _watch_cli_command(
+        input_file,
+        output_file,
+        [
+            "--target-python-version",
+            "3.10",
+            "--output-model-type",
+            "dataclasses.dataclass",
+        ],
+    )
+    formatter_index = command.index("--formatters")
+    command[formatter_index : formatter_index + 2] = [] if notice == "default" else ["--formatters", "black", "isort"]
+    command.insert(1, "-Walways::FutureWarning")
+    process, stdout_lines, stderr_lines, stdout_thread, stderr_thread = _wait_for_watch_cli_ready(
+        *_start_watch_process(command, tmp_path),
+    )
+    try:
+        _write_watch_cli_input_and_wait(
+            process,
+            stdout_lines,
+            stderr_lines,
+            input_file,
+            (JSON_SCHEMA_DATA_PATH / "migration_notice_changed.json").read_text(encoding="utf-8"),
+            lambda: _file_contains(output_file, "age: int | None = None"),
+            "changed model output",
+        )
+        prefix = "Default formatters" if notice == "default" else "Black/isort"
+        assert_output(
+            "\n".join(
+                line.partition("FutureWarning: ")[2].strip()
+                for line in stderr_lines
+                if f"FutureWarning: {prefix}" in line
+            ),
+            EXPECTED_MAIN_PATH / "migration_warnings" / f"{notice}.txt",
+        )
+        assert_output(output_file.read_text(encoding="utf-8"), EXPECTED_MAIN_PATH / "migration_warnings" / "watched.py")
     finally:
         _stop_watch_cli(process, stdout_thread, stderr_thread)

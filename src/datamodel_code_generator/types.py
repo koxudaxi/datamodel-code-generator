@@ -20,6 +20,7 @@ from re import Pattern
 from types import MappingProxyType
 from typing import (
     TYPE_CHECKING,
+    Annotated,
     Any,
     ClassVar,
     Optional,
@@ -33,9 +34,13 @@ from pydantic import (
     ConfigDict,
     Field,
     GetCoreSchemaHandler,
+    PlainSerializer,
+    SerializeAsAny,
     StrictBool,
     StrictInt,
     StrictStr,
+    ValidatorFunctionWrapHandler,
+    WrapValidator,
     create_model,
     field_validator,
 )
@@ -172,6 +177,30 @@ else:
     # path. DataType validates every non-None construction input against the exact
     # runtime class below, so this lazy Pydantic field alias is not an unchecked escape.
     _BoundPythonTypeField = Any
+
+
+def _preserve_float_constraint_precision(value: Any, handler: ValidatorFunctionWrapHandler) -> Any:
+    """Retain legacy floats except when conversion would lose integer precision."""
+    if isinstance(value, int) and not isinstance(value, bool):
+        try:
+            float_value = float(value)
+        except OverflowError:
+            return value
+        return float_value if float_value == value else value
+    return handler(value)
+
+
+def _serialize_float_constraint(value: Any) -> SerializeAsAny[float | None]:
+    """Preserve numeric values without embedding unhashable serialization metadata in unions."""
+    return value
+
+
+FloatConstraint = Annotated[
+    float,
+    WrapValidator(_preserve_float_constraint_precision),
+    # Float serialization would round the integers retained by the validator.
+    PlainSerializer(_serialize_float_constraint),
+]
 
 
 class UnionIntFloat:

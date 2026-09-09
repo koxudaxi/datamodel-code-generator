@@ -46,8 +46,21 @@ Options:
                         points to a mapped file, an import statement is
                         generated instead of a class definition.
   --formatters {builtin,black,isort,ruff-check,ruff-format} [{builtin,black,isort,ruff-check,ruff-format} ...]
-                        Formatters for output (default: [black, isort]; use
-                        builtin for dependency-free formatting)
+                        Formatters (current default: black, isort; future
+                        default: builtin). For Ruff projects, use --formatters
+                        ruff-check ruff-format (install with pip install
+                        'datamodel-code-generator[ruff]'). Use --formatters
+                        builtin when no external formatter is used or
+                        generation speed takes priority. Keep --formatters
+                        black isort to preserve existing formatting. New
+                        20260909 presets include builtin; explicit formatters
+                        override presets. The future builtin default reduces
+                        installation dependencies and version constraints.
+                        Black/isort remain required today; declare
+                        [black,isort] extras for their later optional
+                        installation. Review custom-template output with
+                        builtin. Details: https://datamodel-code-
+                        generator.koxudaxi.dev/formatter-behavior/
   --http-backend {auto,httpx,httpx2}
                         Select the HTTP client backend. 'auto' (default)
                         selects stable HTTPX when its client module is
@@ -106,7 +119,7 @@ Options:
   --output OUTPUT       Output file (default: stdout)
   --output-model-type {pydantic_v2.BaseModel,pydantic_v2.dataclass,dataclasses.dataclass,typing.TypedDict,msgspec.Struct}
                         Output model type (default: pydantic_v2.BaseModel)
-  --preset {standard-py310-20260619,standard-py311-20260619,standard-py312-20260619,standard-py313-20260619,standard-py314-20260619,practical-py310-20260619,practical-py311-20260619,practical-py312-20260619,practical-py313-20260619,practical-py314-20260619,standard-py310-20260826,standard-py311-20260826,standard-py312-20260826,standard-py313-20260826,standard-py314-20260826,practical-py310-20260826,practical-py311-20260826,practical-py312-20260826,practical-py313-20260826,practical-py314-20260826}
+  --preset {standard-py310-20260619,standard-py311-20260619,standard-py312-20260619,standard-py313-20260619,standard-py314-20260619,practical-py310-20260619,practical-py311-20260619,practical-py312-20260619,practical-py313-20260619,practical-py314-20260619,standard-py310-20260826,standard-py311-20260826,standard-py312-20260826,standard-py313-20260826,standard-py314-20260826,practical-py310-20260826,practical-py311-20260826,practical-py312-20260826,practical-py313-20260826,practical-py314-20260826,standard-py310-20260909,standard-py311-20260909,standard-py312-20260909,standard-py313-20260909,standard-py314-20260909,practical-py310-20260909,practical-py311-20260909,practical-py312-20260909,practical-py313-20260909,practical-py314-20260909}
                         Apply an immutable built-in option preset. Preset
                         names include the target Python version so generated
                         syntax is pinned.
@@ -704,4 +717,4 @@ General options:
 
 Documentation: https://datamodel-code-generator.koxudaxi.dev
 Agent skill: https://datamodel-code-generator.koxudaxi.dev/coding-agent-skill/
-GitHub: https://github.com/koxudaxi/datamodel-code-generator
+GitHub: https://github.com/datamodel-code-generator/datamodel-code-generator

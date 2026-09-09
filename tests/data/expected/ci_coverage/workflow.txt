@@ -17,6 +17,8 @@
     "httpx-e2e:ubuntu-24.04:/",
     "httpx2-max-nocov-e2e:windows-latest:/",
     "httpx2-min-e2e:ubuntu-24.04:/",
+    "migration-boundary:ubuntu-24.04:/",
+    "migration-legacy:ubuntu-24.04:/",
     "py3.10:macos-latest",
     "py3.11:macos-latest",
     "py3.12:macos-latest",
@@ -56,20 +58,21 @@
     "py314-nocov-parallel:windows-latest:2/2",
     "py314-parallel:ubuntu-24.04:1/2",
     "py314-parallel:ubuntu-24.04:2/2",
+    "pydantic200:ubuntu-24.04:/",
     "pydantic20:ubuntu-24.04:/",
     "pydantic213:ubuntu-24.04:/",
     "pydantic25:ubuntu-24.04:/"
   ],
-  "coverage_count": 21,
+  "coverage_count": 24,
   "coverage_needs_only_producers": true,
-  "coverage_unique": 21,
+  "coverage_unique": 24,
   "expected_names_match": true,
   "extra_tests": [
     "py314-parallel:shard1:tests/cli_doc/test_cli_options_sync.py"
   ],
   "gate_always": "always()",
   "gate_needs_all_jobs": true,
-  "job_count": 50,
+  "job_count": 53,
   "permissions": {
     "contents": "read"
   },

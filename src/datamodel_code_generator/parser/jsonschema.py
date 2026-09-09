@@ -114,6 +114,7 @@ from datamodel_code_generator.types import (
     ANY,
     DataType,
     EmptyDataType,
+    FloatConstraint,
     Types,
     UnionIntFloat,
 )
@@ -192,6 +193,17 @@ _INHERITED_NESTED_SCHEMA_FIELDS = (
 _INHERITED_POSITIONAL_SCHEMA_FIELDS = frozenset({"items", "prefixItems"})
 _INHERITED_SCHEMA_MAP_FIELDS = frozenset({"patternProperties", "properties"})
 _INHERITED_PROPERTY_COUNT_CONSTRAINT_FIELDS = frozenset({"maxProperties", "minProperties"})
+_ALLOF_BOUND_CONSTRAINT_FIELDS = frozenset({
+    "minimum",
+    "maximum",
+    "exclusiveMinimum",
+    "exclusiveMaximum",
+    "minLength",
+    "maxLength",
+    "minItems",
+    "maxItems",
+    *_INHERITED_PROPERTY_COUNT_CONSTRAINT_FIELDS,
+})
 _INHERITED_ARRAY_EXTRA_CONSTRAINT_FIELDS = frozenset({"contains", "maxContains", "minContains"})
 _RAW_SCHEMA_EXPLICIT_FIELD_EXTRAS_KEY = "_raw_schema_explicit_field_extras"
 _INHERITED_TYPE_SHAPE_FIELDS = frozenset({
@@ -301,6 +313,88 @@ def _json_literal_values_equal(left: object, right: object) -> bool:  # noqa: PL
                 and all(key in right and _json_literal_values_equal(item, right[key]) for key, item in object_.items())
             )
     return False
+
+
+_HASH_SAFE_JSON_SCALAR_TYPES = frozenset({str, int, float, bool, type(None)})
+
+
+def _is_hash_safe_json_scalar(value: object) -> bool:
+    """Keep scalar subclasses with custom equality or hashing on the equality fallback."""
+    value_type = type(value)
+    return any(
+        isinstance(value, scalar_type)
+        and value_type.__eq__ is scalar_type.__eq__
+        and value_type.__hash__ is scalar_type.__hash__
+        for scalar_type in (str, int, float)
+    )
+
+
+def _intersect_all_of_enum(parent: list[Any], child: list[Any]) -> list[Any]:
+    """Intersect JSON enum values while retaining order and already-correct enum aliases."""
+    if all(
+        type(item) in _HASH_SAFE_JSON_SCALAR_TYPES or _is_hash_safe_json_scalar(item) for item in chain(parent, child)
+    ):
+        # JSON booleans are distinct from numbers; integral floats equal their integer values.
+        parent_keys = {(isinstance(item, bool), item) for item in parent}
+        child_keys = {(isinstance(item, bool), item) for item in child}
+        if parent_keys == child_keys and parent:
+            return parent + child
+        intersection = [item for item in parent if (isinstance(item, bool), item) in child_keys]
+    else:
+        intersection = [
+            item for item in parent if any(_json_literal_values_equal(item, candidate) for candidate in child)
+        ]
+        if len(intersection) == len(parent) and all(
+            any(_json_literal_values_equal(item, candidate) for candidate in parent) for item in child
+        ):
+            return parent + child
+    if not intersection:
+        raise SchemaParseError(message="allOf enum intersection is empty and cannot be represented")
+    return intersection
+
+
+def _align_all_of_enum_metadata(parent: dict[str, Any], child: dict[str, Any], result: dict[str, Any]) -> None:
+    """Keep annotations attached to their retained enum values, preferring parent annotations."""
+    metadata = [
+        key for key in ("x-enum-varnames", "x-enumNames", "x-enum-descriptions") if parent.get(key) or child.get(key)
+    ]
+    if not metadata:
+        return
+    retained_ids = {id(value) for value in result["enum"]}
+    indices = [index for index, value in enumerate(parent["enum"]) if id(value) in retained_ids]
+    child_indices: list[int] | None = None
+    for key in metadata:
+        parent_metadata = parent.get(key, [])
+        child_metadata = child.get(key, [])
+        if not child_metadata or indices[-1] < len(parent_metadata):
+            result[key] = [parent_metadata[index] if index < len(parent_metadata) else None for index in indices]
+            continue
+        if child_indices is None:
+            if all(
+                type(value) in _HASH_SAFE_JSON_SCALAR_TYPES or _is_hash_safe_json_scalar(value)
+                for value in chain(parent["enum"], child["enum"])
+            ):
+                positions: dict[tuple[bool, Any], int] = {}
+                for index, value in enumerate(child["enum"]):
+                    positions.setdefault((isinstance(value, bool), value), index)
+                child_indices = [positions[isinstance(value, bool), value] for value in result["enum"]]
+            else:
+                child_indices = [
+                    next(
+                        index
+                        for index, candidate in enumerate(child["enum"])
+                        if _json_literal_values_equal(value, candidate)
+                    )
+                    for value in result["enum"]
+                ]
+        result[key] = [
+            parent_metadata[index]
+            if index < len(parent_metadata)
+            else child_metadata[child_index]
+            if child_index < len(child_metadata)
+            else None
+            for index, child_index in zip(indices, child_indices, strict=True)
+        ]
 
 
 def _is_rw_model_variant_path(path: str) -> bool:
@@ -469,9 +563,8 @@ def __getattr__(name: str) -> Any:
 
 
 def unescape_json_pointer_segment(segment: str) -> str:
-    """Unescape JSON pointer segment by converting escape sequences and percent-encoding."""
-    # Unescape ~1, ~0, and percent-encoding
-    return unquote(segment.replace("~1", "/").replace("~0", "~"))
+    """Decode one URI-fragment JSON Pointer token in RFC evaluation order."""
+    return unquote(segment).replace("~1", "/").replace("~0", "~")
 
 
 _JSON_POINTER_ARRAY_INDEX = re.compile(r"0|[1-9][0-9]*")
@@ -511,15 +604,20 @@ def _resolve_json_pointer_array_index_or_missing(
 
 
 def get_model_by_path(schema: dict[str, YamlValue] | list[YamlValue], keys: list[str] | list[int]) -> YamlValue:
-    """Retrieve a model from schema by traversing the given path keys."""
+    """Retrieve a model from schema by traversing raw JSON Pointer keys."""
+    return _get_model_by_decoded_path(
+        schema, [unescape_json_pointer_segment(key) if isinstance(key, str) else key for key in keys]
+    )
+
+
+def _get_model_by_decoded_path(schema: dict[str, YamlValue] | list[YamlValue], keys: Sequence[str | int]) -> YamlValue:
+    """Retrieve a model after JSON Pointer tokens have already been decoded."""
     if not keys:
         if isinstance(schema, dict):
             return schema
         msg = f"Does not support json pointer to array. schema={schema}, key={keys}"  # pragma: no cover
         raise NotImplementedError(msg)  # pragma: no cover
     key = keys[0]
-    if isinstance(key, str):  # pragma: no branch
-        key = unescape_json_pointer_segment(key)
     if isinstance(schema, dict):
         value = schema.get(str(key), {})
     elif isinstance(schema, list):
@@ -530,7 +628,7 @@ def get_model_by_path(schema: dict[str, YamlValue] | list[YamlValue], keys: list
     if len(keys) == 1:
         return value
     if isinstance(value, (dict, list)):
-        return get_model_by_path(value, keys[1:])
+        return _get_model_by_decoded_path(value, keys[1:])
     msg = f"Cannot traverse non-container value. schema={schema}, key={keys}"  # pragma: no cover
     raise NotImplementedError(msg)  # pragma: no cover
 
@@ -539,11 +637,10 @@ def _get_model_by_path_or_missing(
     schema: dict[str, YamlValue] | list[YamlValue],
     keys: list[str],
 ) -> YamlValue | object:
-    """Resolve a diagnostic JSON pointer with one lookup per segment and a missing sentinel."""
+    """Resolve decoded JSON Pointer keys with one lookup per segment and a missing sentinel."""
     current: YamlValue = schema
     last_index = len(keys) - 1
-    for index, raw_key in enumerate(keys):
-        key = unescape_json_pointer_segment(raw_key)
+    for index, key in enumerate(keys):
         if isinstance(current, dict):
             value = current.get(key, _MISSING_JSON_POINTER)
             if value is _MISSING_JSON_POINTER:
@@ -571,7 +668,7 @@ def _split_json_pointer(schema: dict[str, YamlValue] | list[YamlValue], pointer:
     """Split a JSON pointer into lookup and reference path parts."""
     raw_parts = pointer.lstrip("/").split("/") if pointer else []
     if "://" not in pointer and "~1" not in pointer:
-        return raw_parts, raw_parts
+        return [unescape_json_pointer_segment(part) for part in raw_parts], raw_parts
 
     parts: list[str] = []
     reference_parts: list[str] = []
@@ -808,8 +905,8 @@ class JsonSchemaObject(BaseModel):
         """Validate and convert boolean exclusive maximum and minimum to numeric values."""
         if not isinstance(values, dict):
             return values
-        exclusive_maximum: float | bool | None = values.get("exclusiveMaximum")
-        exclusive_minimum: float | bool | None = values.get("exclusiveMinimum")
+        exclusive_maximum: int | float | bool | None = values.get("exclusiveMaximum")
+        exclusive_minimum: int | float | bool | None = values.get("exclusiveMinimum")
         if not isinstance(exclusive_maximum, bool) and not isinstance(exclusive_minimum, bool):
             return values
 
@@ -914,9 +1011,9 @@ class JsonSchemaObject(BaseModel):
     maxItems: Optional[int] = None  # noqa:  N815,UP045
     minProperties: Optional[int] = None  # noqa: N815, UP045
     maxProperties: Optional[int] = None  # noqa: N815, UP045
-    multipleOf: Optional[float] = None  # noqa: N815, UP045
-    exclusiveMaximum: Optional[Union[float, bool]] = None  # noqa: N815, UP007, UP045
-    exclusiveMinimum: Optional[Union[float, bool]] = None  # noqa: N815, UP007, UP045
+    multipleOf: Optional[FloatConstraint] = None  # noqa: N815, UP045
+    exclusiveMaximum: Optional[Union[FloatConstraint, bool]] = None  # noqa: N815, UP007, UP045
+    exclusiveMinimum: Optional[Union[FloatConstraint, bool]] = None  # noqa: N815, UP007, UP045
     additionalProperties: Optional[Union[JsonSchemaObject, bool]] = None  # noqa: N815, UP007, UP045
     unevaluatedProperties: Optional[Union[JsonSchemaObject, bool]] = None  # noqa: N815, UP007, UP045
     unevaluatedItems: Optional[Union[JsonSchemaObject, bool]] = None  # noqa: N815, UP007, UP045
@@ -1244,6 +1341,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self._python_type_expressions: Mapping[str, PythonTypeExpr] | None = None
         self.remote_object_cache: DefaultPutDict[str, dict[str, YamlValue]] = DefaultPutDict()
         self.raw_obj: dict[str, YamlValue] = {}
+        self._all_of_root_value_ref_stack: set[tuple[str, ...]] | None = None
+        self._root_pattern_string_constraints: JsonSchemaObject | None = None
         self._root_id: Optional[str] = None  # noqa: UP045
         self._root_id_base_path: Optional[str] = None  # noqa: UP045
         self._output_model_context = OutputModelContext.from_generation_types(
@@ -3689,7 +3788,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         target_schema: dict[str, YamlValue] | YamlValue = raw_doc
         if fragment:
             pointer = split_json_pointer(raw_doc, fragment)
-            target_schema = get_model_by_path(raw_doc, pointer)
+            target_schema = _get_model_by_decoded_path(raw_doc, pointer)
         return target_schema
 
     def _ref_schema_exists(self, resolved_ref: str) -> bool:
@@ -3864,7 +3963,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return self._walk_for_ref(raw_obj, target, visited)
 
     def _walk_for_ref(self, data: dict[str, Any] | list[Any], target: str, visited: set[str]) -> bool:
-        """Recursively walk raw dict/list data looking for a $ref that resolves to target."""
+        """Follow references only in schemas, leaving instance values and metadata unvisited."""
         if isinstance(data, dict):
             ref_value = data.get("$ref")
             if isinstance(ref_value, str):
@@ -3876,8 +3975,22 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     return True
                 if resolved not in visited and self._has_ref_cycle(resolved, target, visited):
                     return True
-            for value in data.values():
-                if isinstance(value, (dict, list)) and self._walk_for_ref(value, target, visited):
+            for keyword, value in data.items():
+                if keyword in _JSON_SCHEMA_MAP_KEYWORDS and isinstance(value, dict):
+                    if any(
+                        isinstance(schema, dict) and self._walk_for_ref(schema, target, visited)
+                        for schema in value.values()
+                    ):
+                        return True
+                elif (
+                    (
+                        keyword in _JSON_SCHEMA_SINGLE_KEYWORDS
+                        or keyword in _JSON_SCHEMA_SEQUENCE_KEYWORDS
+                        or keyword in _JSON_SCHEMA_SINGLE_OR_SEQUENCE_KEYWORDS
+                    )
+                    and isinstance(value, (dict, list))
+                    and self._walk_for_ref(value, target, visited)
+                ):
                     return True
             return False
         return any(isinstance(item, (dict, list)) and self._walk_for_ref(item, target, visited) for item in data)
@@ -3945,18 +4058,15 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     @staticmethod
     def _intersect_constraint(field: str, val1: Any, val2: Any) -> Any:  # noqa: PLR0911
         """Compute the intersection of two constraint values."""
-        v1: float | None = None
-        v2: float | None = None
-        with suppress(TypeError, ValueError):
-            v1 = float(val1) if val1 is not None else None
-            v2 = float(val2) if val2 is not None else None
+        v1 = val1.value if isinstance(val1, UnionIntFloat) else val1
+        v2 = val2.value if isinstance(val2, UnionIntFloat) else val2
 
         match field:
-            case "minLength" | "minimum" | "exclusiveMinimum" | "minItems":
+            case "minLength" | "minimum" | "exclusiveMinimum" | "minItems" | "minProperties":
                 if v1 is not None and v2 is not None:
                     return val1 if v1 >= v2 else val2
                 return val1  # pragma: no cover
-            case "maxLength" | "maximum" | "exclusiveMaximum" | "maxItems":
+            case "maxLength" | "maximum" | "exclusiveMaximum" | "maxItems" | "maxProperties":
                 if v1 is not None and v2 is not None:
                     return val1 if v1 <= v2 else val2
                 return val1  # pragma: no cover
@@ -6173,6 +6283,50 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         return self.parse_root_type(name, merged_schema, path)
 
+    def _merge_all_of_schema(
+        self,
+        parent: dict[str, Any],
+        child: dict[str, Any],
+        *,
+        schema_map: bool = False,
+    ) -> dict[str, Any]:
+        """Intersect allOf bounds and enums only in positive schema positions."""
+        result = parent.copy()
+        for key, value in child.items():
+            if key not in result:
+                result[key] = value
+                continue
+            previous = result[key]
+            if isinstance(previous, dict) and isinstance(value, dict):
+                if schema_map or key in _INHERITED_NESTED_SCHEMA_FIELDS:
+                    result[key] = self._merge_all_of_schema(
+                        previous,
+                        value,
+                        schema_map=not schema_map and key in _INHERITED_SCHEMA_MAP_FIELDS,
+                    )
+                else:
+                    result[key] = self._deep_merge(previous, value)
+            elif (
+                not schema_map and key in _ALLOF_BOUND_CONSTRAINT_FIELDS and previous is not None and value is not None
+            ):
+                # Preserve the legacy child representation when two bounds are equal.
+                result[key] = JsonSchemaParser._intersect_constraint(key, value, previous)
+            elif isinstance(previous, list) and isinstance(value, list):
+                if not schema_map and key == "enum":
+                    result[key] = _intersect_all_of_enum(previous, value)
+                else:
+                    result[key] = previous + value
+            else:
+                result[key] = value
+        if (
+            not schema_map
+            and isinstance(parent_enum := parent.get("enum"), list)
+            and isinstance(child_enum := child.get("enum"), list)
+            and len(result["enum"]) < len(parent_enum) + len(child_enum)
+        ):
+            _align_all_of_enum_metadata(parent, child, result)
+        return result
+
     def _merge_all_of_object(self, obj: JsonSchemaObject) -> JsonSchemaObject | None:
         """Merge allOf items when they share object properties to avoid duplicate models.
 
@@ -6205,8 +6359,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return None
 
         merged_schema: dict[str, Any] = obj.model_dump(exclude={"allOf"}, exclude_unset=True, by_alias=True)
+        merge_schema = (
+            self._deep_merge if self.allof_merge_mode == AllOfMergeMode.NoMerge else self._merge_all_of_schema
+        )
         for resolved_item in resolved_items:
-            merged_schema = self._deep_merge(merged_schema, resolved_item.model_dump(exclude_unset=True, by_alias=True))
+            merged_schema = merge_schema(merged_schema, resolved_item.model_dump(exclude_unset=True, by_alias=True))
 
         if "required" in merged_schema and isinstance(merged_schema["required"], list):
             merged_schema["required"] = list(dict.fromkeys(merged_schema["required"]))
@@ -6214,19 +6371,184 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         merged_schema.pop("allOf", None)
         return self.SCHEMA_OBJECT_TYPE.model_validate(merged_schema)
 
-    def _merge_all_of_mapping(self, obj: JsonSchemaObject) -> JsonSchemaObject | None:
-        """Merge mapping-shaped allOf items into one typed dict root schema."""
+    def _merge_all_of_root_validation_keywords(self, merged: dict[str, Any], sources: list[JsonSchemaObject]) -> None:
+        """Preserve literal and item intersections while materializing a value reference."""
+        literal_sets = [values for source in sources if (values := self._schema_literal_values(source)) is not None]
+        if literal_sets:
+            literal_values = [
+                value
+                for value in literal_sets[0]
+                if all(any(_json_literal_values_equal(value, other) for other in values) for values in literal_sets[1:])
+            ]
+            if not literal_values:
+                self._raise_unsatisfiable_schema([], "allOf")
+            merged["enum"] = literal_values
+        item_schemas = [source.items for source in sources if source.items is not None]
+        if len(item_schemas) > 1:
+            if False in item_schemas:
+                merged["items"] = self._merge_all_of_root_value_nodes(
+                    cast("list[JsonSchemaObject | bool]", item_schemas)
+                )
+                return
+            positional_lengths = [len(child) for child in item_schemas if isinstance(child, list)]
+            if positional_lengths:
+                positional_items = []
+                for index in range(max(positional_lengths) + 1):
+                    positional_sources = []
+                    for source in sources:
+                        child = source.items
+                        if isinstance(child, list):
+                            child = child[index] if index < len(child) else source.additionalItems
+                        positional_sources.append(
+                            self.SCHEMA_OBJECT_TYPE.model_validate({"items": True if child is None else child})
+                        )
+                    positional_schema: dict[str, Any] = {}
+                    self._merge_all_of_root_validation_keywords(positional_schema, positional_sources)
+                    positional_items.append(positional_schema["items"])
+                merged["items"] = positional_items[:-1]
+                merged["additionalItems"] = positional_items[-1]
+                return
+            merged["items"] = self._merge_all_of_root_value_nodes(cast("list[JsonSchemaObject | bool]", item_schemas))
+
+    def _merge_all_of_root_value_nodes(self, nodes: list[JsonSchemaObject | bool]) -> dict[str, Any] | bool:
+        """Intersect schema nodes without dropping constraints on nested properties."""
+        first = nodes[0]
+        if len(nodes) == 1:
+            return first.model_dump(exclude_unset=True, by_alias=True) if isinstance(first, JsonSchemaObject) else first
+        if False in nodes:
+            return False
+        references = tuple(
+            self.model_resolver.resolve_ref(node.ref)
+            for node in nodes
+            if isinstance(node, JsonSchemaObject) and node.ref
+        )
+        if not references:
+            return self._merge_all_of_root_value_children(nodes)
+        if self._all_of_root_value_ref_stack is None:
+            self._all_of_root_value_ref_stack = set()
+        if references in self._all_of_root_value_ref_stack:
+            return {
+                "allOf": [
+                    node.model_dump(exclude_unset=True, by_alias=True) if isinstance(node, JsonSchemaObject) else node
+                    for node in nodes
+                ]
+            }
+        self._all_of_root_value_ref_stack.add(references)
+        try:
+            return self._merge_all_of_root_value_children(nodes)
+        finally:
+            self._all_of_root_value_ref_stack.remove(references)
+
+    def _merge_all_of_root_value_children(  # noqa: PLR0912
+        self, nodes: list[JsonSchemaObject | bool]
+    ) -> dict[str, Any] | bool:
+        """Merge acyclic nodes while leaving recursive references for normal reference resolution."""
+        children: list[JsonSchemaObject] = []
+        for child in nodes:
+            if not isinstance(child, JsonSchemaObject):
+                continue
+            child_schema = child
+            if child.ref:
+                resolved = self._load_ref_schema_object(child.ref).model_dump(exclude_unset=True, by_alias=True)
+                self._resolve_schema_refs_in_place(resolved, self.model_resolver.resolve_ref(child.ref))
+                children.append(self.SCHEMA_OBJECT_TYPE.model_validate(resolved))
+                child_schema = child.model_copy(update={"ref": None})
+            children.append(child_schema)
+        merged: dict[str, Any] = {}
+        for child in children:
+            merged.update(child.model_dump(exclude={"ref"}, exclude_unset=True, by_alias=True))
+        allowed_types: set[str] | None = None
+        for child in children:
+            if not child.type:
+                continue
+            child_types = set(child.type) if isinstance(child.type, list) else {child.type}
+            if "number" in child_types:
+                child_types.add("integer")
+            allowed_types = child_types if allowed_types is None else allowed_types & child_types
+        if allowed_types is not None:
+            if not allowed_types:
+                return False
+            if "number" in allowed_types:
+                allowed_types.discard("integer")
+            merged["type"] = next(iter(allowed_types)) if len(allowed_types) == 1 else sorted(allowed_types)
+        self._merge_schema_constraints(merged, children, intersect=self.allof_merge_mode != AllOfMergeMode.NoMerge)
+        self._merge_all_of_root_validation_keywords(merged, children)
+        for keyword in ("properties", "patternProperties"):
+            properties: dict[str, list[JsonSchemaObject | bool]] = {}
+            for source in children:
+                for name, node in (getattr(source, keyword) or {}).items():
+                    properties.setdefault(name, []).append(node)
+            if properties:
+                if keyword == "properties":
+                    forbidden = set()
+                    for source in children:
+                        if source.additionalProperties is False and not source.patternProperties:
+                            forbidden.update(name for name in properties if name not in (source.properties or {}))
+                    if forbidden:
+                        if any(name in source.required for name in forbidden for source in children):
+                            return False
+                        for name in forbidden:
+                            properties.pop(name)
+                merged[keyword] = {
+                    name: self._merge_all_of_root_value_nodes(nodes) for name, nodes in properties.items()
+                }
+        if required := list(dict.fromkeys(name for source in children for name in source.required)):
+            merged["required"] = required
+        return merged
+
+    def _merge_all_of_root_schema(self, obj: JsonSchemaObject) -> JsonSchemaObject | None:  # noqa: PLR0912
+        """Unwrap one value schema or merge mapping-shaped allOf items into a root schema."""
         if obj.properties or obj.patternProperties or obj.propertyNames is not None:
             return None
 
+        supports_literal_validation = hasattr(self.data_model_root_type, "add_literal_validation")
+        single_value = len(obj.allOf) == 1 and not self._schema_requires_model_type(obj)
         mapping_schemas: list[JsonSchemaObject] = []
         for item in obj.allOf:
             match item:
                 case JsonSchemaObject() as schema:
-                    if schema.ref:
-                        schema = self._load_ref_schema_object(schema.ref)
+                    if ref := schema.ref:
+                        schema = self._load_ref_schema_object(ref)
                 case _:
                     return None
+            materialize_siblings = bool(
+                ref
+                and len(item.model_fields_set) > 1
+                and self._ref_sibling_keywords_enabled
+                and (item.has_ref_with_schema_keywords if supports_literal_validation else item.has_constraint)
+            )
+            scalar_or_array = (
+                schema.type
+                and schema.type != "object"
+                and not (schema.enum and not (materialize_siblings and supports_literal_validation))
+            )
+            if (
+                single_value
+                and scalar_or_array
+                and not (schema.allOf or schema.anyOf or schema.oneOf)
+                and not self._schema_requires_model_type(schema)
+            ):
+                merged_root: JsonSchemaObject | None = None
+                if materialize_siblings:
+                    merged = schema.model_dump(exclude_unset=True, by_alias=True)
+                    self._resolve_schema_refs_in_place(merged, self.model_resolver.resolve_ref(ref))
+                    referenced_schema = self.SCHEMA_OBJECT_TYPE.model_validate(merged)
+                    merged.update(item.model_dump(exclude={"ref"}, exclude_unset=True, by_alias=True))
+                    merged.update(obj.model_dump(exclude={"allOf"}, exclude_unset=True, by_alias=True))
+                    self._merge_schema_constraints(
+                        merged, [schema, item, obj], intersect=self.allof_merge_mode != AllOfMergeMode.NoMerge
+                    )
+                    if supports_literal_validation:
+                        self._merge_all_of_root_validation_keywords(merged, [referenced_schema, item, obj])
+                    merged_root = self.SCHEMA_OBJECT_TYPE.model_validate(merged)
+                return merged_root or (
+                    obj.model_copy(update={"ref": ref, "allOf": []})
+                    if ref
+                    else self.SCHEMA_OBJECT_TYPE.model_validate({
+                        **schema.model_dump(exclude_unset=True, by_alias=True),
+                        **obj.model_dump(exclude={"allOf"}, exclude_unset=True, by_alias=True),
+                    })
+                )
             if (
                 schema.properties
                 or schema.patternProperties
@@ -7191,7 +7513,13 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     case JsonSchemaObject():
                         pattern_value_types.append((
                             pattern,
-                            self.parse_item(
+                            self.data_type_manager.get_data_type(
+                                Types.string,
+                                field_constraints=False,
+                                **_get_data_type_constraint_kwargs(schema, Types.string),
+                            )
+                            if schema is self._root_pattern_string_constraints
+                            else self.parse_item(
                                 name,
                                 schema,
                                 get_special_path(
@@ -7909,7 +8237,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         single_obj = obj.allOf[0]
         if not (
-            isinstance(single_obj, JsonSchemaObject) and single_obj.ref and single_obj.ref_type == JSONReference.LOCAL
+            isinstance(single_obj, JsonSchemaObject)
+            and single_obj.ref
+            and single_obj.ref_type == JSONReference.LOCAL
+            and not (
+                hasattr(self.data_model_root_type, "add_literal_validation")
+                and self._ref_sibling_keywords_enabled
+                and single_obj.has_ref_with_schema_keywords
+            )
         ):
             return None
 
@@ -7930,7 +8265,69 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         return ref_data_type
 
-    def parse_all_of(
+    def _parse_all_of_root_value(self, name: str, merged_root: JsonSchemaObject, path: list[str]) -> DataType:
+        """Keep literal membership alongside the existing scalar or container representation."""
+        literal_values = merged_root.enum if not self.ignore_enum_constraints else []
+        literal_validation = cast(
+            "Callable[[DataModel, list[object]], None]",
+            getattr(self.data_model_root_type, "add_literal_validation", None),
+        )
+        if literal_values:
+            merged_root = merged_root.model_copy(
+                update={
+                    "enum": [],
+                    "extras": {key: value for key, value in merged_root.extras.items() if key != "const"},
+                }
+            )
+        item_type = None
+        if (
+            merged_root.is_array
+            and not self.ignore_enum_constraints
+            and isinstance(merged_root.items, JsonSchemaObject)
+            and merged_root.items.enum
+        ):
+            item_type = self._parse_all_of_root_value(f"{name}Item", merged_root.items, get_special_path("items", path))
+            merged_root = merged_root.model_copy(update={"items": True})
+        if merged_root.is_array:
+            root_data_type = self.parse_array(name, merged_root, path)
+        else:
+            root_data_type = self.parse_root_type(name, merged_root, path)
+        reference = cast("Reference", root_data_type.reference)
+        variants: tuple[Literal["Request", "Response"] | None, ...] = (
+            (None,) if reference.source is not None else ("Request", "Response")
+        )
+        for variant in variants:
+            root_model = cast(
+                "DataModel",
+                reference.source
+                if variant is None
+                else self._rw_model_variant_references[reference.path, variant].source,
+            )
+            if item_type is not None:
+                array_type = next(
+                    (
+                        data_type
+                        for data_type in root_model.fields[0].data_type.all_data_types
+                        if data_type.is_list or data_type.is_sequence or data_type.is_set or data_type.is_tuple
+                    ),
+                    None,
+                )
+                if array_type is None:
+                    array_type = next(
+                        nested
+                        for data_type in root_model.fields[0].data_type.all_data_types
+                        if (array_ref := data_type.reference) is not None
+                        and (array_model := cast("DataModel | None", array_ref.source)) is not None
+                        and (array_model.IS_ALIAS or array_model.IS_ROOT_MODEL)
+                        for nested in array_model.fields[0].data_type.all_data_types
+                        if nested.is_list or nested.is_sequence or nested.is_set or nested.is_tuple
+                    )
+                array_type.data_types = [item_type]
+            if literal_values:
+                literal_validation(root_model, literal_values)
+        return root_data_type
+
+    def parse_all_of(  # noqa: PLR0911
         self,
         name: str,
         obj: JsonSchemaObject,
@@ -7945,8 +8342,20 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if single_ref_result is not None:
             return single_ref_result
 
-        if merged_mapping := self._merge_all_of_mapping(obj):
-            return self.parse_root_type(name, merged_mapping, path)
+        if merged_root := self._merge_all_of_root_schema(obj):
+            if self.generate_schema_validators and hasattr(self.data_model_root_type, "add_literal_validation"):
+                return self._parse_all_of_root_value(name, merged_root, path)
+            if (
+                merged_root.enum
+                and not self.ignore_enum_constraints
+                and not self.should_parse_enum_as_literal(merged_root, property_name=name)
+            ):
+                return self.parse_enum(name, merged_root, path)
+            return (
+                self.parse_array(name, merged_root, path)
+                if merged_root.is_array
+                else self.parse_root_type(name, merged_root, path)
+            )
 
         merged_all_of_obj = self._merge_all_of_object(obj)
         if merged_all_of_obj:
@@ -9038,6 +9447,54 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             use_annotated=True,
         )
 
+    def _mark_root_pattern_string_constraints(self, obj: JsonSchemaObject, path: list[str]) -> None:
+        """Retain effective string bounds for a witnessed plain root-array pattern."""
+        if (
+            not self.field_constraints
+            or not self.generate_schema_validators
+            or self.custom_template_dir
+            or self.base_class
+        ):
+            return
+        if (
+            self.base_class_map
+            or self.config.extra_template_data
+            or type(self) is not JsonSchemaParser
+            or path[:-1] != list(self.model_resolver.current_root or ["#"])
+        ):
+            return
+        if (
+            not self._configured_generation_types_are_builtin
+            or not self.data_model_type.SUPPORTS_SCHEMA_RUNTIME_VALIDATION
+            or obj.type != "array"
+            or not obj.model_fields_set <= {"type", "items", "title", "extras"}
+        ):
+            return
+        if (
+            not obj.extras.keys() <= {"$schema", "$defs", "definitions", "title"}
+            or not isinstance(item := obj.items, JsonSchemaObject)
+            or item.type != "object"
+            or not item.model_fields_set <= {"type", "patternProperties"}
+            or len(patterns := item.patternProperties or {}) != 1
+        ):
+            return
+        pattern, value = next(iter(patterns.items()))
+        if (
+            not pattern.startswith("^")
+            or not pattern[1:].isascii()
+            or not pattern[1:].isalnum()
+            or not isinstance(value, JsonSchemaObject)
+            or value.type != "string"
+        ):
+            return
+        if (
+            not value.model_fields_set <= {"type", "minLength", "maxLength"}
+            or not ((value.minLength or 0) > 0 or value.maxLength is not None)
+            or (value.maxLength is not None and value.maxLength < (value.minLength or 0))
+        ):
+            return
+        self._root_pattern_string_constraints = value
+
     def parse_array_fields(
         self,
         name: str,
@@ -9049,6 +9506,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         """Parse array schema into a data model field with list type."""
         # Strict mode: check for version-specific array features
         self._check_array_version_features(obj, path)
+        self._mark_root_pattern_string_constraints(obj, path)
         use_annotated = self.use_annotated if use_annotated is None else use_annotated
 
         required, nullable = self._resolve_array_field_required_nullable(obj)

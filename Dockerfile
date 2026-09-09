@@ -20,7 +20,7 @@ ARG VERSION
 LABEL maintainer="Koudai Aono <koxudaxi@gmail.com>" \
     org.opencontainers.image.description="Generate Python data models from schema definitions" \
     org.opencontainers.image.licenses="MIT" \
-    org.opencontainers.image.source="https://github.com/koxudaxi/datamodel-code-generator" \
+    org.opencontainers.image.source="https://github.com/datamodel-code-generator/datamodel-code-generator" \
     org.opencontainers.image.title="datamodel-code-generator" \
     org.opencontainers.image.version="${VERSION}"
 

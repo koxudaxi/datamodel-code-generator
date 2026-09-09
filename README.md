@@ -15,8 +15,8 @@
 [![Conda-forge](https://img.shields.io/conda/v/conda-forge/datamodel-code-generator)](https://anaconda.org/conda-forge/datamodel-code-generator)
 [![Downloads](https://api.pepy.tech/badge/datamodel-code-generator/month)](https://pepy.tech/projects/datamodel-code-generator)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/datamodel-code-generator)](https://pypi.python.org/pypi/datamodel-code-generator)
-[![codecov](https://codecov.io/gh/koxudaxi/datamodel-code-generator/graph/badge.svg?token=plzSSFb9Li)](https://codecov.io/gh/koxudaxi/datamodel-code-generator)
-![license](https://img.shields.io/github/license/koxudaxi/datamodel-code-generator.svg)
+[![codecov](https://codecov.io/gh/datamodel-code-generator/datamodel-code-generator/graph/badge.svg?token=plzSSFb9Li)](https://codecov.io/gh/datamodel-code-generator/datamodel-code-generator)
+![license](https://img.shields.io/github/license/datamodel-code-generator/datamodel-code-generator.svg)
 [![Pydantic v2](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/pydantic/pydantic/main/docs/badge/v2.json)](https://pydantic.dev)
 
 ## ✨ What it does
@@ -127,11 +127,11 @@ datamodel-codegen \
   --input schema.json \
   --input-file-type jsonschema \
   --output-model-type pydantic_v2.BaseModel \
-  --preset standard-py312-20260826 \
+  --preset standard-py312-20260909 \
   --output model.py
 ```
 
-This quick start uses `standard-py312-20260826` as the modern Python 3.12 baseline.
+This quick start uses `standard-py312-20260909` as the modern Python 3.12 baseline.
 Preset names include the target Python version: `py312` means Python 3.12.
 
 See [CLI Reference](https://datamodel-code-generator.koxudaxi.dev/cli-reference/) for all options. See [Presets](https://datamodel-code-generator.koxudaxi.dev/presets/),
@@ -139,7 +139,7 @@ See [CLI Reference](https://datamodel-code-generator.koxudaxi.dev/cli-reference/
 [`--output-model-type`](https://datamodel-code-generator.koxudaxi.dev/cli-reference/model-customization/#output-model-type) for this command.
 
 For more schema-aware output that preserves schema-authored names, reuses models, and embeds generated
-documentation, use [`practical-py312-20260826`](https://datamodel-code-generator.koxudaxi.dev/presets/#practical-py312-20260826).
+documentation, use [`practical-py312-20260909`](https://datamodel-code-generator.koxudaxi.dev/presets/#practical-py312-20260909).
 
 <details>
 <summary>Input (<code>schema.json</code>)</summary>
@@ -206,14 +206,24 @@ class Pet(BaseModel):
     vaccinated: bool = False
 ```
 
-### ⚡ Speed up generation
+### Choose a formatter
 
-By default, generated Python is currently formatted with `black` and `isort`. For faster generation without external
-formatter dependencies, add `--formatters builtin` for standard generated model modules. In a future version, the
-Black/isort dependencies will become opt-in and the default formatter will change to `builtin`.
+Choose a formatter to match your project and generation priorities:
 
-If you prefer Ruff, install it with `pip install 'datamodel-code-generator[ruff]'` and use
-`--formatters ruff-check ruff-format` for a fast external formatter.
+- **Projects using Ruff:** use `--formatters ruff-check ruff-format` to keep generated code consistent with the
+  project's formatting and lint policy. Install it with `pip install 'datamodel-code-generator[ruff]'`.
+- **No Ruff, Black, or isort, or generation speed is the priority:** use `--formatters builtin` to avoid running
+  external formatters on standard generated model modules.
+- **Projects using Black/isort:** keep `--formatters black isort` to preserve the project's formatting and existing
+  generated output.
+
+The current default remains Black/isort, which are still required dependencies. Omitting formatter options continues
+normal generation. The future builtin default is intended to reduce required installation dependencies and version
+constraints; Ruff will still be recommended for projects that use Ruff. Formatters are never selected automatically
+based on installed packages or Ruff configuration. The new `[black]` and `[isort]` extras prepare for later
+optional installation; their ranges and environment markers match the current required dependencies.
+Selecting only a formatter preserves your other generation settings; a preset also supplies model-generation options.
+Explicit formatter selection does not pin formatter versions or guarantee byte-for-byte output stability.
 
 Custom templates can emit Python outside the standard generated model patterns covered by `builtin`, so
 custom-template output is not exhaustively validated. If `--formatters builtin` produces invalid or poorly formatted
@@ -340,7 +350,7 @@ Validate generated models in your CI pipeline:
 
 ```yaml
 # Replace vX.Y.Z with a released action version.
-- uses: koxudaxi/datamodel-code-generator@vX.Y.Z
+- uses: datamodel-code-generator/datamodel-code-generator@vX.Y.Z
   with:
     input: schemas/api.yaml
     output: src/models/api.py
@@ -412,7 +422,7 @@ These public examples are grouped by how each project uses datamodel-code-genera
 - [vllm-project/vllm](https://github.com/vllm-project/vllm) - *[Test dependency for MiniCPM3 tests](https://github.com/vllm-project/vllm/blob/46f01a50acd6862806ed67b88176c96c2b161142/requirements/test/cuda.in#L40)*
 - [stanfordnlp/dspy](https://github.com/stanfordnlp/dspy) - *[Generate Pydantic models from JSON Schema for reliability tests](https://github.com/stanfordnlp/dspy/blob/main/tests/reliability/generate/utils.py)*
 
-[See all dependents →](https://github.com/koxudaxi/datamodel-code-generator/network/dependents)
+[See all dependents →](https://github.com/datamodel-code-generator/datamodel-code-generator/network/dependents)
 
 ---
 

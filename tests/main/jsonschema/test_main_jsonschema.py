@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, get_args, get_type_hints
 
 import black
 import pytest
+from jinja2 import TemplateNotFound
 from packaging import version
 from pydantic import VERSION as PYDANTIC_VERSION
 from pydantic import ValidationError
@@ -52,6 +53,7 @@ from datamodel_code_generator.model.base import TEMPLATE_DIR
 from datamodel_code_generator.model.msgspec import DataModelField as MsgspecDataModelField
 from datamodel_code_generator.model.pydantic_v2.version import (
     PYDANTIC_V2_DATACLASS_ALIAS_NEEDS_FALLBACK,
+    PYDANTIC_V2_DATACLASS_TYPE_ALIAS_NEEDS_FALLBACK,
     PYDANTIC_V2_ROOT_MODEL_DICT_KEY_FORWARD_REF_NEEDS_SORTING,
 )
 from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
@@ -78,6 +80,7 @@ from tests.main.conftest import (
     DATA_PATH,
     DEFAULT_VALUES_DATA_PATH,
     EXPECTED_MAIN_PATH,
+    JSON_DATA_PATH,
     JSON_SCHEMA_DATA_PATH,
     LEGACY_BLACK_SKIP,
     MSGSPEC_LEGACY_BLACK_SKIP,
@@ -2638,6 +2641,67 @@ def test_main_json_pointer(output_file: Path) -> None:
     )
 
 
+@pytest.mark.parametrize("strict_refs", [False, True])
+@pytest.mark.parametrize("entry_point", ["api", "cli"])
+def test_json_pointer_decoding_api_and_cli(output_file: Path, strict_refs: bool, entry_point: str) -> None:
+    """Resolve URI-fragment pointer tokens exactly once through every public entry point."""
+    input_path = JSON_SCHEMA_DATA_PATH / "json_pointer_decoding" / "root.json"
+
+    if entry_point == "api":
+        run_generate_and_assert(
+            input_=input_path,
+            expected_file=EXPECTED_JSON_SCHEMA_PATH / "json_pointer_decoding_api.py",
+            input_file_type=InputFileType.JsonSchema,
+            strict_refs=strict_refs,
+            disable_timestamp=True,
+        )
+        run_generate_file_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            assert_func=assert_file_content,
+            expected_file="json_pointer_decoding.py",
+            strict_refs=strict_refs,
+            disable_timestamp=True,
+        )
+    else:
+        run_main_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file="json_pointer_decoding.py",
+            extra_args=["--disable-timestamp", *(["--strict-refs"] if strict_refs else [])],
+            force_exec_validation=True,
+        )
+
+    payloads = json.loads((JSON_DATA_PATH / "json_pointer_decoding" / "payloads.json").read_text(encoding="utf-8"))
+    for invalid in payloads["invalid"]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="json_pointer_decoding",
+            model_name="PointerRoot",
+            valid_json=json.dumps(payloads["valid"]),
+            invalid_json=json.dumps({**payloads["valid"], invalid["field"]: []}),
+            expected_error_type=invalid["error"],
+            expected_attribute_path=("once", "root"),
+            expected_attribute_value="once",
+        )
+
+
+def test_json_pointer_decoding_preserves_ordinary_references(output_file: Path) -> None:
+    """Keep ordinary escaped tokens, array indices and external references byte-identical."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "json_pointer_decoding" / "control.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="json_pointer_decoding_control.py",
+        extra_args=["--strict-refs", "--disable-timestamp"],
+        force_exec_validation=True,
+    )
+
+
 def test_main_nested_json_pointer(output_file: Path) -> None:
     """Test nested JSON pointer references."""
     run_main_and_assert(
@@ -3635,6 +3699,41 @@ def test_main_generate_pydantic_v2_dataclass_extra_ignore(output_file: Path) -> 
         expected_file="pydantic_v2_dataclass_extra_ignore.py",
         output_model_type=DataModelType.PydanticV2Dataclass,
         extra_fields="ignore",
+    )
+
+
+@pytest.mark.parametrize("extra_args", [[], ["--use-type-alias-type"]], ids=["default", "explicit"])
+def test_main_pydantic_v2_dataclass_reference_alias_defaults(output_file: Path, extra_args: list[str]) -> None:
+    """Validate reference aliases and their defaults on supported Pydantic runtimes."""
+    suffix = "legacy" if PYDANTIC_V2_DATACLASS_TYPE_ALIAS_NEEDS_FALLBACK else "modern"
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "msgspec_alias_defaults.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=f"pydantic_v2_dataclass_reference_alias_defaults_{suffix}.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.dataclass",
+            "--target-python-version",
+            "3.10",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+            *extra_args,
+        ],
+        force_exec_validation=True,
+    )
+    payloads = json.loads((JSON_DATA_PATH / "pydantic_v2_dataclass_reference_alias_defaults.json").read_text())
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="generated_dataclass_reference_alias_defaults",
+        model_name="AliasDefaults",
+        valid_json=json.dumps(payloads["valid"]),
+        invalid_json=json.dumps(payloads["invalid"]),
+        expected_error_type="missing",
+        expected_attribute_path=("chained", "id"),
+        expected_attribute_value=3,
     )
 
 
@@ -14146,6 +14245,58 @@ def test_main_allof_root_model_constraints_none(output_file: Path) -> None:
     )
 
 
+@pytest.mark.parametrize("entry_point", ["api", "cli"])
+@pytest.mark.parametrize("fixture", ["large", "ordinary"])
+def test_allof_integer_bound_comparisons(output_file: Path, entry_point: str, fixture: str) -> None:
+    """Intersect integer and floating bounds without rounding the comparison operands."""
+    input_path = JSON_SCHEMA_DATA_PATH / "integer_bound_comparisons" / f"{fixture}.json"
+    if entry_point == "api":
+        run_generate_and_assert(
+            input_=json.loads(input_path.read_text(encoding="utf-8")),
+            expected_file=EXPECTED_JSON_SCHEMA_PATH / "integer_bound_comparisons" / f"{fixture}_api.py",
+            assert_input_unchanged=True,
+            input_file_type=InputFileType.JsonSchema,
+            field_constraints=True,
+            disable_timestamp=True,
+            formatters=[Formatter.BUILTIN],
+        )
+        run_generate_file_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            assert_func=assert_file_content,
+            expected_file=f"integer_bound_comparisons/{fixture}.py",
+            field_constraints=True,
+            disable_timestamp=True,
+            formatters=[Formatter.BUILTIN],
+        )
+    else:
+        run_main_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file=f"integer_bound_comparisons/{fixture}.py",
+            extra_args=["--field-constraints", "--disable-timestamp", "--formatters", "builtin"],
+            force_exec_validation=True,
+        )
+
+    payloads = json.loads(
+        (JSON_DATA_PATH / "integer_bound_comparisons" / f"{fixture}_payloads.json").read_text(encoding="utf-8")
+    )
+    for model_name, payload in payloads.items():
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="integer_bound_comparisons",
+            model_name=model_name,
+            valid_json=json.dumps(payload["valid"]),
+            invalid_json=json.dumps(payload["invalid"]),
+            expected_error_type=payload["error_type"],
+            expected_attribute_path=("root",),
+            expected_attribute_value=payload["valid"],
+        )
+
+
 @pytest.mark.benchmark
 def test_main_allof_root_model_constraints_merge_pydantic_v2(output_file: Path) -> None:
     """Test allOf with root model constraints in Pydantic v2 (issue #2232).
@@ -17921,6 +18072,106 @@ def test_main_circular_ref_with_schema_keywords(output_file: Path) -> None:
     )
 
 
+@pytest.mark.parametrize("entry_point", ["api", "cli"])
+def test_schema_reference_cycles_ignore_instance_values(output_file: Path, entry_point: str) -> None:
+    """Keep ref sibling fields when only instance data or metadata contains apparent cycles."""
+    input_path = JSON_SCHEMA_DATA_PATH / "schema_reference_cycles" / "instance_values.json"
+    if entry_point == "api":
+        schema = json.loads(input_path.read_text(encoding="utf-8"))
+        run_generate_and_assert(
+            input_=schema,
+            expected_file=EXPECTED_JSON_SCHEMA_PATH / "schema_reference_cycles" / "instance_values_api.py",
+            input_file_type=InputFileType.JsonSchema,
+            assert_input_unchanged=True,
+            field_constraints=True,
+            strict_refs=True,
+            disable_timestamp=True,
+            formatters=[Formatter.BUILTIN],
+        )
+        run_generate_file_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            assert_func=assert_file_content,
+            expected_file="schema_reference_cycles/instance_values.py",
+            field_constraints=True,
+            strict_refs=True,
+            disable_timestamp=True,
+            formatters=[Formatter.BUILTIN],
+        )
+    else:
+        run_main_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file="schema_reference_cycles/instance_values.py",
+            extra_args=["--field-constraints", "--strict-refs", "--disable-timestamp", "--formatters", "builtin"],
+            force_exec_validation=True,
+        )
+
+    payloads = json.loads((JSON_DATA_PATH / "schema_reference_cycles" / "payloads.json").read_text(encoding="utf-8"))
+    for field_name, value in payloads.items():
+        invalid_value = {key: item for key, item in value.items() if key != "code"}
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="schema_reference_cycles",
+            model_name="PayloadRoot",
+            valid_json=json.dumps(payloads),
+            invalid_json=json.dumps({**payloads, field_name: invalid_value}),
+            expected_error_type="missing",
+            expected_attribute_path=(field_name, "code"),
+            expected_attribute_value=value["code"],
+        )
+
+
+@pytest.mark.parametrize("fixture", ["ordinary", "schema_names"])
+def test_schema_reference_cycles_preserve_normal_output(output_file: Path, fixture: str) -> None:
+    """Preserve ordinary defaults and real cycles through schemas named like instance keywords."""
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_reference_cycles" / f"{fixture}.json",
+        output_path=output_file,
+        input_file_type=InputFileType.JsonSchema,
+        assert_func=assert_file_content,
+        expected_file=f"schema_reference_cycles/{fixture}.py",
+        field_constraints=True,
+        strict_refs=True,
+        disable_timestamp=True,
+        formatters=[Formatter.BUILTIN],
+    )
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_reference_cycles" / f"{fixture}.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=f"schema_reference_cycles/{fixture}.py",
+        extra_args=["--field-constraints", "--strict-refs", "--disable-timestamp", "--formatters", "builtin"],
+        force_exec_validation=True,
+    )
+    if fixture == "schema_names":
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="schema_reference_names",
+            model_name="SchemaNames",
+            valid_json='{"value":{"default":{"const":{"enum":{"examples":{}}}}},"pair":{"other":{"items":[{}]}}}',
+            invalid_json='{"value":{"default":1},"pair":{}}',
+            expected_error_type="model_type",
+            expected_attribute_path=("value", "default", "const", "enum", "examples", "default"),
+            expected_attribute_value=None,
+        )
+    else:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="ordinary_reference_defaults",
+            model_name="OrdinaryRoot",
+            valid_json='{"value":{"text":"ordinary","code":7}}',
+            invalid_json='{"value":{"text":"ordinary"}}',
+            expected_error_type="missing",
+            expected_attribute_path=("value", "code"),
+            expected_attribute_value=7,
+        )
+
+
 @pytest.mark.benchmark
 def test_main_circular_ref_indirect(output_file: Path) -> None:
     """Test indirect circular $ref (A->B->A) does not cause RecursionError."""
@@ -18885,3 +19136,382 @@ def test_main_typed_dict_self_referencing_extra_items(output_file: Path) -> None
         importable_module_name="generated_typed_dict_self_referencing_extra_items",
         importable_module_attribute="SelfMap",
     )
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("relative_directory", [False, True])
+def test_custom_template_dependencies_refresh_dynamic_loads(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, entrypoint: str, *, relative_directory: bool
+) -> None:
+    """Refresh dynamic includes, imports, extends and previously missing candidates."""
+    template_data = DATA_PATH / "templates_dependencies"
+    custom_root = tmp_path / "templates"
+    custom_directory = custom_root / "pydantic_v2"
+    custom_directory.mkdir(parents=True)
+    if relative_directory:
+        monkeypatch.chdir(tmp_path)
+        custom_root = Path("templates")
+    output = tmp_path / "output.py"
+    for stage in json.loads((template_data / "stages.json").read_text()):
+        for source, destination in stage.get("copy", []):
+            shutil.copyfile(template_data / source, custom_directory / destination)
+        for destination in stage.get("delete", []):
+            (custom_directory / destination).unlink()
+        expected = f"custom_template_dependencies/{stage.get('expected', stage['name'])}.py"
+        if entrypoint == "cli":
+            run_main_and_assert(
+                input_path=JSON_SCHEMA_DATA_PATH / "custom_template_refresh.json",
+                output_path=output,
+                input_file_type="jsonschema",
+                assert_func=assert_file_content,
+                expected_file=expected,
+                extra_args=["--custom-template-dir", str(custom_root), "--disable-timestamp"],
+            )
+        else:
+            run_generate_file_and_assert(
+                input_path=JSON_SCHEMA_DATA_PATH / "custom_template_refresh.json",
+                output_path=output,
+                input_file_type=InputFileType.JsonSchema,
+                custom_template_dir=custom_root,
+                disable_timestamp=True,
+                assert_func=assert_file_content,
+                expected_file=expected,
+            )
+        assert_generated_model_json_validation(
+            output,
+            module_name=f"generated_template_dependencies_{stage['name']}",
+            model_name="Example",
+            valid_json=json.dumps({stage["field"]: "accepted"}),
+            invalid_json=json.dumps({stage["field"]: 42}),
+            expected_error_type="string_type",
+            expected_attribute_path=(stage["field"],),
+            expected_attribute_value="accepted",
+        )
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+def test_custom_template_dependencies_recover_after_failure(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], entrypoint: str
+) -> None:
+    """Retain negative lookups after a failed render until a missing include is added."""
+    custom_root = tmp_path / "templates"
+    custom_directory = custom_root / "pydantic_v2"
+    custom_directory.mkdir(parents=True)
+    template_data = DATA_PATH / "templates_dependencies"
+    shutil.copyfile(template_data / "root_missing.jinja2", custom_directory / "BaseModel.jinja2")
+    output = tmp_path / "output.py"
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "custom_template_refresh.json",
+            output_path=output,
+            input_file_type="jsonschema",
+            extra_args=["--custom-template-dir", str(custom_root), "--disable-timestamp"],
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr_contains="required.jinja2",
+        )
+    else:
+        with pytest.raises(TemplateNotFound, match=r"required\.jinja2"):
+            generate(
+                JSON_SCHEMA_DATA_PATH / "custom_template_refresh.json",
+                input_file_type=InputFileType.JsonSchema,
+                output=output,
+                custom_template_dir=custom_root,
+                disable_timestamp=True,
+            )
+    shutil.copyfile(template_data / "body_first.jinja2", custom_directory / "required.jinja2")
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "custom_template_refresh.json",
+        output_path=output,
+        input_file_type=InputFileType.JsonSchema,
+        custom_template_dir=custom_root,
+        disable_timestamp=True,
+        assert_func=assert_file_content,
+        expected_file="custom_template_refresh/first.py",
+    )
+    assert_generated_model_json_validation(
+        output,
+        module_name="generated_template_failure_recovery",
+        model_name="Example",
+        valid_json='{"first": "accepted"}',
+        invalid_json='{"first": 42}',
+        expected_error_type="string_type",
+    )
+
+
+@pytest.mark.parametrize(
+    "external_directory",
+    [
+        False,
+        pytest.param(True, marks=pytest.mark.skipif(os.name == "nt", reason="symlink creation requires privileges")),
+    ],
+)
+def test_custom_template_dependencies_bound_and_refresh_overflow(tmp_path: Path, *, external_directory: bool) -> None:
+    """Use the full signature after bounded dynamic dependency tracking fills up."""
+    custom_root = tmp_path / "templates"
+    custom_root.mkdir()
+    custom_directory = tmp_path / "external" if external_directory else custom_root / "pydantic_v2"
+    custom_directory.mkdir()
+    template_data = DATA_PATH / "templates_dependencies"
+    custom_template = custom_directory / "BaseModel.jinja2"
+    shutil.copyfile(template_data / "root_overflow.jinja2", custom_template)
+    if external_directory:
+        (custom_root / "BaseModel.jinja2").symlink_to(custom_template)
+    output = tmp_path / "output.py"
+    for _ in range(2):
+        run_generate_file_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "custom_template_refresh.json",
+            output_path=output,
+            input_file_type=InputFileType.JsonSchema,
+            custom_template_dir=custom_root,
+            disable_timestamp=True,
+            assert_func=assert_file_content,
+            expected_file="custom_template_refresh/first.py",
+        )
+    dependencies = model_base._missing_custom_template_state.dependencies[custom_root]
+    assert_output(
+        json.dumps({"paths": len(dependencies.paths), "overflow": dependencies.overflow}) + "\n",
+        EXPECTED_JSON_SCHEMA_PATH / "custom_template_dependencies/overflow.txt",
+    )
+    shutil.copyfile(template_data / "overflow_added.jinja2", custom_directory / "unused-129.jinja2")
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "custom_template_refresh.json",
+        output_path=output,
+        input_file_type=InputFileType.JsonSchema,
+        custom_template_dir=custom_root,
+        disable_timestamp=True,
+        assert_func=assert_file_content,
+        expected_file="custom_template_dependencies/overflow_added.py",
+    )
+    assert_generated_model_json_validation(
+        output,
+        module_name="generated_template_overflow",
+        model_name="Example",
+        valid_json='{"first": "accepted"}',
+        invalid_json='{"first": 42}',
+        expected_error_type="string_type",
+        expected_attribute_path=("discovered",),
+        expected_attribute_value=4,
+    )
+
+
+@pytest.mark.parametrize(
+    ("model_name", "external_directory"),
+    [
+        ("AdaptedModel", False),
+        pytest.param(
+            "AdaptedModel",
+            True,
+            marks=pytest.mark.skipif(os.name == "nt", reason="symlink creation requires privileges"),
+        ),
+        ("DefaultDirectoryModel", False),
+        ("AbsoluteTemplateModel", False),
+        ("AbsoluteAdaptedTemplateModel", False),
+    ],
+)
+def test_custom_template_dependencies_support_parser_extensions(
+    tmp_path: Path, model_name: str, *, external_directory: bool
+) -> None:
+    """Preserve direct parser extensions and conservatively refresh unknown adapters."""
+    template_data = DATA_PATH / "templates_dependencies"
+    custom_root = tmp_path / "templates"
+    custom_directory = tmp_path / "external" if external_directory else custom_root / "pydantic_v2"
+    custom_directory.mkdir(parents=True)
+    shutil.copyfile(template_data / "standalone.jinja2", custom_directory / "BaseModel.jinja2")
+    if external_directory:
+        custom_root.mkdir()
+        (custom_root / "BaseModel.jinja2").symlink_to(custom_directory / "BaseModel.jinja2")
+    output = tmp_path / "output.py"
+    model_types = get_data_model_types(DataModelType.PydanticV2BaseModel, PythonVersion.PY_310)
+    stages = ["first", "first", "second"] if model_name == "AdaptedModel" else ["first"]
+    with _generated_model(template_data / "plugin.py", "template_dependency_plugin", model_name) as model_type:
+        for field in stages:
+            shutil.copyfile(
+                template_data / ("standalone.jinja2" if field == "first" else "adapted_second.jinja2"),
+                custom_directory / "adapted.jinja2",
+            )
+            generated = JsonSchemaParser(
+                JSON_SCHEMA_DATA_PATH / "custom_template_refresh.json",
+                data_model_type=model_type,
+                data_model_root_type=model_types.root_model,
+                data_model_field_type=model_types.field_model,
+                data_type_manager_type=model_types.data_type_manager,
+                custom_template_dir=custom_root if model_name == "AdaptedModel" else None,
+                formatters=[Formatter.BUILTIN],
+            ).parse()
+            assert_output(generated, EXPECTED_JSON_SCHEMA_PATH / f"custom_template_dependencies/parser_{field}.py")
+            output.write_text(str(generated))
+            assert_generated_model_json_validation(
+                output,
+                module_name=f"generated_parser_extension_{model_name}_{field}",
+                model_name="Example",
+                valid_json=json.dumps({field: "accepted"}),
+                invalid_json=json.dumps({field: 42}),
+                expected_error_type="string_type",
+            )
+
+
+@pytest.mark.parametrize("model_name", ["SplitTemplateModel", "SplitAdaptedModel"])
+def test_custom_template_dependencies_bound_external_directories(tmp_path: Path, model_name: str) -> None:
+    """Fail closed after a public parser extension selects more external directories than retained."""
+    template_data = DATA_PATH / "templates_dependencies"
+    custom_root = tmp_path / "templates"
+    custom_root.mkdir()
+    schema = JSON_SCHEMA_DATA_PATH / "custom_template_dependencies_many.json"
+    names = list(json.loads(schema.read_text())["$defs"])
+    for name in names:
+        directory = tmp_path / "split" / name
+        directory.mkdir(parents=True)
+        shutil.copyfile(template_data / "standalone.jinja2", directory / "BaseModel.jinja2")
+        shutil.copyfile(template_data / "standalone.jinja2", directory / "adapted.jinja2")
+    model_types = get_data_model_types(DataModelType.PydanticV2BaseModel, PythonVersion.PY_310)
+    output = tmp_path / "output.py"
+    for expected in ("parser_split.py", "parser_split.py", "parser_split_changed.py"):
+        if expected == "parser_split_changed.py":
+            shutil.copyfile(
+                template_data / "adapted_second.jinja2", tmp_path / "split" / names[-1] / "BaseModel.jinja2"
+            )
+            shutil.copyfile(template_data / "adapted_second.jinja2", tmp_path / "split" / names[-1] / "adapted.jinja2")
+        with _generated_model(template_data / "plugin.py", "split_template_plugin", model_name) as model_type:
+            generated = JsonSchemaParser(
+                schema,
+                data_model_type=model_type,
+                data_model_root_type=model_types.root_model,
+                data_model_field_type=model_types.field_model,
+                data_type_manager_type=model_types.data_type_manager,
+                custom_template_dir=custom_root,
+                formatters=[Formatter.BUILTIN],
+            ).parse()
+        assert_output(generated, EXPECTED_JSON_SCHEMA_PATH / "custom_template_dependencies" / expected)
+    dependencies = model_base._missing_custom_template_state.dependencies[custom_root]
+    assert_output(
+        json.dumps({"directories": len(dependencies.directories), "incomplete": dependencies.incomplete}) + "\n",
+        EXPECTED_JSON_SCHEMA_PATH / "custom_template_dependencies/directories.txt",
+    )
+    output.write_text(str(generated))
+    assert_generated_model_json_validation(
+        output,
+        module_name="generated_split_templates",
+        model_name="Collection",
+        valid_json='{"first": "accepted"}',
+        invalid_json='{"first": 42}',
+        expected_error_type="string_type",
+        expected_attribute_path=("root", "first"),
+        expected_attribute_value="accepted",
+    )
+
+    assert_generated_model_json_validation(
+        output,
+        module_name="generated_split_templates_changed",
+        model_name="Model129",
+        valid_json='{"second": "accepted"}',
+        invalid_json='{"second": 42}',
+        expected_error_type="string_type",
+    )
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.skipif(os.name == "nt", reason="symlink creation requires privileges")
+def test_custom_template_dependencies_defer_external_signatures(tmp_path: Path, entrypoint: str) -> None:
+    """Capture external metadata only when a warmed loader starts untracked lookups."""
+    custom_root = (tmp_path / "templates").resolve()
+    custom_root.mkdir()
+    custom_directory = tmp_path / "external"
+    custom_directory.mkdir()
+    template_data = DATA_PATH / "templates_dependencies"
+    shutil.copyfile(template_data / "root_deferred_overflow.jinja2", custom_directory / "BaseModel.jinja2")
+    (custom_root / "BaseModel.jinja2").symlink_to(custom_directory / "BaseModel.jinja2")
+    for index in range(1_000):
+        shutil.copyfile(template_data / "standalone.jinja2", custom_directory / f"unrelated-{index}.jinja2")
+    output = tmp_path / "output.py"
+    snapshots = []
+    source = tmp_path / "custom_template_refresh.json"
+    for stage in range(5):
+        if stage == 4:
+            shutil.copyfile(template_data / "overflow_added.jinja2", custom_directory / "unused-129.jinja2")
+        shutil.copyfile(
+            JSON_SCHEMA_DATA_PATH
+            / ("custom_template_refresh.json" if stage < 2 else "custom_template_dependencies_overflow.json"),
+            source,
+        )
+        expected = (
+            "custom_template_dependencies/overflow_added.py" if stage == 4 else "custom_template_refresh/first.py"
+        )
+        if entrypoint == "cli":
+            run_main_and_assert(
+                input_path=source,
+                output_path=output,
+                input_file_type="jsonschema",
+                assert_func=assert_file_content,
+                expected_file=expected,
+                extra_args=["--custom-template-dir", str(custom_root), "--disable-timestamp"],
+            )
+        else:
+            run_generate_file_and_assert(
+                input_path=source,
+                output_path=output,
+                input_file_type=InputFileType.JsonSchema,
+                custom_template_dir=custom_root,
+                disable_timestamp=True,
+                assert_func=assert_file_content,
+                expected_file=expected,
+            )
+        dependencies = model_base._missing_custom_template_state.dependencies[custom_root]
+        snapshots.append({
+            "directories": len(dependencies.directories),
+            "captured": all(signature is not None for signature in dependencies.directories.values()),
+        })
+    assert_output(
+        json.dumps(snapshots, indent=2) + "\n",
+        EXPECTED_JSON_SCHEMA_PATH / "custom_template_dependencies/deferred_directories.txt",
+    )
+    assert_generated_model_json_validation(
+        output,
+        module_name="generated_deferred_external_templates",
+        model_name="Example",
+        valid_json='{"first": "accepted"}',
+        invalid_json='{"first": 42}',
+        expected_error_type="string_type",
+        expected_attribute_path=("discovered",),
+        expected_attribute_value=4,
+    )
+
+
+def test_custom_template_dependencies_bound_generation_roots(tmp_path: Path) -> None:
+    """Evict complete root inventories and reset missing-directory overflow through real API calls."""
+    model_base._clear_custom_template_caches()
+    output = tmp_path / "output.py"
+    snapshots = []
+    try:
+        for index in range(130):
+            run_generate_file_and_assert(
+                input_path=JSON_SCHEMA_DATA_PATH / "custom_template_refresh.json",
+                output_path=output,
+                input_file_type=InputFileType.JsonSchema,
+                custom_template_dir=tmp_path / f"missing-{index}",
+                formatters=[Formatter.BUILTIN],
+                disable_timestamp=True,
+                assert_func=assert_file_content,
+                expected_file="custom_template_refresh/fallback.py",
+            )
+            if index in {128, 129}:
+                state = model_base._missing_custom_template_state
+                snapshots.append({
+                    "roots": len(state.signatures),
+                    "dependencies": len(state.dependencies),
+                    "missing_overflow": state.overflow,
+                })
+        assert_output(
+            json.dumps(snapshots, indent=2) + "\n",
+            EXPECTED_JSON_SCHEMA_PATH / "custom_template_dependencies/roots.txt",
+        )
+        assert_generated_model_json_validation(
+            output,
+            module_name="generated_missing_root_templates",
+            model_name="Example",
+            valid_json='{"name": "accepted"}',
+            invalid_json='{"name": 42}',
+            expected_error_type="string_type",
+        )
+    finally:
+        model_base._clear_custom_template_caches()

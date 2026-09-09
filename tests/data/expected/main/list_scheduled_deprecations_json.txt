@@ -2,7 +2,7 @@
   {
     "id": "format.default-formatters",
     "kind": "behavior",
-    "message": "The default external formatters (black, isort) will become opt-in in a future version.",
+    "message": "Default formatters will change to builtin. Set --formatters or --preset explicitly; see --help.",
     "note": null,
     "removal_version": null,
     "replacement": "Set formatters explicitly, for example black and isort or builtin.",
@@ -118,6 +118,54 @@
     "target": "YAML bool values True, False, TRUE, FALSE",
     "warning_category": "DeprecationWarning",
     "warning_since": "0.48.0"
+  },
+  {
+    "id": "dependency.black-minimum",
+    "kind": "dependency",
+    "message": "Support for Black <24.3.0 will end in a future release.",
+    "note": "This is advance notice only. Current dependency ranges and compatibility remain unchanged.",
+    "removal_version": null,
+    "replacement": "Upgrade Black to >=24.3.0 before the later support change.",
+    "status": "active",
+    "target": "Black <24.3.0",
+    "warning_category": "FutureWarning",
+    "warning_since": "0.78.0"
+  },
+  {
+    "id": "dependency.external-formatters-optional",
+    "kind": "dependency",
+    "message": "Black/isort will become optional. Declare the corresponding extras; see --help.",
+    "note": "This is advance notice only. Current dependency ranges and compatibility remain unchanged.",
+    "removal_version": null,
+    "replacement": "Declare the black/isort extras for the external formatters you select.",
+    "status": "active",
+    "target": "Black/isort installation",
+    "warning_category": "FutureWarning",
+    "warning_since": "0.78.0"
+  },
+  {
+    "id": "dependency.pydantic-runtime-minimum",
+    "kind": "dependency",
+    "message": "Support for DCG runtime Pydantic <2.8.2 will end in a future release.",
+    "note": "This is advance notice only. Current dependency ranges and compatibility remain unchanged.",
+    "removal_version": null,
+    "replacement": "Upgrade DCG runtime Pydantic to >=2.8.2; generated-code targets are unchanged.",
+    "status": "active",
+    "target": "DCG runtime Pydantic <2.8.2",
+    "warning_category": "FutureWarning",
+    "warning_since": "0.78.0"
+  },
+  {
+    "id": "dependency.isort-minimum",
+    "kind": "dependency",
+    "message": "Support for isort <6 will end in a future release.",
+    "note": "This is advance notice only. Current dependency ranges and compatibility remain unchanged.",
+    "removal_version": null,
+    "replacement": "Upgrade isort to >=6,<9 before the later support change.",
+    "status": "active",
+    "target": "isort <6",
+    "warning_category": "FutureWarning",
+    "warning_since": "0.78.0"
   },
   {
     "id": "python-api.python-version-has-type-alias",
