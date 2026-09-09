@@ -11,7 +11,12 @@ from typing import TYPE_CHECKING, Literal, TypeAlias
 from pydantic import ConfigDict, PrivateAttr
 from typing_extensions import TypedDict
 
-from datamodel_code_generator._format_types import DateClassType, DatetimeClassType, PythonVersion
+from datamodel_code_generator._format_types import (
+    DateClassType,
+    DatetimeClassType,
+    Formatter,
+    PythonVersion,
+)
 from datamodel_code_generator._registry_render import _render_registry_json
 from datamodel_code_generator._shared_types import LiteralType
 from datamodel_code_generator.base_config import BaseGenerateConfig
@@ -56,6 +61,7 @@ PresetEnumConfigValue: TypeAlias = (
     | DatetimeClassType
     | ExtraFields
     | DefaultValueType
+    | Formatter
 )
 PresetEnumSequenceConfigValue: TypeAlias = tuple[PresetEnumConfigValue, ...]
 PresetConfigValue: TypeAlias = bool | PresetEnumConfigValue | PresetEnumSequenceConfigValue
@@ -117,6 +123,17 @@ class PresetName(str, Enum):
     PracticalPy31220260826 = "practical-py312-20260826"
     PracticalPy31320260826 = "practical-py313-20260826"
     PracticalPy31420260826 = "practical-py314-20260826"
+
+    StandardPy31020260909 = "standard-py310-20260909"
+    StandardPy31120260909 = "standard-py311-20260909"
+    StandardPy31220260909 = "standard-py312-20260909"
+    StandardPy31320260909 = "standard-py313-20260909"
+    StandardPy31420260909 = "standard-py314-20260909"
+    PracticalPy31020260909 = "practical-py310-20260909"
+    PracticalPy31120260909 = "practical-py311-20260909"
+    PracticalPy31220260909 = "practical-py312-20260909"
+    PracticalPy31320260909 = "practical-py313-20260909"
+    PracticalPy31420260909 = "practical-py314-20260909"
 
 
 @dataclass(frozen=True, slots=True)
@@ -292,6 +309,7 @@ def _ensure_preset_enum_config_value(
             | DateClassType()
             | DatetimeClassType()
             | DefaultValueType()
+            | Formatter()
         ):
             return value
     msg = f"Preset field {field_name!r} cannot be rendered as a preset CLI option"  # pragma: no cover
@@ -483,8 +501,36 @@ _PRACTICAL_20260826_PRESET_NAMES_BY_TARGET: dict[PythonVersion, PresetName] = {
     PythonVersion.PY_314: PresetName.PracticalPy31420260826,
 }
 
-_STANDARD_PRESET_NAMES_BY_TARGET = _STANDARD_20260826_PRESET_NAMES_BY_TARGET
-_PRACTICAL_PRESET_NAMES_BY_TARGET = _PRACTICAL_20260826_PRESET_NAMES_BY_TARGET
+_STANDARD_20260909_OPTION_GROUPS: tuple[PresetOptionGroup, ...] = (
+    *_STANDARD_20260826_OPTION_GROUPS,
+    PresetOptionGroup(
+        title="Built-in formatting",
+        config=PresetConfig(formatters=[Formatter.BUILTIN]),
+        description=(
+            "Format generated models without running an external formatter. "
+            "For projects using Ruff, override with --formatters ruff-check ruff-format. "
+            "To preserve Black/isort formatting, override with --formatters black isort."
+        ),
+    ),
+)
+
+_STANDARD_20260909_PRESET_NAMES_BY_TARGET: dict[PythonVersion, PresetName] = {
+    PythonVersion.PY_310: PresetName.StandardPy31020260909,
+    PythonVersion.PY_311: PresetName.StandardPy31120260909,
+    PythonVersion.PY_312: PresetName.StandardPy31220260909,
+    PythonVersion.PY_313: PresetName.StandardPy31320260909,
+    PythonVersion.PY_314: PresetName.StandardPy31420260909,
+}
+_PRACTICAL_20260909_PRESET_NAMES_BY_TARGET: dict[PythonVersion, PresetName] = {
+    PythonVersion.PY_310: PresetName.PracticalPy31020260909,
+    PythonVersion.PY_311: PresetName.PracticalPy31120260909,
+    PythonVersion.PY_312: PresetName.PracticalPy31220260909,
+    PythonVersion.PY_313: PresetName.PracticalPy31320260909,
+    PythonVersion.PY_314: PresetName.PracticalPy31420260909,
+}
+
+_STANDARD_PRESET_NAMES_BY_TARGET = _STANDARD_20260909_PRESET_NAMES_BY_TARGET
+_PRACTICAL_PRESET_NAMES_BY_TARGET = _PRACTICAL_20260909_PRESET_NAMES_BY_TARGET
 
 
 def _standard_option_groups_for_target(
@@ -582,6 +628,12 @@ _PRESET_INFOS: tuple[PresetInfo, ...] = (
         standard_names_by_target=_STANDARD_20260826_PRESET_NAMES_BY_TARGET,
         practical_names_by_target=_PRACTICAL_20260826_PRESET_NAMES_BY_TARGET,
         standard_option_groups=_STANDARD_20260826_OPTION_GROUPS,
+        practical_extra_option_groups=_PRACTICAL_20260619_EXTRA_OPTION_GROUPS,
+    ),
+    *_build_preset_family_infos(
+        standard_names_by_target=_STANDARD_20260909_PRESET_NAMES_BY_TARGET,
+        practical_names_by_target=_PRACTICAL_20260909_PRESET_NAMES_BY_TARGET,
+        standard_option_groups=_STANDARD_20260909_OPTION_GROUPS,
         practical_extra_option_groups=_PRACTICAL_20260619_EXTRA_OPTION_GROUPS,
     ),
 )
@@ -709,14 +761,21 @@ def render_presets_markdown() -> str:
         "  --input schema.json \\",
         "  --input-file-type jsonschema \\",
         "  --output-model-type pydantic_v2.BaseModel \\",
-        "  --preset standard-py312-20260826 \\",
+        "  --preset standard-py312-20260909 \\",
         "  --output model.py",
         "```",
         "",
         (
-            "Use `standard-py312-20260826` for the project-recommended modern Python 3.12 baseline. "
-            "Use `practical-py312-20260826` when you also want schema-authored names, model reuse, and schema "
+            "Use `standard-py312-20260909` for the project-recommended modern Python 3.12 baseline. "
+            "Use `practical-py312-20260909` when you also want schema-authored names, model reuse, and schema "
             "descriptions embedded in the generated code."
+        ),
+        "",
+        (
+            "The 20260909 presets select builtin to avoid running external formatters. "
+            "For project-wide Ruff consistency, use the preset with `--formatters ruff-check ruff-format`. "
+            "Keep `--formatters black isort` to preserve existing Black/isort output. "
+            "Earlier dated presets are unchanged. Black and isort remain required installation dependencies."
         ),
         "",
         "## Override Preset Options",
@@ -726,7 +785,7 @@ def render_presets_markdown() -> str:
         "```bash",
         "datamodel-codegen \\",
         "  --input schema.json \\",
-        "  --preset standard-py312-20260826 \\",
+        "  --preset standard-py312-20260909 \\",
         "  --no-snake-case-field \\",
         "  --no-use-annotated \\",
         "  --enum-field-as-literal none",
@@ -747,7 +806,7 @@ def render_presets_markdown() -> str:
         "```bash",
         "datamodel-codegen \\",
         "  --input schema.json \\",
-        "  --preset standard-py312-20260826 \\",
+        "  --preset standard-py312-20260909 \\",
         "  --extra-fields forbid \\",
         "  --use-title-as-name \\",
         "  --output model.py",
@@ -763,12 +822,12 @@ def render_presets_markdown() -> str:
         '```toml title="pyproject.toml"',
         "[tool.datamodel-codegen]",
         'output-model-type = "pydantic_v2.BaseModel"',
-        'preset = "standard-py312-20260826"',
+        'preset = "standard-py312-20260909"',
         "",
         "[tool.datamodel-codegen.profiles.api]",
         'input = "schemas/api.json"',
         'output = "src/models/api.py"',
-        'preset = "practical-py312-20260826"',
+        'preset = "practical-py312-20260909"',
         'extra-fields = "forbid"',
         "",
         "[tool.datamodel-codegen.profiles.events]",
@@ -797,7 +856,7 @@ def render_presets_markdown() -> str:
         "  --input schema.json \\",
         "  --output model.py \\",
         "  --output-model-type pydantic_v2.BaseModel \\",
-        "  --preset practical-py312-20260826 \\",
+        "  --preset practical-py312-20260909 \\",
         "  --extra-fields forbid \\",
         "  --generate-pyproject-config",
         "```",

@@ -1243,6 +1243,7 @@ base_options.add_argument(
     "(install with pip install 'datamodel-code-generator[ruff]'). "
     "Use --formatters builtin when no external formatter is used or generation speed takes priority. "
     "Keep --formatters black isort to preserve existing formatting. "
+    "New 20260909 presets include builtin; explicit formatters override presets. "
     "The future builtin default reduces installation dependencies and version constraints. "
     "Review custom-template output with builtin. "
     "Details: https://datamodel-code-generator.koxudaxi.dev/formatter-behavior/",
