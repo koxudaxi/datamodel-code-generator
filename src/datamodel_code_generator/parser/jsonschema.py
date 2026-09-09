@@ -8012,19 +8012,19 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             config.alias_generator,
         )):
             return False
-        from datamodel_code_generator.model import pydantic_v2  # noqa: PLC0415
-        from datamodel_code_generator.model.pydantic_v2.types import DataTypeManager  # noqa: PLC0415
-
+        if (get_types := self.data_model_type.PLAIN_PATTERN_ROOT_TYPES) is None:
+            return False
+        model_type, root_type, field_type, manager_type = get_types()
         if (
-            self.data_model_type is not pydantic_v2.BaseModel
-            or self.data_model_root_type is not pydantic_v2.RootModel
-            or self.data_model_field_type is not pydantic_v2.DataModelField
-            or type(self.data_type_manager) is not DataTypeManager
+            self.data_model_type is not model_type
+            or self.data_model_root_type is not root_type
+            or self.data_model_field_type is not field_type
+            or type(self.data_type_manager) is not manager_type
         ):
             return False
         return all(
-            type(model := data_type.reference.source) is pydantic_v2.BaseModel
-            and all(type(field) is pydantic_v2.DataModelField for field in model.fields)
+            type(model := data_type.reference.source) is model_type
+            and all(type(field) is field_type for field in model.fields)
             for _, data_type in patterns
             if data_type.reference is not None
         )

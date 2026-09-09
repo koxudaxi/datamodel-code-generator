@@ -1880,6 +1880,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     ROOT_MODEL_CONSTRAINTS_FALLBACK: ClassVar[
         Callable[[Path | None], Callable[[list[DataModelFieldBase]], type[DataModel] | None] | None] | None
     ] = None
+    PLAIN_PATTERN_ROOT_TYPES: ClassVar[Callable[[], tuple[type, type, type, type]] | None] = None
     SCHEMA_RUNTIME_VALIDATION_ROOT_MODEL: ClassVar[Callable[[], type[DataModel]] | None] = None
     DOCSTRING_INDENT: ClassVar[int] = 4
     FIELD_DOCSTRING_INDENT: ClassVar[int] = 4

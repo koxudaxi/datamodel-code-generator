@@ -24,6 +24,12 @@ class CustomModel(pydantic_v2.BaseModel):
     """Application model type retaining the standard template."""
 
 
+class CustomUnprovenModel(CustomModel):
+    """Application model explicitly disabling the root annotation capability."""
+
+    PLAIN_PATTERN_ROOT_TYPES = None
+
+
 class CustomRoot(pydantic_v2.RootModel):
     """Application root model type retaining the standard template."""
 

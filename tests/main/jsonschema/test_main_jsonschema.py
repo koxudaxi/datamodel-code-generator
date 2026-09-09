@@ -24174,7 +24174,9 @@ def test_unknown_pattern_root_annotations(
     )
 
 
-@pytest.mark.parametrize("custom", ["parser", "parser_other", "schema", "model", "root", "field", "manager"])
+@pytest.mark.parametrize(
+    "custom", ["parser", "parser_other", "schema", "model", "unproven_model", "root", "field", "manager"]
+)
 def test_custom_pattern_annotation_context(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, custom: str) -> None:
     """Keep existing custom extension code, raw metadata and accepted dumps intact."""
     from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
@@ -24185,10 +24187,12 @@ def test_custom_pattern_annotation_context(tmp_path: Path, monkeypatch: pytest.M
         CustomModel,
         CustomRoot,
         CustomSchema,
+        CustomUnprovenModel,
     )
 
     options = {
         "model": {"data_model_type": CustomModel},
+        "unproven_model": {"data_model_type": CustomUnprovenModel},
         "root": {"data_model_root_type": CustomRoot},
         "field": {"data_model_field_type": CustomField},
         "manager": {"data_type_manager_type": CustomManager},
@@ -24200,7 +24204,8 @@ def test_custom_pattern_annotation_context(tmp_path: Path, monkeypatch: pytest.M
     parser = parser_type(source, generate_schema_validators=True, formatters=[Formatter.BUILTIN], **options)
     output = tmp_path / "output.py"
     output.write_text(parser.parse())
-    assert_output(output.read_text(), UNKNOWN_PATTERN_EXPECTED / f"custom_{custom}.py")
+    expected_case = "model" if custom == "unproven_model" else custom
+    assert_output(output.read_text(), UNKNOWN_PATTERN_EXPECTED / f"custom_{expected_case}.py")
     contexts = [value["extensions"] for value in parser.extra_template_data.values() if "extensions" in value]
     records = []
     schema = json.loads(source.read_text())
@@ -24216,5 +24221,5 @@ def test_custom_pattern_annotation_context(tmp_path: Path, monkeypatch: pytest.M
             records.append(record)
     assert_output(
         json.dumps({"contexts": contexts, "values": records}, indent=2),
-        UNKNOWN_PATTERN_EXPECTED / f"custom_{custom}_runtime.txt",
+        UNKNOWN_PATTERN_EXPECTED / f"custom_{expected_case}_runtime.txt",
     )

@@ -160,6 +160,14 @@ def _supports_pydantic_typed_extra_dict_key(data_type: DataType) -> bool:  # noq
     return False
 
 
+def _get_plain_pattern_root_types() -> tuple[type, type, type, type]:
+    """Identify the uncustomized model types eligible for inert root annotations."""
+    from .root_model import RootModel  # noqa: PLC0415
+    from .types import DataTypeManager  # noqa: PLC0415
+
+    return BaseModel, RootModel, DataModelField, DataTypeManager
+
+
 def _get_schema_runtime_validation_root_model() -> type[DataModel]:
     """Return the executable root model owned by the Pydantic v2 output."""
     from datamodel_code_generator.model.pydantic_v2.root_model import RootModel  # noqa: PLC0415
@@ -972,6 +980,7 @@ class BaseModel(BaseModelBase):
     SUPPORTS_FIELD_RENAMING: ClassVar[bool] = True
     SUPPORTS_ANNOTATED_CONSTRAINTS: ClassVar[bool] = True
     SUPPORTS_SCHEMA_RUNTIME_VALIDATION: ClassVar[bool] = True
+    PLAIN_PATTERN_ROOT_TYPES = staticmethod(_get_plain_pattern_root_types)
     SCHEMA_RUNTIME_VALIDATION_ROOT_MODEL = staticmethod(_get_schema_runtime_validation_root_model)
     ANNOTATED_CONSTRAINTS_CONTEXT: ClassVar[object | None] = _ANNOTATED_CONSTRAINTS_CONTEXT
     SUPPORTS_CONFIG_EXTRA: ClassVar[bool] = True
