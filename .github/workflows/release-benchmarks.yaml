@@ -337,7 +337,7 @@ jobs:
             gh pr list \
               --repo "$TARGET_REPO" \
               --base main \
-              --head "${target_owner}:${sync_branch}" \
+              --head "$sync_branch" \
               --state open \
               --json number \
               --jq '.[0].number // empty'

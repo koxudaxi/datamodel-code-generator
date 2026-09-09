@@ -7,5 +7,6 @@ trusted checkout: True
 pending diff guard: True
 pending data extraction: True
 current sha guard: True
+existing PR lookup uses branch name: True
 existing PR body preserved: True
 new PR body empty: True

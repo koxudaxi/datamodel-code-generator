@@ -169,6 +169,8 @@ def test_release_benchmark_workflow_keeps_one_safe_sync_branch() -> None:
     push_coalescing = "cancel-in-progress: ${{ github.event_name == 'push' }}"
     independent_runs = "github.run_id"
     data_writer = "group: release-benchmark-data"
+    existing_pr = workflow[workflow.index("gh pr list") : workflow.index('if [ -n "$existing_pr" ]; then')]
+    branch_only_lookup = '--head "$sync_branch"' in existing_pr
     new_pr = workflow[workflow.index("gh pr create") :]
     new_pr_body_empty = '--body ""' in new_pr
     output = "\n".join((
@@ -181,6 +183,7 @@ def test_release_benchmark_workflow_keeps_one_safe_sync_branch() -> None:
         f"pending diff guard: {pending_diff in workflow}",
         f"pending data extraction: {pending_data in workflow}",
         f"current sha guard: {current_sha in workflow}",
+        f"existing PR lookup uses branch name: {branch_only_lookup}",
         f"existing PR body preserved: {'gh pr edit' not in workflow}",
         f"new PR body empty: {new_pr_body_empty}",
         "",
