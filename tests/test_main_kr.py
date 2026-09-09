@@ -4036,8 +4036,12 @@ def test_encoding_option(output_file: Path) -> None:
 
 The `--formatters` flag specifies which code formatters to apply to
 the generated Python code. Available formatters are: builtin, black,
-isort, ruff-check, ruff-format. Default is [black, isort].
-Use this to customize formatting or disable formatters entirely.""",
+isort, ruff-check, ruff-format. The current default is [black, isort].
+For projects using Ruff, select --formatters ruff-check ruff-format to match project lint and formatting settings.
+Use --formatters builtin when you use no external formatter or prioritize generation speed.
+Keep --formatters black isort to preserve existing formatting. Explicit formatters override presets.
+The future builtin default reduces installation dependencies and version constraints; Black/isort remain required today.
+See the formatter guides for installation and custom-template limitations.""",
     input_schema="jsonschema/pet_simple.json",
     cli_args=["--formatters", "isort"],
     golden_output="main_kr/formatters/output.py",

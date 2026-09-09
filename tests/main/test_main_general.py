@@ -5912,3 +5912,54 @@ def test_config_models_allow_internal_model_extra_options() -> None:
 def test_all_exports_includes_generate_config() -> None:
     """Test that __all__ includes GenerateConfig."""
     assert "GenerateConfig" in datamodel_code_generator.__all__
+
+
+@pytest.mark.parametrize("mode", ["implicit", "explicit", "old-preset", "disabled"])
+@pytest.mark.parametrize("api", [False, True])
+def test_formatter_policy_warning(mode: str, api: bool, output_file: Path) -> None:
+    """Generation keeps its defaults and emits only the agreed short warning."""
+    preset = {"old-preset": "standard-py310-20260826"}.get(mode)
+    with warnings.catch_warnings(record=True) as recorded:
+        warnings.simplefilter("always", FutureWarning)
+        if api:
+            generate(
+                JSON_SCHEMA_DATA_PATH / "person.json",
+                input_file_type=InputFileType.JsonSchema,
+                output=output_file,
+                preset=preset,
+                disable_timestamp=True,
+                **(
+                    {"formatters": [Formatter.BLACK, Formatter.ISORT]}
+                    if mode == "explicit"
+                    else {"formatters": []}
+                    if mode == "disabled"
+                    else {}
+                ),
+            )
+        else:
+            run_main_with_args(
+                [
+                    "--input",
+                    str(JSON_SCHEMA_DATA_PATH / "person.json"),
+                    "--input-file-type",
+                    "jsonschema",
+                    "--output",
+                    str(output_file),
+                    "--disable-timestamp",
+                    *(["--preset", preset] if preset else []),
+                    *(["--formatters", "black", "isort"] if mode == "explicit" else []),
+                    *(["--disable-warnings"] if mode == "disabled" else []),
+                ],
+                use_builtin_default_formatter=False,
+            )
+    formatter_warnings = "\n".join(str(item.message) for item in recorded if "Default formatters" in str(item.message))
+    assert_output(
+        formatter_warnings,
+        EXPECTED_MAIN_PATH
+        / "formatter_policy"
+        / ("warning.txt" if mode in {"implicit", "old-preset"} else "no_warning.txt"),
+    )
+    assert_output(
+        output_file.read_text(encoding="utf-8"),
+        EXPECTED_MAIN_PATH / "formatter_policy" / f"{mode}-{'api' if api else 'cli'}.py",
+    )

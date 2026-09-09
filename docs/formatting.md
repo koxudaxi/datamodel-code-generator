@@ -14,13 +14,12 @@ configuration precedence, see [Formatter Behavior](formatter-behavior.md).
 ## 🎯 Default Behavior
 
 !!! warning "Future Change"
-    In a future version, the default formatter will change to `builtin`, and the external formatter dependencies
-    (`black` and `isort`) will become opt-in. To prepare for dependency-free formatting, try the built-in formatter
-    with `--formatters builtin`.
+    In a future version, builtin will become the default to reduce required installation dependencies and
+    version constraints. Black/isort remain the default and required dependencies today.
 
-    **CLI users**: To suppress this warning, use `--disable-warnings` or explicitly specify `--formatters black isort`.
+    **CLI users**: Select `--formatters` to suppress the default-change warning, or use `--disable-warnings`.
 
-    **Library users**: Explicitly pass `formatters=[Formatter.BLACK, Formatter.ISORT]` to suppress this warning.
+    **Library users**: Explicitly pass `formatters`. Older presets retain the default-change warning.
 
 ```bash
 datamodel-codegen \
@@ -44,14 +43,21 @@ This runs the following formatters in order:
 | `ruff-check` | Linting with auto-fix |
 | `ruff-format` | Fast code formatting (black alternative) |
 
-### ⚡ Speed up generation
+### Choose a formatter
 
-The default formatter list is currently `black` and `isort`. For standard generated model modules,
-`--formatters builtin` is the recommended dependency-free choice. In a future version, the Black/isort dependencies
-will become opt-in and the default formatter will change to `builtin`.
+Choose a formatter to match your project and generation priorities:
 
-If you prefer Ruff, install it with `pip install 'datamodel-code-generator[ruff]'` and use
-`--formatters ruff-check ruff-format` for a fast external formatter.
+- **Projects using Ruff:** use `--formatters ruff-check ruff-format` to keep generated code consistent with the
+  project's formatting and lint policy. Install it with `pip install 'datamodel-code-generator[ruff]'`.
+- **No Ruff, Black, or isort, or generation speed is the priority:** use `--formatters builtin` to avoid running
+  external formatters on standard generated model modules.
+- **Projects using Black/isort:** keep `--formatters black isort` to preserve the project's formatting and existing
+  generated output.
+
+The current default remains Black/isort, which are still required dependencies. Omitting formatter options continues
+normal generation. The future builtin default is intended to reduce required installation dependencies and version
+constraints; Ruff will still be recommended for projects that use Ruff. Formatters are never selected automatically
+based on installed packages or Ruff configuration.
 
 Custom templates can emit Python outside the standard generated model patterns covered by `builtin`, so
 custom-template output is not exhaustively validated. If `--formatters builtin` produces invalid or poorly formatted

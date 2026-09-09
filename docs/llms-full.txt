@@ -394,14 +394,23 @@ class Pet(BaseModel):
 
 🎉 That's it! Your schema is now a fully-typed Python model.
 
-### ⚡ Speed up generation
+### Choose a formatter
 
-By default, generated Python is currently formatted with `black` and `isort`. For faster generation without external
-formatter dependencies, add `--formatters builtin` for standard generated model modules. In a future version, the
-Black/isort dependencies will become opt-in and the default formatter will change to `builtin`.
+Choose a formatter to match your project and generation priorities:
 
-If you prefer Ruff, install it with `pip install 'datamodel-code-generator[ruff]'` and use
-`--formatters ruff-check ruff-format` for a fast external formatter.
+- **Projects using Ruff:** use `--formatters ruff-check ruff-format` to keep generated code consistent with the
+  project's formatting and lint policy. Install it with `pip install 'datamodel-code-generator[ruff]'`.
+- **No Ruff, Black, or isort, or generation speed is the priority:** use `--formatters builtin` to avoid running
+  external formatters on standard generated model modules.
+- **Projects using Black/isort:** keep `--formatters black isort` to preserve the project's formatting and existing
+  generated output.
+
+The current default remains Black/isort, which are still required dependencies. Omitting formatter options continues
+normal generation. The future builtin default is intended to reduce required installation dependencies and version
+constraints; Ruff will still be recommended for projects that use Ruff. Formatters are never selected automatically
+based on installed packages or Ruff configuration.
+Selecting only a formatter preserves your other generation settings; a preset also supplies model-generation options.
+Explicit formatter selection does not pin formatter versions or guarantee byte-for-byte output stability.
 
 Custom templates can emit Python outside the standard generated model patterns covered by `builtin`, so
 custom-template output is not exhaustively validated. If `--formatters builtin` produces invalid or poorly formatted
@@ -7990,13 +7999,12 @@ configuration precedence, see [Formatter Behavior](formatter-behavior.md).
 ## 🎯 Default Behavior
 
 !!! warning "Future Change"
-    In a future version, the default formatter will change to `builtin`, and the external formatter dependencies
-    (`black` and `isort`) will become opt-in. To prepare for dependency-free formatting, try the built-in formatter
-    with `--formatters builtin`.
+    In a future version, builtin will become the default to reduce required installation dependencies and
+    version constraints. Black/isort remain the default and required dependencies today.
 
-    **CLI users**: To suppress this warning, use `--disable-warnings` or explicitly specify `--formatters black isort`.
+    **CLI users**: Select `--formatters` to suppress the default-change warning, or use `--disable-warnings`.
 
-    **Library users**: Explicitly pass `formatters=[Formatter.BLACK, Formatter.ISORT]` to suppress this warning.
+    **Library users**: Explicitly pass `formatters`. Older presets retain the default-change warning.
 
 ```bash
 datamodel-codegen \
@@ -8020,14 +8028,21 @@ This runs the following formatters in order:
 | `ruff-check` | Linting with auto-fix |
 | `ruff-format` | Fast code formatting (black alternative) |
 
-### ⚡ Speed up generation
+### Choose a formatter
 
-The default formatter list is currently `black` and `isort`. For standard generated model modules,
-`--formatters builtin` is the recommended dependency-free choice. In a future version, the Black/isort dependencies
-will become opt-in and the default formatter will change to `builtin`.
+Choose a formatter to match your project and generation priorities:
 
-If you prefer Ruff, install it with `pip install 'datamodel-code-generator[ruff]'` and use
-`--formatters ruff-check ruff-format` for a fast external formatter.
+- **Projects using Ruff:** use `--formatters ruff-check ruff-format` to keep generated code consistent with the
+  project's formatting and lint policy. Install it with `pip install 'datamodel-code-generator[ruff]'`.
+- **No Ruff, Black, or isort, or generation speed is the priority:** use `--formatters builtin` to avoid running
+  external formatters on standard generated model modules.
+- **Projects using Black/isort:** keep `--formatters black isort` to preserve the project's formatting and existing
+  generated output.
+
+The current default remains Black/isort, which are still required dependencies. Omitting formatter options continues
+normal generation. The future builtin default is intended to reduce required installation dependencies and version
+constraints; Ruff will still be recommended for projects that use Ruff. Formatters are never selected automatically
+based on installed packages or Ruff configuration.
 
 Custom templates can emit Python outside the standard generated model patterns covered by `builtin`, so
 custom-template output is not exhaustively validated. If `--formatters builtin` produces invalid or poorly formatted
@@ -8203,14 +8218,21 @@ selected.
 The built-in formatter is an alternative to external formatting, not a pre-formatter.
 If `builtin` is passed together with `black`, `isort`, `ruff-check`, or `ruff-format`, `builtin` is ignored.
 
-### ⚡ Speed up generation
+### Choose a formatter
 
-The default formatter list is currently `black` and `isort`. For faster generation with no extra formatter dependency,
-prefer `--formatters builtin` for standard generated model modules. In a future version, the default formatter will
-change to `builtin` and the Black/isort dependencies will become opt-in.
+Choose a formatter to match your project and generation priorities:
 
-If you prefer Ruff, install it with `pip install 'datamodel-code-generator[ruff]'` and use
-`--formatters ruff-check ruff-format` for a fast external formatter.
+- **Projects using Ruff:** use `--formatters ruff-check ruff-format` to keep generated code consistent with the
+  project's formatting and lint policy. Install it with `pip install 'datamodel-code-generator[ruff]'`.
+- **No Ruff, Black, or isort, or generation speed is the priority:** use `--formatters builtin` to avoid running
+  external formatters on standard generated model modules.
+- **Projects using Black/isort:** keep `--formatters black isort` to preserve the project's formatting and existing
+  generated output.
+
+The current default remains Black/isort, which are still required dependencies. Omitting formatter options continues
+normal generation. The future builtin default is intended to reduce required installation dependencies and version
+constraints; Ruff will still be recommended for projects that use Ruff. Formatters are never selected automatically
+based on installed packages or Ruff configuration.
 
 Custom templates can emit Python outside the standard generated model patterns covered by `builtin`, so
 custom-template output is not exhaustively validated. If `--formatters builtin` produces invalid or poorly formatted
@@ -31205,8 +31227,12 @@ Specify code formatters to apply to generated output.
 
 The `--formatters` flag specifies which code formatters to apply to
 the generated Python code. Available formatters are: builtin, black,
-isort, ruff-check, ruff-format. Default is [black, isort].
-Use this to customize formatting or disable formatters entirely.
+isort, ruff-check, ruff-format. The current default is [black, isort].
+For projects using Ruff, select --formatters ruff-check ruff-format to match project lint and formatting settings.
+Use --formatters builtin when you use no external formatter or prioritize generation speed.
+Keep --formatters black isort to preserve existing formatting. Explicit formatters override presets.
+The future builtin default reduces installation dependencies and version constraints; Black/isort remain required today.
+See the formatter guides for installation and custom-template limitations.
 
 **See also:** [CI/CD Integration](../ci-cd.md), [Formatter behavior](../formatter-behavior.md), [Code Formatting](../formatting.md)
 
@@ -40282,7 +40308,7 @@ This page lists deprecations and scheduled breaking changes.
 - **Warning category:** `FutureWarning`
 - **Replacement:** Set formatters explicitly, for example black and isort or builtin.
 
-The default external formatters (black, isort) will become opt-in in a future version.
+Default formatters will change to builtin. Set --formatters or --preset explicitly; see --help.
 
 ### `behavior.pydantic-v2-use-annotated-default`
 

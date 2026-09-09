@@ -32,7 +32,7 @@ This page lists deprecations and scheduled breaking changes.
 - **Warning category:** `FutureWarning`
 - **Replacement:** Set formatters explicitly, for example black and isort or builtin.
 
-The default external formatters (black, isort) will become opt-in in a future version.
+Default formatters will change to builtin. Set --formatters or --preset explicitly; see --help.
 
 ### `behavior.pydantic-v2-use-annotated-default`
 

@@ -2852,9 +2852,7 @@ def test_generate_with_ruff_batch_formatting_and_explicit_type_checking_imports(
 def test_code_formatter_warns_when_formatters_is_none(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Test that FutureWarning is emitted when formatters is None (default)."""
     monkeypatch.chdir(tmp_path)
-    with pytest.warns(FutureWarning, match="external formatters"):
-        CodeFormatter(PythonVersionMin)
-    with pytest.warns(FutureWarning, match="dependency-free formatting"):
+    with pytest.warns(FutureWarning, match="^Default formatters will change to builtin"):
         CodeFormatter(PythonVersionMin)
 
 
