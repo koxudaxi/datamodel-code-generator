@@ -23806,6 +23806,30 @@ def test_pattern_property_intersections(
         }
         else suffix
     )
+    if (
+        formatter == "external"
+        and int(black.__version__.split(".")[0]) < 24
+        and golden_suffix
+        in {
+            "constrained_objects_disabled",
+            "undeclared_required_object_disabled",
+            "overlap_disabled",
+            "complex_disabled",
+            "incompatible_objects_disabled",
+            "third_rejected_pattern_disabled",
+            "annotated_objects_disabled",
+            "unreachable_nested_disabled",
+            "disjoint_disabled",
+            "equivalent_objects_disabled",
+            "different_literals_disabled",
+            "custom_base_disabled",
+            "closed_objects_disabled",
+            "opaque_root_disabled",
+        }
+    ):
+        golden_suffix += "_black23"
+    if formatter == "external" and black.__version__.startswith("23.") and golden_suffix == "single_custom_disabled":
+        golden_suffix += "_black23"
     assert_output(output.read_text(), PATTERN_INTERSECTION_EXPECTED / f"{golden_suffix}.py")
     schema = json.loads(source.read_text())
     Draft202012Validator.check_schema(schema)
