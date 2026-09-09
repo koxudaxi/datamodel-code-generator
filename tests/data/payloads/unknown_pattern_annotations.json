@@ -30,6 +30,12 @@
       "True_False_external": "code_01.py",
       "True_True_builtin": "code_01.py",
       "True_True_external": "code_01.py"
+    },
+    "legacy_code_names": {
+      "False_False_external_22": "code_00_black23.py",
+      "False_False_external_23": "code_00_black23.py",
+      "False_True_external_22": "code_00_black23.py",
+      "False_True_external_23": "code_00_black23.py"
     }
   },
   "other_annotation": {
@@ -63,6 +69,12 @@
       "True_False_external": "code_03.py",
       "True_True_builtin": "code_03.py",
       "True_True_external": "code_03.py"
+    },
+    "legacy_code_names": {
+      "False_False_external_22": "code_02_black23.py",
+      "False_False_external_23": "code_02_black23.py",
+      "False_True_external_22": "code_02_black23.py",
+      "False_True_external_23": "code_02_black23.py"
     }
   },
   "unknown_keyword": {
@@ -96,6 +108,12 @@
       "True_False_external": "code_05.py",
       "True_True_builtin": "code_05.py",
       "True_True_external": "code_05.py"
+    },
+    "legacy_code_names": {
+      "False_False_external_22": "code_04_black23.py",
+      "False_False_external_23": "code_04_black23.py",
+      "False_True_external_22": "code_04_black23.py",
+      "False_True_external_23": "code_04_black23.py"
     }
   },
   "python_type": {
@@ -129,6 +147,12 @@
       "True_False_external": "code_07.py",
       "True_True_builtin": "code_07.py",
       "True_True_external": "code_07.py"
+    },
+    "legacy_code_names": {
+      "False_False_external_22": "code_06_black23.py",
+      "False_False_external_23": "code_06_black23.py",
+      "False_True_external_22": "code_06_black23.py",
+      "False_True_external_23": "code_06_black23.py"
     }
   },
   "classvar": {
@@ -162,6 +186,12 @@
       "True_False_external": "code_09.py",
       "True_True_builtin": "code_09.py",
       "True_True_external": "code_09.py"
+    },
+    "legacy_code_names": {
+      "False_False_external_22": "code_08_black23.py",
+      "False_False_external_23": "code_08_black23.py",
+      "False_True_external_22": "code_08_black23.py",
+      "False_True_external_23": "code_08_black23.py"
     }
   },
   "base_class_extension": {
@@ -195,6 +225,12 @@
       "True_False_external": "code_11.py",
       "True_True_builtin": "code_11.py",
       "True_True_external": "code_11.py"
+    },
+    "legacy_code_names": {
+      "False_False_external_22": "code_10_black23.py",
+      "False_False_external_23": "code_10_black23.py",
+      "False_True_external_22": "code_10_black23.py",
+      "False_True_external_23": "code_10_black23.py"
     }
   },
   "model_extras": {
@@ -232,6 +268,12 @@
       "True_False_external": "code_12.py",
       "True_True_builtin": "code_12.py",
       "True_True_external": "code_12.py"
+    },
+    "legacy_code_names": {
+      "False_False_external_22": "code_00_black23.py",
+      "False_False_external_23": "code_00_black23.py",
+      "False_True_external_22": "code_00_black23.py",
+      "False_True_external_23": "code_00_black23.py"
     }
   },
   "model_extras_stripped": {
@@ -269,6 +311,12 @@
       "True_False_external": "code_13.py",
       "True_True_builtin": "code_13.py",
       "True_True_external": "code_13.py"
+    },
+    "legacy_code_names": {
+      "False_False_external_22": "code_00_black23.py",
+      "False_False_external_23": "code_00_black23.py",
+      "False_True_external_22": "code_00_black23.py",
+      "False_True_external_23": "code_00_black23.py"
     }
   },
   "custom_base": {
@@ -304,6 +352,12 @@
       "True_False_external": "code_17.py",
       "True_True_builtin": "code_16.py",
       "True_True_external": "code_17.py"
+    },
+    "legacy_code_names": {
+      "False_False_external_22": "code_15_black23.py",
+      "False_False_external_23": "code_15_black23.py",
+      "False_True_external_22": "code_15_black23.py",
+      "False_True_external_23": "code_15_black23.py"
     }
   },
   "declared": {

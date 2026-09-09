@@ -24147,7 +24147,10 @@ def test_unknown_pattern_root_annotations(
             ),
         )
     mode = f"{enabled}_{field_constraints}_{formatter}"
-    assert_output(output.read_text(), UNKNOWN_PATTERN_EXPECTED / record["code_names"][mode])
+    code_name = record.get("legacy_code_names", {}).get(
+        f"{mode}_{black.__version__.split('.')[0]}", record["code_names"][mode]
+    )
+    assert_output(output.read_text(), UNKNOWN_PATTERN_EXPECTED / code_name)
     schema = json.loads(source.read_text())
     Draft202012Validator.check_schema(schema)
     native = Draft202012Validator(schema)

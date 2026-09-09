@@ -8024,7 +8024,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return False
         return all(
             type(model := data_type.reference.source) is model_type
-            and all(type(field) is field_type for field in model.fields)
+            and all(type(field) is field_type for field in cast("DataModel", model).fields)
             for _, data_type in patterns
             if data_type.reference is not None
         )
