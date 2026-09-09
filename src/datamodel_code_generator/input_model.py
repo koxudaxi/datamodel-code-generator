@@ -1135,7 +1135,7 @@ class _InputModelDefinitions:
             # Only schema positions contain references: defaults/examples are user data.
             from datamodel_code_generator.parser.mcp import _rewrite_schema_refs  # noqa: PLC0415
 
-            schema = _rewrite_schema_refs(schema, renames, schema_positions_only=True)
+            schema = _rewrite_schema_refs(schema, renames, set())
             schema["$defs"] = {renames.get(name, name): value for name, value in schema["$defs"].items()}
         if "$ref" in schema or "allOf" in schema:
             name = self.name(model_class.__name__, model_class)
