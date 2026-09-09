@@ -261,7 +261,7 @@ def cli_migration_warning_scope() -> Iterator[None]:
 @lru_cache(maxsize=16)
 def _dependency_version_is_legacy(version: str, minimum: tuple[int, int, int]) -> bool:
     """Compare release numbers and prereleases without a transitive packaging dependency."""
-    import re  # noqa: PLC0415
+    import re  # ruff: ignore[import-outside-top-level]
 
     if (match := re.fullmatch(r"(\d+)\.(\d+)(?:\.(\d+))?(.*)", version.partition("+")[0])) is None:
         return False
