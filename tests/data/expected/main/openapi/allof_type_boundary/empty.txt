@@ -1,0 +1,1 @@
+allOf numeric/null type constraints have no common value

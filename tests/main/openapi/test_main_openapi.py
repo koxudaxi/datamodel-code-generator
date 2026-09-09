@@ -10121,3 +10121,58 @@ def test_external_discriminator_parent_load_order(output_file: Path, entrypoint:
                     json.dumps(model.model_validate(payloads[tag]).model_dump(), sort_keys=True) + "\n",
                     DATA_PATH / "payloads/external_discriminator_outputs" / f"local_{tag}.txt",
                 )
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("case", ["empty", "mixed"])
+def test_openapi_allof_type_boundary(
+    output_file: Path, capsys: pytest.CaptureFixture[str], entrypoint: str, case: str
+) -> None:
+    """Preserve OpenAPI's existing primitive merge boundary when JSON Schema gains preflight checks."""
+    source = OPEN_API_DATA_PATH / "allof_type_boundary" / f"{case}.json"
+    expected = EXPECTED_OPENAPI_PATH / "allof_type_boundary"
+    if case == "empty":
+        if entrypoint == "cli":
+            run_main_and_assert(
+                input_path=source,
+                output_path=output_file,
+                input_file_type="openapi",
+                expected_exit=Exit.ERROR,
+                capsys=capsys,
+                expected_stderr=(expected / "empty.txt").read_text(),
+                output_should_not_exist=True,
+            )
+        else:
+            with pytest.raises(Error) as error:
+                generate(source, input_file_type=InputFileType.OpenAPI, output=output_file)
+            assert_output(str(error.value) + "\n", expected / "empty.txt")
+        return
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=source,
+            output_path=output_file,
+            input_file_type="openapi",
+            extra_args=["--disable-timestamp", "--formatters", "builtin"],
+            assert_func=assert_file_content,
+            expected_file=expected / "mixed.py",
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=source,
+            output_path=output_file,
+            input_file_type=InputFileType.OpenAPI,
+            disable_timestamp=True,
+            formatters=[Formatter.BUILTIN],
+            assert_func=assert_file_content,
+            expected_file=expected / "mixed.py",
+        )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="openapi_allof_boundary",
+        model_name="Root",
+        valid_json="{}",
+        invalid_json='{"value": {}}',
+        expected_error_type="int_type",
+        expected_attribute_path=("value",),
+        expected_attribute_value=None,
+    )

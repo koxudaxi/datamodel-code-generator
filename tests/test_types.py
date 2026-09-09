@@ -274,6 +274,13 @@ def test_datatype_deepcopy_with_circular_references() -> None:
     child1 = DataType(type="ChildType1", parent=parent)
     child2 = DataType(type="ChildType2", parent=parent)
     parent.children = [child1, child2]
+    parent.data_types = [child1, child2, child1]
+    visited = []
+    parent.walk(visited.append)
+    assert_output(
+        json.dumps([node.type for node in visited]) + "\n",
+        Path(__file__).parent / "data/expected/types/shared_walk.txt",
+    )
 
     # This should not cause infinite recursion
     copied_parent = deepcopy(parent)
