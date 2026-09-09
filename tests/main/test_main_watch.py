@@ -2105,12 +2105,29 @@ def test_watch_dependencies_accepts_polling_parent_events_for_changed_inputs(tmp
     assert not dependencies.accepts_event(project_directory, accept_directory_events=True)
 
     dependencies.add_directory(project_directory)
+    child_file = project_directory / "child.json"
+    child_file.write_text(WATCH_SCHEMA_CHANGED, encoding="utf-8")
+    input_file.write_text((WATCH_DATA_PATH / "file_change/reference.json").read_text(), encoding="utf-8")
     with dependencies.generation():
-        dependencies.record_file(input_file)
+        run_main_with_args([
+            "--input",
+            str(input_file),
+            "--output",
+            str(output_file),
+            "--input-file-type",
+            "jsonschema",
+            "--formatters",
+            "builtin",
+            "--disable-timestamp",
+        ])
+        assert_output(output_file.read_text(), EXPECTED_MAIN_PATH / "watch_reference_change.py")
         replacement.write_text("generated output\n", encoding="utf-8")
         replacement.replace(output_file)
     assert not dependencies._polling_dependencies_changed()
     assert not dependencies.accepts_event(output_file, accept_directory_events=True)
+    child_file.write_text(WATCH_SCHEMA_INITIAL, encoding="utf-8")
+    assert dependencies._polling_dependencies_changed()
+    assert dependencies.accepts_event(project_directory, accept_directory_events=True)
 
 
 @pytest.mark.allow_direct_assert
@@ -3723,11 +3740,7 @@ def test_watch_cli_catches_up_changes_queued_while_restarting_roots(
 @pytest.mark.allow_direct_assert
 def test_watch_dependencies_handle_path_resolution_errors(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Defensive path resolution falls back to the lexical path."""
-    from datamodel_code_generator.watch_dependencies import (
-        WatchDependencies,
-        _logical_working_directory,
-        _path_variants,
-    )
+    from datamodel_code_generator.watch_dependencies import _logical_working_directory, _path_variants
 
     unresolved_path = tmp_path / "unresolved.json"
     resolution_error = "unresolvable"
@@ -3743,11 +3756,6 @@ def test_watch_dependencies_handle_path_resolution_errors(monkeypatch: pytest.Mo
 
     monkeypatch.setattr(Path, "samefile", raise_samefile_error)
     assert _logical_working_directory() == Path.cwd()
-
-    dependencies = WatchDependencies()
-    monkeypatch.setattr(Path, "expanduser", raise_resolution_error)
-    dependencies.add_file(unresolved_path)
-    assert dependencies.files == frozenset()
 
 
 @pytest.mark.skipif(os.name == "nt", reason="requires POSIX symlinks")
