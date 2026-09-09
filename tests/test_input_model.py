@@ -2255,7 +2255,6 @@ def test_input_model_equal_schema_identity(
     tmp_path: Path, case: str, multiple: bool, strategy: str, entrypoint: str, formatter: str
 ) -> None:
     """Equal schemas retain distinct reused types and their native validators."""
-    import json
 
     from pydantic import ValidationError
 
@@ -2314,7 +2313,6 @@ def test_input_model_equal_schema_identity(
 
 def test_input_model_equal_native_schemas() -> None:
     """The distinct native types expose equal schemas before input-model conversion."""
-    import json
 
     from pydantic import TypeAdapter
 
