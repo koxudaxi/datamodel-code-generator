@@ -339,8 +339,8 @@ jobs:
               --base main \
               --head "$sync_branch" \
               --state open \
-              --json number \
-              --jq '.[0].number // empty'
+              --json number,isCrossRepository \
+              --jq 'map(select(.isCrossRepository == false)) | .[0].number // empty'
           )"
 
           if [ -n "$existing_pr" ]; then
