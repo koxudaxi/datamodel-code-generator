@@ -23863,7 +23863,7 @@ def test_invalid_pattern_does_not_change_generation(tmp_path: Path, formatter: s
 ADDITIONAL_PATTERN_FIXTURES = JSON_SCHEMA_DATA_PATH / "additional_pattern_intersections"
 
 
-ADDITIONAL_PATTERN_CASES = json.loads((ADDITIONAL_PATTERN_FIXTURES / "cases.json").read_text())
+ADDITIONAL_PATTERN_CASES = json.loads((DATA_PATH / "payloads/additional_pattern_intersections.json").read_text())
 
 
 ADDITIONAL_PATTERN_EXPECTED = EXPECTED_JSON_SCHEMA_PATH / "additional_pattern_intersections"
