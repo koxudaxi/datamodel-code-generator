@@ -20258,25 +20258,23 @@ def test_dotted_module_exports(
             extra_args=extra_args,
         )
     else:
-        generate(
-            JSON_SCHEMA_DATA_PATH / fixture,
-            **_default_formatter_generate_options({
-                "input_file_type": InputFileType.JsonSchema,
-                "target_python_version": target_version,
-                "output": output_dir,
-                "treat_dot_as_module": True,
-                "all_exports_scope": scope,
-                "module_split_mode": split,
-                "all_exports_collision_strategy": strategy,
-                "reuse_model": reuse,
-                "reuse_scope": "tree" if reuse else "module",
-                "output_model_type": "pydantic_v2.BaseModel",
-                "use_exact_imports": True,
-                "disable_timestamp": True,
-                "formatters": formatters,
-            }),
+        run_generate_file_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / fixture,
+            output_path=output_dir,
+            input_file_type=InputFileType.JsonSchema,
+            expected_directory=expected_directory,
+            target_python_version=target_version,
+            treat_dot_as_module=True,
+            all_exports_scope=scope,
+            module_split_mode=split,
+            all_exports_collision_strategy=strategy,
+            reuse_model=reuse,
+            reuse_scope="tree" if reuse else "module",
+            output_model_type="pydantic_v2.BaseModel",
+            use_exact_imports=True,
+            disable_timestamp=True,
+            formatters=formatters,
         )
-        assert_directory_content(output_dir, expected_directory)
     if "_cycle" in fixture and target_version.value != f"{sys.version_info.major}.{sys.version_info.minor}":
         return
     result = subprocess.run(
