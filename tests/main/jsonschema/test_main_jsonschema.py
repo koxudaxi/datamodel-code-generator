@@ -12270,16 +12270,14 @@ def test_reuse_tree_single_module_imports(
 @pytest.mark.parametrize("scenario", ["chain", "recursive", "mutual"])
 @pytest.mark.parametrize("collapse", [False, True])
 @pytest.mark.parametrize("exact", [False, True])
-@pytest.mark.parametrize("order", ["[0,1,2]", "[2,0,1]"])
-@pytest.mark.parametrize("payload", ["nested", "empty"])
 def test_reuse_tree_single_first_root_validation(
-    output_dir: Path, entrypoint: str, scenario: str, collapse: bool, exact: bool, order: str, payload: str
+    output_dir: Path, entrypoint: str, scenario: str, collapse: bool, exact: bool
 ) -> None:
     """Resolve relocated shared forward references before a root's first validation."""
     fixture = f"reuse_tree_nested_{scenario}"
     expected = fixture + ("_collapsed" if collapse else "") + ("_exact" if exact else "")
     expected_directory = EXPECTED_MAIN_PATH / "jsonschema" / expected
-    output_dir = output_dir.with_name(f"{expected}_{entrypoint}_{order[1]}_{payload}")
+    output_dir = output_dir.with_name(f"{expected}_{entrypoint}")
     metadata_path = output_dir.parent / "model-map.json"
     if entrypoint == "cli":
         extra_args = [
@@ -12323,18 +12321,25 @@ def test_reuse_tree_single_first_root_validation(
         )
         assert_directory_content(output_dir, expected_directory)
     assert_output(metadata_path.read_text(), expected_directory.with_name(f"{expected}_metadata.txt"))
-    result = subprocess.run(
-        [sys.executable, str(DATA_PATH / "python" / "reuse_tree_nested_runtime.py"), str(output_dir), order, payload],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    assert_output(
-        result.stdout,
-        EXPECTED_MAIN_PATH
-        / "jsonschema"
-        / f"{fixture}{'_collapsed' if collapse else ''}_{order[1]}_{payload}_runtime.txt",
-    )
+    for order, payload in itertools.product(("[0,1,2]", "[2,0,1]"), ("nested", "empty")):
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(DATA_PATH / "python" / "reuse_tree_nested_runtime.py"),
+                str(output_dir),
+                order,
+                payload,
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        assert_output(
+            result.stdout,
+            EXPECTED_MAIN_PATH
+            / "jsonschema"
+            / f"{fixture}{'_collapsed' if collapse else ''}_{order[1]}_{payload}_runtime.txt",
+        )
 
 
 @pytest.mark.cli_doc(
