@@ -23978,7 +23978,7 @@ def test_additional_pattern_intersections(
 UNDECLARED_REQUIRED_FIXTURES = JSON_SCHEMA_DATA_PATH / "undeclared_required"
 
 
-UNDECLARED_REQUIRED_CASES = json.loads((UNDECLARED_REQUIRED_FIXTURES / "cases.json").read_text())
+UNDECLARED_REQUIRED_CASES = json.loads((DATA_PATH / "payloads/undeclared_required.json").read_text())
 
 
 UNDECLARED_REQUIRED_EXPECTED = EXPECTED_JSON_SCHEMA_PATH / "undeclared_required"
