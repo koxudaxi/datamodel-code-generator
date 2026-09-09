@@ -4,8 +4,7 @@
       "x-python-import": {
         "module": "tests.data.python.input_model.generic_reuse",
         "name": "Box",
-        "x-python-type": "tests.data.python.input_model.generic_reuse.Box[int]",
-        "symbols": {}
+        "x-python-type": "tests.data.python.input_model.generic_reuse.Box[int]"
       }
     }
   },

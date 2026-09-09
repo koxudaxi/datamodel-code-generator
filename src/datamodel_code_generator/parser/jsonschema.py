@@ -3311,7 +3311,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 symbol["module"],
                 tuple(symbol["qualname"].split(".")),
             )
-            for name, symbol in x_python_import["symbols"].items()
+            for name, symbol in x_python_import.get("symbols", {}).items()
         }
         expression = rewrite_python_type_expr(
             cast("PythonTypeExpr", expression),
