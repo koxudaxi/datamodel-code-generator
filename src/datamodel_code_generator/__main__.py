@@ -3401,7 +3401,9 @@ def _main(  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
 
 def main(args: Sequence[str] | None = None) -> Exit:
     """Execute datamodel code generation from command-line arguments."""
-    from datamodel_code_generator.deprecations import cli_migration_warning_scope  # noqa: PLC0415
+    from datamodel_code_generator.deprecations import (  # ruff: ignore[import-outside-top-level]
+        cli_migration_warning_scope,
+    )
 
     with cli_migration_warning_scope():
         return _main(args, start_watch=True)
