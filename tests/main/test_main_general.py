@@ -5914,11 +5914,62 @@ def test_all_exports_includes_generate_config() -> None:
     assert "GenerateConfig" in datamodel_code_generator.__all__
 
 
-@pytest.mark.parametrize("mode", ["implicit", "explicit", "old-preset", "disabled"])
+@pytest.mark.parametrize(
+    ("family", "target", "formatters"),
+    [
+        pytest.param(
+            family,
+            target,
+            formatters,
+            marks=pytest.mark.skipif(
+                formatters == ["black", "isort"]
+                and not datamodel_code_generator.format.is_supported_in_black(PythonVersion(f"3.{target[1:]}")),
+                reason="Installed Black does not support this target",
+            ),
+        )
+        for family in ("standard", "practical")
+        for target in ("310", "311", "312", "313", "314")
+        for formatters in ([], ["black", "isort"], ["ruff-check", "ruff-format"])
+    ],
+)
+def test_builtin_preset_formatter_selection(
+    family: str,
+    target: str,
+    formatters: list[str],
+    output_file: Path,
+) -> None:
+    """New presets support builtin and explicit project formatter pipelines."""
+    with warnings.catch_warnings(record=True) as recorded:
+        warnings.simplefilter("always", FutureWarning)
+        run_main_with_args(
+            [
+                "--input",
+                str(JSON_SCHEMA_DATA_PATH / "person.json"),
+                "--input-file-type",
+                "jsonschema",
+                "--output",
+                str(output_file),
+                "--preset",
+                f"{family}-py{target}-20260909",
+                *(["--formatters", *formatters] if formatters else []),
+            ],
+            use_builtin_default_formatter=False,
+        )
+    assert_output(
+        output_file.read_text(encoding="utf-8"),
+        EXPECTED_MAIN_PATH / "formatter_policy" / f"{family}-{target}-{formatters[0] if formatters else 'builtin'}.py",
+    )
+    assert_output(
+        "\n".join(str(item.message) for item in recorded if "Default formatters" in str(item.message)),
+        EXPECTED_MAIN_PATH / "formatter_policy" / "no_warning.txt",
+    )
+
+
+@pytest.mark.parametrize("mode", ["implicit", "explicit", "old-preset", "new-preset", "disabled"])
 @pytest.mark.parametrize("api", [False, True])
 def test_formatter_policy_warning(mode: str, api: bool, output_file: Path) -> None:
     """Generation keeps its defaults and emits only the agreed short warning."""
-    preset = {"old-preset": "standard-py310-20260826"}.get(mode)
+    preset = {"old-preset": "standard-py310-20260826", "new-preset": "standard-py310-20260909"}.get(mode)
     with warnings.catch_warnings(record=True) as recorded:
         warnings.simplefilter("always", FutureWarning)
         if api:
@@ -5962,4 +6013,35 @@ def test_formatter_policy_warning(mode: str, api: bool, output_file: Path) -> No
     assert_output(
         output_file.read_text(encoding="utf-8"),
         EXPECTED_MAIN_PATH / "formatter_policy" / f"{mode}-{'api' if api else 'cli'}.py",
+    )
+
+
+@pytest.mark.parametrize("mode", ["builtin", "ruff", "black", "empty", "implicit"])
+@pytest.mark.parametrize("override", [False, True])
+def test_formatter_policy_pyproject(mode: str, override: bool, output_file: Path, tmp_path: Path) -> None:
+    """Respect configured formatters, empty lists and CLI overrides without automatic Ruff selection."""
+    shutil.copyfile(DATA_PATH / "config" / "formatter_policy" / f"{mode}.toml", tmp_path / "pyproject.toml")
+    with chdir(tmp_path), warnings.catch_warnings(record=True) as recorded:
+        warnings.simplefilter("always", FutureWarning)
+        run_main_with_args(
+            [
+                "--input",
+                str(JSON_SCHEMA_DATA_PATH / "person.json"),
+                "--input-file-type",
+                "jsonschema",
+                "--output",
+                str(output_file),
+                *(["--formatters", "ruff-check", "ruff-format"] if override else []),
+            ],
+            use_builtin_default_formatter=False,
+        )
+    assert_output(
+        "\n".join(str(item.message) for item in recorded if "Default formatters" in str(item.message)),
+        EXPECTED_MAIN_PATH
+        / "formatter_policy"
+        / ("warning.txt" if mode == "implicit" and not override else "no_warning.txt"),
+    )
+    assert_output(
+        output_file.read_text(encoding="utf-8"),
+        EXPECTED_MAIN_PATH / "formatter_policy" / f"pyproject-{mode}-{'override' if override else 'configured'}.py",
     )

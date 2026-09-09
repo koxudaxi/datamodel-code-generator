@@ -17,9 +17,9 @@ configuration precedence, see [Formatter Behavior](formatter-behavior.md).
     In a future version, builtin will become the default to reduce required installation dependencies and
     version constraints. Black/isort remain the default and required dependencies today.
 
-    **CLI users**: Select `--formatters` to suppress the default-change warning, or use `--disable-warnings`.
+    **CLI users**: Select `--formatters` or a new preset that supplies formatters to suppress the default-change warning, or use `--disable-warnings`.
 
-    **Library users**: Explicitly pass `formatters`. Older presets retain the default-change warning.
+    **Library users**: Explicitly pass `formatters` or a preset that supplies formatters. Older presets retain the default-change warning.
 
 ```bash
 datamodel-codegen \
