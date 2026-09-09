@@ -24040,11 +24040,13 @@ def test_undeclared_required(tmp_path: Path, case: str, enabled: bool, entrypoin
                 **options,
             ),
         )
-    mode = f"{enabled}_{formatter}"
-    code_name = record.get("legacy_code_names", {}).get(
-        f"{mode}_{black.__version__.split('.')[0]}", record["code_names"][mode]
+    assert_output(
+        output.read_text(),
+        UNDECLARED_REQUIRED_EXPECTED
+        / record.get("legacy_code_names", {}).get(
+            f"{enabled}_{formatter}_{black.__version__.split('.')[0]}", record["code_names"][f"{enabled}_{formatter}"]
+        ),
     )
-    assert_output(output.read_text(), UNDECLARED_REQUIRED_EXPECTED / code_name)
     schema = json.loads(source.read_text())
     Draft202012Validator.check_schema(schema)
     native = Draft202012Validator(schema)
