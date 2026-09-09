@@ -110,7 +110,7 @@ class _OccurrenceContext(NamedTuple):
     required: bool = True
     repeating: bool = False
     min_items: int | None = None
-    max_items: int | None = None
+    max_items: int | None = 1  # Multiplicative identity; None denotes an unbounded maximum.
 
 
 DEFAULT_OCCURRENCE = _OccurrenceContext()
@@ -1477,12 +1477,12 @@ class _XMLSchemaConverter:
     def _combine_max_items(self, parent_max_items: int | None, max_occurs: str | None) -> int | None:  # noqa: PLR6301
         if max_occurs is None:
             return parent_max_items
-        if max_occurs == UNBOUNDED:
+        if max_occurs == UNBOUNDED or parent_max_items is None:
             return None
         max_items = _safe_int(max_occurs)
         if max_items is None:
             return parent_max_items
-        return parent_max_items * max_items if parent_max_items is not None else max_items
+        return parent_max_items * max_items
 
     def _combine_min_items(self, parent_min_items: int | None, min_occurs: str | None) -> int | None:  # noqa: PLR6301
         if min_occurs is None:
@@ -1499,13 +1499,16 @@ class _XMLSchemaConverter:
         min_items: int | None,
         max_items: int | None,
     ) -> JsonSchema:
-        if schema.get("type") != "array" or not schema.get(INTERNAL_OCCURS_ARRAY):
+        occurs_array = schema.get("type") == "array" and schema.get(INTERNAL_OCCURS_ARRAY)
+        if not occurs_array:
             array_schema: JsonSchema = {"type": "array", "items": schema, INTERNAL_OCCURS_ARRAY: True}
         else:
             array_schema = _copy_schema(schema)
         if min_items is not None:
             self._set_repeated_bound(array_schema, "minItems", min_items)
-        if max_items is not None:
+        if max_items is None:
+            array_schema.pop("maxItems", None)
+        elif not occurs_array or "maxItems" in array_schema:
             self._set_repeated_bound(array_schema, "maxItems", max_items)
         return array_schema
 
