@@ -22540,10 +22540,13 @@ def test_main_root_sequence_final_types(
             force_exec_validation=True,
         )
     else:
-        generate(
-            source,
+        run_generate_file_and_assert(
+            input_path=source,
+            expected_directory=expected if package else None,
+            expected_file=expected if not package else None,
+            assert_func=assert_file_content,
             input_file_type=InputFileType.JsonSchema,
-            output=output,
+            output_path=output,
             disable_timestamp=True,
             formatters=[Formatter.BLACK, Formatter.ISORT]
             if _uses_external_test_default_formatter()
@@ -22552,10 +22555,6 @@ def test_main_root_sequence_final_types(
             custom_template_dir=TEMPLATE_DIR if custom_template else None,
             **options,
         )
-        if package:
-            assert_directory_content(output, expected)
-        else:
-            assert_file_content(output, expected)
     context = (
         _generated_package_module(output, "root") if package else _generated_model(output, "sequence_final", "Values")
     )
