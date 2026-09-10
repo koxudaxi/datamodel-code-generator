@@ -3544,6 +3544,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         module_models: list[tuple[tuple[str, ...], list[DataModel]]],
         duplicates: list[tuple[tuple[str, ...], DataModel, tuple[str, ...], DataModel]],
         require_update_action_models: list[str],
+        reference_models: list[DataModel] | None,
     ) -> tuple[tuple[str, ...], list[DataModel]]:
         """Create shared module with canonical models and replace duplicates with inherited models."""
         shared_module = self.shared_module_name
@@ -3578,14 +3579,15 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             for module, models in module_models:  # pragma: no branch
                 if module != duplicate_module:
                     continue
+                referring_models = reference_models if reference_models is not None else models
                 if isinstance(duplicate_model, Enum) or not supports_inheritance or self.collapse_reuse_models:
-                    self.generation_store.redirect_model_reference_users(duplicate_model, models, shared_ref)
+                    self.generation_store.redirect_model_reference_users(duplicate_model, referring_models, shared_ref)
                     models_to_remove[module].add(duplicate_model)
                 else:
                     inherited_model = duplicate_model.create_reuse_model(shared_ref)
                     self.generation_store.redirect_model_reference_users(
                         duplicate_model,
-                        models,
+                        referring_models,
                         inherited_model.reference,
                     )
                     if shared_ref.path in require_update_action_models:
@@ -3607,12 +3609,21 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             if to_remove:
                 models[:] = [m for m in models if m not in to_remove]
 
+        if reference_models is not None:
+            # Relocation can introduce forward references after the initial sort.
+            later_shared_paths: set[str] = set()
+            for model in reversed(shared_models):
+                if self.generation_store.index.reference_classes_for_model(model) & later_shared_paths:
+                    add_model_path_to_list(require_update_action_models, model)
+                later_shared_paths.add(model.path)
+
         return (shared_module,), shared_models
 
     def __reuse_model_tree_scope(
         self,
         module_models: list[tuple[tuple[str, ...], list[DataModel]]],
         require_update_action_models: list[str],
+        module_split_mode: ModuleSplitMode | None,
     ) -> tuple[tuple[str, ...], list[DataModel]] | None:
         """Deduplicate models across all modules, placing shared models in shared.py."""
         if not self.reuse_model or self.reuse_scope != ReuseScope.Tree:
@@ -3623,7 +3634,15 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             return None
 
         self.__validate_shared_module_name(module_models)
-        return self.__create_shared_module_from_duplicates(module_models, duplicates, require_update_action_models)
+        # Single-model splitting puts users outside the duplicate's original module.
+        reference_models = (
+            [model for _, models in module_models for model in models]
+            if module_split_mode == ModuleSplitMode.Single
+            else None
+        )
+        return self.__create_shared_module_from_duplicates(
+            module_models, duplicates, require_update_action_models, reference_models
+        )
 
     def __collapse_root_models(
         self,
@@ -5797,9 +5816,15 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             )
             model_to_module_models, model_path_to_module_name = _index_module_models(module_models, module_split_mode)
 
-        shared_module_entry = self.__reuse_model_tree_scope(module_models, require_update_action_models)
+        shared_module_entry = self.__reuse_model_tree_scope(
+            module_models, require_update_action_models, module_split_mode
+        )
         if shared_module_entry:
             module_models.insert(0, shared_module_entry)
+            if module_split_mode == ModuleSplitMode.Single:
+                model_to_module_models, model_path_to_module_name = _index_module_models(
+                    module_models, module_split_mode
+                )
 
         module_models, internal_modules, forwarder_map, path_mapping = self.__resolve_circular_imports(module_models)
 

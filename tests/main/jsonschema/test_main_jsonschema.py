@@ -12195,6 +12195,167 @@ def test_main_jsonschema_type_mappings_invalid_format(output_file: Path, capsys:
     )
 
 
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("metadata", [False, True])
+@pytest.mark.parametrize("collapse", [False, True])
+@pytest.mark.parametrize("exact", [False, True])
+def test_reuse_tree_single_module_imports(
+    output_dir: Path, entrypoint: str, metadata: bool, collapse: bool, exact: bool
+) -> None:
+    """Resolve moved canonical models and retained wrappers with isolated package imports."""
+    fixture = "reuse_scope_tree_single" + ("_collapsed" if collapse else "") + ("_exact" if exact else "")
+    expected_directory = EXPECTED_MAIN_PATH / "jsonschema" / fixture
+    metadata_path = output_dir.parent / "model-map.json"
+    if entrypoint == "cli":
+        extra_args = [
+            "--reuse-model",
+            "--reuse-scope",
+            "tree",
+            "--module-split-mode",
+            "single",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+        ]
+        if metadata:
+            extra_args.extend(["--emit-model-metadata", str(metadata_path)])
+        if collapse:
+            extra_args.append("--collapse-reuse-models")
+        if exact:
+            extra_args.append("--use-exact-imports")
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree",
+            output_path=output_dir,
+            input_file_type="jsonschema",
+            expected_directory=expected_directory,
+            extra_args=extra_args,
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree",
+            output_path=output_dir,
+            input_file_type=InputFileType.JsonSchema,
+            expected_directory=expected_directory,
+            reuse_model=True,
+            reuse_scope="tree",
+            module_split_mode="single",
+            output_model_type="pydantic_v2.BaseModel",
+            disable_timestamp=True,
+            collapse_reuse_models=collapse,
+            use_exact_imports=exact,
+            emit_model_metadata=metadata_path if metadata else None,
+        )
+    if metadata:
+        assert_output(
+            metadata_path.read_text(encoding="utf-8"),
+            expected_directory.with_name(f"{fixture}_metadata.txt"),
+        )
+    case = json.loads((DATA_PATH / "payloads/reuse_tree.json").read_text())["single"]
+    results = []
+    with _generated_package_module(output_dir, "shared") as shared_module:
+        shared = shared_module.SharedModel
+        for module_name, field_name in case["modules"]:
+            model = importlib.import_module(f"{output_dir.name}.{module_name}").Model
+            value = model.model_validate({field_name: case["payload"]})
+            nested = getattr(value, field_name)
+            results.append({
+                "module": module_name,
+                "fields": list(model.model_fields),
+                "dump": value.model_dump(),
+                "nested_fields": list(type(nested).model_fields),
+                "canonical": type(nested) is shared,
+                "inherits_shared": isinstance(nested, shared),
+            })
+    assert_output(
+        json.dumps(results, indent=2) + "\n",
+        EXPECTED_MAIN_PATH / "jsonschema" / f"reuse_scope_tree_single_runtime{'_collapsed' if collapse else ''}.txt",
+    )
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("scenario", ["chain", "recursive", "mutual"])
+@pytest.mark.parametrize("collapse", [False, True])
+@pytest.mark.parametrize("exact", [False, True])
+def test_reuse_tree_single_first_root_validation(
+    output_dir: Path, entrypoint: str, scenario: str, collapse: bool, exact: bool
+) -> None:
+    """Resolve relocated shared forward references before a root's first validation."""
+    fixture = f"reuse_tree_nested_{scenario}"
+    expected = fixture + ("_collapsed" if collapse else "") + ("_exact" if exact else "")
+    expected_directory = EXPECTED_MAIN_PATH / "jsonschema" / expected
+    output_dir = output_dir.with_name(f"{expected}_{entrypoint}")
+    metadata_path = output_dir.parent / "model-map.json"
+    if entrypoint == "cli":
+        extra_args = [
+            "--reuse-model",
+            "--reuse-scope",
+            "tree",
+            "--module-split-mode",
+            "single",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+            "--emit-model-metadata",
+            str(metadata_path),
+        ]
+        if collapse:
+            extra_args.append("--collapse-reuse-models")
+        if exact:
+            extra_args.append("--use-exact-imports")
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / fixture,
+            output_path=output_dir,
+            input_file_type="jsonschema",
+            expected_directory=expected_directory,
+            extra_args=extra_args,
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / fixture,
+            output_path=output_dir,
+            input_file_type=InputFileType.JsonSchema,
+            expected_directory=expected_directory,
+            reuse_model=True,
+            reuse_scope="tree",
+            module_split_mode="single",
+            output_model_type="pydantic_v2.BaseModel",
+            disable_timestamp=True,
+            collapse_reuse_models=collapse,
+            use_exact_imports=exact,
+            emit_model_metadata=metadata_path,
+        )
+    assert_output(metadata_path.read_text(), expected_directory.with_name(f"{expected}_metadata.txt"))
+    cases = json.loads((DATA_PATH / "payloads/reuse_tree.json").read_text())
+    for order, payload in itertools.product(((0, 1, 2), (2, 0, 1)), ("nested", "empty")):
+        case = cases[payload]
+        results = []
+        with _generated_package_module(output_dir, f"schema_{order[0]}.root{order[0]}"):
+            for index in order:
+                module = importlib.import_module(f"{output_dir.name}.schema_{index}.root{index}")
+                model = getattr(module, f"Root{index}")
+                value = model.model_validate({f"data{index}": case} if case else {})
+                nested = getattr(value, f"data{index}")
+                result = {"root": index, "fields": list(model.model_fields), "dump": value.model_dump(by_alias=True)}
+                if nested is not None:
+                    result["nested"] = [
+                        {
+                            "origin": type(item).__module__.removeprefix(output_dir.name + "."),
+                            "name": type(item).__name__,
+                            "identity": getattr(importlib.import_module(type(item).__module__), type(item).__name__)
+                            is type(item),
+                            "fields": list(type(item).model_fields),
+                        }
+                        for item in (nested, nested.inner)
+                    ]
+                results.append(result)
+        assert_output(
+            json.dumps(results, indent=2) + "\n",
+            EXPECTED_MAIN_PATH
+            / "jsonschema"
+            / f"{fixture}{'_collapsed' if collapse else ''}_{order[0]}_{payload}_runtime.txt",
+        )
+
+
 @pytest.mark.cli_doc(
     options=["--reuse-scope"],
     option_description="""Scope for model reuse detection (root or tree).
