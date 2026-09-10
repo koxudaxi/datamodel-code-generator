@@ -24108,6 +24108,10 @@ def test_unknown_pattern_root_annotations(
     source = UNKNOWN_PATTERN_FIXTURES / f"{record['source']}.json"
     output = tmp_path / "output.py"
     formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
+    mode = f"{enabled}_{field_constraints}_{formatter}"
+    code_name = record.get("legacy_code_names", {}).get(
+        f"{mode}_{black.__version__.split('.')[0]}", record["code_names"][mode]
+    )
     if entrypoint == "cli":
         options = []
         for key, value in record["config"].items():
@@ -24116,25 +24120,26 @@ def test_unknown_pattern_root_annotations(
                 if isinstance(value, list)
                 else [f"--{key.replace('_', '-')}", value]
             )
-        run_main_with_args([
-            "--input",
-            str(source),
-            "--output",
-            str(output),
-            "--input-file-type",
-            "jsonschema",
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-            "--disable-timestamp",
-            "--formatters",
-            *formatters,
-            *(["--generate-schema-validators"] if enabled else []),
-            *(["--field-constraints"] if field_constraints else []),
-            *options,
-        ])
+        run_main_and_assert(
+            input_path=source,
+            output_path=output,
+            input_file_type="jsonschema",
+            extra_args=[
+                "--output-model-type",
+                "pydantic_v2.BaseModel",
+                "--disable-timestamp",
+                "--formatters",
+                *formatters,
+                *(["--generate-schema-validators"] if enabled else []),
+                *(["--field-constraints"] if field_constraints else []),
+                *options,
+            ],
+            expected_file=UNKNOWN_PATTERN_EXPECTED / code_name,
+            skip_code_validation=True,
+        )
     else:
-        generate(
-            source,
+        run_generate_and_assert(
+            input_=source,
             config=GenerateConfig(
                 output=output,
                 input_file_type=InputFileType.JsonSchema,
@@ -24145,12 +24150,8 @@ def test_unknown_pattern_root_annotations(
                 formatters=[Formatter(value) for value in formatters],
                 **record["config"],
             ),
+            expected_file=UNKNOWN_PATTERN_EXPECTED / code_name,
         )
-    mode = f"{enabled}_{field_constraints}_{formatter}"
-    code_name = record.get("legacy_code_names", {}).get(
-        f"{mode}_{black.__version__.split('.')[0]}", record["code_names"][mode]
-    )
-    assert_output(output.read_text(), UNKNOWN_PATTERN_EXPECTED / code_name)
     schema = json.loads(source.read_text())
     Draft202012Validator.check_schema(schema)
     native = Draft202012Validator(schema)
