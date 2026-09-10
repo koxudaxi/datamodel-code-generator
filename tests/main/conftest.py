@@ -36,6 +36,7 @@ from tests.conftest import (
     _infer_expected_file,
     _validation_stats,
     assert_directory_content,
+    assert_generate_wrote_file,
     assert_inputs_not_mutated,
     assert_output,
     assert_warnings_contain,
@@ -822,19 +823,29 @@ def run_generate_and_assert(
     *,
     input_: Any,
     expected_file: Path,
+    expected_error: type[Exception] | None = None,
     assert_input_unchanged: bool = False,
     unchanged_inputs: Mapping[str, object] | None = None,
     **generate_kwargs: Any,
 ) -> None:
-    """Execute generate(output=None) and assert the returned text output."""
+    """Execute generate() and assert returned text, written text, or an expected error."""
     __tracebackhide__ = True
 
     guarded_inputs = dict(unchanged_inputs or {})
     if assert_input_unchanged:
         guarded_inputs["input_"] = input_
 
+    options = _default_formatter_generate_options(generate_kwargs)
     with _enable_test_parsed_source_cache(), assert_inputs_not_mutated(guarded_inputs or None):
-        result = generate(input_=input_, **_default_formatter_generate_options(generate_kwargs))
+        if expected_error is not None:
+            with pytest.raises(expected_error) as error:
+                generate(input_=input_, **options)
+            assert_output(f"{error.value}\n", expected_file)
+            return
+        result = generate(input_=input_, **options)
+    if (output_path := generate_kwargs.get("output")) is not None:
+        assert_generate_wrote_file(result, output_path)
+        result = output_path.read_text(encoding=generate_kwargs.get("encoding", "utf-8"))
     if not isinstance(result, str):  # pragma: no cover
         pytest.fail(f"Expected generate() to return str, got {type(result).__name__}")
     assert_output(result, expected_file)

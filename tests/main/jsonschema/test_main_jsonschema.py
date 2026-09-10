@@ -19542,15 +19542,15 @@ def test_msgspec_enum_diagnostics_reject_unsupported_members(
             output_should_not_exist=True,
         )
     else:
-        with pytest.raises(Error) as error:
-            generate(
-                schema,
-                output=output_file,
-                input_file_type=InputFileType.JsonSchema,
-                output_model_type=DataModelType.MsgspecStruct,
-                **case["options"],
-            )
-        assert_output(f"{error.value}\n", expected)
+        run_generate_and_assert(
+            input_=schema,
+            output=output_file,
+            expected_file=expected,
+            expected_error=Error,
+            input_file_type=InputFileType.JsonSchema,
+            output_model_type=DataModelType.MsgspecStruct,
+            **case["options"],
+        )
         assert_output(f"{output_file.exists()}\n", EXPECTED_JSON_SCHEMA_PATH / "msgspec_enum_diagnostics/absent.txt")
 
 
@@ -19721,9 +19721,13 @@ def test_msgspec_enum_diagnostics_integer_subclasses(
     ]
     if case["error"]:
         message = "msgspec.Struct does not support float Enum members in 'Value'."
-        with pytest.raises(Error, match="does not support float Enum") as error:
-            generate(schema, output=output_file, **options)
-        assert_output(f"{error.value}\n", data / "subclass_error.txt")
+        run_generate_and_assert(
+            input_=schema,
+            output=output_file,
+            expected_file=data / "subclass_error.txt",
+            expected_error=Error,
+            **options,
+        )
         run_main_and_assert(
             input_path=schema_path,
             output_path=output_file,
@@ -19736,8 +19740,12 @@ def test_msgspec_enum_diagnostics_integer_subclasses(
         )
         return
     expected = f"msgspec_enum_diagnostics/{case['name']}.py"
-    generate(schema, output=output_file, **options)
-    assert_file_content(output_file, expected)
+    run_generate_and_assert(
+        input_=schema,
+        output=output_file,
+        expected_file=EXPECTED_JSON_SCHEMA_PATH / expected,
+        **options,
+    )
     with _generated_model(output_file, "generated_integer_subclass", "Payload") as model:
         results = {
             "convert": msgspec.to_builtins(msgspec.convert(case["payload"], type=model)),
@@ -19765,11 +19773,12 @@ def test_msgspec_enum_diagnostics_preserve_integer_comparison_error(output_file:
     data = JSON_SCHEMA_DATA_PATH / "msgspec_enum_diagnostics"
     schema = json.loads((data / "subclass_float.json").read_text())
     schema["properties"]["value"]["enum"][0] = EqualityRaisesInt(1)
-    with pytest.raises(TypeError, match="integer comparison was called"):
-        generate(
-            schema,
-            output=output_file,
-            input_file_type=InputFileType.JsonSchema,
-            output_model_type=DataModelType.MsgspecStruct,
-        )
+    run_generate_and_assert(
+        input_=schema,
+        output=output_file,
+        expected_file=EXPECTED_JSON_SCHEMA_PATH / "msgspec_enum_diagnostics/comparison_error.txt",
+        expected_error=TypeError,
+        input_file_type=InputFileType.JsonSchema,
+        output_model_type=DataModelType.MsgspecStruct,
+    )
     assert_output(f"{output_file.exists()}\n", EXPECTED_JSON_SCHEMA_PATH / "msgspec_enum_diagnostics/absent.txt")
