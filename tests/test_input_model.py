@@ -10,7 +10,6 @@ import types
 from argparse import Namespace
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
-from copy import deepcopy
 from pathlib import Path
 from threading import Event
 from typing import TYPE_CHECKING
@@ -33,7 +32,7 @@ from tests.conftest import (
 from tests.data.python.input_model import inherited_overrides, union_annotations
 from tests.data.python.input_model.inherited_override_runtime import CASES as INHERITED_OVERRIDE_CASES
 from tests.data.python.input_model.union_runtime import CASES, VALUES, describe
-from tests.main.conftest import _generated_model, run_generate_and_assert, run_main_with_args
+from tests.main.conftest import _generated_model, run_generate_and_assert, run_main_and_assert, run_main_with_args
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
@@ -2059,23 +2058,30 @@ def test_input_model_inherited_overrides(model_name: str, entrypoint: str, tmp_p
         if model_name == "RawSchemaIntersection"
         else None
     )
-    input_args = (
-        ["--input", str(schema_path), "--input-file-type", "jsonschema"] if schema_path else ["--input-model", source]
-    )
+    expected_file = INPUT_OVERRIDE_EXPECTED / f"{model_name}{'_builtin' if use_builtin else ''}.py"
+    extra_args = [
+        "--disable-timestamp",
+        "--strict-nullable",
+        "--generate-schema-validators",
+        "--formatters",
+        *(formatter.value for formatter in formatters),
+    ]
     if entrypoint == "cli":
-        run_main_with_args(
-            [
-                *input_args,
-                "--output",
-                str(output),
-                "--disable-timestamp",
-                "--strict-nullable",
-                "--generate-schema-validators",
-                "--formatters",
-                *(formatter.value for formatter in formatters),
-            ],
-            use_parsed_source_cache=False,
-        )
+        if schema_path:
+            run_main_and_assert(
+                input_path=schema_path,
+                input_file_type="jsonschema",
+                output_path=output,
+                expected_file=expected_file,
+                extra_args=extra_args,
+            )
+        else:
+            run_input_model_and_assert(
+                input_model=source,
+                output_path=output,
+                expected_file=expected_file,
+                extra_args=extra_args,
+            )
     else:
         schema = (
             json.loads(schema_path.read_text())
@@ -2084,8 +2090,8 @@ def test_input_model_inherited_overrides(model_name: str, entrypoint: str, tmp_p
         )
         with assert_inputs_not_mutated(schema):
             run_generate_and_assert(
-                input_=deepcopy(schema),
-                expected_file=INPUT_OVERRIDE_EXPECTED / f"{model_name}{'_builtin' if use_builtin else ''}.py",
+                input_=schema,
+                expected_file=expected_file,
                 config=GenerateConfig(
                     input_file_type=InputFileType.JsonSchema,
                     input_filename=schema_path.name if schema_path else "<stdin>",
@@ -2097,10 +2103,6 @@ def test_input_model_inherited_overrides(model_name: str, entrypoint: str, tmp_p
                     output=output,
                 ),
             )
-    if entrypoint == "cli":
-        assert_output(
-            output.read_text(), INPUT_OVERRIDE_EXPECTED / f"{model_name}{'_builtin' if use_builtin else ''}.py"
-        )
     schema = (
         json.loads(schema_path.read_text()) if schema_path else load_model_schema([source], InputFileType.JsonSchema)
     )

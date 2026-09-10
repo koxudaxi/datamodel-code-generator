@@ -92,6 +92,20 @@ class AliasGrandChild(AliasChild):
     value: int = Field(3, alias="newest")
 
 
+class AliasPairParent(AliasParent):
+    other: int = Field(4, alias="old_other")
+
+
+class AliasPairChild(AliasPairParent):
+    value: int = Field(2, alias="new")
+    other: int = Field(5, alias="new_other")
+
+
+class AliasPairGrandChild(AliasPairChild):
+    value: int = Field(3, alias="newest")
+    other: int = Field(6, alias="newest_other")
+
+
 class OtherParent(BaseModel):
     other: str = "other"
     value: int = 9

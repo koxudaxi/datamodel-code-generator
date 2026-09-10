@@ -7862,6 +7862,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             fields.extend(object_fields)
         if base_classes:
             reserved_names = {field.name for field in fields if field.name}
+            collected_inherited_fields: list[DataModelFieldBase] | None = None
             for index, field in enumerate(fields):
                 field_name = _field_source_name(field)
                 if field_name in python_overrides:
@@ -7871,10 +7872,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                         for resolved_ref in self._linearize_inherited_schema_refs(base_classes):
                             parent_schema = self._load_inherited_schema_object(resolved_ref)
                             parent_name = parent_schema.python_field_overrides.get(parent_name, parent_name)
+                        if collected_inherited_fields is None:
+                            collected_inherited_fields = self._collect_inherited_fields_for_request_response(
+                                base_classes
+                            )
                         parent_field = next(
                             (
                                 candidate
-                                for candidate in self._collect_inherited_fields_for_request_response(base_classes)
+                                for candidate in collected_inherited_fields
                                 if _field_source_name(candidate) == parent_name
                             ),
                             None,
