@@ -6997,12 +6997,16 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if not isinstance(item, JsonSchemaObject):
                 continue
             if item.ref:
-                if (
-                    item.allOf or item.oneOf or item.anyOf or "if" in item.extras
-                ) and self._ref_sibling_keywords_enabled:
-                    yield from self._iter_schema_validation_sources(
-                        item.model_copy(update={"ref": None}), visited_refs, include_references=False
+                if self._ref_sibling_keywords_enabled:
+                    has_sibling_constraints = (
+                        item.patternProperties
+                        or item.additionalProperties is not None
+                        or item.unevaluatedProperties is not None
                     )
+                    if item.allOf or item.oneOf or item.anyOf or "if" in item.extras or has_sibling_constraints:
+                        yield from self._iter_schema_validation_sources(
+                            item.model_copy(update={"ref": None}), visited_refs, include_references=False
+                        )
                 if not include_references:
                     continue
                 resolved_ref = self.model_resolver.resolve_ref(item.ref)

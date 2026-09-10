@@ -21909,3 +21909,14 @@ def test_inline_allof_validators(
     )
     with _generated_model(output_file, f"inline_allof_python_{case}", "Root") as model:
         _assert_model_json_invalid(model.model_validate, values["invalid"], error_type)
+        for sibling in values.get("sibling_cases", []):
+            payload = sibling["payload"]
+            if sibling["valid"]:
+                native.validate(payload)
+                model.model_validate(payload)
+                model.model_validate_json(json.dumps(payload))
+                continue
+            with pytest.raises(SchemaValidationError):
+                native.validate(payload)
+            _assert_model_json_invalid(model.model_validate, payload, sibling["error_type"])
+            _assert_model_json_invalid(model.model_validate_json, json.dumps(payload), sibling["error_type"])
