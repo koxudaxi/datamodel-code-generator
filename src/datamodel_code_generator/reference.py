@@ -296,7 +296,6 @@ def _get_builtin_type_attributes_for_target(target: PythonVersion) -> frozenset[
 class FieldNameResolver:
     """Converts schema field names to valid Python identifiers."""
 
-    EXPLICIT_ALIAS_CONFLICT_CHECKER: ClassVar[Callable[[model_base.DataModelFieldBase, str], bool] | None] = None
     FIELD_ASSIGNMENT_HELPER: ClassVar[str | None] = None
 
     def __init__(  # noqa: PLR0913, PLR0917
@@ -353,7 +352,6 @@ class FieldNameResolver:
         """Diagnose collisions without applying automatic naming policy to user choices."""
         if not any(_EXPLICIT_FIELD_ALIAS_KEY in field.__dict__ for field in fields):
             return
-        conflicts_with_alias = cls.EXPLICIT_ALIAS_CONFLICT_CHECKER if final else None
         helper_name = cls.FIELD_ASSIGNMENT_HELPER if final else None
         names: dict[str, model_base.DataModelFieldBase] = {}
         field_helper: model_base.DataModelFieldBase | None = None
@@ -378,7 +376,11 @@ class FieldNameResolver:
             if not final:
                 continue
             invalid = explicit and (not cast("str", field.name).isidentifier() or iskeyword(cast("str", field.name)))
-            if explicit and conflicts_with_alias is not None:
+            if (
+                explicit
+                and (conflicts_with_alias := cast("model_base.DataModel", field.parent).EXPLICIT_ALIAS_CONFLICT_CHECKER)
+                is not None
+            ):
                 invalid |= conflicts_with_alias(field, name)
             if field_helper is not None and str(field).startswith(f"{helper_name}("):
                 field = field_helper  # noqa: PLW2901

@@ -15,6 +15,7 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 from warnings import warn
 
+from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, ValidationError, field_validator, model_validator
 from pydantic.alias_generators import to_camel, to_pascal, to_snake
 
@@ -28,6 +29,7 @@ from datamodel_code_generator.model.base import (
     BaseClassDataType,
     DataModel,
     DataModelFieldBase,
+    _find_base_classes,
     _get_template_with_custom_dir,
     _uses_original_template_loader,
 )
@@ -809,6 +811,28 @@ def has_lookaround_pattern(
     return False
 
 
+def _explicit_alias_conflicts_with_pydantic(field: DataModelFieldBase, name: str) -> bool:
+    """Respect generated namespace configuration without importing custom bases."""
+    if name == "model_config" or name.startswith("_"):
+        return True
+    if not hasattr(PydanticBaseModel, name):
+        return False
+    namespaces = ("model_validate", "model_dump")
+    pending = [cast("DataModel", field.parent)]
+    while pending:
+        model = pending.pop()
+        config = model.extra_template_data.get("config")
+        if (configured := getattr(config, "protected_namespaces", None)) is not None:
+            namespaces = configured
+            break
+        base_classes = _find_base_classes(model)
+        if not base_classes and model.custom_base_class and model.custom_base_class != "pydantic.BaseModel":
+            # This later external base may override any earlier generated base's namespaces.
+            return False
+        pending.extend(base_classes)
+    return name.startswith(namespaces)
+
+
 class BaseModel(BaseModelBase):
     """Pydantic v2 BaseModel with ConfigDict and pattern-based regex_engine support."""
 
@@ -826,6 +850,7 @@ class BaseModel(BaseModelBase):
     SUPPORTS_TREE_SCOPE_REUSE_MODEL_INHERITANCE: ClassVar[bool] = True
     FIELD_NAME_MODEL_TYPE: ClassVar[ModelType] = ModelType.PYDANTIC
     FIELD_NAME_RESOLVER_CLASS: ClassVar[type[FieldNameResolver]] = PydanticFieldNameResolver
+    EXPLICIT_ALIAS_CONFLICT_CHECKER = staticmethod(_explicit_alias_conflicts_with_pydantic)
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = True
     SUPPORTS_INHERITED_DISCRIMINATOR_ENUM: ClassVar[bool] = True
     SUPPORTS_FIELD_RENAMING: ClassVar[bool] = True
