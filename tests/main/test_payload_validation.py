@@ -994,29 +994,33 @@ def test_generated_pydantic_v2_model_rejects_schema_invalid_payloads(
 
 
 @pytest.mark.parametrize(("backend", "case"), BACKEND_ACCEPTANCE_CASES)
-@settings(
-    database=None,
-    deadline=None,
-    derandomize=True,
-    max_examples=MAX_EXAMPLES,
-    suppress_health_check=[
-        HealthCheck.filter_too_much,
-        HealthCheck.function_scoped_fixture,
-        HealthCheck.too_slow,
-    ],
-)
-@given(data=st.data())
 def test_generated_payload_backend_accepts_representative_schema_payloads(
     backend: PayloadBackend,
     case: SchemaCase,
     generated_model_cache: dict[str, Any],
-    data: st.DataObject,
 ) -> None:
-    """Representative non-default backends should accept source-valid payloads."""
-    payload = data.draw(payload_strategy(case), label=f"{backend.value}:{case.id}:valid")
-    validate_with_source_schema(case, payload)
-    runtime = load_generated_payload_runtime(case, generated_model_cache, backend)
-    runtime.validate_python(payload)
+    """Check each backend case with fresh Hypothesis settings, avoiding parametrization parent chains."""
+
+    @settings(
+        database=None,
+        deadline=None,
+        derandomize=True,
+        max_examples=MAX_EXAMPLES,
+        suppress_health_check=[
+            HealthCheck.filter_too_much,
+            HealthCheck.function_scoped_fixture,
+            HealthCheck.too_slow,
+        ],
+    )
+    @given(data=st.data())
+    def check_acceptance(data: st.DataObject) -> None:
+        """Non-default backends should accept source-valid payloads."""
+        payload = data.draw(payload_strategy(case), label=f"{backend.value}:{case.id}:valid")
+        validate_with_source_schema(case, payload)
+        runtime = load_generated_payload_runtime(case, generated_model_cache, backend)
+        runtime.validate_python(payload)
+
+    check_acceptance()
 
 
 @pytest.mark.parametrize(("backend", "case"), BACKEND_REJECTION_CASES)
