@@ -13,5 +13,9 @@
     "Base": {
       "type": "string"
     }
-  }
+  },
+  "enum": [
+    "long-email@example.com",
+    "a@example.com"
+  ]
 }
