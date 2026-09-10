@@ -73,6 +73,7 @@ from datamodel_code_generator.model.pydantic_v2.version import (
 from datamodel_code_generator.model.runtime_validation import (
     SchemaRuntimeValidation,
     _is_internal_schema_runtime_validation,
+    conditional_value_uses_json_equality,
     unique_items_path_uses_regex,
 )
 from datamodel_code_generator.python_literal import (
@@ -1377,6 +1378,13 @@ class BaseModel(BaseModelBase):
             ),
             "has_conditional_required": any(
                 runtime_validation.conditional_required for runtime_validation in runtime_validations
+            ),
+            "has_conditional_json_equality": any(
+                conditional_value_uses_json_equality(value)
+                for runtime_validation in runtime_validations
+                for rule in runtime_validation.conditional_required
+                for _names, expected in rule.condition
+                for value in expected
             ),
             "has_unique_items": any(runtime_validation.unique_items for runtime_validation in runtime_validations),
             "has_unique_items_regex_paths": any(

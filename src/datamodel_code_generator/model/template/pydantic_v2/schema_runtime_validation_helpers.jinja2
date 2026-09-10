@@ -124,7 +124,18 @@ class {{ schema_runtime_validation_base_class_name }}(BaseModel):
             return data
         for rule in cls.__json_schema_conditional_required__:
             condition_matches = all(
+{%- if has_conditional_json_equality %}
+                any(
+                    name in data
+                    and any(
+                        cls._json_schema_conditional_equal(data[name], value)
+                        for value in expected
+                    )
+                    for name in names
+                )
+{%- else %}
                 any(name in data and data[name] in expected for name in names)
+{%- endif %}
                 for names, expected in rule['condition']
             )
             required_groups = (
@@ -137,6 +148,36 @@ class {{ schema_runtime_validation_base_class_name }}(BaseModel):
                     continue
                 raise ValueError('Conditional required properties are missing')
         return data
+{%- endif %}
+{%- if has_conditional_json_equality %}
+
+    @classmethod
+    def _json_schema_conditional_equal(cls, value: Any, expected: Any) -> bool:
+        match expected:
+            case bool():
+                return isinstance(value, bool) and value == expected
+            case int() | float():
+                return not isinstance(value, bool) and value == expected
+            case dict():
+                return (
+                    isinstance(value, dict)
+                    and len(value) == len(expected)
+                    and all(
+                        key in value
+                        and cls._json_schema_conditional_equal(value[key], item)
+                        for key, item in expected.items()
+                    )
+                )
+            case list():
+                return (
+                    isinstance(value, list)
+                    and len(value) == len(expected)
+                    and all(
+                        cls._json_schema_conditional_equal(item, other)
+                        for item, other in zip(value, expected, strict=True)
+                    )
+                )
+        return value == expected
 {%- endif %}
 {%- if has_unique_items %}
 
