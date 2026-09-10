@@ -27,7 +27,7 @@ from packaging import version
 from pydantic import TypeAdapter, ValidationError
 from pydantic.errors import PydanticUndefinedAnnotation
 
-from datamodel_code_generator import DataModelType, InputFileType, enable_parsed_source_cache, generate
+from datamodel_code_generator import DataModelType, GenerateConfig, InputFileType, enable_parsed_source_cache, generate
 from datamodel_code_generator.__main__ import Exit, main
 from datamodel_code_generator.arguments import arg_parser
 from datamodel_code_generator.format import Formatter, PythonVersion, is_supported_in_black
@@ -861,6 +861,7 @@ def run_generate_and_assert(
         pytest.fail(f"Expected generate() to return str, got {type(result).__name__}")
     assert expected_file is not None
     assert_output(result, expected_file)
+
 
 def run_main_and_assert(  # noqa: PLR0912
     *,

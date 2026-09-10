@@ -17,15 +17,15 @@ import warnings
 from collections import UserDict, defaultdict
 from collections.abc import Callable as ABCCallable
 from collections.abc import Sequence
+from contextlib import ExitStack, nullcontext
 from dataclasses import Field as DataclassField
 from decimal import Decimal
-from operator import itemgetter
-from pathlib import Path, PurePath
-from types import MappingProxyType
-from contextlib import ExitStack, nullcontext
 from functools import partial
 from http.server import ThreadingHTTPServer
+from operator import itemgetter
+from pathlib import Path, PurePath
 from threading import Thread
+from types import MappingProxyType
 from typing import TYPE_CHECKING, get_args, get_type_hints
 from urllib.parse import urlparse
 
@@ -35,10 +35,10 @@ import pytest
 from jinja2 import TemplateNotFound
 from jsonschema import Draft7Validator, Draft202012Validator, FormatChecker
 from jsonschema import ValidationError as SchemaValidationError
+from jsonschema.validators import validator_for
 from packaging import version
 from pydantic import VERSION as PYDANTIC_VERSION
 from pydantic import PydanticUserError, ValidationError
-from jsonschema.validators import validator_for
 from referencing import Registry, Resource
 from referencing.exceptions import Unresolvable
 
