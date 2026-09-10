@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING
 import pytest
 from pydantic import ValidationError
 
-from datamodel_code_generator import DataModelType, GenerateConfig, InputFileType, arguments, generate
+from datamodel_code_generator import DataModelType, GenerateConfig, InputFileType, arguments
 from datamodel_code_generator import __main__ as main_module
 from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.format import Formatter
@@ -24,7 +24,7 @@ from datamodel_code_generator.input_model import load_model_schema
 from tests.conftest import assert_inputs_not_mutated, assert_output, freeze_time
 from tests.data.python.input_model import union_annotations
 from tests.data.python.input_model.union_runtime import CASES, VALUES, describe
-from tests.main.conftest import _generated_model, run_main_with_args
+from tests.main.conftest import _generated_model, run_generate_and_assert, run_main_with_args
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
@@ -1937,23 +1937,18 @@ def test_input_model_union_branch_provenance(model_name: str, entrypoint: str, f
     formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
     base_class = f"{INPUT_UNION_INPUT_MODULE}.ArbitraryBase" if model_name == "MultipleUnsupported" else None
     extra_args = ["--base-class", base_class] if base_class else []
+    expected_name = f"{model_name}_builtin" if formatter == "builtin" and base_class else model_name
     if entrypoint == "cli":
-        run_main_with_args(
-            [
-                "--input-model",
-                source,
-                "--output",
-                str(output),
-                "--disable-timestamp",
-                "--formatters",
-                *formatters,
-                *extra_args,
-            ],
-            use_parsed_source_cache=False,
+        run_input_model_and_assert(
+            input_model=source,
+            output_path=output,
+            expected_file=INPUT_UNION_EXPECTED / f"{expected_name}.py",
+            extra_args=["--disable-timestamp", "--formatters", *formatters, *extra_args],
         )
     else:
-        generate(
-            load_model_schema([source], InputFileType.JsonSchema),
+        run_generate_and_assert(
+            input_=load_model_schema([source], InputFileType.JsonSchema),
+            expected_file=INPUT_UNION_EXPECTED / f"{expected_name}.py",
             config=GenerateConfig(
                 base_class=base_class or "",
                 input_file_type=InputFileType.JsonSchema,
@@ -1964,8 +1959,6 @@ def test_input_model_union_branch_provenance(model_name: str, entrypoint: str, f
                 formatters=[Formatter(value) for value in formatters],
             ),
         )
-    expected_name = f"{model_name}_builtin" if formatter == "builtin" and base_class else model_name
-    assert_output(output.read_text(), INPUT_UNION_EXPECTED / f"{expected_name}.py")
     schema = load_model_schema([source], InputFileType.JsonSchema)
     assert_output(json.dumps(schema, indent=2), INPUT_UNION_EXPECTED / f"{model_name}_schema.txt")
     records = {}
@@ -1996,18 +1989,16 @@ def test_input_model_union_caller_extensions(model_name: str, entrypoint: str, f
     output = tmp_path / "output.py"
     formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
     if entrypoint == "cli":
-        run_main_with_args([
-            "--input-model",
-            source,
-            "--output",
-            str(output),
-            "--disable-timestamp",
-            "--formatters",
-            *formatters,
-        ])
+        run_input_model_and_assert(
+            input_model=source,
+            output_path=output,
+            expected_file=INPUT_UNION_EXPECTED / f"extension_{model_name}.py",
+            extra_args=["--disable-timestamp", "--formatters", *formatters],
+        )
     else:
-        generate(
-            load_model_schema([source], InputFileType.JsonSchema),
+        run_generate_and_assert(
+            input_=load_model_schema([source], InputFileType.JsonSchema),
+            expected_file=INPUT_UNION_EXPECTED / f"extension_{model_name}.py",
             config=GenerateConfig(
                 input_file_type=InputFileType.JsonSchema,
                 input_filename="<stdin>",
@@ -2016,7 +2007,6 @@ def test_input_model_union_caller_extensions(model_name: str, entrypoint: str, f
                 formatters=[Formatter(value) for value in formatters],
             ),
         )
-    assert_output(output.read_text(), INPUT_UNION_EXPECTED / f"extension_{model_name}.py")
     schema = load_model_schema([source], InputFileType.JsonSchema)
     assert_output(json.dumps(schema, indent=2), INPUT_UNION_EXPECTED / f"extension_{model_name}_schema.txt")
     if model_name == "Serializable":
