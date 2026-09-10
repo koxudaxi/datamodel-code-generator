@@ -21257,9 +21257,10 @@ def test_validator_finalized_model_import(output_dir: Path, entrypoint: str, exa
             ],
         )
     else:
-        generate(
-            schema,
-            output=output_dir,
+        run_generate_file_and_assert(
+            input_path=schema,
+            output_path=output_dir,
+            expected_directory=expected,
             input_file_type=InputFileType.JsonSchema,
             output_model_type=DataModelType.PydanticV2BaseModel,
             validators=json.loads(config.read_text()),
@@ -21269,7 +21270,6 @@ def test_validator_finalized_model_import(output_dir: Path, entrypoint: str, exa
             if _uses_external_test_default_formatter()
             else [Formatter.BUILTIN],
         )
-        assert_directory_content(output_dir, expected)
     with _generated_package_module(output_dir, "child") as module:
         assert_output(
             json.dumps(
