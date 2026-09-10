@@ -20347,6 +20347,10 @@ EXPLICIT_ALIAS_ALIASES = json.loads((ALIASES_DATA_PATH / "explicit_alias_names.j
         ("reserved_config", DataModelType.PydanticV2BaseModel),
         ("reserved_validate", DataModelType.PydanticV2BaseModel),
         ("reserved_msgspec", DataModelType.MsgspecStruct),
+        ("discriminator_invalid", DataModelType.PydanticV2BaseModel),
+        ("discriminator_keyword", DataModelType.PydanticV2BaseModel),
+        ("discriminator_reserved", DataModelType.PydanticV2BaseModel),
+        ("discriminator_scoped_invalid", DataModelType.PydanticV2BaseModel),
     ],
 )
 def test_explicit_alias_names_invalid(
@@ -20354,26 +20358,34 @@ def test_explicit_alias_names_invalid(
 ) -> None:
     """Reject collisions and invalid Python identifiers for every output model."""
     aliases = EXPLICIT_ALIAS_ALIASES[case]
+    synthesized = case.startswith("discriminator_")
+    input_path = JSON_SCHEMA_DATA_PATH / (
+        "discriminator_no_literal.json" if synthesized else "explicit_alias_names.json"
+    )
     field_name = (
         "b" if case in {"duplicate", "existing", "scoped_duplicate", "snake_duplicate", "nfkc_duplicate"} else "a"
     )
-    alias = aliases.get(f"AliasNames.{field_name}", aliases.get(field_name))
+    if synthesized:
+        field_name = "pet_type"
+    alias = aliases.get(f"{'ApiDog' if synthesized else 'AliasNames'}.{field_name}", aliases.get(field_name))
     reason = (
         "conflicts with another field" if field_name == "b" or case == "snake_existing" else "is not a valid field name"
     )
     message = f"Alias {alias!r} for field {field_name!r} {reason}."
     run_generate_and_assert(
-        input_=JSON_SCHEMA_DATA_PATH / "explicit_alias_names.json",
+        input_=input_path,
         expected_error=Error,
         expected_error_match=re.escape(message),
         input_file_type=InputFileType.JsonSchema,
         output=output_file,
         aliases=aliases,
+        class_name_prefix="Api" if synthesized else None,
         output_model_type=backend,
         snake_case_field=case != "nfkc_duplicate",
     )
+    assert_output(f"{output_file.exists()}\n", EXPECTED_JSON_SCHEMA_PATH / "msgspec_enum_diagnostics/absent.txt")
     run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "explicit_alias_names.json",
+        input_path=input_path,
         output_path=output_file,
         input_file_type="jsonschema",
         extra_args=[
@@ -20381,6 +20393,7 @@ def test_explicit_alias_names_invalid(
             json.dumps(aliases),
             "--output-model-type",
             backend.value,
+            *(["--class-name-prefix", "Api"] if synthesized else []),
             *([] if case == "nfkc_duplicate" else ["--snake-case-field"]),
         ],
         expected_exit=Exit.ERROR,

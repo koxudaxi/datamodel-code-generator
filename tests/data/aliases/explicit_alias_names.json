@@ -94,5 +94,18 @@
   "scoped_empty_choices": {
     "a": "value",
     "AliasNames.a": []
+  },
+  "discriminator_invalid": {
+    "pet_type": "not-valid"
+  },
+  "discriminator_keyword": {
+    "pet_type": "class"
+  },
+  "discriminator_reserved": {
+    "pet_type": "model_config"
+  },
+  "discriminator_scoped_invalid": {
+    "ApiDog.pet_type": "not-valid",
+    "ApiCat.pet_type": "not-valid"
   }
 }

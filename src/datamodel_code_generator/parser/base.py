@@ -109,6 +109,7 @@ from datamodel_code_generator.python_literal import (
     rewrite_runtime_imports,
 )
 from datamodel_code_generator.reference import (
+    _ALIAS_RESOLUTION_CLASS_NAME_KEY,
     ModelResolver,
     ModelType,
     Reference,
@@ -3385,7 +3386,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                         single_alias, validation_aliases = self._split_field_alias(alias)
                         self.generation_store.append_field(
                             discriminator_model,
-                            self.data_model_field_type(
+                            discriminator_field := self.data_model_field_type(
                                 name=field_name,
                                 data_type=new_data_type,
                                 required=True,
@@ -3398,6 +3399,13 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                                 **self._data_model_field_common_kwargs(),
                             ),
                         )
+                        if self.config.aliases:
+                            discriminator_field.__dict__[_ALIAS_RESOLUTION_CLASS_NAME_KEY] = (
+                                discriminator_model.class_name
+                            )
+                            self.model_resolver.prepare_explicit_field_aliases(
+                                [discriminator_field], discriminator_model.reference, self.field_name_model_type
+                            )
             has_imported_literal = any(import_ == IMPORT_LITERAL for import_ in imports)
             if has_imported_literal:  # pragma: no cover
                 imports.append(IMPORT_LITERAL)
