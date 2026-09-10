@@ -22663,17 +22663,19 @@ def test_unique_model_set_hash_contract(
                 "output_model_type": DataModelType(options.get("output_model_type", "pydantic_v2.BaseModel")),
             },
         )
-        if case["error"]:
-            with pytest.raises(Error) as caught:
-                generate(source, config=config)
-            error = f"{caught.value}\n"
-        else:
-            generate(source, config=config)
+        run_generate_and_assert(
+            input_=source,
+            config=config,
+            expected_error=Error if case["error"] else None,
+            expected_file=expected.with_suffix(".txt" if case["error"] else ".py"),
+        )
     if case["error"]:
-        assert_output(error, expected.with_suffix(".txt"))
+        if entrypoint == "cli":
+            assert_output(error, expected.with_suffix(".txt"))
         assert_output(f"{output.exists()}\n", expected.parent / "missing_output.txt")
         return
-    assert_output(output.read_text(), expected.with_suffix(".py"))
+    if entrypoint == "cli":
+        assert_output(output.read_text(), expected.with_suffix(".py"))
 
 
 @pytest.mark.parametrize("custom_template", [False, True])
@@ -22698,15 +22700,15 @@ def test_root_sequence_nested_set_rejected(
             output_should_not_exist=True,
         )
     else:
-        with pytest.raises(Error) as caught:
-            generate(
-                source,
-                input_file_type=InputFileType.JsonSchema,
-                output=output,
-                custom_template_dir=TEMPLATE_DIR if custom_template else None,
-                **options,
-            )
-        assert_output(f"{caught.value}\n", EXPECTED_JSON_SCHEMA_PATH / "unique_model_sets/nested_root.txt")
+        run_generate_and_assert(
+            input_=source,
+            input_file_type=InputFileType.JsonSchema,
+            output=output,
+            custom_template_dir=TEMPLATE_DIR if custom_template else None,
+            expected_error=Error,
+            expected_file=EXPECTED_JSON_SCHEMA_PATH / "unique_model_sets/nested_root.txt",
+            **options,
+        )
 
 
 @pytest.mark.parametrize(
@@ -22731,8 +22733,9 @@ def test_unique_model_set_native_contract(case: dict[str, Any], tmp_path: Path) 
 
     output = tmp_path / "model.py"
     options = case["options"]
-    generate(
-        JSON_SCHEMA_DATA_PATH / "unique_model_sets" / case["schema"],
+    run_generate_and_assert(
+        input_=JSON_SCHEMA_DATA_PATH / "unique_model_sets" / case["schema"],
+        expected_file=EXPECTED_JSON_SCHEMA_PATH / "unique_model_sets" / f"{case['name']}.py",
         config=GenerateConfig(
             input_file_type=InputFileType.JsonSchema,
             output=output,
@@ -22853,14 +22856,20 @@ def test_unique_model_set_template_sources(
             "enable_faux_immutability": frozen,
             "custom_template_dir": directory,
         })
-        if frozen:
-            generate(source, **options)
-        else:
-            with pytest.raises(Error) as caught:
-                generate(source, **options)
-            error = f"{caught.value}\n"
+        run_generate_and_assert(
+            input_=source,
+            expected_error=None if frozen else Error,
+            expected_file=expected
+            / (
+                ("template_custom.py" if case["mode"].startswith("custom") else "object_PydanticV2BaseModel_True.py")
+                if frozen
+                else "object_PydanticV2BaseModel_False.txt"
+            ),
+            **options,
+        )
     if not frozen:
-        assert_output(error, expected / "object_PydanticV2BaseModel_False.txt")
+        if entrypoint == "cli":
+            assert_output(error, expected / "object_PydanticV2BaseModel_False.txt")
         assert_output(f"{output_file.exists()}\n", expected / "missing_output.txt")
         return
     assert_output(
