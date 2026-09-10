@@ -14,9 +14,10 @@ from collections import OrderedDict, defaultdict
 from copy import deepcopy
 from dataclasses import dataclass, replace
 from functools import cached_property, lru_cache
+from itertools import accumulate
 from pathlib import Path
 from threading import RLock
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeVar, cast
 from warnings import warn
 
 from pydantic import ConfigDict, Field
@@ -1755,6 +1756,42 @@ def _field_participates_in_constructor(_: DataModelFieldBase) -> bool:
     return True
 
 
+_EXPRESSION_ATTRIBUTES = ("type_hint", "base_type_hint", "annotated", "field", "represented_default")
+
+
+def _bind_expression(expression: str, bindings: dict[str, str]) -> str:
+    """Replace bound name spans while preserving every other source byte."""
+    source = expression.encode()
+    offsets = [0, *accumulate(map(len, source.splitlines(keepends=True)))]
+    replacements = [
+        (
+            offsets[node.lineno - 1] + node.col_offset,
+            offsets[cast("int", node.end_lineno) - 1] + cast("int", node.end_col_offset),
+            bindings[node.id],
+        )
+        for node in ast.walk(ast.parse(expression, mode="eval"))
+        if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load) and node.id in bindings
+    ]
+    for start, end, replacement in sorted(replacements, reverse=True):
+        source = source[:start] + replacement.encode() + source[end:]
+    return source.decode()
+
+
+class _BoundFieldExpressions:
+    """Expose bound syntax while delegating all field metadata unchanged."""
+
+    def __init__(self, field: Any, bindings: dict[str, str]) -> None:
+        self._field = field
+        self._bindings = bindings
+
+    def __getattr__(self, name: str) -> Any:
+        value = getattr(self._field, name)
+        if name in _EXPRESSION_ATTRIBUTES and isinstance(value, str) and value:
+            value = _bind_expression(value, self._bindings)
+        self.__dict__[name] = value
+        return value
+
+
 class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     """Abstract base class for all data model types.
 
@@ -2404,9 +2441,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         extra_template_data = self._custom_template_data() if use_custom_template else self._builtin_template_data()
         fields = self._template_fields(use_custom_template=use_custom_template)
         if bindings := self.__dict__.get("_field_name_bindings"):
-            from datamodel_code_generator.model._field_name_bindings import bind_field_views  # noqa: PLC0415
-
-            fields = bind_field_views(fields, bindings)
+            fields = [_BoundFieldExpressions(field, bindings) for field in fields]
         return self._render(
             class_name=class_name or self.class_name,
             fields=fields,

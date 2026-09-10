@@ -21282,16 +21282,23 @@ def test_validator_finalized_model_import(output_dir: Path, entrypoint: str, exa
 
 
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
-@pytest.mark.parametrize("target", [PythonVersion.PY_310, PythonVersion.PY_314])
-@pytest.mark.parametrize("union", [False, True])
-@pytest.mark.parametrize("case", ["collision", "control", "required", "late", "unused", "forward", "wire"])
 @pytest.mark.parametrize(
-    "backend",
+    ("backend", "case", "union", "target"),
     [
-        DataModelType.PydanticV2BaseModel,
-        DataModelType.PydanticV2Dataclass,
-        DataModelType.DataclassesDataclass,
-        DataModelType.MsgspecStruct,
+        (backend, case, union, target)
+        for backend in (
+            DataModelType.PydanticV2BaseModel,
+            DataModelType.PydanticV2Dataclass,
+            DataModelType.DataclassesDataclass,
+            DataModelType.MsgspecStruct,
+        )
+        for case in ("collision", "control", "required", "late", "unused", "forward", "wire")
+        for union in (False, True)
+        for target in (PythonVersion.PY_310, PythonVersion.PY_314)
+    ]
+    + [
+        (backend, "typing", False, PythonVersion.PY_310)
+        for backend in (DataModelType.PydanticV2BaseModel, DataModelType.MsgspecStruct)
     ],
 )
 def test_field_name_bindings(
@@ -21322,6 +21329,7 @@ def test_field_name_bindings(
                 "--disable-timestamp",
                 *(["--formatters", "builtin"] if use_builtin else []),
                 *(["--aliases", str(alias_path)] if case == "wire" else []),
+                *(["--use-annotated", "--field-constraints"] if case == "typing" else []),
                 *(
                     ["--disable-future-imports", "--use-schema-description", "--use-field-description"]
                     if case == "forward"
@@ -21339,8 +21347,8 @@ def test_field_name_bindings(
             output_model_type=backend,
             target_python_version=target,
             use_standard_collections=True,
-            use_annotated=backend == DataModelType.MsgspecStruct,
-            field_constraints=backend == DataModelType.MsgspecStruct,
+            use_annotated=backend == DataModelType.MsgspecStruct or case == "typing",
+            field_constraints=backend == DataModelType.MsgspecStruct or case == "typing",
             use_union_operator=union,
             enum_field_as_literal="all",
             disable_timestamp=True,
