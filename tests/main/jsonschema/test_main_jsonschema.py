@@ -15697,7 +15697,7 @@ def test_x_python_type_rejects_unsafe_value(
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
 @pytest.mark.parametrize(
     ("case", "record"),
-    json.loads((JSON_SCHEMA_DATA_PATH / "generic_reuse_cycles.json").read_text()).items(),
+    json.loads((DATA_PATH / "payloads/generic_reuse_cycles.json").read_text()).items(),
 )
 def test_x_python_type_rejects_cyclic_imports(
     case: str, record: dict, entrypoint: str, output_file: Path, capsys: pytest.CaptureFixture[str]
