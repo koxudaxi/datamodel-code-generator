@@ -19817,15 +19817,15 @@ def test_msgspec_inheritance_reject_conflicting_layouts(
             output_should_not_exist=True,
         )
     else:
-        with pytest.raises(Error) as error:
-            generate(
-                MSGSPEC_INHERITANCE_DATA / case["schema"],
-                output=output_file,
-                input_file_type=InputFileType(case["format"]),
-                output_model_type=DataModelType.MsgspecStruct,
-                **case["options"],
-            )
-        assert_output(f"{error.value}\n", expected)
+        run_generate_and_assert(
+            input_=MSGSPEC_INHERITANCE_DATA / case["schema"],
+            output=output_file,
+            expected_file=expected,
+            expected_error=Error,
+            input_file_type=InputFileType(case["format"]),
+            output_model_type=DataModelType.MsgspecStruct,
+            **case["options"],
+        )
         assert_output(f"{output_file.exists()}\n", MSGSPEC_INHERITANCE_EXPECTED / "absent.txt")
 
 
