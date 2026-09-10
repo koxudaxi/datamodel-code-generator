@@ -21830,3 +21830,93 @@ def test_conditional_json_equality(
                 model.model_validate(value)
                 model.model_validate_json(json.dumps(value))
                 model(**value)
+
+
+@pytest.mark.parametrize("formatter", ["builtin", "external"])
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize(
+    "case",
+    [
+        "conditional",
+        "oneof",
+        "anyof",
+        "nested",
+        "count",
+        "core",
+        "inherited",
+        "referenced",
+        "ref_siblings",
+        "ref_siblings_draft7",
+    ],
+)
+def test_inline_allof_validators(
+    output_file: Path, monkeypatch: pytest.MonkeyPatch, entrypoint: str, case: str, formatter: str
+) -> None:
+    """Validate native-schema and generated runtime behavior through both entrypoints."""
+    source = JSON_SCHEMA_DATA_PATH / "inline_allof_validators" / f"{case}.json"
+    payloads = DATA_PATH / "payloads/inline_allof_validators"
+    values = json.loads((payloads / f"{case}.json").read_text())
+    native_type = Draft7Validator if case == "ref_siblings_draft7" else Draft202012Validator
+    native = native_type(json.loads(source.read_text()))
+    error_type = values.get("error_type", "value_error")
+    assert_output(
+        json.dumps([native.is_valid(values["valid"]), native.is_valid(values["invalid"])]) + "\n",
+        payloads / "native.txt",
+    )
+    # These cases assert separate formatter goldens because their wrapping differs.
+    if case in {"anyof", "core"}:
+        monkeypatch.delenv("DATAMODEL_CODE_GENERATOR_CHECK_BUILTIN_FORMATTER_PARITY", raising=False)
+    formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
+    (output_file.parent / "pyproject.toml").write_text((source.parent / "pyproject.toml").read_text())
+    suffix = "_builtin" if case in {"anyof", "core"} and formatter == "builtin" else ""
+    expected = f"inline_allof_validators/{case}{suffix}.py"
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=source,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file=expected,
+            extra_args=[
+                "--output-model-type",
+                "pydantic_v2.BaseModel",
+                "--generate-schema-validators",
+                "--disable-timestamp",
+                "--formatters",
+                *formatters,
+            ],
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=source,
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            assert_func=assert_file_content,
+            expected_file=expected,
+            output_model_type=DataModelType.PydanticV2BaseModel,
+            generate_schema_validators=True,
+            disable_timestamp=True,
+            formatters=[Formatter(value) for value in formatters],
+            settings_path=output_file.parent,
+        )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name=f"inline_allof_{case}",
+        model_name="Root",
+        valid_json=json.dumps(values["valid"]),
+        invalid_json=json.dumps(values["invalid"]),
+        expected_error_type=error_type,
+    )
+    with _generated_model(output_file, f"inline_allof_python_{case}", "Root") as model:
+        _assert_model_json_invalid(model.model_validate, values["invalid"], error_type)
+        for sibling in values.get("sibling_cases", []):
+            payload = sibling["payload"]
+            if sibling["valid"]:
+                native.validate(payload)
+                model.model_validate(payload)
+                model.model_validate_json(json.dumps(payload))
+                continue
+            with pytest.raises(SchemaValidationError):
+                native.validate(payload)
+            _assert_model_json_invalid(model.model_validate, payload, sibling["error_type"])
+            _assert_model_json_invalid(model.model_validate_json, json.dumps(payload), sibling["error_type"])
