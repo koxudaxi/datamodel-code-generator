@@ -38,5 +38,9 @@ class PatternConstraints(Constraints):
     pattern: Optional[str] = Field(None, alias="pattern")  # noqa: UP045
 
 
+Constraints.model_rebuild()
+PatternConstraints.model_rebuild()
+
+
 Constraints.__module__ = _LEGACY_MODULE
 PatternConstraints.__module__ = _LEGACY_MODULE

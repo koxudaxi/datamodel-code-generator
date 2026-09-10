@@ -977,4 +977,5 @@ class DataTypeManager(_DataTypeManager):
     ANNOTATED_CONSTRAINTS_CONTEXT: ClassVar[object | None] = _ANNOTATED_CONSTRAINTS_CONTEXT
 
 
+_rebuild_model_with_datamodel_namespace(Constraints)
 _rebuild_model_with_datamodel_namespace(DataModelField)

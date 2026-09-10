@@ -1655,4 +1655,5 @@ class BaseModel(BaseModelBase):
         return base_model
 
 
+_rebuild_model_with_datamodel_namespace(Constraints)
 _rebuild_model_with_datamodel_namespace(DataModelField)

@@ -130,6 +130,8 @@ codes = []
 if scenario in {'concurrent', 'parallel_generation'}:
     # Warm only parser/model imports; this schema does not need inflection.
     generate({'title': 'Empty', 'type': 'object'}, **{**options, 'formatters': []})
+    # Exercise cold constraint initialization under frequent real thread switches.
+    sys.setswitchinterval(0.000001)
     barrier = Barrier(4)
 
     def parallel_generate(index):
