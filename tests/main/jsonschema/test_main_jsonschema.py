@@ -21917,12 +21917,18 @@ def test_inline_allof_validators(
             payload = sibling["payload"]
             if sibling["valid"]:
                 native.validate(payload)
-                model.model_validate(payload)
+                for container in (dict, UserDict, MappingProxyType):
+                    model.model_validate(json.loads(json.dumps(payload), object_hook=container))
                 model.model_validate_json(json.dumps(payload))
                 continue
             with pytest.raises(SchemaValidationError):
                 native.validate(payload)
-            _assert_model_json_invalid(model.model_validate, payload, sibling["error_type"])
+            for container in (dict, UserDict, MappingProxyType):
+                _assert_model_json_invalid(
+                    model.model_validate,
+                    json.loads(json.dumps(payload), object_hook=container),
+                    sibling["error_type"],
+                )
             _assert_model_json_invalid(model.model_validate_json, json.dumps(payload), sibling["error_type"])
 
 
