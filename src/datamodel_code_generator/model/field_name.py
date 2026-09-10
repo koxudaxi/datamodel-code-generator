@@ -59,6 +59,8 @@ class PydanticFieldNameResolver(FieldNameResolver):
 class MsgspecFieldNameResolver(FieldNameResolver):
     """Avoid shadowing the output-owned msgspec ``field`` import."""
 
+    FIELD_ASSIGNMENT_HELPER = "field"
+
     def _validate_field_name(self, field_name: str) -> bool:  # noqa: PLR6301
         return field_name != "field"
 

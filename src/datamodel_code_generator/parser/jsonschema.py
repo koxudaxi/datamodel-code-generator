@@ -105,6 +105,7 @@ from datamodel_code_generator.parser.base import (
 from datamodel_code_generator.parser.schema_version import get_data_formats
 from datamodel_code_generator.python_literal import _semantic_value_text
 from datamodel_code_generator.reference import (
+    _ALIAS_RESOLUTION_CLASS_NAME_KEY,
     SPECIAL_PATH_MARKER,
     ModelType,
     Reference,
@@ -8527,6 +8528,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     class_name=class_name,
                 )
             )
+        if self.config.aliases:
+            for field in fields:
+                field.__dict__[_ALIAS_RESOLUTION_CLASS_NAME_KEY] = class_name
         return fields
 
     def _get_typed_additional_properties_field(

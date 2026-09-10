@@ -1778,6 +1778,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     # Kept opaque so this generic layer does not import reference-layer policy.
     FIELD_NAME_MODEL_TYPE: ClassVar[Any] = None
     FIELD_NAME_RESOLVER_CLASS: ClassVar[Any] = None
+    EXPLICIT_ALIAS_CONFLICT_CHECKER: ClassVar[Callable[[DataModelFieldBase, str], bool] | None] = None
     USES_DATACLASS_ARGUMENTS: ClassVar[bool] = False
     SUPPORTS_REQUIRED_INHERITED_FIELD_ASSIGNMENT: ClassVar[bool] = False
     REQUIRES_EXPLICIT_INHERITED_FACTORY_OVERRIDE: ClassVar[bool] = False
@@ -2613,3 +2614,8 @@ def _rebuild_model_with_datamodel_namespace(model: type[Any]) -> None:
 _rebuild_model_with_datamodel_namespace(DataType)
 _rebuild_model_with_datamodel_namespace(BaseClassDataType)
 _rebuild_model_with_datamodel_namespace(DataModelFieldBase)
+
+
+def _find_base_classes(model: DataModel) -> list[DataModel]:
+    """Get direct base class DataModels."""
+    return [b.reference.source for b in model.base_classes if b.reference and isinstance(b.reference.source, DataModel)]

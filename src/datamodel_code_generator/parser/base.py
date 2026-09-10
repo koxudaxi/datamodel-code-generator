@@ -87,6 +87,7 @@ from datamodel_code_generator.model.base import (
     ConstraintsBase,
     DataModel,
     DataModelFieldBase,
+    _find_base_classes,
     _refresh_custom_template_paths,
     _set_nested_model_default_factory_order,
     get_inherited_fields,
@@ -107,7 +108,13 @@ from datamodel_code_generator.python_literal import (
     rewrite_runtime_expressions,
     rewrite_runtime_imports,
 )
-from datamodel_code_generator.reference import ModelResolver, ModelType, Reference, split_module_name
+from datamodel_code_generator.reference import (
+    _ALIAS_RESOLUTION_CLASS_NAME_KEY,
+    ModelResolver,
+    ModelType,
+    Reference,
+    split_module_name,
+)
 from datamodel_code_generator.types import (
     ANY,
     NONE,
@@ -142,6 +149,7 @@ _MODEL_MODULE_PREFIX: Final = "datamodel_code_generator.model."
 _CLASS_NAME_SEPARATOR_PATTERN: Final = re.compile(r"[^A-Za-z0-9]+")
 _TOP_LEVEL_FUTURE_IMPORT_PATTERN: Final = re.compile(r"(?m)^from __future__ import ")
 _TOP_LEVEL_RELATIVE_IMPORT_PATTERN: Final = re.compile(r"(?m)^from \.")
+
 _DEFERRED_INHERITED_CLASS_KEY: Final = "_deferred_inherited_class"
 _DEFERRED_INHERITED_FIELD_KEY: Final = "_deferred_inherited_field"
 _DEFERRED_INHERITED_TYPE_KEY: Final = "_deferred_inherited_type"
@@ -1360,11 +1368,6 @@ def title_to_class_name(title: str) -> str:
     return "".join(x for x in classname.title() if not x.isspace())
 
 
-def _find_base_classes(model: DataModel) -> list[DataModel]:
-    """Get direct base class DataModels."""
-    return [b.reference.source for b in model.base_classes if b.reference and isinstance(b.reference.source, DataModel)]
-
-
 def _find_field(field_name: str, models: list[DataModel]) -> DataModelFieldBase | None:
     """Find a field using generated models' C3 inheritance order."""
     return get_inherited_fields(models).get(field_name)
@@ -2253,6 +2256,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
     def _create_data_model(self, model_type: type[DataModel] | None = None, **kwargs: Any) -> DataModel:
         """Create data model instance with dataclass_arguments support for DataClass."""
+        if self.config.aliases and (fields := kwargs.get("fields")):
+            self.model_resolver.prepare_explicit_field_aliases(fields, kwargs["reference"], self.field_name_model_type)
         # Add class decorators if not already provided
         if "decorators" not in kwargs and self.class_decorators:
             kwargs["decorators"] = list(self.class_decorators)
@@ -3381,7 +3386,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                         single_alias, validation_aliases = self._split_field_alias(alias)
                         self.generation_store.append_field(
                             discriminator_model,
-                            self.data_model_field_type(
+                            discriminator_field := self.data_model_field_type(
                                 name=field_name,
                                 data_type=new_data_type,
                                 required=True,
@@ -3394,6 +3399,13 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                                 **self._data_model_field_common_kwargs(),
                             ),
                         )
+                        if self.config.aliases:
+                            discriminator_field.__dict__[_ALIAS_RESOLUTION_CLASS_NAME_KEY] = (
+                                discriminator_model.class_name
+                            )
+                            self.model_resolver.prepare_explicit_field_aliases(
+                                [discriminator_field], discriminator_model.reference, self.field_name_model_type
+                            )
             has_imported_literal = any(import_ == IMPORT_LITERAL for import_ in imports)
             if has_imported_literal:  # pragma: no cover
                 imports.append(IMPORT_LITERAL)
@@ -6086,6 +6098,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 imports = module_to_import[module]
                 imports.remove(model_imports.get(unused_model, unused_model.imports))
                 models.remove(unused_model)
+
+        if self.config.aliases:
+            for ctx in contexts:
+                for model in ctx.models:
+                    self.model_resolver.validate_explicit_field_aliases(model.fields, self.field_name_model_type)
 
         if self.generate_schema_validators:
             self._prepare_schema_runtime_validation_module_code(contexts)
