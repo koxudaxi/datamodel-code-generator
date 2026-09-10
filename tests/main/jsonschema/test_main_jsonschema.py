@@ -23875,9 +23875,17 @@ ADDITIONAL_PATTERN_EXPECTED = EXPECTED_JSON_SCHEMA_PATH / "additional_pattern_in
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
 @pytest.mark.parametrize("formatter", ["builtin", "external"])
 def test_additional_pattern_intersections(
-    tmp_path: Path, case: str, enabled: bool, field_constraints: bool, entrypoint: str, formatter: str
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    case: str,
+    enabled: bool,
+    field_constraints: bool,
+    entrypoint: str,
+    formatter: str,
 ) -> None:
     """Check complete generated code, native validation, dumps and input mutation."""
+    # Each formatter has its own golden for intentionally different formatting.
+    monkeypatch.delenv("DATAMODEL_CODE_GENERATOR_CHECK_BUILTIN_FORMATTER_PARITY", raising=False)
     source = ADDITIONAL_PATTERN_FIXTURES / f"{case}.json"
     record = ADDITIONAL_PATTERN_CASES[case]
     template = JSON_SCHEMA_DATA_PATH.parent / "templates" / record["custom"] if record["custom"] else None
@@ -23927,13 +23935,14 @@ def test_additional_pattern_intersections(
     if record.get("invalid_schema"):
         with pytest.raises(JsonSchemaError):
             Draft202012Validator.check_schema(schema)
+        native = None
     else:
         Draft202012Validator.check_schema(schema)
-    native = Draft202012Validator(schema)
+        native = Draft202012Validator(schema)
     records = []
     with _generated_model(output, "additional_pattern_generated", "Root") as model:
         for payload in record["payloads"]:
-            result = {"native": native.is_valid(payload)}
+            result = {"native": native.is_valid(payload)} if native is not None else {}
             with assert_inputs_not_mutated({"payload": payload}):
                 try:
                     result["json"] = model.model_validate_json(json.dumps(payload)).model_dump(mode="json")

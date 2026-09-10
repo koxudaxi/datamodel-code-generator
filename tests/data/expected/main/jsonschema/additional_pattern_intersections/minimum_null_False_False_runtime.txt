@@ -1,6 +1,5 @@
 [
   {
-    "native": true,
     "json": {},
     "python": {}
   }
