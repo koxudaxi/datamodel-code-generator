@@ -109,7 +109,7 @@ def render_unique_items_rules(rules: Iterable[UniqueItemsRule]) -> tuple[str, ..
 
 
 def render_property_count_validation_base(class_name: str, base_class_name: str) -> str:
-    """Render the shared raw-dict property-count validator base."""
+    """Render the shared raw-mapping property-count validator base."""
     return f"""class {class_name}({base_class_name}):
     __json_schema_property_count_rule__: ClassVar[tuple[Any, ...]] = ()
 
@@ -118,7 +118,7 @@ def render_property_count_validation_base(class_name: str, base_class_name: str)
     def _validate_json_schema_property_count(cls, data: Any) -> Any:
         if not (rule := cls.__json_schema_property_count_rule__):
             return data
-        if not isinstance(data, dict):
+        if not (isinstance(data, dict) or isinstance(data, _Mapping)):
             return data
         property_count = len(data)
         min_properties, max_properties = rule

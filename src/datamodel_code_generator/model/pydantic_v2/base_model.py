@@ -25,6 +25,7 @@ from datamodel_code_generator.imports import IMPORT_ANNOTATED, IMPORT_ANY, IMPOR
 from datamodel_code_generator.model import _rebuild_model_with_datamodel_namespace
 from datamodel_code_generator.model.base import (
     ALL_MODEL,
+    TEMPLATE_DIR,
     UNDEFINED,
     BaseClassDataType,
     DataModel,
@@ -1047,6 +1048,7 @@ class BaseModel(BaseModelBase):
             runtime_models[0],
             runtime_validations,
             has_local_core_helper=any(capabilities[0] for capabilities in helper_base_class_names),
+            has_local_property_count_helper=any(capabilities[1] for capabilities in helper_base_class_names),
             uses_generated_generic_base_class=uses_generated_generic_base_class,
         )
         module_plan = SchemaRuntimeValidationModulePlan(
@@ -1120,11 +1122,18 @@ class BaseModel(BaseModelBase):
         runtime_validations: list[SchemaRuntimeValidation],
         *,
         has_local_core_helper: bool,
+        has_local_property_count_helper: bool = False,
         uses_generated_generic_base_class: bool = False,
     ) -> None:
         """Add imports only when this module renders a shared runtime helper."""
         additional_imports = model._additional_imports  # noqa: SLF001
         helper_imports = (IMPORT_MODEL_VALIDATOR, IMPORT_ANY, IMPORT_CLASSVAR)
+        if (
+            has_local_property_count_helper
+            or not cls._has_custom_schema_runtime_validation_helper(model)
+            or model.custom_template_dir == TEMPLATE_DIR
+        ):
+            helper_imports += (Import(from_="collections.abc", import_="Mapping", alias="_Mapping"),)
         if not uses_generated_generic_base_class:
             helper_imports += (IMPORT_BASE_MODEL,)
         for import_ in helper_imports:

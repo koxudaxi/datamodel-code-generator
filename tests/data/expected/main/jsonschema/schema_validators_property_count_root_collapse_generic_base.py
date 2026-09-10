@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping as _Mapping
 from typing import Any, ClassVar
 
 from pydantic import BaseModel as _BaseModel
@@ -28,7 +29,7 @@ class _JsonSchemaRuntimeValidationBaseCore(BaseModel):
 
     @classmethod
     def _validate_json_schema_pattern_properties(cls, data: Any) -> Any:
-        if not isinstance(data, dict):
+        if not (isinstance(data, dict) or isinstance(data, _Mapping)):
             return data
         values = data
         for rule in cls.__json_schema_pattern_properties__:
@@ -83,7 +84,7 @@ class _JsonSchemaRuntimeValidationBase(BaseModel):
     def _validate_json_schema_property_count(cls, data: Any) -> Any:
         if not (rule := cls.__json_schema_property_count_rule__):
             return data
-        if not isinstance(data, dict):
+        if not (isinstance(data, dict) or isinstance(data, _Mapping)):
             return data
         property_count = len(data)
         min_properties, max_properties = rule
