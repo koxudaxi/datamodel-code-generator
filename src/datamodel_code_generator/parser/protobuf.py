@@ -412,6 +412,7 @@ class _ProtobufDescriptorConverter:
         self.map_entries: dict[str, Any] = {}
         self.definition_keys: dict[str, str] = {}
         self.used_definition_keys: dict[str, str] = {}
+        self._referenced_standard_types: dict[str, None] | None = None
 
     def convert(self, file_descriptor_set: Any) -> dict[str, Any]:
         for file_descriptor in file_descriptor_set.file:
@@ -445,11 +446,65 @@ class _ProtobufDescriptorConverter:
                     effective_version,
                 )
 
+        if referenced := self._referenced_standard_types:
+            omitted_files = [
+                file
+                for file in file_descriptor_set.file
+                if file.name in WELL_KNOWN_PROTO_PATHS and file.name not in self.input_file_names
+            ]
+            self._convert_referenced_standard_types(omitted_files, referenced)
+
         return {
             "$schema": "http://json-schema.org/draft-07/schema#",
             "title": "Model",
             "definitions": self.definitions,
         }
+
+    def _convert_referenced_standard_types(self, omitted_files: list[Any], referenced: dict[str, None]) -> None:
+        locations: dict[str, tuple[Any, tuple[str, ...], tuple[int, ...]]] = {}
+        for file_descriptor in omitted_files:
+            pending: list[tuple[Any, tuple[str, ...], tuple[int, ...]]] = [(file_descriptor, (), ())]
+            while pending:
+                container, parents, path = pending.pop()
+                for index, enum_descriptor in enumerate(container.enum_type):
+                    full_name = _full_name(file_descriptor.package, parents, enum_descriptor.name)
+                    locations[full_name] = (file_descriptor, parents, (*path, 4 if parents else 5, index))
+                messages = container.nested_type if parents else container.message_type
+                for index, message in enumerate(messages):
+                    full_name = _full_name(file_descriptor.package, parents, message.name)
+                    message_path = (*path, 3 if parents else 4, index)
+                    locations[full_name] = (file_descriptor, parents, message_path)
+                    pending.append((message, (*parents, message.name), message_path))
+        comments_by_file: dict[str, dict[tuple[int, ...], str]] = {}
+        while referenced:
+            pending_names = tuple(referenced)
+            referenced.clear()
+            for full_name in pending_names:
+                if self._definition_key(full_name) in self.definitions:
+                    continue
+                file_descriptor, parents, path = locations[full_name]
+                if file_descriptor.name not in comments_by_file:
+                    comments_by_file[file_descriptor.name] = _comment_map(file_descriptor)
+                comments = comments_by_file[file_descriptor.name]
+                if full_name in self.enums:
+                    self._convert_enum(self.enums[full_name], full_name, comments, path)
+                else:
+                    self._convert_message(
+                        self.messages[full_name],
+                        file_descriptor.package,
+                        parents,
+                        comments,
+                        path,
+                        self._effective_version(file_descriptor),
+                        include_nested=False,
+                    )
+
+    def _reference_schema(self, full_name: str) -> dict[str, Any]:
+        if full_name.startswith("google.protobuf."):
+            if self._referenced_standard_types is None:
+                self._referenced_standard_types = {}
+            self._referenced_standard_types.setdefault(full_name, None)
+        return {"$ref": f"#/definitions/{self._definition_key(full_name)}"}
 
     def _collect_symbols(self, messages: Iterable[Any], package: str, parents: tuple[str, ...]) -> None:
         for message_descriptor in messages:
@@ -525,28 +580,31 @@ class _ProtobufDescriptorConverter:
         comments: dict[tuple[int, ...], str],
         path: tuple[int, ...],
         syntax: ProtobufVersion,
+        *,
+        include_nested: bool = True,
     ) -> None:
         full_name = _full_name(package, parents, message_descriptor.name)
         if message_descriptor.options.map_entry:
             return
 
-        for index, enum_descriptor in enumerate(message_descriptor.enum_type):
-            enum_path = (*path, 4, index)
-            self._convert_enum(
-                enum_descriptor,
-                _full_name(package, (*parents, message_descriptor.name), enum_descriptor.name),
-                comments,
-                enum_path,
-            )
-        for index, nested_descriptor in enumerate(message_descriptor.nested_type):
-            self._convert_message(
-                nested_descriptor,
-                package,
-                (*parents, message_descriptor.name),
-                comments,
-                (*path, 3, index),
-                syntax,
-            )
+        if include_nested:
+            for index, enum_descriptor in enumerate(message_descriptor.enum_type):
+                enum_path = (*path, 4, index)
+                self._convert_enum(
+                    enum_descriptor,
+                    _full_name(package, (*parents, message_descriptor.name), enum_descriptor.name),
+                    comments,
+                    enum_path,
+                )
+            for index, nested_descriptor in enumerate(message_descriptor.nested_type):
+                self._convert_message(
+                    nested_descriptor,
+                    package,
+                    (*parents, message_descriptor.name),
+                    comments,
+                    (*path, 3, index),
+                    syntax,
+                )
 
         properties: dict[str, Any] = {}
         required: list[str] = []
@@ -606,12 +664,12 @@ class _ProtobufDescriptorConverter:
         if field.type in SCALAR_SCHEMAS:
             return dict(SCALAR_SCHEMAS[field.type])
         if field.type == TYPE_ENUM:
-            return {"$ref": f"#/definitions/{self._definition_key(_type_name(field.type_name))}"}
+            return self._reference_schema(_type_name(field.type_name))
         if field.type in {TYPE_MESSAGE, TYPE_GROUP}:
             type_name = _type_name(field.type_name)
             if type_name in WELL_KNOWN_SCHEMAS:
                 return deepcopy(WELL_KNOWN_SCHEMAS[type_name])
-            return {"$ref": f"#/definitions/{self._definition_key(type_name)}"}
+            return self._reference_schema(type_name)
         return {}  # pragma: no cover
 
     def _map_field_schema(self, field: Any) -> dict[str, Any] | None:
