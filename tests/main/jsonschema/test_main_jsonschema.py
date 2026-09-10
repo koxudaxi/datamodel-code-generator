@@ -20955,10 +20955,11 @@ def test_allof_final_scoped_aliases_modular(output_dir: Path, entrypoint: str) -
     expected = EXPECTED_JSON_SCHEMA_PATH / "allof_scoped_aliases/modular"
     aliases = {"pkg.ApiChildSchema.x": "renamed"}
     if entrypoint == "api":
-        generate(
-            SCOPED_ALIAS_DATA / "modular.json",
+        run_generate_file_and_assert(
+            input_path=SCOPED_ALIAS_DATA / "modular.json",
             input_file_type=InputFileType.JsonSchema,
-            output=output_dir,
+            output_path=output_dir,
+            expected_directory=expected,
             aliases=aliases,
             class_name_prefix="Api",
             class_name_suffix="Schema",
@@ -20967,7 +20968,6 @@ def test_allof_final_scoped_aliases_modular(output_dir: Path, entrypoint: str) -
             if _uses_external_test_default_formatter()
             else [Formatter.BUILTIN],
         )
-        assert_directory_content(output_dir, expected)
     else:
         run_main_and_assert(
             input_path=SCOPED_ALIAS_DATA / "modular.json",
@@ -21019,16 +21019,16 @@ def test_allof_final_scoped_aliases_invalid(
     """Validate the selected final alias before writing conflicting or reserved field names."""
     expected = EXPECTED_JSON_SCHEMA_PATH / "allof_scoped_aliases" / f"error_{case['name']}.txt"
     if entrypoint == "api":
-        with pytest.raises(Error) as error:
-            generate(
-                SCOPED_ALIAS_DATA / "allof.json",
-                input_file_type=InputFileType.JsonSchema,
-                output=output_file,
-                aliases=case["aliases"],
-                class_name_prefix="Api",
-                class_name_suffix="Schema",
-            )
-        assert_output(f"{error.value}\n", expected)
+        run_generate_and_assert(
+            input_=SCOPED_ALIAS_DATA / "allof.json",
+            input_file_type=InputFileType.JsonSchema,
+            output=output_file,
+            aliases=case["aliases"],
+            class_name_prefix="Api",
+            class_name_suffix="Schema",
+            expected_error=Error,
+            expected_file=expected,
+        )
         assert_output(f"{output_file.exists()}\n", EXPECTED_JSON_SCHEMA_PATH / "allof_scoped_aliases/absent.txt")
     else:
         run_main_and_assert(
