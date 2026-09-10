@@ -5,6 +5,72 @@ This changelog is automatically generated from GitHub Releases.
 
 ---
 
+## [0.79.0](https://github.com/datamodel-code-generator/datamodel-code-generator/releases/tag/0.79.0) - 2026-09-10
+
+## Breaking Changes
+
+### Error Handling Changes
+* Reject unsupported msgspec enum members - When generating `msgspec.Struct` output, enums that would render as a plain `Enum` and contain bool or float members now raise an error such as msgspec.Struct does not support bool Enum members, instead of producing code; schemas that previously generated output will now fail and no file is written (#3928)
+* msgspec Struct multiple inheritance now aborts generation on layout conflicts - When generating `msgspec.Struct` models with more than one base class, the generator now validates the inherited slot layouts and raises an `Error` refusing to write any output when the generated bases would produce incompatible instance layouts, whereas previously it emitted a module that only failed later at Python import time; both the CLI (which now exits with an error and writes no file) and the Python API (which now raises `Error`) are affected for such schemas (#3929)
+* Aliases now abort generation on conflicts or invalid names - When the `aliases` option is used, an alias value that collides with another field, is not a valid Python identifier, is a Python keyword, or conflicts with a reserved Pydantic or msgspec attribute name now raises an Error and stops generation instead of being silently sanitized or deduplicated (#3936)
+* Missing embedded resource anchors now raise an error - A reference to an anchor that does not exist within an embedded schema resource now raises an Error with the message that the embedded schema resource has no such anchor, instead of falling back to a physical document fetch (#3977)
+
+### Default Behavior Changes
+* Fail msgspec.Struct generation for bool and float enum aliases - By default, without any new opt-in flag, msgspec.Struct generation now aborts for enums whose bool or float members are not represented as an int or str subclass enum, changing behavior for existing schemas that formerly succeeded (#3928)
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+* Aliases are treated as explicit field names and validated - Values supplied through the `aliases` option are now preserved as the chosen field names and checked against each output backend's naming rules, so configurations that previously produced auto-adjusted output for dataclasses, msgspec, or TypedDict backends may now fail instead of quietly renaming the field (#3936)
+* Runtime schema validators now validate Mapping inputs - Generated pydantic v2 runtime validators previously skipped validation and returned the value unchanged whenever the input was not a plain `dict`, so non-dict mapping objects such as `UserDict` or `MappingProxyType` bypassed pattern-property, required-group, conditional-required, property-count, and unique-items checks; they are now treated like dictionaries and validated, which can raise a `ValidationError` for mapping inputs that previously passed through silently (#3975)
+* Embedded schema resources now resolve in-document first - References to schemas declared with a nested `$id` are now resolved within the containing document before any file or HTTP lookup, and resource-scoped anchors and JSON pointers are honored, so schemas that previously resolved such references to physical files or remote URLs (including cases where an embedded resource shares a physical filename) can now produce different generated models and different fetch behavior (#3977)
+
+### Code Generation Changes
+* Dotted module exports now follow the final package layout - When `treat-dot-as-module` is combined with `all-exports-scope`, export depth and collision prefixes are recomputed against the final package layout and the empty-package re-export `__init__.py` files are emitted after module post-processing, so projects generated with both options together will see different import paths and `__init__.py` contents than before (#3926)
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+* Validator method naming now accounts for more collisions - Generated pydantic v2 validator method names now receive incrementing `_1`, `_2` suffixes when they collide with another validator, an existing field name, or an inherited validator, so models using the validators feature with inheritance or overlapping field names can produce method names that differ from previously generated output (#3942)
+* Same-named external validator functions now aliased - Validator functions that share a name across different modules now receive stable import aliases and repeated uses of one function share a single import binding, changing the generated import statements and call expressions compared with prior output (#3942)
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+* Automatic aliasing of imports shadowed by field names - When a property name matches an imported symbol that is used inside that model's own annotations or defaults, the generator now emits an aliased import such as `Optional as Optional_aliased`, `Field as Field_aliased`, or `list as list_aliased_2` and rewrites the affected annotations and defaults to reference the alias; this runs by default with no opt-in flag, so generated output changes for any schema whose field names collide with imported names (#3943)
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+* Conditional required validation now uses strict JSON equality - Generated pydantic v2 runtime validators emit a new `_json_schema_conditional_equal` helper and stop relying on Python `in` membership, so when an if then else conditional required rule has const or enum values that include booleans or the integers 0 and 1 (or nested objects and arrays containing them) the generated code now distinguishes booleans from numbers and compares objects and arrays deeply, changing both the generated output and the runtime acceptance of payloads for schemas built with `schema-validator-type pydantic-v2` (#3960)
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+* Generated schema validators now import Mapping - When generating pydantic v2 schema validators with the bundled template, generated modules now include a new `from collections.abc import Mapping as _Mapping` import and every `isinstance(data, dict)` guard becomes `isinstance(data, dict) or isinstance(data, _Mapping)`, while structural `match` cases change from `case dict()` to `case dict() or _Mapping()`; users who compare regenerated output against committed golden files will see these differences (#3975)
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+
+<!-- Release notes generated using configuration in .github/release.yml at main -->
+
+## What's Changed
+* Fix release benchmark PR lookup by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/4017
+* Resolve referenced Protobuf standard types by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3934
+* Reject unsupported msgspec enums by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3928
+* Reject incompatible msgspec bases by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3929
+* Fix concurrent constraint initialization by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/4015
+* Fix reused model module imports by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3924
+* Fix recursive model reexports by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3926
+* Validate explicit field aliases by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3936
+* Resolve aliases using final model names by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3937
+* Resolve validator name collisions by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3942
+* Avoid field type name collisions by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3943
+* Fix literal allOf pattern intersections by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3945
+* Preserve outer scalar allOf constraints by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3946
+* Use JSON equality in conditional validators by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3960
+* Preserve inline allOf schema validators by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3974
+* Accept mapping inputs in schema validators by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3975
+* Preserve input changes during watched generation by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3989
+* Resolve embedded schema resources by @koxudaxi in https://github.com/datamodel-code-generator/datamodel-code-generator/pull/3977
+
+
+**Full Changelog**: https://github.com/datamodel-code-generator/datamodel-code-generator/compare/0.78.0...0.79.0
+
+---
+
 ## [0.78.0](https://github.com/datamodel-code-generator/datamodel-code-generator/releases/tag/0.78.0) - 2026-09-09
 
 ## Breaking Changes
