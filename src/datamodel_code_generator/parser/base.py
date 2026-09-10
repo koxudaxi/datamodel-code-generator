@@ -5985,9 +5985,6 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.__apply_discriminator_type(models, imports, can_retain_cache=can_retain_cache)
         self.__set_one_literal_on_default(models, can_retain_cache=can_retain_cache)
         self.__fix_constructor_field_ordering(models)
-        if self.config.aliases:
-            for model in models:
-                self.model_resolver.validate_explicit_field_aliases(model.fields, self.field_name_model_type)
 
         return self.__remove_overridden_models(models)
 
@@ -6101,6 +6098,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 imports = module_to_import[module]
                 imports.remove(model_imports.get(unused_model, unused_model.imports))
                 models.remove(unused_model)
+
+        if self.config.aliases:
+            for ctx in contexts:
+                for model in ctx.models:
+                    self.model_resolver.validate_explicit_field_aliases(model.fields, self.field_name_model_type)
 
         if self.generate_schema_validators:
             self._prepare_schema_runtime_validation_module_code(contexts)

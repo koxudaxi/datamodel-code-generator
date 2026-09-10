@@ -107,5 +107,15 @@
   "discriminator_scoped_invalid": {
     "ApiDog.pet_type": "not-valid",
     "ApiCat.pet_type": "not-valid"
+  },
+  "reserved_legacy": {
+    "a": "model_fields"
+  },
+  "discriminator_modular_collision": {
+    "AliasNames.a": "K",
+    "pet_type": "K"
+  },
+  "reserved_legacy_prefix": {
+    "a": "model_validate_custom"
   }
 }
