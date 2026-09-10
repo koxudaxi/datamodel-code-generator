@@ -270,5 +270,20 @@
       ""
     ],
     "normal": true
+  },
+  {
+    "name": "triple",
+    "valid": [
+      "abc",
+      "cba",
+      "b\nc\na"
+    ],
+    "invalid": [
+      "ab",
+      "ac",
+      "bc",
+      ""
+    ],
+    "normal": false
   }
 ]

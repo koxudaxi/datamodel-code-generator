@@ -21555,6 +21555,7 @@ def test_field_name_template_helper(output_file: Path, entrypoint: str, formatte
     "case",
     [
         "split",
+        "triple",
         "suffix",
         "unicode",
         "punctuation",

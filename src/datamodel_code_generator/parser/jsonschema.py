@@ -1290,6 +1290,27 @@ def _literal_pattern_value(pattern: str) -> str | None:
     return re.sub(r"\\(.)", r"\1", pattern)
 
 
+def _intersect_patterns(patterns: Sequence[str]) -> str:
+    """Preserve pairwise output unless literal searches need independent positions."""
+    match patterns:
+        case [pattern]:
+            return pattern
+        case [left, right] if left == right:
+            return left
+    literals = [_literal_pattern_value(pattern) for pattern in patterns]
+    if all(literal is not None for literal in literals):
+        longest = max((literal for literal in literals if literal is not None), key=len)
+        if any(literal is not None and not longest.startswith(literal) for literal in literals):
+            return r"\A" + "".join(rf"(?=[\s\S]*{pattern})" for pattern in dict.fromkeys(patterns))
+    match patterns:
+        case [left, right]:
+            return f"(?={left})(?={right})"
+    result = patterns[0]
+    for pattern in patterns[1:]:
+        result = _intersect_patterns((result, pattern))
+    return result
+
+
 @snooper_to_methods()  # noqa: PLR0904
 class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     """Parser for JSON Schema, JSON, YAML, Dict, and CSV formats."""
@@ -4083,20 +4104,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     return val1 if v1 <= v2 else val2
                 return val1  # pragma: no cover
             case "pattern":
-                if val1 == val2:
-                    return val1
-                # Only disjoint-prefix literals are provably broken by a shared search position.
-                # Preserve existing regex expressions and already-correct literal intersections.
-                literal1 = _literal_pattern_value(val1)
-                literal2 = _literal_pattern_value(val2)
-                if (
-                    literal1 is not None
-                    and literal2 is not None
-                    and not literal1.startswith(literal2)
-                    and not literal2.startswith(literal1)
-                ):
-                    return rf"\A(?=[\s\S]*{val1})(?=[\s\S]*{val2})"
-                return f"(?={val1})(?={val2})"
+                return _intersect_patterns((val1, val2))
             case "uniqueItems":
                 return val1 or val2
             case "multipleOf":
@@ -4111,14 +4119,22 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         *,
         intersect: bool,
     ) -> None:
+        patterns: list[str] | None = None
         for item in items:
             for field in JsonSchemaObject.__constraint_fields__:
                 if (value := cls._schema_constraint_value(item, field)) is None:
+                    continue
+                if intersect and field == "pattern":
+                    if patterns is None:
+                        patterns = [] if (base_pattern := base_dict.get(field)) is None else [base_pattern]
+                    patterns.append(value)
                     continue
                 if intersect and field in base_dict and base_dict[field] is not None:
                     base_dict[field] = cls._intersect_constraint(field, base_dict[field], value)
                 else:
                     base_dict[field] = value
+        if patterns:
+            base_dict["pattern"] = _intersect_patterns(patterns)
 
     def _build_allof_type(  # noqa: PLR0911, PLR0912, PLR0913, PLR0915, PLR0917
         self,
