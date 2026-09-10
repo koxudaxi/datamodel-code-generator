@@ -24010,26 +24010,31 @@ def test_undeclared_required(tmp_path: Path, case: str, enabled: bool, entrypoin
                 "apply_default_values_for_required_fields": "use-default",
             }.get(key, key.replace("_", "-"))
             args.extend([f"--{option}", *([] if argument_value is True else [str(argument_value)])])
-        run_main_with_args([
-            "--input",
-            str(source),
-            "--output",
-            str(output),
-            "--input-file-type",
-            "jsonschema",
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-            "--disable-timestamp",
-            "--formatters",
-            *formatters,
-            *(["--generate-schema-validators"] if enabled else []),
-            *args,
-        ])
+        run_main_and_assert(
+            input_path=source,
+            output_path=output,
+            input_file_type="jsonschema",
+            extra_args=[
+                "--output-model-type",
+                "pydantic_v2.BaseModel",
+                "--disable-timestamp",
+                "--formatters",
+                *formatters,
+                *(["--generate-schema-validators"] if enabled else []),
+                *args,
+            ],
+            expected_file=UNDECLARED_REQUIRED_EXPECTED
+            / record.get("legacy_code_names", {}).get(
+                f"{enabled}_{formatter}_{black.__version__.split('.')[0]}",
+                record["code_names"][f"{enabled}_{formatter}"],
+            ),
+            skip_code_validation=True,
+        )
     else:
         if "extra_template_data" in options:
             options["extra_template_data"] = defaultdict(dict, options["extra_template_data"])
-        generate(
-            source,
+        run_generate_and_assert(
+            input_=source,
             config=GenerateConfig(
                 output=output,
                 input_file_type=InputFileType.JsonSchema,
@@ -24039,14 +24044,12 @@ def test_undeclared_required(tmp_path: Path, case: str, enabled: bool, entrypoin
                 formatters=[Formatter(value) for value in formatters],
                 **options,
             ),
+            expected_file=UNDECLARED_REQUIRED_EXPECTED
+            / record.get("legacy_code_names", {}).get(
+                f"{enabled}_{formatter}_{black.__version__.split('.')[0]}",
+                record["code_names"][f"{enabled}_{formatter}"],
+            ),
         )
-    assert_output(
-        output.read_text(),
-        UNDECLARED_REQUIRED_EXPECTED
-        / record.get("legacy_code_names", {}).get(
-            f"{enabled}_{formatter}_{black.__version__.split('.')[0]}", record["code_names"][f"{enabled}_{formatter}"]
-        ),
-    )
     schema = json.loads(source.read_text())
     Draft202012Validator.check_schema(schema)
     native = Draft202012Validator(schema)
@@ -24070,7 +24073,7 @@ def test_undeclared_required(tmp_path: Path, case: str, enabled: bool, entrypoin
             results.append(result)
     runtime_expected = (
         UNDECLARED_REQUIRED_EXPECTED / "pydantic20"
-        if not enabled and "objects" in case and PYDANTIC_VERSION.split(".")[:2] == ["2", "0"]
+        if not enabled and "objects" in case and (PYDANTIC_VERSION.split(".")[:2] == ["2", "0"])
         else UNDECLARED_REQUIRED_EXPECTED
     )
     assert_output(

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping as _Mapping
 from typing import Any, ClassVar
 
 from pydantic import BaseModel, ConfigDict, TypeAdapter, conint, model_validator
@@ -32,7 +33,7 @@ class _JsonSchemaRuntimeValidationBase(BaseModel):
 
     @classmethod
     def _validate_json_schema_pattern_properties(cls, data: Any) -> Any:
-        if not isinstance(data, dict):
+        if not (isinstance(data, dict) or isinstance(data, _Mapping)):
             return data
         values = data
         for rule in cls.__json_schema_pattern_properties__:
@@ -86,7 +87,9 @@ class _JsonSchemaRuntimeValidationBase(BaseModel):
         required_group_rules: tuple[Any, ...],
         require_exactly_one: bool,
     ) -> Any:
-        if not required_group_rules or not isinstance(data, dict):
+        if not required_group_rules:
+            return data
+        if not (isinstance(data, dict) or isinstance(data, _Mapping)):
             return data
         for required_groups in required_group_rules:
             matches = sum(
