@@ -5,7 +5,6 @@ from __future__ import annotations
 import importlib
 import json
 import os
-import subprocess
 import sys
 import types
 from argparse import Namespace
@@ -13,7 +12,7 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from pathlib import Path
 from threading import Event
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, get_args, get_origin, get_type_hints
 
 import black
 import pytest
@@ -37,7 +36,14 @@ from tests.conftest import (
 from tests.data.python.input_model import inherited_overrides, union_annotations
 from tests.data.python.input_model.inherited_override_runtime import CASES as INHERITED_OVERRIDE_CASES
 from tests.data.python.input_model.union_runtime import CASES, VALUES, describe
-from tests.main.conftest import DATA_PATH, EXPECTED_MAIN_PATH, _generated_model, run_generate_and_assert, run_main_and_assert, run_main_with_args
+from tests.main.conftest import (
+    DATA_PATH,
+    EXPECTED_MAIN_PATH,
+    _generated_model,
+    run_generate_and_assert,
+    run_main_and_assert,
+    run_main_with_args,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
@@ -2759,109 +2765,144 @@ INPUT_GENERIC_CASES = json.loads((INPUT_GENERIC_FIXTURES / "generic_reuse_cases.
 
 
 @pytest.mark.parametrize(
-    ("record", "strategy"),
+    ("record", "strategy", "preserved"),
     [
-        pytest.param(record, strategy, id=f"{strategy}-{record['name']}")
-        for record in INPUT_GENERIC_CASES
-        for strategy in record.get("strategies", ["regenerate-all", "reuse-all", "reuse-foreign"])
+        *(
+            pytest.param(record, strategy, False, id=f"{strategy}-{record['name']}")
+            for record in INPUT_GENERIC_CASES
+            for strategy in record.get("strategies", ["regenerate-all", "reuse-all", "reuse-foreign"])
+        ),
+        pytest.param(INPUT_GENERIC_CASES[0], "reuse-all", True, id="preserved"),
     ],
 )
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
 @pytest.mark.parametrize("formatter", ["builtin", "external"])
-def test_python_generic_reuse(record: dict, strategy: str, entrypoint: str, formatter: str, tmp_path: Path) -> None:
+def test_python_generic_reuse(  # noqa: PLR0912, PLR0914
+    record: dict, strategy: str, entrypoint: str, formatter: str, tmp_path: Path, *, preserved: bool
+) -> None:
     """Preserve original validators and specialization identity without changing regeneration."""
     paths = ["tests.data.python.input_model." + source for source in record["sources"]]
     (tmp_path / "pyproject.toml").write_text((INPUT_GENERIC_FIXTURES / "collision_settings/pyproject.toml").read_text())
     formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
     output = tmp_path / "output.py"
-    if entrypoint == "cli":
-        args = [argument for path in paths for argument in ("--input-model", path)]
-        run_main_with_args([
-            *args,
-            "--output",
-            str(output),
-            "--disable-timestamp",
-            "--input-model-ref-strategy",
-            strategy,
-            "--formatters",
-            *formatters,
-        ])
-    else:
-        schema = load_model_schema(
-            paths, InputFileType.JsonSchema, InputModelRefStrategy(strategy), DataModelType.PydanticV2BaseModel
-        )
-        schema = json.loads(json.dumps(schema))
-        config = GenerateConfig(
-            input_file_type=InputFileType.JsonSchema,
-            disable_timestamp=True,
-            input_filename="<stdin>",
-            output=output,
-            settings_path=tmp_path,
-            formatters=[Formatter(value) for value in formatters],
-        )
-        generate(schema, config=config)
     expected_strategy = "regenerate-all" if strategy == "regenerate-all" else "reuse-all"
     stem = record["name"] + "_" + expected_strategy
     source_expected = INPUT_GENERIC_EXPECTED / formatter if record.get("formatter_goldens") else INPUT_GENERIC_EXPECTED
     if record.get("pydantic20_goldens") and PYDANTIC_VERSION.split(".")[:2] == ["2", "0"]:
         source_expected = INPUT_GENERIC_EXPECTED / "pydantic20" / formatter
-    code_name = record.get("legacy_code_names", {}).get(
-        f"{formatter}_{black.__version__.split('.')[0]}_{expected_strategy}", stem + ".py"
+    code_name = (
+        "preserved.py"
+        if preserved
+        else record.get("legacy_code_names", {}).get(
+            f"{formatter}_{black.__version__.split('.')[0]}_{expected_strategy}", stem + ".py"
+        )
     )
-    assert_output(output.read_text(), source_expected / code_name)
-    runtime = subprocess.run(
-        [sys.executable, str(INPUT_GENERIC_FIXTURES / "generic_reuse_runtime.py"), str(output), json.dumps(record)],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    assert_output(runtime.stdout, INPUT_GENERIC_EXPECTED / (stem + ".txt"))
-
-
-@pytest.mark.parametrize("entrypoint", ["cli", "api"])
-@pytest.mark.parametrize("formatter", ["builtin", "external"])
-def test_python_generic_reuse_type_binding(entrypoint: str, formatter: str, tmp_path: Path) -> None:
-    """Resolve a transported generic definition from a preserved field expression."""
-    fixture = DATA_PATH / "jsonschema/generic_reuse_type.json"
-    output = tmp_path / "output.py"
-    (tmp_path / "pyproject.toml").write_text((INPUT_GENERIC_FIXTURES / "collision_settings/pyproject.toml").read_text())
-    formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
     if entrypoint == "cli":
+        args = (
+            ["--input", str(DATA_PATH / "jsonschema/generic_reuse_type.json"), "--input-file-type", "jsonschema"]
+            if preserved
+            else _input_model_args(paths)
+        )
         run_main_with_args([
-            "--input",
-            str(fixture),
+            *args,
             "--output",
             str(output),
-            "--input-file-type",
-            "jsonschema",
             "--disable-timestamp",
+            *([] if preserved else ["--input-model-ref-strategy", strategy]),
             "--formatters",
             *formatters,
         ])
+        assert_output(output.read_text(), source_expected / code_name)
     else:
-        generate(
-            fixture,
+        schema = (
+            DATA_PATH / "jsonschema/generic_reuse_type.json"
+            if preserved
+            else json.loads(
+                json.dumps(
+                    load_model_schema(
+                        paths,
+                        InputFileType.JsonSchema,
+                        InputModelRefStrategy(strategy),
+                        DataModelType.PydanticV2BaseModel,
+                    )
+                )
+            )
+        )
+        run_generate_and_assert(
+            input_=schema,
+            expected_file=source_expected / code_name,
             config=GenerateConfig(
                 input_file_type=InputFileType.JsonSchema,
-                output=output,
                 disable_timestamp=True,
+                input_filename=None if preserved else "<stdin>",
+                output=output,
                 settings_path=tmp_path,
                 formatters=[Formatter(value) for value in formatters],
             ),
         )
-    assert_output(output.read_text(), INPUT_GENERIC_EXPECTED / "preserved.py")
-    runtime = subprocess.run(
-        [
-            sys.executable,
-            str(INPUT_GENERIC_FIXTURES / "generic_reuse_runtime.py"),
-            str(output),
-            json.dumps(INPUT_GENERIC_CASES[0]),
-        ],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    assert_output(runtime.stdout, INPUT_GENERIC_EXPECTED / "int_reuse-all.txt")
+    with _generated_model(output, "generic_output", record["sources"][0].split(":")[1]):  # noqa: PLR1702
+        rows = []
+        for source, payload, invalid in zip(record["sources"], record["payloads"], record["invalid"], strict=True):
+            module_name, name = source.split(":")
+            native = getattr(importlib.import_module("tests.data.python.input_model." + module_name), name)
+            generated = getattr(sys.modules["generic_output"], name)
+            native_fields = getattr(native, "model_fields", None)
+            native_annotations = (
+                {field: info.annotation for field, info in native_fields.items()}
+                if native_fields is not None
+                else get_type_hints(native)
+            )
+            row = {
+                "name": name,
+                "fields": list(generated.model_fields),
+                "annotations_equal": {
+                    field: generated.model_fields[field].annotation == annotation
+                    for field, annotation in native_annotations.items()
+                },
+                "type_identity": {
+                    field: generated.model_fields[field].annotation is annotation
+                    for field, annotation in native_annotations.items()
+                    if get_origin(annotation) is None and isinstance(annotation, type)
+                },
+                "results": {},
+            }
+            leaf_ids = {}
+            for label, annotations in [
+                ("native", native_annotations),
+                ("generated", {field: info.annotation for field, info in generated.model_fields.items()}),
+            ]:
+                leaf_ids[label] = {}
+                for field, annotation in annotations.items():
+                    pending = [annotation]
+                    leaves = []
+                    while pending:
+                        item = pending.pop()
+                        if get_origin(item) is None and isinstance(item, type):
+                            leaves.append(id(item))
+                        else:
+                            pending.extend(get_args(item))
+                    leaf_ids[label][field] = leaves
+            row["type_leaf_identity"] = {
+                field: leaves == leaf_ids["generated"][field] for field, leaves in leaf_ids["native"].items()
+            }
+            for label, model in [("native", native), ("generated", generated)]:
+                adapter = TypeAdapter(model)
+                try:
+                    row["results"][label] = {
+                        "valid": adapter.dump_python(adapter.validate_python(payload), mode="json")
+                    }
+                except ValidationError as error:
+                    row["results"][label] = {
+                        "valid_error": [(list(item["loc"]), item["type"]) for item in error.errors()]
+                    }
+                try:
+                    adapter.validate_python(invalid)
+                except ValidationError as error:
+                    row["results"][label]["invalid"] = [(list(item["loc"]), item["type"]) for item in error.errors()]
+                else:
+                    row["results"][label]["invalid"] = None
+            rows.append(row)
+    assert_output(json.dumps(rows, indent=2) + "\n", INPUT_GENERIC_EXPECTED / (stem + ".txt"))
 
 
 @pytest.mark.parametrize("case", ["name", "family", "index_type", "index_negative"])
@@ -2869,8 +2910,9 @@ def test_python_native_field_invalid_path(case: str, tmp_path: Path) -> None:
     """Reject malformed external native paths before generating executable annotations."""
     record = json.loads((DATA_PATH / "payloads/generic_native_fields" / (case + ".json")).read_text())
     with pytest.raises((TypeError, ValueError), match=record["message"]):
-        generate(
-            record["schema"],
+        run_generate_and_assert(
+            input_=record["schema"],
+            expected_file=tmp_path / "output.py",
             config=GenerateConfig(input_file_type=InputFileType.JsonSchema, output=tmp_path / "output.py"),
         )
 
