@@ -2687,6 +2687,52 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 return self.serialization_aliases[key]
         return None
 
+    def _apply_final_class_field_aliases(
+        self, fields: list[DataModelFieldBase], class_name: str, original_class_name: str
+    ) -> None:
+        """Apply final class scopes after name allocation, retaining already resolved fallback aliases."""
+        if class_name == original_class_name or not (aliases := self.config.aliases):
+            return
+        prefix = f"{class_name}."
+        if not any(key.startswith(prefix) for key in aliases):
+            return
+        scoped_aliases = {
+            field.original_name
+            for field in fields
+            if field.original_name is not None
+            and (isinstance(alias_value := aliases.get(f"{class_name}.{field.original_name}"), str) or alias_value)
+        }
+        if not scoped_aliases:
+            return
+        reserved_names = {field.name for field in fields if field.original_name not in scoped_aliases and field.name}
+        resolved_aliases: dict[str, tuple[str, str | None, list[str] | None]] = {}
+        for field in fields:
+            if (original_name := field.original_name) is None or original_name not in scoped_aliases:
+                continue
+            if original_name not in resolved_aliases:
+                field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
+                    original_name,
+                    excludes=reserved_names,
+                    model_type=self.field_name_model_type,
+                    class_name=class_name,
+                )
+                field_alias, validation_aliases = self._split_field_alias(alias)
+                resolved_aliases[original_name] = field_name, field_alias, validation_aliases
+                reserved_names.add(field_name)
+            field.name, field.alias, field.validation_aliases = resolved_aliases[original_name]
+            if (
+                self.serialization_aliases
+                and (
+                    field.serialization_alias is None
+                    or f"{class_name}.{original_name}" in self.serialization_aliases
+                    or f"{class_name}.{field.name}" in self.serialization_aliases
+                )
+                and (serialization_alias := self.get_serialization_alias(original_name, field.name, class_name))
+                is not None
+            ):
+                field.serialization_alias = serialization_alias
+            field.__dict__[_ALIAS_RESOLUTION_CLASS_NAME_KEY] = class_name
+
     @staticmethod
     def _parse_type_mappings(type_mappings: list[str] | None) -> dict[tuple[str, str], str]:
         """Parse type mappings from CLI format to internal format.

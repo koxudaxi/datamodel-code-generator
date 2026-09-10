@@ -7801,6 +7801,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 if self.model_resolver.default_value_overrides:
                     field.__dict__[_DEFERRED_INHERITED_CLASS_KEY] = name
                 self.generation_store.replace_field_type(field, self.data_type())
+        original_class_name = name
         name = self._apply_title_as_name(name, obj)  # pragma: no cover
         reference = self.model_resolver.add(path, name, class_name=True, loaded=True)
         extra_field = self._get_typed_additional_properties_field(reference.name, obj, path)
@@ -7836,6 +7837,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 field_name_to_field[required_name] = field
         for field in fields:
             self._finalize_required_inherited_field(field)
+        self._apply_final_class_field_aliases(fields, reference.name, original_class_name)
         if extra_field is not None:
             fields.insert(0, extra_field)
         self._set_schema_metadata(reference.path, obj)
