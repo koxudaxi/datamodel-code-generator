@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Final
 
 from datamodel_code_generator.format import PythonVersion
 
-from .constants import PAYLOAD_TARGET_PYTHON_VERSION
+from .constants import LITERAL_PATTERN_INTERSECTION_CASE_IDS, PAYLOAD_TARGET_PYTHON_VERSION
 from .models import PayloadBackend, SchemaCase
 
 if TYPE_CHECKING:
@@ -99,6 +99,10 @@ PYDANTIC_V2_DATACLASS_BUILTIN_NAME_EXCLUDED_CASES: Final[dict[str, str]] = {
     ),
 }
 PYDANTIC_V2_DATACLASS_REGEX_EXCLUDED_CASES: Final[dict[str, str]] = {
+    **dict.fromkeys(
+        LITERAL_PATTERN_INTERSECTION_CASE_IDS,
+        "root pattern aliases have no consuming dataclass to carry ConfigDict(regex_engine='python-re')",
+    ),
     "jsonschema/lookaround_mixed_constraints.json": (
         "root-level oneOf generates a bare TypeAliasType with no consuming dataclass to carry "
         "ConfigDict(regex_engine='python-re'), so TypeAdapter construction still rejects the lookaround pattern"
@@ -185,6 +189,53 @@ DATACLASS_FIELD_ORDER_EXCLUDED_CASES: Final[dict[str, str]] = {
     ),
 }
 MSGSPEC_VALIDATION_EXCLUDED_CASES: Final[dict[str, str]] = {
+    **dict.fromkeys(
+        (
+            "jsonschema/msgspec_enum_diagnostics/boolean.json",
+            "jsonschema/msgspec_enum_diagnostics/boolean_false.json",
+            "jsonschema/msgspec_enum_diagnostics/boolean_first_alias.json",
+            "jsonschema/msgspec_enum_diagnostics/boolean_integer_alias.json",
+            "jsonschema/msgspec_enum_diagnostics/boolean_true.json",
+            "jsonschema/msgspec_enum_diagnostics/boolean_untyped.json",
+            "jsonschema/msgspec_enum_diagnostics/float.json",
+            "jsonschema/msgspec_enum_diagnostics/float_first_alias.json",
+            "jsonschema/msgspec_enum_diagnostics/large_aliases.json",
+            "jsonschema/msgspec_enum_diagnostics/other_backends.json",
+            "jsonschema/msgspec_enum_diagnostics/string_alias_before_boolean.json",
+            "jsonschema/msgspec_enum_diagnostics/subclass_bool.json",
+            "jsonschema/msgspec_enum_diagnostics/subclass_late.json",
+            "jsonschema/msgspec_enum_diagnostics/subclass_rejected.json",
+            "jsonschema/msgspec_enum_diagnostics/subclass_reverse.json",
+        ),
+        "msgspec conversion only supports Enum classes with homogeneous str or int values",
+    ),
+    **dict.fromkeys(
+        (
+            "jsonschema/explicit_alias_namespace_inheritance/earlier.json",
+            "jsonschema/explicit_alias_namespace_inheritance/later.json",
+        ),
+        "msgspec Struct cannot combine independent field-bearing base layouts",
+    ),
+    **dict.fromkeys(
+        (
+            "jsonschema/allof_constraint_intersections/complex.json",
+            "jsonschema/allof_constraint_intersections/metadata.json",
+        ),
+        "msgspec conversion cannot validate generated empty Enum classes from object or array enum values",
+    ),
+    **dict.fromkeys(
+        (
+            "jsonschema/allof_constraint_intersections/scalars_equal.json",
+            "jsonschema/allof_constraint_intersections/scalars_partial.json",
+        ),
+        "msgspec conversion only supports Enum classes with homogeneous str or int values",
+    ),
+    "jsonschema/custom_template_dependencies_many.json": (
+        "msgspec conversion requires tagged Struct unions for combined object schemas"
+    ),
+    "jsonschema/numeric_constraint_precision/large.json": (
+        "msgspec Meta cannot represent integer constraints outside its native numeric range"
+    ),
     "jsonschema/array_combined.py.json": (
         "msgspec conversion cannot validate generated empty Enum classes from array-valued enum schemas"
     ),

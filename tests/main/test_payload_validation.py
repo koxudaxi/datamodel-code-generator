@@ -61,7 +61,11 @@ from .payload_validation.constants import (
     PYDANTIC_V2_FLOAT_MULTIPLE_OF_CASE_IDS,
     PYDANTIC_V2_FLOAT_MULTIPLE_OF_RUNTIME_MIN_VERSION,
 )
-from .payload_validation.native_numeric import native_float_multiple_errors, pydantic_payload_result
+from .payload_validation.native_numeric import (
+    NATIVE_NUMERIC_SAMPLING_ADAPTERS,
+    native_float_multiple_errors,
+    pydantic_payload_result,
+)
 from .payload_validation.schema import _schema_for_payload_generation
 from .payload_validation.strategy import _bound_float_multiples
 
@@ -331,7 +335,18 @@ def test_numeric_payload_sampling_validates_generated_models(
         payload = data.draw(payload_strategy(case), label=name)
         validate_with_source_schema(case, payload)
         adapter = load_generated_payload_adapter(case, generated_model_cache)
-        validated = adapter.validate_python(payload)
+        expected_errors = (
+            pydantic_payload_result(native_adapter, payload)[1]
+            if (native_adapter := NATIVE_NUMERIC_SAMPLING_ADAPTERS.get(name)) is not None
+            else []
+        )
+        validated, errors = pydantic_payload_result(adapter, payload)
+        assert_output(
+            json.dumps([] if errors == expected_errors else {"expected": expected_errors, "actual": errors}, indent=2),
+            NATIVE_NUMERIC_EMPTY_ERRORS,
+        )
+        if errors:
+            return
         dumped = adapter.dump_python(validated, mode="json", by_alias=True, exclude_unset=True)
         validate_with_source_schema(case, dumped)
 
@@ -491,6 +506,12 @@ def test_payload_backend_full_matrix_exclusions_are_classified() -> None:
     "case_id",
     [
         "jsonschema/constrained_types_keyword_order.json",
+        "jsonschema/allof_constraint_intersections/complex.json",
+        "jsonschema/allof_constraint_intersections/metadata.json",
+        "jsonschema/allof_constraint_intersections/scalars_equal.json",
+        "jsonschema/allof_constraint_intersections/scalars_partial.json",
+        "jsonschema/custom_template_dependencies_many.json",
+        "jsonschema/numeric_constraint_precision/large.json",
         "jsonschema/exact_imports_collapse_root_models_module_split_oneof.json",
         "jsonschema/strict_types.json",
         "jsonschema/type_array_only_null.json",

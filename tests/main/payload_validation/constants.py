@@ -235,13 +235,39 @@ PYDANTIC_V2_MISSING_SENTINEL_RUNTIME_MIN_VERSION = "2.12.0"
 PYDANTIC_V2_TYPE_ALIAS_RUNTIME_MIN_VERSION = "2.10.0"
 PYDANTIC_V2_FLOAT_MULTIPLE_OF_RUNTIME_MIN_VERSION = "2.5.2"
 PYDANTIC_V2_FLOAT_MULTIPLE_OF_CASE_IDS = (
+    "jsonschema/numeric_constraint_precision/ordinary.json",
     "jsonschema/native_decimal_default_constrained.json",
     "jsonschema/serialized_decimal_default_multiple_of.json",
 )
 PYDANTIC_V2_FLOAT_MULTIPLE_OF_EXCLUSION_REASON = (
     "Pydantic before 2.5.2 can reject schema-valid float multipleOf values near float boundaries"
 )
+LITERAL_PATTERN_INTERSECTION_CASE_IDS = (
+    "jsonschema/allof_literal_patterns/anchored.json",
+    "jsonschema/allof_literal_patterns/character_class.json",
+    "jsonschema/allof_literal_patterns/empty.json",
+    "jsonschema/allof_literal_patterns/escaped_dollar.json",
+    "jsonschema/allof_literal_patterns/escaped_dot.json",
+    "jsonschema/allof_literal_patterns/escaped_metacharacters.json",
+    "jsonschema/allof_literal_patterns/escaped_prefix.json",
+    "jsonschema/allof_literal_patterns/escaped_reverse_prefix.json",
+    "jsonschema/allof_literal_patterns/newline.json",
+    "jsonschema/allof_literal_patterns/prefix.json",
+    "jsonschema/allof_literal_patterns/punctuation.json",
+    "jsonschema/allof_literal_patterns/reverse_prefix.json",
+    "jsonschema/allof_literal_patterns/right_anchor.json",
+    "jsonschema/allof_literal_patterns/split.json",
+    "jsonschema/allof_literal_patterns/suffix.json",
+    "jsonschema/allof_literal_patterns/triple.json",
+    "jsonschema/allof_literal_patterns/unicode.json",
+    "jsonschema/allof_literal_patterns/unknown_escape.json",
+    "jsonschema/allof_literal_patterns/unknown_newline_escape.json",
+)
 PYDANTIC_V2_LEGACY_LOOKAROUND_EXCLUDED_CASES: dict[str, str] = {
+    **dict.fromkeys(
+        LITERAL_PATTERN_INTERSECTION_CASE_IDS,
+        "Pydantic before 2.5.0 cannot apply regex_engine='python-re' to intersected literal patterns",
+    ),
     "jsonschema/lookaround_anyof_nullable.json": (
         "Pydantic before 2.5.0 cannot apply regex_engine='python-re' to lookaround pattern validators"
     ),
