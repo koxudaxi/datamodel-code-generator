@@ -10,19 +10,19 @@ from pydantic import BaseModel as PydanticBaseModel
 from datamodel_code_generator.reference import FieldNameResolver
 
 if TYPE_CHECKING:
-    from datamodel_code_generator.model.base import DataModelFieldBase
+    from datamodel_code_generator.model import base as model_base
 
 
-def _explicit_alias_conflicts_with_pydantic(field: DataModelFieldBase, name: str) -> bool:
+def _explicit_alias_conflicts_with_pydantic(field: model_base.DataModelFieldBase, name: str) -> bool:
     """Respect generated namespace configuration without importing custom bases."""
     if name == "model_config" or name.startswith("_"):
         return True
     if not hasattr(PydanticBaseModel, name):
         return False
-    from datamodel_code_generator.model.base import DataModel, _find_base_classes  # noqa: PLC0415
+    from datamodel_code_generator.model.base import _find_base_classes  # noqa: PLC0415
 
     namespaces = ("model_validate", "model_dump")
-    pending = [cast("DataModel", field.parent)]
+    pending = [cast("model_base.DataModel", field.parent)]
     while pending:
         model = pending.pop()
         config = model.extra_template_data.get("config")

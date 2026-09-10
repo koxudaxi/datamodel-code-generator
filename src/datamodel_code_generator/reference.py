@@ -47,7 +47,7 @@ if TYPE_CHECKING:
 
     import inflect
 
-    from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
+    from datamodel_code_generator.model import base as model_base
     from datamodel_code_generator.types import DataType
 
     DEFAULT_FIELD_NAME_RESOLVERS: dict[ModelType, type[FieldNameResolver]]
@@ -114,7 +114,7 @@ def _is_data_type(value: object) -> TypeIs[DataType]:
     return isinstance(value, DataType_)
 
 
-def _is_data_model(value: object) -> TypeIs[DataModel]:
+def _is_data_model(value: object) -> TypeIs[model_base.DataModel]:
     """Check if value is a DataModel instance."""
     from datamodel_code_generator.model.base import DataModel as DataModel_  # noqa: PLC0415
 
@@ -296,7 +296,7 @@ def _get_builtin_type_attributes_for_target(target: PythonVersion) -> frozenset[
 class FieldNameResolver:
     """Converts schema field names to valid Python identifiers."""
 
-    EXPLICIT_ALIAS_CONFLICT_CHECKER: ClassVar[Callable[[DataModelFieldBase, str], bool] | None] = None
+    EXPLICIT_ALIAS_CONFLICT_CHECKER: ClassVar[Callable[[model_base.DataModelFieldBase, str], bool] | None] = None
     FIELD_ASSIGNMENT_HELPER: ClassVar[str | None] = None
 
     def __init__(  # noqa: PLR0913, PLR0917
@@ -332,7 +332,7 @@ class FieldNameResolver:
         self.use_subclass_enum: bool = use_subclass_enum
         self.target_python_version = target_python_version
 
-    def prepare_explicit_field_aliases(self, fields: list[DataModelFieldBase], reference: Reference) -> None:
+    def prepare_explicit_field_aliases(self, fields: list[model_base.DataModelFieldBase], reference: Reference) -> None:
         """Retain selected explicit aliases until all emitted field names are finalized."""
         aliases = self.aliases
         for field in fields:
@@ -349,14 +349,14 @@ class FieldNameResolver:
         self.validate_explicit_field_aliases(fields, final=False)
 
     @classmethod
-    def validate_explicit_field_aliases(cls, fields: list[DataModelFieldBase], *, final: bool) -> None:
+    def validate_explicit_field_aliases(cls, fields: list[model_base.DataModelFieldBase], *, final: bool) -> None:
         """Diagnose collisions without applying automatic naming policy to user choices."""
         if not any(_EXPLICIT_FIELD_ALIAS_KEY in field.__dict__ for field in fields):
             return
         conflicts_with_alias = cls.EXPLICIT_ALIAS_CONFLICT_CHECKER if final else None
         helper_name = cls.FIELD_ASSIGNMENT_HELPER if final else None
-        names: dict[str, DataModelFieldBase] = {}
-        field_helper: DataModelFieldBase | None = None
+        names: dict[str, model_base.DataModelFieldBase] = {}
+        field_helper: model_base.DataModelFieldBase | None = None
         for field in fields:
             name = cast("str", field.name)
             if final and not name.isascii():
@@ -1703,13 +1703,13 @@ class ModelResolver:  # noqa: PLR0904
         return self._field_name_resolvers[model_type].get_valid_name(name, excludes)
 
     def prepare_explicit_field_aliases(
-        self, fields: list[DataModelFieldBase], reference: Reference, model_type: ModelType
+        self, fields: list[model_base.DataModelFieldBase], reference: Reference, model_type: ModelType
     ) -> None:
         """Record explicit choices before model transforms can combine fields."""
         self._field_name_resolvers[model_type].prepare_explicit_field_aliases(fields, reference)
 
     @staticmethod
-    def validate_explicit_field_aliases(fields: list[DataModelFieldBase], model_type: ModelType) -> None:
+    def validate_explicit_field_aliases(fields: list[model_base.DataModelFieldBase], model_type: ModelType) -> None:
         """Check finalized names against output model rules without renaming them."""
         _default_field_name_resolver_class(model_type).validate_explicit_field_aliases(fields, final=True)
 
