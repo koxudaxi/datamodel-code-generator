@@ -22376,7 +22376,10 @@ def test_root_alias_constraints(
 
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
 @pytest.mark.parametrize("case", ["integer", "multiple"])
-@pytest.mark.parametrize("template_mode", ["custom", "custom_alias", "partial", "missing", "builtin", "builtin_alias"])
+@pytest.mark.parametrize(
+    "template_mode",
+    ["custom", "custom_alias", "custom_flat", "custom_flat_alias", "partial", "missing", "builtin", "builtin_alias"],
+)
 @pytest.mark.parametrize(("field_constraints", "use_annotated"), [(False, False), (True, False), (True, True)])
 def test_root_alias_custom_template_constraints(
     tmp_path: Path,
@@ -22402,6 +22405,17 @@ def test_root_alias_custom_template_constraints(
             template_dir.symlink_to(
                 custom_template if template_mode == "custom_alias" else TEMPLATE_DIR, target_is_directory=True
             )
+        case "custom_flat" | "custom_flat_alias":
+            template_dir = tmp_path / "flat-templates"
+            template_dir.mkdir()
+            shutil.copyfile(
+                custom_template / "pydantic_v2/RootModelTypeAlias.jinja2",
+                template_dir / "RootModelTypeAlias.jinja2",
+            )
+            if template_mode == "custom_flat_alias":
+                linked_dir = tmp_path / "linked-templates"
+                linked_dir.symlink_to(template_dir, target_is_directory=True)
+                template_dir = linked_dir
         case "partial":
             template_dir = tmp_path / "partial-templates"
             (template_dir / "pydantic_v2").mkdir(parents=True)
@@ -22419,11 +22433,14 @@ def test_root_alias_custom_template_constraints(
         "custom_template_dir": template_dir,
     }
     if entrypoint == "cli":
-        args = ["--disable-timestamp", "--use-root-model-type-alias", "--custom-template-dir", str(template_dir)]
-        if field_constraints:
-            args.append("--field-constraints")
-        if use_annotated:
-            args.append("--use-annotated")
+        args = [
+            "--disable-timestamp",
+            "--use-root-model-type-alias",
+            "--custom-template-dir",
+            str(template_dir),
+            *(["--field-constraints"] if field_constraints else []),
+            *(["--use-annotated"] if use_annotated else []),
+        ]
         run_main_and_assert(
             input_path=source,
             output_path=output_file,
