@@ -436,24 +436,24 @@ def _process_unserializable_property(
     prop: dict[str, Any],
     annotation: type,
     expression_collector: PythonTypeExpressionCollector | None = None,
+    *,
+    in_union: bool = False,
 ) -> None:
     """Process a single property, handling anyOf/oneOf/items structures."""
     if branches := prop.get("anyOf", prop.get("oneOf")):
-        args = None
+        if not in_union and not _has_unserializable_schema(prop):
+            return
+        while (origin := get_origin(annotation)) is Annotated:
+            annotation = get_args(annotation)[0]
+        args = (
+            tuple(arg for arg in get_args(annotation) if arg is not type(None))
+            if origin is Union or origin is types.UnionType
+            else ()
+        )
         for item in branches:
             index = _consume_union_branch(item)
-            if not _has_unserializable_schema(item):
-                continue
-            if args is None:
-                while get_origin(annotation) is Annotated:
-                    annotation = get_args(annotation)[0]
-                args = (
-                    tuple(arg for arg in get_args(annotation) if arg is not type(None))
-                    if get_origin(annotation) in {Union, types.UnionType}
-                    else ()
-                )
             branch_annotation = args[index] if args and index is not None else args[0] if len(args) == 1 else annotation
-            _process_unserializable_property(item, branch_annotation, expression_collector)
+            _process_unserializable_property(item, branch_annotation, expression_collector, in_union=True)
     elif prop.get(_UNSERIALIZABLE_MARKER):
         _set_python_type_for_unserializable(prop, annotation, expression_collector)
     elif ("items" in prop or "prefixItems" in prop or "additionalProperties" in prop or "allOf" in prop) and (
@@ -461,7 +461,7 @@ def _process_unserializable_property(
     ):
         prop["x-python-type"] = _serialize_python_type_full(annotation, expression_collector)
         _remove_unserializable_markers(prop)
-    elif _is_type_origin(annotation):
+    elif not in_union and _is_type_origin(annotation):
         prop["x-python-type"] = _serialize_python_type_full(annotation, expression_collector)
 
 
