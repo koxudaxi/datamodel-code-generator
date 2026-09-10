@@ -11,6 +11,7 @@ import json
 import re
 from collections import defaultdict
 from contextlib import contextmanager, suppress
+from copy import copy
 from fractions import Fraction
 from functools import cached_property, lru_cache
 from itertools import chain, starmap
@@ -18,7 +19,7 @@ from math import gcd, lcm
 from pathlib import Path
 from string import digits
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, Union, cast
-from urllib.parse import ParseResult, unquote, urlparse
+from urllib.parse import ParseResult, unquote, urljoin, urlparse
 from warnings import warn
 
 from pydantic import (
@@ -1376,6 +1377,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self.raw_obj: dict[str, YamlValue] = {}
         self._all_of_root_value_ref_stack: set[tuple[str, ...]] | None = None
         self._root_pattern_string_constraints: JsonSchemaObject | None = None
+        self._init_schema_resources()
         self._root_id: Optional[str] = None  # noqa: UP045
         self._root_id_base_path: Optional[str] = None  # noqa: UP045
         self._output_model_context = OutputModelContext.from_generation_types(
@@ -10298,8 +10300,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                         ),
                         stacklevel=2,
                     )
-            return self._get_ref_body_from_url(resolved_ref)
-        return self._get_ref_body_from_remote(resolved_ref)
+            return self._prepare_schema_resources(self._get_ref_body_from_url(resolved_ref), [resolved_ref])
+        return self._prepare_schema_resources(self._get_ref_body_from_remote(resolved_ref), [resolved_ref])
 
     def _normalize_external_ref(self, ref: str) -> str:
         """Resolve an external anchor before falling back to legacy shorthand pointers."""
@@ -10473,6 +10475,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             reference.loaded = True
             return reference
 
+        if self._has_embedded_schema_resources:
+            document = self._schema_resource_document(list(self.model_resolver.current_root))
+            object_ref = self._resolve_schema_resource_ref(
+                object_ref, self._schema_resource_root_bases.get(document, document), document, nested_scope=False
+            )
         # https://swagger.io/docs/specification/using-ref/
         object_ref = self._normalize_external_ref(object_ref)
         ref = self.model_resolver.resolve_ref(object_ref)
@@ -10643,6 +10650,155 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         """Resolve $ref in schema object."""
         if obj.ref:
             self.resolve_ref(obj.ref)
+
+    def _init_schema_resources(self) -> None:
+        """Initialize the document-local resource indexes and normalization cache."""
+        self._schema_resource_locations: dict[str, str] = {}
+        self._schema_resource_document_aliases: dict[str, str] = {}
+        self._schema_resource_root_bases: dict[str, str] = {}
+        self._schema_resource_cache: dict[str, tuple[dict[str, Any], dict[str, Any]]] = {}
+        self._schema_resource_keys: dict[str, set[str]] = {}
+        self._has_embedded_schema_resources = False
+
+    def _schema_resource_document(self, path_parts: list[str]) -> str:
+        """Identify one physical schema document without changing its public reference names."""
+        document = self.model_resolver.join_path(tuple(path_parts)).split("#", 1)[0]
+        if (location := self._schema_resource_document_aliases.get(document)) is None:
+            location = (
+                document if not document or is_url(document) else (self.base_path / document).resolve().as_posix()
+            )
+            self._schema_resource_document_aliases[document] = location
+        return location
+
+    def _iter_schema_resource_children(
+        self, schema: dict[str, Any]
+    ) -> Iterator[tuple[tuple[str | int, ...], dict[str, Any]]]:
+        """Visit schema-valued keywords without inspecting examples, defaults or extensions."""
+        for keyword, value in schema.items():
+            if keyword in {"$defs", "definitions"} and isinstance(value, dict):
+                for _name, child, path in self._iter_schema_definition_entries(value, [keyword]):
+                    if isinstance(child, dict):
+                        yield tuple(path), child
+            elif keyword in _JSON_SCHEMA_MAP_KEYWORDS and isinstance(value, dict):
+                for name, child in value.items():
+                    if isinstance(child, dict):
+                        yield (keyword, str(name)), child
+            elif (
+                keyword in _JSON_SCHEMA_SEQUENCE_KEYWORDS or keyword in _JSON_SCHEMA_SINGLE_OR_SEQUENCE_KEYWORDS
+            ) and isinstance(value, list):
+                for index, sequence_child in enumerate(value):
+                    if isinstance(sequence_child, dict):
+                        yield (keyword, index), cast("dict[str, Any]", sequence_child)
+            elif (
+                keyword in _JSON_SCHEMA_SINGLE_KEYWORDS or keyword in _JSON_SCHEMA_SINGLE_OR_SEQUENCE_KEYWORDS
+            ) and isinstance(value, dict):
+                yield (keyword,), value
+
+    def _register_schema_resources(
+        self, schema: dict[str, Any], document: str, pointer: str, base: str, keys: set[str]
+    ) -> bool:
+        """Index resource URIs and resource-scoped anchors once for each document."""
+        identifier = schema.get(self.schema_features.id_field) or schema.get("$id") or schema.get("id")
+        nested = bool(pointer and isinstance(identifier, str) and not identifier.startswith("#"))
+        location = f"{document}#{pointer}"
+        if isinstance(identifier, str):
+            absolute = urljoin(base, identifier)
+            self._schema_resource_locations[absolute] = location
+            keys.add(absolute)
+            base = absolute.split("#", 1)[0]
+        if not pointer:
+            self._schema_resource_root_bases[document] = base
+            self._schema_resource_locations.setdefault(base, location)
+            keys.add(base)
+        for keyword in ("$anchor", "$dynamicAnchor"):
+            if isinstance(anchor := schema.get(keyword), str):
+                absolute = urljoin(base, f"#{anchor}")
+                self._schema_resource_locations[absolute] = location
+                keys.add(absolute)
+        for path, child in self._iter_schema_resource_children(schema):
+            child_pointer = pointer + "".join(f"/{str(part).replace('~', '~0').replace('/', '~1')}" for part in path)
+            nested |= self._register_schema_resources(child, document, child_pointer, base, keys)
+        return nested
+
+    def _resolve_schema_resource_ref(self, reference: str, base: str, document: str, *, nested_scope: bool) -> str:
+        """Resolve registered resources before considering a physical document fetch."""
+        absolute = urljoin(base, reference)
+        resource, _, fragment = absolute.partition("#")
+        location = self._schema_resource_locations.get(absolute)
+        if (
+            location is None
+            and (not fragment or fragment.startswith("/"))
+            and (root := self._schema_resource_locations.get(resource)) is not None
+        ):
+            location = f"{root}{fragment}" if fragment else root
+        if (
+            location is None
+            and fragment
+            and not fragment.startswith("/")
+            and (root := self._schema_resource_locations.get(resource)) is not None
+            and root.split("#", 1)[1]
+        ):
+            msg = f"Embedded schema resource has no anchor {fragment!r}: {reference!r}"
+            raise Error(msg)
+        if location is not None:
+            target_document, pointer = location.split("#", 1)
+            return f"#{pointer}" if target_document == document else location
+        if nested_scope and resource.startswith("file://") and not reference.startswith("file://"):
+            from urllib.request import url2pathname  # noqa: PLC0415
+
+            absolute = Path(url2pathname(resource[5:])).as_posix() + absolute[len(resource) :]
+        return absolute if nested_scope else reference
+
+    def _rewrite_schema_resource_refs(
+        self, schema: dict[str, Any], document: str, base: str, root_base: str
+    ) -> dict[str, Any]:
+        """Copy only schema containers whose resource-relative references change."""
+        identifier = schema.get(self.schema_features.id_field) or schema.get("$id") or schema.get("id")
+        if isinstance(identifier, str):
+            base = urljoin(base, identifier).split("#", 1)[0]
+        result = schema
+        if isinstance(reference := schema.get("$ref"), str):
+            resolved = self._resolve_schema_resource_ref(reference, base, document, nested_scope=base != root_base)
+            if resolved != reference:
+                result = {**schema, "$ref": resolved}
+        for path, child in self._iter_schema_resource_children(schema):
+            rewritten = self._rewrite_schema_resource_refs(child, document, base, root_base)
+            if rewritten is child:
+                continue
+            if result is schema:
+                result = dict(schema)
+            parent: Any = result
+            original: Any = schema
+            for part in path[:-1]:
+                if parent[part] is original[part]:
+                    parent[part] = copy(original[part])
+                parent, original = parent[part], original[part]
+            if isinstance(parent, list):
+                parent[cast("int", path[-1])] = rewritten
+            else:
+                cast("dict[str, Any]", parent)[cast("str", path[-1])] = rewritten
+        return result
+
+    def _prepare_schema_resources(self, raw: dict[str, Any], path_parts: list[str]) -> dict[str, Any]:
+        """Cache resource indexing and normalization instead of rescanning on each reference."""
+        document = self._schema_resource_document(path_parts)
+        if (cached := self._schema_resource_cache.get(document)) is not None and (raw is cached[0] or raw is cached[1]):
+            return cached[1]
+        for key in self._schema_resource_keys.get(document, ()):
+            if self._schema_resource_locations.get(key, "").split("#", 1)[0] == document:
+                self._schema_resource_locations.pop(key, None)
+        keys: set[str] = set()
+        base = document if is_url(document) else Path(document).as_uri() if document else f"{self.base_path.as_uri()}/"
+        nested = self._register_schema_resources(raw, document, "", base, keys)
+        self._schema_resource_keys[document] = keys
+        prepared = raw
+        if nested:
+            self._has_embedded_schema_resources = True
+            prepared = self._rewrite_schema_resource_refs(
+                raw, document, base, self._schema_resource_root_bases[document]
+            )
+        self._schema_resource_cache[document] = raw, prepared
+        return prepared
 
     def _add_id_callback(self, obj: JsonSchemaObject, path: list[str]) -> None:
         """Add $id and $anchor to model resolver."""
@@ -11226,6 +11382,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             else path_parts
         )
         with self.model_resolver.current_root_context(path_parts):
+            raw = self._prepare_schema_resources(raw, path_parts)
             obj_name = self.model_resolver.add(
                 path,
                 obj_name,

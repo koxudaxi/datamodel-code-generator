@@ -27,7 +27,7 @@ from packaging import version
 from pydantic import TypeAdapter, ValidationError
 from pydantic.errors import PydanticUndefinedAnnotation
 
-from datamodel_code_generator import DataModelType, InputFileType, enable_parsed_source_cache, generate
+from datamodel_code_generator import DataModelType, GenerateConfig, InputFileType, enable_parsed_source_cache, generate
 from datamodel_code_generator.__main__ import Exit, main
 from datamodel_code_generator.arguments import arg_parser
 from datamodel_code_generator.format import Formatter, PythonVersion, is_supported_in_black
@@ -850,9 +850,13 @@ def run_generate_and_assert(
                 assert_output(f"{error.value}\n", expected_file)
             return
         result = generate(input_=input_, **options)
-    if (output_path := generate_kwargs.get("output")) is not None:
+    if isinstance(config := generate_kwargs.get("config"), GenerateConfig):
+        output_path, encoding = config.output, config.encoding
+    else:
+        output_path, encoding = generate_kwargs.get("output"), generate_kwargs.get("encoding", "utf-8")
+    if output_path is not None:
         assert_generate_wrote_file(result, output_path)
-        result = output_path.read_text(encoding=generate_kwargs.get("encoding", "utf-8"))
+        result = output_path.read_text(encoding=encoding)
     if not isinstance(result, str):  # pragma: no cover
         pytest.fail(f"Expected generate() to return str, got {type(result).__name__}")
     assert expected_file is not None
