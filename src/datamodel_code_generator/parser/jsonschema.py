@@ -1278,6 +1278,37 @@ EXCLUDE_FIELD_KEYS = (set(JsonSchemaObject.get_fields()) - DEFAULT_FIELD_KEYS - 
 
 
 _DEFAULT_SCHEMA_PATHS = ("#/definitions", "#/$defs")
+_REGEX_META_CHARACTERS = frozenset(r"\.^$*+?{}[]|()")
+
+
+def _literal_pattern_value(pattern: str) -> str | None:
+    """Recognize plain characters and escaped regex metacharacters only."""
+    if _REGEX_META_CHARACTERS.isdisjoint(pattern):
+        return pattern
+    if re.fullmatch(r"(?:[^\\.^$*+?{}\[\]|()]|\\[\\.^$*+?{}\[\]|()])*", pattern) is None:
+        return None
+    return re.sub(r"\\(.)", r"\1", pattern)
+
+
+def _intersect_patterns(patterns: Sequence[str]) -> str:
+    """Preserve pairwise output unless literal searches need independent positions."""
+    match patterns:
+        case [pattern]:
+            return pattern
+        case [left, right] if left == right:
+            return left
+    literals = [_literal_pattern_value(pattern) for pattern in patterns]
+    if all(literal is not None for literal in literals):
+        longest = max((literal for literal in literals if literal is not None), key=str.__len__)
+        if any(literal is not None and not longest.startswith(literal) for literal in literals):
+            return r"\A" + "".join(rf"(?=[\s\S]*{pattern})" for pattern in dict.fromkeys(patterns))
+    match patterns:
+        case [left, right]:
+            return f"(?={left})(?={right})"
+    result = patterns[0]
+    for pattern in patterns[1:]:
+        result = _intersect_patterns((result, pattern))
+    return result
 
 
 @snooper_to_methods()  # noqa: PLR0904
@@ -4072,8 +4103,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 if v1 is not None and v2 is not None:
                     return val1 if v1 <= v2 else val2
                 return val1  # pragma: no cover
-            case "pattern":
-                return f"(?={val1})(?={val2})" if val1 != val2 else val1
             case "uniqueItems":
                 return val1 or val2
             case "multipleOf":
@@ -4088,14 +4117,22 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         *,
         intersect: bool,
     ) -> None:
+        patterns: list[str] | None = None
         for item in items:
             for field in JsonSchemaObject.__constraint_fields__:
                 if (value := cls._schema_constraint_value(item, field)) is None:
+                    continue
+                if intersect and field == "pattern":
+                    if patterns is None:
+                        patterns = [] if (base_pattern := base_dict.get(field)) is None else [base_pattern]
+                    patterns.append(value)
                     continue
                 if intersect and field in base_dict and base_dict[field] is not None:
                     base_dict[field] = cls._intersect_constraint(field, base_dict[field], value)
                 else:
                     base_dict[field] = value
+        if patterns:
+            base_dict["pattern"] = _intersect_patterns(patterns)
 
     def _build_allof_type(  # noqa: PLR0911, PLR0912, PLR0913, PLR0915, PLR0917
         self,
@@ -8958,7 +8995,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 merged_property_names.pattern = (
                     merged_pattern
                     if merged_property_names.pattern is None
-                    else self._intersect_constraint("pattern", merged_property_names.pattern, merged_pattern)
+                    else _intersect_patterns((merged_property_names.pattern, merged_pattern))
                 )
                 if merged_property_names.ref:
                     merged_property_names = self._merge_ref_with_schema(merged_property_names)

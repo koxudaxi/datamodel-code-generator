@@ -28,6 +28,8 @@ import black
 import msgspec
 import pytest
 from jinja2 import TemplateNotFound
+from jsonschema import Draft7Validator
+from jsonschema import ValidationError as SchemaValidationError
 from packaging import version
 from pydantic import VERSION as PYDANTIC_VERSION
 from pydantic import PydanticUserError, ValidationError
@@ -7692,14 +7694,17 @@ def test_main_jsonschema_property_names_pattern_field_constraints(output_file: P
     )
 
 
-def test_main_jsonschema_property_names_pattern_properties_intersection(output_file: Path) -> None:
+@pytest.mark.parametrize(
+    "case", ["property_names_pattern_properties_intersection", "property_names_pattern_properties_redundant_pattern"]
+)
+def test_main_jsonschema_property_names_pattern_properties_intersection(output_file: Path, case: str) -> None:
     """Test propertyNames constraints also apply to patternProperties keys."""
     run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "property_names_pattern_properties_intersection.json",
+        input_path=JSON_SCHEMA_DATA_PATH / f"{case}.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
-        expected_file="property_names_pattern_properties_intersection.py",
+        expected_file=f"{case}.py",
         extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
         force_exec_validation=True,
     )
@@ -21544,3 +21549,91 @@ def test_field_name_template_helper(output_file: Path, entrypoint: str, formatte
             json.dumps(observations, indent=2) + "\n",
             DATA_PATH / "payloads/field_name_bindings_runtime" / f"{case}.txt",
         )
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("formatter", ["builtin", "external"])
+@pytest.mark.parametrize("constraints", [False, True])
+@pytest.mark.parametrize(
+    "case",
+    [
+        "split",
+        "triple",
+        "suffix",
+        "unicode",
+        "punctuation",
+        "newline",
+        "prefix",
+        "reverse_prefix",
+        "identical",
+        "empty",
+        "anchored",
+        "right_anchor",
+        "character_class",
+        "single",
+        "escaped_dot",
+        "escaped_dollar",
+        "escaped_metacharacters",
+        "escaped_prefix",
+        "escaped_reverse_prefix",
+        "escaped_identical",
+        "unknown_escape",
+        "unknown_newline_escape",
+    ],
+)
+def test_allof_literal_patterns(
+    output_file: Path, entrypoint: str, formatter: str, constraints: bool, case: str
+) -> None:
+    """Validate literal intersections and keep already-correct patterns byte-identical."""
+    schema = JSON_SCHEMA_DATA_PATH / f"allof_literal_patterns/{case}.json"
+    formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
+    expected = f"allof_literal_patterns/{case}_{constraints}.py"
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=schema,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file=expected,
+            extra_args=[
+                "--disable-timestamp",
+                "--formatters",
+                *formatters,
+                *(["--field-constraints"] if constraints else []),
+            ],
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=schema,
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            assert_func=assert_file_content,
+            expected_file=expected,
+            disable_timestamp=True,
+            field_constraints=constraints,
+            formatters=[Formatter(value) for value in formatters],
+        )
+    cases = json.loads(
+        (JSON_SCHEMA_DATA_PATH.parent / "payloads/allof_literal_patterns.json").read_text(encoding="utf-8")
+    )
+    payloads = next(item for item in cases if item["name"] == case)
+    validator = Draft7Validator(json.loads(schema.read_text(encoding="utf-8")))
+    for value in payloads["valid"]:
+        validator.validate(value)
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="allof_literal_patterns_valid",
+            model_name="Root",
+            valid_json=json.dumps(value),
+            invalid_json=json.dumps(payloads["invalid"][0]),
+            expected_error_type="string_pattern_mismatch",
+            expected_attribute_path=("root",),
+            expected_attribute_value=value,
+        )
+    with _generated_model(output_file, "allof_literal_patterns_invalid", "Root") as model:
+        validate = _model_json_validator(model)
+        for value in payloads["invalid"]:
+            with pytest.raises(SchemaValidationError):
+                validator.validate(value)
+            with pytest.raises(ValidationError):
+                validate(json.dumps(value))
