@@ -322,7 +322,7 @@ def _assert_python_module_importable(path: Path, module_name: str, attribute: st
 def _generated_package_module(output_path: Path, module_path: str) -> Generator[Any, None, None]:
     """Temporarily import a generated package module without leaking module cache state."""
     package_name = output_path.name
-    module_name = f"{package_name}.{module_path}"
+    module_name = f"{package_name}.{module_path}" if module_path else package_name
     module_prefix = f"{package_name}."
     previous_modules = {
         name: module for name, module in sys.modules.items() if name == package_name or name.startswith(module_prefix)

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import importlib
 import importlib.util
 import itertools
@@ -20277,16 +20278,46 @@ def test_dotted_module_exports(
         )
     if "_cycle" in fixture and target_version.value != f"{sys.version_info.major}.{sys.version_info.minor}":
         return
-    result = subprocess.run(
-        [
-            sys.executable,
-            str(DATA_PATH / "python" / "dotted_module_exports_runtime.py"),
-            str(output_dir),
-            runtime_case,
-            target_version.value,
-        ],
-        check=True,
-        stdout=subprocess.PIPE,
-        text=True,
+    for path in output_dir.rglob("*.py"):
+        ast.parse(path.read_text(), feature_version=tuple(map(int, target_version.value.split("."))))
+    case = json.loads((DATA_PATH / "python/dotted_module_exports_runtime.json").read_text())[runtime_case]
+    results = []
+    with _generated_package_module(output_dir, case["modules"][0]):
+        for suffix in case["modules"]:
+            module = importlib.import_module(output_dir.name + (f".{suffix}" if suffix else ""))
+            exports = []
+            for name in getattr(module, "__all__", ()):
+                model = getattr(module, name)
+                validated = model.model_validate(case["payload"])
+                exports.append({
+                    "name": name,
+                    "origin": model.__module__.removeprefix(output_dir.name + "."),
+                    "is_definition": getattr(importlib.import_module(model.__module__), model.__name__) is model,
+                    "fields": list(model.model_fields),
+                    "dump": validated.model_dump(),
+                })
+                if runtime_case.startswith("cycle"):
+                    imported = {}
+                    exec(f"from {module.__name__} import {name}", imported)
+                    starred = {}
+                    exec(f"from {module.__name__} import *", starred)
+                    exports[-1]["access_identity"] = [
+                        vars(module)[name] is model,
+                        getattr(module, name) is model,
+                        imported[name] is model,
+                        starred[name] is model,
+                    ]
+                    exports[-1]["nested_identity"] = [
+                        getattr(importlib.import_module(type(value).__module__), type(value).__name__) is type(value)
+                        for value in vars(validated).values()
+                        if hasattr(type(value), "model_fields")
+                    ]
+            results.append({"module": suffix, "exports": exports})
+            if runtime_case.startswith("cycle"):
+                with pytest.raises(AttributeError, match="missing_for_export_probe"):
+                    _ = module.missing_for_export_probe
+                results[-1]["unknown_attribute"] = True
+    assert_output(
+        json.dumps(results, indent=2) + "\n",
+        expected_directory.with_name(f"{expected_directory.name}_runtime.txt"),
     )
-    assert_output(result.stdout, expected_directory.with_name(f"{expected_directory.name}_runtime.txt"))
