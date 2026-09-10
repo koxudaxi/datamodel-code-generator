@@ -22555,9 +22555,17 @@ def test_root_alias_null_constraints(
 @pytest.mark.parametrize("merge_mode", list(AllOfMergeMode))
 @pytest.mark.parametrize("field_constraints", [False, True])
 def test_numeric_allof_types(
-    output_file: Path, entrypoint: str, case: str, merge_mode: AllOfMergeMode, *, field_constraints: bool
+    output_file: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    entrypoint: str,
+    case: str,
+    merge_mode: AllOfMergeMode,
+    *,
+    field_constraints: bool,
 ) -> None:
     """Preserve order and intersect numeric types independently of constraint merge mode."""
+    # Count warnings from one generation; parity checking performs another generation.
+    monkeypatch.delenv("DATAMODEL_CODE_GENERATOR_CHECK_BUILTIN_FORMATTER_PARITY", raising=False)
     source = JSON_SCHEMA_DATA_PATH / "numeric_allof_types" / f"{case}.json"
     expected = EXPECTED_JSON_SCHEMA_PATH / "numeric_allof_types"
     expected_constraints = field_constraints and case not in {
