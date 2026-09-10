@@ -2533,13 +2533,11 @@ def test_validation_property_owner_scope(tmp_path: Path, roots: str, entrypoint:
 @pytest.mark.parametrize("formatter", ["builtin", "external"])
 @pytest.mark.parametrize("strategy", ["regenerate-all", "reuse-all", "reuse-foreign"])
 @pytest.mark.parametrize("case", ["nested", "direct", "export", "alias", "multiple", "reverse"])
-def test_input_model_nested_reuse(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, entrypoint: str, formatter: str, strategy: str, case: str
-) -> None:
+def test_input_model_nested_reuse(tmp_path: Path, entrypoint: str, formatter: str, strategy: str, case: str) -> None:
     """Reuse exact nested identities without importing their owners as modules."""
     from pydantic import ValidationError
 
-    from datamodel_code_generator import DataModelType, GenerateConfig, InputFileType, generate
+    from datamodel_code_generator import DataModelType, GenerateConfig, InputFileType
     from datamodel_code_generator.enums import InputModelRefStrategy
     from datamodel_code_generator.format import Formatter
     from datamodel_code_generator.input_model import load_model_schema
@@ -2572,49 +2570,48 @@ def test_input_model_nested_reuse(
         schema = load_model_schema(
             paths, InputFileType.JsonSchema, InputModelRefStrategy(strategy), DataModelType.PydanticV2BaseModel
         )
-        generate(schema, config=config)
-    code = output.read_text()
-    assert_output(code, EXPECTED_INPUT_MODEL_PATH / f"nested_reuse_{case}_{strategy}.py")
-    module = types.ModuleType("nested_reuse_output")
-    monkeypatch.setitem(sys.modules, module.__name__, module)
-    exec(code, module.__dict__)
-    for path, payload in zip(paths, record["payloads"], strict=True):
-        module_name, model_name = path.split(":")
-        native_model = getattr(importlib.import_module(module_name), model_name)
-        native = native_model.model_validate(payload)
-        generated_model = getattr(module, model_name)
-        generated = generated_model.model_validate(payload)
-        assert generated.model_dump(mode="json", exclude_unset=True) == native.model_dump(
-            mode="json", exclude_unset=True
+        run_generate_and_assert(
+            input_=schema, config=config, expected_file=EXPECTED_INPUT_MODEL_PATH / f"nested_reuse_{case}_{strategy}.py"
         )
-        assert list(generated_model.model_fields) == list(native_model.model_fields)
-        if len(paths) > 1:
-            assert module.Model.model_validate(payload).root.model_dump(
+    if entrypoint == "cli":
+        assert_output(output.read_text(), EXPECTED_INPUT_MODEL_PATH / f"nested_reuse_{case}_{strategy}.py")
+    with _generated_model(output, "nested_reuse_output", paths[0].split(":")[1]):
+        module = sys.modules["nested_reuse_output"]
+        for path, payload in zip(paths, record["payloads"], strict=True):
+            module_name, model_name = path.split(":")
+            native_model = getattr(importlib.import_module(module_name), model_name)
+            native = native_model.model_validate(payload)
+            generated_model = getattr(module, model_name)
+            generated = generated_model.model_validate(payload)
+            assert generated.model_dump(mode="json", exclude_unset=True) == native.model_dump(
                 mode="json", exclude_unset=True
-            ) == native.model_dump(mode="json", exclude_unset=True)
-        with pytest.raises(ValidationError):
-            generated_model.model_validate({"child": {}})
-        with pytest.raises(ValidationError):
-            native_model.model_validate({"child": {}})
-        if strategy != "regenerate-all":
-            assert type(generated.child) is type(native.child)
-        if model_name == "NestedRoot" and strategy != "regenerate-all":
-            assert type(generated.leaf) is type(native.leaf)
-            assert type(generated.kind) is type(native.kind)
-            assert type(generated.node.child) is type(native.node.child)
-            if strategy == "reuse-all":
-                assert type(generated.record) is type(native.record)
+            )
+            assert list(generated_model.model_fields) == list(native_model.model_fields)
+            if len(paths) > 1:
+                assert module.Model.model_validate(payload).root.model_dump(
+                    mode="json", exclude_unset=True
+                ) == native.model_dump(mode="json", exclude_unset=True)
+            with pytest.raises(ValidationError):
+                generated_model.model_validate({"child": {}})
+            with pytest.raises(ValidationError):
+                native_model.model_validate({"child": {}})
+            if strategy != "regenerate-all":
+                assert type(generated.child) is type(native.child)
+            if model_name == "NestedRoot" and strategy != "regenerate-all":
+                assert type(generated.leaf) is type(native.leaf)
+                assert type(generated.kind) is type(native.kind)
+                assert type(generated.node.child) is type(native.node.child)
+                if strategy == "reuse-all":
+                    assert type(generated.record) is type(native.record)
 
 
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
 @pytest.mark.parametrize("formatter", ["builtin", "external"])
-def test_input_model_nested_reuse_type_binding(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, entrypoint: str, formatter: str
-) -> None:
+def test_input_model_nested_reuse_type_binding(tmp_path: Path, entrypoint: str, formatter: str) -> None:
     """Bind preserved containers to nested definitions using the same runtime symbol."""
     from pydantic import ValidationError
 
-    from datamodel_code_generator import GenerateConfig, InputFileType, generate
+    from datamodel_code_generator import GenerateConfig, InputFileType
     from datamodel_code_generator.format import Formatter
     from tests.data.python.input_model.nested_reuse import ContainerRoot, Outer
 
@@ -2637,8 +2634,9 @@ def test_input_model_nested_reuse_type_binding(
             *formatters,
         ])
     else:
-        generate(
-            fixture,
+        run_generate_and_assert(
+            input_=fixture,
+            expected_file=EXPECTED_INPUT_MODEL_PATH / "nested_reuse_type.py",
             config=GenerateConfig(
                 input_file_type=InputFileType.JsonSchema,
                 output=output,
@@ -2647,19 +2645,19 @@ def test_input_model_nested_reuse_type_binding(
                 formatters=[Formatter(value) for value in formatters],
             ),
         )
-    code = output.read_text()
-    assert_output(code, EXPECTED_INPUT_MODEL_PATH / "nested_reuse_type.py")
-    module = types.ModuleType("nested_reuse_type_output")
-    monkeypatch.setitem(sys.modules, module.__name__, module)
-    exec(code, module.__dict__)
-    payload = {"items": [{"value": 1}]}
-    native = ContainerRoot.model_validate(payload)
-    generated = module.ContainerRoot.model_validate(payload)
-    assert type(generated.items) is type(native.items)
-    assert type(generated.items[0]) is Outer.Inner
-    assert generated.model_dump(mode="json", exclude_unset=True) == native.model_dump(mode="json", exclude_unset=True)
-    with pytest.raises(ValidationError):
-        module.ContainerRoot.model_validate({"items": [{"value": "bad"}]})
+    if entrypoint == "cli":
+        assert_output(output.read_text(), EXPECTED_INPUT_MODEL_PATH / "nested_reuse_type.py")
+    with _generated_model(output, "nested_reuse_type_output", "ContainerRoot") as model:
+        payload = {"items": [{"value": 1}]}
+        native = ContainerRoot.model_validate(payload)
+        generated = model.model_validate(payload)
+        assert type(generated.items) is type(native.items)
+        assert type(generated.items[0]) is Outer.Inner
+        assert generated.model_dump(mode="json", exclude_unset=True) == native.model_dump(
+            mode="json", exclude_unset=True
+        )
+        with pytest.raises(ValidationError):
+            model.model_validate({"items": [{"value": "bad"}]})
 
 
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
@@ -2682,12 +2680,12 @@ def test_input_model_nested_reuse_type_binding(
     ],
 )
 def test_input_model_dynamic_nested_exports(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, entrypoint: str, formatter: str, strategy: str, case: str
+    tmp_path: Path, entrypoint: str, formatter: str, strategy: str, case: str
 ) -> None:
     """Check owner identity while preserving existing dynamic short exports."""
     from pydantic import ValidationError
 
-    from datamodel_code_generator import DataModelType, GenerateConfig, InputFileType, generate
+    from datamodel_code_generator import DataModelType, GenerateConfig, InputFileType
     from datamodel_code_generator.enums import InputModelRefStrategy
     from datamodel_code_generator.format import Formatter
     from datamodel_code_generator.input_model import load_model_schema
@@ -2722,22 +2720,25 @@ def test_input_model_dynamic_nested_exports(
         )
         if case == "Deleted":
             assert schema["x-caller-root"] == "kept"
-        generate(schema, config=config)
+        run_generate_and_assert(
+            input_=schema,
+            config=config,
+            expected_file=EXPECTED_INPUT_MODEL_PATH / f"dynamic_nested_{case}_{strategy}.py",
+        )
     assert nested_dynamic_exports.calls == []
-    assert_output(output.read_text(), EXPECTED_INPUT_MODEL_PATH / f"dynamic_nested_{case}_{strategy}.py")
-    module = types.ModuleType("dynamic_nested_output")
-    monkeypatch.setitem(sys.modules, module.__name__, module)
-    exec(output.read_text(), module.__dict__)
-    native = getattr(nested_dynamic_exports, f"{case}Root")(child={"value": 1})
-    generated = getattr(module, f"{case}Root")(child={"value": 1})
-    assert generated.model_dump() == native.model_dump() == {"child": {"value": 1}}
-    assert list(type(generated).model_fields) == ["child"]
-    with pytest.raises(ValidationError):
-        type(native).model_validate({"child": {"value": "invalid"}})
-    with pytest.raises(ValidationError):
-        type(generated).model_validate({"child": {"value": "invalid"}})
-    if strategy != "regenerate-all":
-        assert type(generated.child) is type(native.child) is nested_dynamic_exports.exports[case]
-    assert nested_dynamic_exports.calls == (
-        ["__path__", case] if strategy != "regenerate-all" and case not in {"Live", "Lazy", "Proxy"} else []
-    )
+    if entrypoint == "cli":
+        assert_output(output.read_text(), EXPECTED_INPUT_MODEL_PATH / f"dynamic_nested_{case}_{strategy}.py")
+    with _generated_model(output, "dynamic_nested_output", f"{case}Root") as model:
+        native = getattr(nested_dynamic_exports, f"{case}Root")(child={"value": 1})
+        generated = model(child={"value": 1})
+        assert generated.model_dump() == native.model_dump() == {"child": {"value": 1}}
+        assert list(type(generated).model_fields) == ["child"]
+        with pytest.raises(ValidationError):
+            type(native).model_validate({"child": {"value": "invalid"}})
+        with pytest.raises(ValidationError):
+            type(generated).model_validate({"child": {"value": "invalid"}})
+        if strategy != "regenerate-all":
+            assert type(generated.child) is type(native.child) is nested_dynamic_exports.exports[case]
+        assert nested_dynamic_exports.calls == (
+            ["__path__", case] if strategy != "regenerate-all" and case not in {"Live", "Lazy", "Proxy"} else []
+        )
