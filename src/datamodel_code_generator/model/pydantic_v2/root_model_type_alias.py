@@ -42,7 +42,10 @@ def _root_model_constraints_fallback(
     """Resolve an alias template once without inspecting or replacing custom templates."""
     if (
         custom_template_dir is not None
-        and cached_path_exists(custom_template_dir / RootModelTypeAlias.TEMPLATE_FILE_PATH)
+        and (
+            cached_path_exists(custom_template_dir / RootModelTypeAlias.TEMPLATE_FILE_PATH)
+            or cached_path_exists(custom_template_dir / RootModelTypeAlias.TEMPLATE_FILE_PATH.rsplit("/", 1)[-1])
+        )
         and custom_template_dir.resolve() != TEMPLATE_DIR.resolve()
     ):
         return None
