@@ -2137,7 +2137,6 @@ def test_input_model_inherited_overrides(model_name: str, entrypoint: str, tmp_p
 )
 def test_input_model_definition_collisions(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
     entrypoint: str,
     reverse: bool,
     strategy: str,
@@ -2145,23 +2144,15 @@ def test_input_model_definition_collisions(
     formatter: str,
 ) -> None:
     """Keep colliding and shared runtime types attached to their own definitions."""
-    from datamodel_code_generator import GenerateConfig, InputFileType, generate
+    from datamodel_code_generator import GenerateConfig, InputFileType
     from datamodel_code_generator.enums import InputModelRefStrategy
     from datamodel_code_generator.format import Formatter
     from datamodel_code_generator.input_model import load_model_schema
 
-    roots = {
-        "nested": ("RootA", "RootB"),
-        "roots": ("Root", "Root"),
-        "shared": ("RootA", "SharedRoot"),
-        "plain": ("PlainA", "PlainB"),
-        "identical": ("SameRootA", "SameRootB"),
-        "metadata": ("ExtraDefinitions", "EmptyDefinitions"),
-        "recursive": ("Recursive", "Recursive"),
-        "generic": ("GenericRootA", "GenericRootB"),
-        "suffixes": ("PlainA", "PlainB", "PlainC"),
-        "suffix_roots": ("Root", "Root", "Root"),
-    }[case]
+    collision_case = json.loads(
+        (EXPECTED_INPUT_MODEL_PATH.parents[2] / "python/input_model/equal_identity.json").read_text()
+    )["definition_collisions"][case]
+    roots = collision_case["roots"]
     sides = "abc"[: len(roots)]
     paths = [f"tests.data.python.input_model.collision_{side}:{root}" for side, root in zip(sides, roots, strict=True)]
     if reverse:
@@ -2170,6 +2161,8 @@ def test_input_model_definition_collisions(
     (tmp_path / "pyproject.toml").write_text((settings / "pyproject.toml").read_text())
     formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
     output = tmp_path / "output.py"
+    expected_strategy = "regenerate-all" if strategy == "regenerate-all" else "reuse-all"
+    expected = EXPECTED_INPUT_MODEL_PATH / f"collisions_{case}_{'ba' if reverse else 'ab'}_{expected_strategy}.py"
     if entrypoint == "cli":
         run_main_with_args(
             _input_model_args(
@@ -2184,7 +2177,6 @@ def test_input_model_definition_collisions(
                 ],
             ),
         )
-        code = output.read_text()
     else:
         config = GenerateConfig(
             input_file_type=InputFileType.JsonSchema,
@@ -2195,53 +2187,23 @@ def test_input_model_definition_collisions(
             formatters=[Formatter(value) for value in formatters],
         )
         schema = load_model_schema(paths, InputFileType.JsonSchema, InputModelRefStrategy(strategy))
-        generate(schema, config=config)
-        code = output.read_text()
-    expected_strategy = "regenerate-all" if strategy == "regenerate-all" else "reuse-all"
-    expected = EXPECTED_INPUT_MODEL_PATH / f"collisions_{case}_{'ba' if reverse else 'ab'}_{expected_strategy}.py"
-    assert_output(code, expected)
-    module = types.ModuleType("collision_output")
-    monkeypatch.setitem(sys.modules, module.__name__, module)
-    exec(code, module.__dict__)
-    payloads = {
-        "nested": [
-            {"first": 1, "data": {"id": 2, "child": {"id": 3}}},
-            {
-                "second": "b",
-                "data": {"name": "b", "child": {"name": "c"}},
-                "shared": {"id": 4},
-                "reserved": {"reserved": True},
-            },
-        ],
-        "roots": [{"data": {"id": 1, "child": {"id": 2}}}, {"data": {"name": "b", "child": {"name": "c"}}}],
-        "shared": [{"first": 1, "data": {"id": 2}}, {"first": 3, "shared": {"id": 4}}],
-        "plain": [
-            {"data": {"id": 1}, "kind": "a", "mode": "mode-a"},
-            {"data": {"name": "b"}, "kind": "b", "mode": "mode-b"},
-        ],
-        "suffixes": [
-            {"data": {"id": 1}, "kind": "a", "mode": "mode-a"},
-            {"data": {"name": "b"}, "kind": "b", "mode": "mode-b"},
-            {"data": {"score": 3}, "kind": "c", "mode": "mode-c"},
-        ],
-        "suffix_roots": [{"data": {"id": 1}}, {"data": {"name": "b"}}, {"data": {"score": 3}}],
-        "identical": [{"data": {"value": "a"}}, {"data": {"value": "b"}}],
-        "metadata": [{"first": 1}, {"second": "b"}],
-        "generic": [{"data": {"value": 1}}, {"data": {"value": "b"}}],
-        "recursive": [
-            {"first": 1, "id": 2, "child": {"first": 3, "id": 4}},
-            {"second": "a", "name": "b", "child": {"second": "c", "name": "d"}},
-        ],
-    }[case]
-    for side, root, payload in zip(sides, roots, payloads, strict=True):
-        source_model = getattr(importlib.import_module(f"tests.data.python.input_model.collision_{side}"), root)
-        assert source_model.model_validate(payload).model_dump(mode="json", exclude_unset=True) == payload
-        result = module.Model.model_validate(payload).root.model_dump(mode="json", exclude_unset=True)
-        assert result == payload
-    if case == "identical":
-        assert module.SameRootA.model_fields["data"].annotation is not module.SameRootB.model_fields["data"].annotation
-    elif case == "shared":
-        assert module.RootA.model_fields["data"].annotation is module.SharedRoot.model_fields["shared"].annotation
+        run_generate_and_assert(input_=schema, config=config, expected_file=expected)
+    if entrypoint == "cli":
+        assert_output(output.read_text(), expected)
+    payloads = collision_case["payloads"]
+    with _generated_model(output, "collision_output", "Model") as generated:
+        module = sys.modules[generated.__module__]
+        for side, root, payload in zip(sides, roots, payloads, strict=True):
+            source_model = getattr(importlib.import_module(f"tests.data.python.input_model.collision_{side}"), root)
+            assert source_model.model_validate(payload).model_dump(mode="json", exclude_unset=True) == payload
+            result = module.Model.model_validate(payload).root.model_dump(mode="json", exclude_unset=True)
+            assert result == payload
+        if case == "identical":
+            assert (
+                module.SameRootA.model_fields["data"].annotation is not module.SameRootB.model_fields["data"].annotation
+            )
+        elif case == "shared":
+            assert module.RootA.model_fields["data"].annotation is module.SharedRoot.model_fields["shared"].annotation
 
 
 @pytest.mark.parametrize(
@@ -2257,7 +2219,7 @@ def test_input_model_equal_schema_identity(
     """Equal schemas retain distinct reused types and their native validators."""
     from pydantic import ValidationError
 
-    from datamodel_code_generator import GenerateConfig, InputFileType, generate
+    from datamodel_code_generator import GenerateConfig, InputFileType
     from datamodel_code_generator.enums import InputModelRefStrategy
     from datamodel_code_generator.format import Formatter
     from datamodel_code_generator.input_model import load_model_schema
@@ -2269,6 +2231,7 @@ def test_input_model_equal_schema_identity(
     (tmp_path / "pyproject.toml").write_text((settings / "pyproject.toml").read_text())
     output = tmp_path / "model.py"
     formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
+    suffix = f"{case.lower()}_{'multiple' if multiple else 'single'}_{strategy}"
     if entrypoint == "cli":
         run_main_with_args(
             _input_model_args(
@@ -2286,9 +2249,13 @@ def test_input_model_equal_schema_identity(
             settings_path=tmp_path,
             formatters=[Formatter(value) for value in formatters],
         )
-        generate(load_model_schema(paths, InputFileType.JsonSchema, InputModelRefStrategy(strategy)), config=config)
-    suffix = f"{case.lower()}_{'multiple' if multiple else 'single'}_{strategy}"
-    assert_output(output.read_text(), EXPECTED_INPUT_MODEL_PATH / f"equal_identity_{suffix}.py")
+        run_generate_and_assert(
+            input_=load_model_schema(paths, InputFileType.JsonSchema, InputModelRefStrategy(strategy)),
+            config=config,
+            expected_file=EXPECTED_INPUT_MODEL_PATH / f"equal_identity_{suffix}.py",
+        )
+    if entrypoint == "cli":
+        assert_output(output.read_text(), EXPECTED_INPUT_MODEL_PATH / f"equal_identity_{suffix}.py")
     settings = json.loads((EXPECTED_INPUT_MODEL_PATH.parents[2] / "python/input_model/equal_identity.json").read_text())
     options = settings[case]
     native = getattr(importlib.import_module(source), case)
