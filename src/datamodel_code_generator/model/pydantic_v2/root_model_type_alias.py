@@ -15,6 +15,7 @@ from datamodel_code_generator.model.base import TEMPLATE_DIR
 from datamodel_code_generator.model.pydantic_v2.base_model import has_lookaround_pattern
 from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_ROOT_MODEL
 from datamodel_code_generator.model.pydantic_v2.root_model import RootModel
+from datamodel_code_generator.types import NONE
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -26,7 +27,7 @@ if TYPE_CHECKING:
 
 def _constrained_root_model(fields: list[DataModelFieldBase]) -> type[RootModel] | None:
     """Keep constraints omitted by the alias template on an executable root class."""
-    if len(fields) == 1 and (data_type := fields[0].data_type).type == "None" and not data_type.is_custom_type:
+    if len(fields) == 1 and (data_type := fields[0].data_type).type == NONE and not data_type.is_custom_type:
         return None
     if any(
         field.constraints and field.constraints.model_dump(exclude={"unique_items"}, exclude_none=True)
