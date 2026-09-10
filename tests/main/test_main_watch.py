@@ -2104,6 +2104,31 @@ def test_watch_dependencies_accepts_polling_parent_events_for_changed_inputs(tmp
     assert not dependencies._polling_dependencies_changed()
     assert not dependencies.accepts_event(project_directory, accept_directory_events=True)
 
+    dependencies.add_directory(project_directory)
+    child_file = project_directory / "child.json"
+    child_file.write_text(WATCH_SCHEMA_CHANGED, encoding="utf-8")
+    input_file.write_text((WATCH_DATA_PATH / "file_change/reference.json").read_text(), encoding="utf-8")
+    with dependencies.generation():
+        run_main_with_args([
+            "--input",
+            str(input_file),
+            "--output",
+            str(output_file),
+            "--input-file-type",
+            "jsonschema",
+            "--formatters",
+            "builtin",
+            "--disable-timestamp",
+        ])
+        assert_output(output_file.read_text(), EXPECTED_MAIN_PATH / "watch_reference_change.py")
+        replacement.write_text("generated output\n", encoding="utf-8")
+        replacement.replace(output_file)
+    assert not dependencies._polling_dependencies_changed()
+    assert not dependencies.accepts_event(output_file, accept_directory_events=True)
+    child_file.write_text(WATCH_SCHEMA_INITIAL, encoding="utf-8")
+    assert dependencies._polling_dependencies_changed()
+    assert dependencies.accepts_event(project_directory, accept_directory_events=True)
+
 
 @pytest.mark.allow_direct_assert
 def test_watch_dependencies_accept_events_with_unresolvable_paths(
@@ -3839,5 +3864,116 @@ def test_watch_migration_notice_is_not_repeated(notice: str, tmp_path: Path) -> 
             EXPECTED_MAIN_PATH / "migration_warnings" / f"{notice}.txt",
         )
         assert_output(output_file.read_text(encoding="utf-8"), EXPECTED_MAIN_PATH / "migration_warnings" / "watched.py")
+    finally:
+        _stop_watch_cli(process, stdout_thread, stderr_thread)
+
+
+def test_watch_cli_keeps_input_changes_during_generation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An atomic input update during formatting survives publication of the dependency graph."""
+    project_directory = tmp_path / "project"
+    formatter_directory = project_directory
+    input_file = project_directory / "schema.json"
+    output_file = project_directory / "output.py"
+    pyproject_file = project_directory / "pyproject.toml"
+    marker_file = tmp_path / "formatter-started"
+    release_file = tmp_path / "formatter-release"
+    project_directory.mkdir()
+    input_file.write_text((WATCH_DATA_PATH / "file_change/initial.json").read_text(encoding="utf-8"), encoding="utf-8")
+    pyproject_file.write_text('[tool.datamodel-codegen]\ncustom-formatters = "blocking_formatter"\n', encoding="utf-8")
+    release_file.touch()
+    shutil.copyfile(
+        WATCH_DATA_PATH.parent / "python/custom_formatters/blocking_watch.py",
+        formatter_directory / "blocking_formatter.py",
+    )
+    monkeypatch.setenv(
+        "PYTHONPATH",
+        f"{formatter_directory}{os.pathsep}{os.environ['PYTHONPATH']}"
+        if "PYTHONPATH" in os.environ
+        else str(formatter_directory),
+    )
+    monkeypatch.setenv("DATAMODEL_CODEGEN_WATCH_MARKER", str(marker_file))
+    monkeypatch.setenv("DATAMODEL_CODEGEN_WATCH_RELEASE", str(release_file))
+    monkeypatch.setenv("DATAMODEL_CODEGEN_WATCH_BLOCK_TIMEOUT", "5")
+    process, stdout_lines, stderr_lines, stdout_thread, stderr_thread = _start_watch_cli_until_ready(
+        input_file,
+        output_file,
+        working_directory=project_directory,
+    )
+
+    try:
+        marker_file.unlink()
+        release_file.unlink()
+        assert_output(output_file.read_text(encoding="utf-8"), EXPECTED_MAIN_PATH / "watch_file_initial.py")
+        time.sleep(WATCH_CLI_CHANGE_RETRY_SECONDS)
+        pyproject_update = project_directory / "pyproject-update.toml"
+        pyproject_update.write_text(
+            '[tool.datamodel-codegen]\ncustom-formatters = "blocking_formatter"\n',
+            encoding="utf-8",
+        )
+        pyproject_update.replace(pyproject_file)
+        _wait_for_watch_cli(
+            process,
+            stdout_lines,
+            stderr_lines,
+            marker_file.is_file,
+            "the custom formatter to begin regeneration",
+        )
+        input_update = project_directory / "input-update.json"
+        input_update.write_text(
+            (WATCH_DATA_PATH / "file_change/changed.json").read_text(encoding="utf-8"), encoding="utf-8"
+        )
+        original_status = input_file.stat()
+        os.utime(input_update, ns=(original_status.st_atime_ns, original_status.st_mtime_ns))
+        input_update.replace(input_file)
+        release_file.touch()
+        _wait_for_watch_cli(
+            process,
+            stdout_lines,
+            stderr_lines,
+            lambda: _file_contains(output_file, "age: int | None = None"),
+            "the input changed during formatting to regenerate",
+        )
+        assert_output(output_file.read_text(encoding="utf-8"), EXPECTED_MAIN_PATH / "watch_file_change.py")
+    finally:
+        _stop_watch_cli(process, stdout_thread, stderr_thread)
+
+
+def test_watch_cli_tracks_new_reference_after_generation(tmp_path: Path) -> None:
+    """Newly discovered dependencies remain observable after their first generation."""
+    input_file = tmp_path / "schema.json"
+    child_file = tmp_path / "child.json"
+    output_file = tmp_path / "output.py"
+    initial = (WATCH_DATA_PATH / "file_change/initial.json").read_text(encoding="utf-8")
+    changed = (WATCH_DATA_PATH / "file_change/changed.json").read_text(encoding="utf-8")
+    input_file.write_text(initial, encoding="utf-8")
+    child_file.write_text(changed, encoding="utf-8")
+    process, stdout_lines, stderr_lines, stdout_thread, stderr_thread = _start_watch_cli_until_ready(
+        input_file,
+        output_file,
+    )
+    try:
+        _write_watch_cli_input_and_wait(
+            process,
+            stdout_lines,
+            stderr_lines,
+            input_file,
+            (WATCH_DATA_PATH / "file_change/reference.json").read_text(encoding="utf-8"),
+            lambda: _file_contains(output_file, "age: int | None = None"),
+            "the newly referenced child to generate",
+        )
+        assert_output(output_file.read_text(encoding="utf-8"), EXPECTED_MAIN_PATH / "watch_reference_change.py")
+        _write_watch_cli_input_and_wait(
+            process,
+            stdout_lines,
+            stderr_lines,
+            child_file,
+            initial,
+            lambda: _file_contains(output_file, "name: str") and not _file_contains(output_file, "age:"),
+            "an edit to the newly referenced child to regenerate",
+        )
+        assert_output(output_file.read_text(encoding="utf-8"), EXPECTED_MAIN_PATH / "watch_reference_initial.py")
     finally:
         _stop_watch_cli(process, stdout_thread, stderr_thread)

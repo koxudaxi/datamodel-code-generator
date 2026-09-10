@@ -56,6 +56,7 @@ class _CollectedGeneration(_Weakrefable):
     files: set[Path] = field(default_factory=set)
     symlink_events: set[Path] = field(default_factory=set)
     failed: bool = False
+    polling_fingerprints: dict[Path, tuple[int, int, int]] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -202,9 +203,8 @@ class WatchDependencies(_Weakrefable):
             static_files |= candidate.files
             static_directories |= candidate.directories
             static_symlink_events |= candidate.symlink_events
-        failed_generation_files = self._failed_generation_files
         failed_generation_symlink_events = self._failed_generation_symlink_events
-        files = frozenset(static_files | self._generation_files | failed_generation_files)
+        files = frozenset(static_files | self._generation_files | self._failed_generation_files)
         directories = frozenset(static_directories)
         event_paths = frozenset(
             files | static_symlink_events | self._generation_symlink_events | failed_generation_symlink_events
@@ -213,9 +213,20 @@ class WatchDependencies(_Weakrefable):
         outputs = self._outputs.copy()
         if candidate is not None:
             outputs.update(candidate.outputs)
-        recovery_paths = frozenset((candidate.files if candidate is not None else set()) | failed_generation_files)
+        recovery_paths = frozenset(
+            (candidate.files if candidate is not None else set()) | self._failed_generation_files
+        )
+        collector = _current_collector.get()
+        generation_fingerprints = (
+            collector.polling_fingerprints if collector is not None and collector.owner is self else None
+        )
         polling_fingerprints = (
-            {path: _path_fingerprint(path) for path in files | directories}
+            {
+                path: generation_fingerprints[path]
+                if generation_fingerprints is not None and path in generation_fingerprints
+                else _path_fingerprint(path)
+                for path in files | directories
+            }
             if self._polling_fingerprints_enabled
             else None
         )
@@ -242,12 +253,22 @@ class WatchDependencies(_Weakrefable):
                 self._publish()
 
     @staticmethod
-    def _add_path(path: Path, paths: set[Path], symlink_events: set[Path]) -> None:
+    def _add_path(
+        path: Path,
+        paths: set[Path],
+        symlink_events: set[Path],
+        polling_fingerprints: dict[Path, tuple[int, int, int]] | None = None,
+    ) -> None:
         try:
-            paths.update(_path_variants(path))
+            path_variants = _path_variants(path)
+            paths.update(path_variants)
             symlink_events.update(_symlink_event_paths(path))
         except (OSError, ValueError):
             return
+        if polling_fingerprints is not None:
+            for dependency in path_variants:
+                if dependency not in polling_fingerprints:
+                    polling_fingerprints[dependency] = _path_fingerprint(dependency)
 
     @staticmethod
     def _add_output(path: Path | None, outputs: dict[Path, bool], *, is_directory: bool | None = None) -> None:
@@ -365,6 +386,9 @@ class WatchDependencies(_Weakrefable):
     def generation(self) -> Iterator[_CollectedGeneration]:
         """Collect one generation privately, publishing a complete graph only at its end."""
         collected = _CollectedGeneration(self)
+        # A completed generation must acknowledge the inputs it observed, not later edits.
+        if self._polling_fingerprints_enabled:
+            collected.polling_fingerprints = {path: _path_fingerprint(path) for path in self._snapshot.files}
         token = _current_collector.set(collected)
         try:
             yield collected
@@ -455,7 +479,7 @@ class WatchDependencies(_Weakrefable):
     def record_file(self, path: Path) -> None:
         """Add a generated dependency to the private collector or current snapshot."""
         if (collector := _current_collector.get()) is not None and collector.owner is self:
-            self._add_path(path, collector.files, collector.symlink_events)
+            self._add_path(path, collector.files, collector.symlink_events, collector.polling_fingerprints)
             return
         with self._lock:
             self._add_path(path, self._generation_files, self._generation_symlink_events)
