@@ -1,0 +1,9 @@
+{
+  "valid": {
+    "mode": "a",
+    "value": "ok"
+  },
+  "invalid": {
+    "mode": "a"
+  }
+}

@@ -21835,14 +21835,28 @@ def test_conditional_json_equality(
 @pytest.mark.parametrize("formatter", ["builtin", "external"])
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
 @pytest.mark.parametrize(
-    "case", ["conditional", "oneof", "anyof", "nested", "count", "core", "inherited", "referenced"]
+    "case",
+    [
+        "conditional",
+        "oneof",
+        "anyof",
+        "nested",
+        "count",
+        "core",
+        "inherited",
+        "referenced",
+        "ref_siblings",
+        "ref_siblings_draft7",
+    ],
 )
 def test_inline_allof_validators(output_file: Path, entrypoint: str, case: str, formatter: str) -> None:
     """Validate native-schema and generated runtime behavior through both entrypoints."""
     source = JSON_SCHEMA_DATA_PATH / "inline_allof_validators" / f"{case}.json"
     payloads = DATA_PATH / "payloads/inline_allof_validators"
     values = json.loads((payloads / f"{case}.json").read_text())
-    native = Draft202012Validator(json.loads(source.read_text()))
+    native_type = Draft7Validator if case == "ref_siblings_draft7" else Draft202012Validator
+    native = native_type(json.loads(source.read_text()))
+    error_type = values.get("error_type", "value_error")
     assert_output(
         json.dumps([native.is_valid(values["valid"]), native.is_valid(values["invalid"])]) + "\n",
         payloads / "native.txt",
@@ -21887,7 +21901,7 @@ def test_inline_allof_validators(output_file: Path, entrypoint: str, case: str, 
         model_name="Root",
         valid_json=json.dumps(values["valid"]),
         invalid_json=json.dumps(values["invalid"]),
-        expected_error_type="value_error",
+        expected_error_type=error_type,
     )
     with _generated_model(output_file, f"inline_allof_python_{case}", "Root") as model:
-        _assert_model_json_invalid(model.model_validate, values["invalid"], "value_error")
+        _assert_model_json_invalid(model.model_validate, values["invalid"], error_type)

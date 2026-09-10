@@ -1,0 +1,9 @@
+{
+  "valid": {
+    "mode": "a"
+  },
+  "invalid": {
+    "mode": {}
+  },
+  "error_type": "string_type"
+}
