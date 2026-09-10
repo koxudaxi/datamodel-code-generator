@@ -40,7 +40,6 @@ from datamodel_code_generator import (
     DataModelType,
     DefaultValueType,
     Error,
-    GenerateConfig,
     InputFileType,
     InvalidFileFormatError,
     PythonVersion,
@@ -21854,34 +21853,34 @@ def test_inline_allof_validators(output_file: Path, entrypoint: str, case: str, 
     suffix = "_builtin" if case in {"anyof", "core"} and formatter == "builtin" else ""
     expected = f"inline_allof_validators/{case}{suffix}.py"
     if entrypoint == "cli":
-        run_main_with_args([
-            "--input",
-            str(source),
-            "--output",
-            str(output_file),
-            "--input-file-type",
-            "jsonschema",
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-            "--generate-schema-validators",
-            "--disable-timestamp",
-            "--formatters",
-            *formatters,
-        ])
-    else:
-        generate(
-            source,
-            config=GenerateConfig(
-                output=output_file,
-                input_file_type=InputFileType.JsonSchema,
-                output_model_type=DataModelType.PydanticV2BaseModel,
-                generate_schema_validators=True,
-                disable_timestamp=True,
-                formatters=[Formatter(value) for value in formatters],
-                settings_path=output_file.parent,
-            ),
+        run_main_and_assert(
+            input_path=source,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file=expected,
+            extra_args=[
+                "--output-model-type",
+                "pydantic_v2.BaseModel",
+                "--generate-schema-validators",
+                "--disable-timestamp",
+                "--formatters",
+                *formatters,
+            ],
         )
-    assert_file_content(output_file, expected)
+    else:
+        run_generate_file_and_assert(
+            input_path=source,
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            assert_func=assert_file_content,
+            expected_file=expected,
+            output_model_type=DataModelType.PydanticV2BaseModel,
+            generate_schema_validators=True,
+            disable_timestamp=True,
+            formatters=[Formatter(value) for value in formatters],
+            settings_path=output_file.parent,
+        )
     assert_generated_model_json_validation(
         output_file,
         module_name=f"inline_allof_{case}",
