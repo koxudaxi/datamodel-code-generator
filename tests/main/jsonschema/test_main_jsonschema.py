@@ -21925,8 +21925,12 @@ def test_inline_allof_validators(
 
 @pytest.mark.parametrize("formatter", ["builtin", "external"])
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
-def test_schema_validator_mapping_inputs(output_file: Path, entrypoint: str, formatter: str) -> None:
+def test_schema_validator_mapping_inputs(
+    output_file: Path, monkeypatch: pytest.MonkeyPatch, entrypoint: str, formatter: str
+) -> None:
     """Generate once per entrypoint and formatter, then validate every real mapping input."""
+    # Each formatter has its own golden for intentionally different helper wrapping.
+    monkeypatch.delenv("DATAMODEL_CODE_GENERATOR_CHECK_BUILTIN_FORMATTER_PARITY", raising=False)
     source = JSON_SCHEMA_DATA_PATH / "mapping_schema_validators.json"
     payloads = DATA_PATH / "payloads/mapping_schema_validators"
     formatters = [Formatter.BUILTIN] if formatter == "builtin" else [Formatter.BLACK, Formatter.ISORT]
