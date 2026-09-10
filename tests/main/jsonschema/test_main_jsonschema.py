@@ -19728,6 +19728,10 @@ def test_msgspec_enum_diagnostics_integer_subclasses(
             expected_error=Error,
             **options,
         )
+        assert_output(
+            f"{output_file.exists()}\n",
+            EXPECTED_JSON_SCHEMA_PATH / "msgspec_enum_diagnostics" / "absent.txt",
+        )
         run_main_and_assert(
             input_path=schema_path,
             output_path=output_file,
