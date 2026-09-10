@@ -7948,12 +7948,17 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         names_by_property = self._get_input_names_by_property(fields, base_classes)
         declared_names = tuple(sorted({name for names in names_by_property.values() for name in names}))
         rule_type = PatternPropertiesRule
-        if obj is self._pattern_validation_document_root:
-            match self._pattern_validation_loses_raw_value(obj, pattern_value_types):
-                case "declared":
-                    rule_type = IndependentDeclaredPatternPropertiesRule
-                case "models":
-                    rule_type = IndependentModelPatternPropertiesRule
+        intersection = (
+            self._pattern_validation_loses_raw_value(obj, pattern_value_types)
+            if not any((self.config.base_class, self.config.base_class_map, self.config.custom_template_dir))
+            and self.config.extra_template_data is None
+            else None
+        )
+        match intersection:
+            case "declared":
+                rule_type = IndependentDeclaredPatternPropertiesRule
+            case "models":
+                rule_type = IndependentModelPatternPropertiesRule
         self._schema_runtime_validation(reference_path).pattern_properties.append(
             rule_type(
                 declared_properties=declared_names,

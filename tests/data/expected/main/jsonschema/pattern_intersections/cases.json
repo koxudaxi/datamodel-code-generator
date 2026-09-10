@@ -804,5 +804,37 @@
     "legacy_code_names": {
       "external_23_False": "single_custom_disabled_black23.py"
     }
+  },
+  "reachable_nested": {
+    "payloads": [
+      {},
+      {
+        "value": {
+          "x": {
+            "a": 1,
+            "b": 2
+          }
+        }
+      },
+      {
+        "value": {
+          "x": {
+            "a": 1
+          }
+        }
+      },
+      {
+        "value": {
+          "x": {
+            "a": 1,
+            "b": "invalid"
+          }
+        }
+      }
+    ],
+    "legacy_code_names": {
+      "external_22_False": "reachable_nested_disabled_black23.py",
+      "external_23_False": "reachable_nested_disabled_black23.py"
+    }
   }
 }

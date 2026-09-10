@@ -23744,9 +23744,11 @@ PATTERN_INTERSECTION_CASES = json.loads((PATTERN_INTERSECTION_EXPECTED / "cases.
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
 @pytest.mark.parametrize("formatter", ["external", "builtin"])
 def test_pattern_property_intersections(
-    tmp_path: Path, case: str, enabled: bool, entrypoint: str, formatter: str
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, case: str, enabled: bool, entrypoint: str, formatter: str
 ) -> None:
     """Validate raw values independently while preserving ordinary generated code."""
+    # Each formatter has its own golden for intentionally different formatting.
+    monkeypatch.delenv("DATAMODEL_CODE_GENERATOR_CHECK_BUILTIN_FORMATTER_PARITY", raising=False)
     source_case = PATTERN_INTERSECTION_CASES[case].get("source", case)
     source = JSON_SCHEMA_DATA_PATH / "pattern_intersections" / f"{source_case}.json"
     custom_template_dir = (
