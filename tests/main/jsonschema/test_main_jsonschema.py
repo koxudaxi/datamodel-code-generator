@@ -11,7 +11,6 @@ import operator
 import os
 import re
 import shutil
-import subprocess
 import sys
 import tempfile
 import warnings
@@ -22972,23 +22971,20 @@ def test_root_alias_constraints(
             extra_args=args,
         )
     else:
-        schema = json.loads(source.read_text())
-        with assert_inputs_not_mutated({"schema": schema}):
-            generate(
-                schema,
-                **_default_formatter_generate_options({
-                    "input_file_type": InputFileType.JsonSchema,
-                    "input_filename": source.name,
-                    "output": output_file,
-                    "disable_timestamp": True,
-                    **options,
-                }),
-            )
         filename = ROOT_ALIAS_LEGACY_API_OUTPUTS.get(
             (filename, int(black.__version__.split(".")[0]) < 24 and not _uses_builtin_test_default_formatter()),
             filename,
         )
-        assert_output(output_file.read_text(encoding="utf-8"), expected / filename)
+        run_generate_and_assert(
+            input_=json.loads(source.read_text()),
+            input_file_type=InputFileType.JsonSchema,
+            input_filename=source.name,
+            output=output_file,
+            disable_timestamp=True,
+            expected_file=expected / filename,
+            assert_input_unchanged=True,
+            **options,
+        )
     if case == "lookaround":
         try:
             with _generated_model(
@@ -23009,13 +23005,18 @@ def test_root_alias_constraints(
                 expected / "lookaround_native.txt",
             )
             return
-    result = subprocess.run(
-        [sys.executable, str(DATA_PATH / "python/root_alias_constraints/runtime.py"), str(source), str(output_file)],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    assert_output(result.stdout, expected / f"{case}_runtime.txt")
+    validator = Draft7Validator(json.loads(source.read_text()))
+    payloads = json.loads((DATA_PATH / "python/root_alias_constraints/cases.json").read_text())[case]
+    results = []
+    with _generated_model(output_file, "generated_root_constraints", "Root") as model:
+        for payload in payloads:
+            try:
+                model.model_validate(payload)
+                accepted = True
+            except ValidationError:
+                accepted = False
+            results.append({"payload": payload, "native": validator.is_valid(payload), "generated": accepted})
+    assert_output(json.dumps(results, indent=2) + "\n", expected / f"{case}_runtime.txt")
 
 
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
@@ -23076,23 +23077,27 @@ def test_root_alias_custom_template_constraints(
             extra_args=args,
         )
     else:
-        generate(
-            source,
-            **_default_formatter_generate_options({
-                "input_file_type": InputFileType.JsonSchema,
-                "output": output_file,
-                "disable_timestamp": True,
-                **options,
-            }),
+        run_generate_file_and_assert(
+            input_path=source,
+            input_file_type=InputFileType.JsonSchema,
+            output_path=output_file,
+            disable_timestamp=True,
+            expected_file=expected / filename,
+            assert_func=assert_file_content,
+            **options,
         )
-        assert_output(output_file.read_text(encoding="utf-8"), expected / filename)
-    result = subprocess.run(
-        [sys.executable, str(DATA_PATH / "python/root_alias_constraints/runtime.py"), str(source), str(output_file)],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    assert_output(result.stdout, expected / f"{case}_runtime.txt")
+    validator = Draft7Validator(json.loads(source.read_text()))
+    payloads = json.loads((DATA_PATH / "python/root_alias_constraints/cases.json").read_text())[case]
+    results = []
+    with _generated_model(output_file, "generated_root_constraints", "Root") as model:
+        for payload in payloads:
+            try:
+                model.model_validate(payload)
+                accepted = True
+            except ValidationError:
+                accepted = False
+            results.append({"payload": payload, "native": validator.is_valid(payload), "generated": accepted})
+    assert_output(json.dumps(results, indent=2) + "\n", expected / f"{case}_runtime.txt")
 
 
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
@@ -23118,20 +23123,16 @@ def test_root_alias_null_constraints(
             ],
         )
     else:
-        generate(
-            source,
-            **_default_formatter_generate_options({
-                "input_file_type": InputFileType.JsonSchema,
-                "output": output_file,
-                "disable_timestamp": True,
-                "use_root_model_type_alias": True,
-                "field_constraints": field_constraints,
-                "use_annotated": use_annotated,
-            }),
-        )
-        assert_output(
-            output_file.read_text(encoding="utf-8"),
-            expected / (f"{case}_annotated_api.py" if use_annotated else f"{case}.py"),
+        run_generate_file_and_assert(
+            input_path=source,
+            input_file_type=InputFileType.JsonSchema,
+            output_path=output_file,
+            disable_timestamp=True,
+            use_root_model_type_alias=True,
+            field_constraints=field_constraints,
+            use_annotated=use_annotated,
+            expected_file=expected / (f"{case}_annotated_api.py" if use_annotated else f"{case}.py"),
+            assert_func=assert_file_content,
         )
     payloads = json.loads((DATA_PATH / "payloads/root_alias_null_values.json").read_text())
     validator = Draft7Validator(json.loads(source.read_text()))
