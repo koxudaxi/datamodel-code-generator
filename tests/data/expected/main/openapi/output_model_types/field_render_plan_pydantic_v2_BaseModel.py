@@ -23,7 +23,7 @@ class RenderPlan(BaseModel):
     Field_: str | None = Field(default='value', alias='Field(')
     literal_convert_marker: str | None = 'lambda: convert'
     required_marker: str = Field(..., title='Field(')
-    nested_factory: Nested | None = Field(default_factory=Nested)
+    nested_factory: Nested | None = None
     nested_convert: Nested | None = Field(
         default={'value': 'Field('}, validate_default=True
     )
