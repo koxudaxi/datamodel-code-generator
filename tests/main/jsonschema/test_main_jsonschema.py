@@ -3311,7 +3311,7 @@ def test_main_all_of_hierarchy_inline_allof(output_file: Path) -> None:
         )
 
 
-def test_main_combined_array(output_file: Path) -> None:
+def test_main_combined_array(output_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """Reject the fixture's incompatible array, object, and string allOf types."""
     with chdir(JSON_SCHEMA_DATA_PATH):
         run_main_and_assert(
@@ -3319,6 +3319,10 @@ def test_main_combined_array(output_file: Path) -> None:
             output_path=output_file,
             input_file_type="jsonschema",
             expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr=(
+                EXPECTED_JSON_SCHEMA_PATH / "disjoint_allof_types/original_combined_array_cli_error.txt"
+            ).read_text(encoding="utf-8"),
         )
 
 
