@@ -22583,29 +22583,25 @@ def test_numeric_allof_types(
             args = ["--disable-timestamp", "--allof-merge-mode", merge_mode.value]
             if field_constraints:
                 args.append("--field-constraints")
-            run_main_with_args([
-                "--input",
-                str(source),
-                "--output",
-                str(output_file),
-                "--input-file-type",
-                "jsonschema",
-                *args,
-            ])
+            run_main_and_assert(
+                input_path=source,
+                output_path=output_file,
+                input_file_type="jsonschema",
+                expected_file=expected / filename,
+                extra_args=args,
+            )
         else:
-            with assert_inputs_not_mutated({"schema": schema}):
-                generate(
-                    schema,
-                    **_default_formatter_generate_options({
-                        "input_file_type": InputFileType.JsonSchema,
-                        "input_filename": source.name,
-                        "output": output_file,
-                        "disable_timestamp": True,
-                        "allof_merge_mode": merge_mode,
-                        "field_constraints": field_constraints,
-                    }),
-                )
-        assert_output(output_file.read_text(encoding="utf-8"), expected / filename)
+            run_generate_and_assert(
+                input_=schema,
+                input_file_type=InputFileType.JsonSchema,
+                input_filename=source.name,
+                output=output_file,
+                disable_timestamp=True,
+                allof_merge_mode=merge_mode,
+                field_constraints=field_constraints,
+                assert_input_unchanged=True,
+                expected_file=expected / filename,
+            )
     assert_output(
         json.dumps([str(item.message) for item in captured], indent=2) + "\n", expected / f"{case}_warnings.txt"
     )
@@ -22669,15 +22665,25 @@ def test_numeric_allof_empty_intersection(
     )
     message = "allOf numeric/null type constraints have no common value"
     if entrypoint == "cli":
-        run_main_with_args(
-            ["--input", str(source), "--output", str(output_file), "--allof-merge-mode", merge_mode.value],
+        run_main_and_assert(
+            input_path=source,
+            output_path=output_file,
+            extra_args=["--allof-merge-mode", merge_mode.value],
             expected_exit=Exit.ERROR,
             capsys=capsys,
             expected_stderr_contains=message,
+            output_should_not_exist=True,
         )
     else:
-        with assert_inputs_not_mutated({"schema": schema}), pytest.raises(SchemaParseError, match=message):
-            generate(schema, input_file_type=InputFileType.JsonSchema, output=output_file, allof_merge_mode=merge_mode)
+        run_generate_and_assert(
+            input_=schema,
+            input_file_type=InputFileType.JsonSchema,
+            output=output_file,
+            allof_merge_mode=merge_mode,
+            assert_input_unchanged=True,
+            expected_error=SchemaParseError,
+            expected_error_match=message,
+        )
 
 
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
@@ -22686,35 +22692,29 @@ def test_numeric_null_custom_template(output_file: Path, entrypoint: str) -> Non
     source = JSON_SCHEMA_DATA_PATH / "numeric_allof_types/null_template.json"
     expected = EXPECTED_JSON_SCHEMA_PATH / "numeric_allof_types"
     template_dir = DATA_PATH / "templates_numeric_null"
-    if entrypoint == "cli":
-        run_main_with_args([
-            "--input",
-            str(source),
-            "--output",
-            str(output_file),
-            "--input-file-type",
-            "jsonschema",
-            "--disable-timestamp",
-            "--field-constraints",
-            "--custom-template-dir",
-            str(template_dir),
-        ])
-    else:
-        generate(
-            source,
-            **_default_formatter_generate_options({
-                "input_file_type": InputFileType.JsonSchema,
-                "output": output_file,
-                "disable_timestamp": True,
-                "field_constraints": True,
-                "custom_template_dir": template_dir,
-            }),
-        )
     filename = {
         (False, 22): "null_custom_black22.py",
         (False, 23): "null_custom_black23.py",
     }.get((_uses_builtin_test_default_formatter(), int(black.__version__.split(".")[0])), "null_custom.py")
-    assert_output(output_file.read_text(encoding="utf-8"), expected / filename)
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=source,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            expected_file=expected / filename,
+            extra_args=["--disable-timestamp", "--field-constraints", "--custom-template-dir", str(template_dir)],
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=source,
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            disable_timestamp=True,
+            field_constraints=True,
+            custom_template_dir=template_dir,
+            expected_file=expected / filename,
+            assert_func=assert_file_content,
+        )
     try:
         with _generated_model(
             DATA_PATH / "python/numeric_allof_types/native_null.py", "native_null_control", "NativeNull"
