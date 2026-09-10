@@ -22869,8 +22869,12 @@ def test_compatible_allof_types(
 
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
 @pytest.mark.parametrize("builtin", [False, True])
-def test_allof_external_mappings_preserve_imports(output_file: Path, entrypoint: str, builtin: bool) -> None:
+def test_allof_external_mappings_preserve_imports(
+    monkeypatch: pytest.MonkeyPatch, output_file: Path, entrypoint: str, builtin: bool
+) -> None:
     """Mapped local and remote refs use the supplied Python model without loading their files."""
+    # Each formatter has its own golden for intentionally different formatting.
+    monkeypatch.delenv("DATAMODEL_CODE_GENERATOR_CHECK_BUILTIN_FORMATTER_PARITY", raising=False)
     from referencing import Registry, Resource
     from referencing.jsonschema import DRAFT202012
 
