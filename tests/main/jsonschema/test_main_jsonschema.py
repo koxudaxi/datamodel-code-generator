@@ -28,7 +28,7 @@ import black
 import msgspec
 import pytest
 from jinja2 import TemplateNotFound
-from jsonschema import Draft7Validator
+from jsonschema import Draft7Validator, FormatChecker
 from jsonschema import ValidationError as SchemaValidationError
 from packaging import version
 from pydantic import VERSION as PYDANTIC_VERSION
@@ -21644,7 +21644,20 @@ def test_allof_literal_patterns(
 @pytest.mark.parametrize("constraints", [False, True])
 @pytest.mark.parametrize("merge", ["none", "all"])
 @pytest.mark.parametrize(
-    "case", ["length", "minimum", "number", "multiple", "redundant", "description", "ordinary", "same_pattern"]
+    "case",
+    [
+        "length",
+        "minimum",
+        "number",
+        "multiple",
+        "redundant",
+        "description",
+        "ordinary",
+        "same_pattern",
+        "enum",
+        "const",
+        "format",
+    ],
 )
 def test_allof_outer_constraints(
     output_file: Path, entrypoint: str, formatter: str, constraints: bool, merge: str, case: str
@@ -21652,7 +21665,7 @@ def test_allof_outer_constraints(
     """Compare real generated root validation with all schema assertions."""
     schema = JSON_SCHEMA_DATA_PATH / f"allof_outer_constraints/{case}.json"
     formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
-    expected = f"allof_outer_constraints/{case}_{constraints}_all.py"
+    expected = f"allof_outer_constraints/{case}_{constraints and case != 'enum'}_all.py"
     if entrypoint == "cli":
         run_main_and_assert(
             input_path=schema,
@@ -21683,13 +21696,14 @@ def test_allof_outer_constraints(
         )
     cases = json.loads((JSON_SCHEMA_DATA_PATH.parent / "payloads/allof_outer_constraints.json").read_text())
     payloads = next(item for item in cases if item["name"] == case)
-    validator = Draft7Validator(json.loads(schema.read_text()))
+    validator = Draft7Validator(json.loads(schema.read_text()), format_checker=FormatChecker())
     with _generated_model(output_file, "allof_outer_constraints", "Root") as model:
         validate = _model_json_validator(model)
-        assert_output(
-            "\n".join(model.model_fields) + "\n",
-            EXPECTED_JSON_SCHEMA_PATH / "allof_outer_constraints/root_fields.txt",
-        )
+        if case != "enum":
+            assert_output(
+                "\n".join(model.model_fields) + "\n",
+                EXPECTED_JSON_SCHEMA_PATH / "allof_outer_constraints/root_fields.txt",
+            )
         for value in payloads["valid"]:
             validator.validate(value)
             assert_generated_model_json_validation(
@@ -21699,7 +21713,7 @@ def test_allof_outer_constraints(
                 valid_json=json.dumps(value),
                 invalid_json=json.dumps(payloads["invalid"][0]),
                 expected_error_type=payloads["error_type"],
-                expected_attribute_path=("root",),
+                expected_attribute_path=("value" if case == "enum" else "root",),
                 expected_attribute_value=value,
             )
         for value in payloads["invalid"]:

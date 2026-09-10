@@ -6315,14 +6315,28 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if merged_schema is None:
             return None
 
-        if obj.has_constraint or obj.description:
+        has_literals = "enum" in obj.model_fields_set or "const" in obj.extras
+        if obj.has_constraint or obj.description or obj.format or has_literals:
             merged_dict = merged_schema.model_dump(exclude_unset=True, by_alias=True)
             if obj.has_constraint:
                 self._merge_schema_constraints(merged_dict, [obj], intersect=True)
+            if obj.format and not merged_schema.format:
+                merged_dict["format"] = obj.format
+            if has_literals:
+                self._merge_all_of_root_validation_keywords(merged_dict, [*all_items, obj])
+                if self.schema_features.const_support and "const" in obj.extras:
+                    merged_dict.pop("enum", None)
+                    merged_dict["const"] = obj.extras["const"]
             if obj.description:
                 merged_dict["description"] = obj.description
             merged_schema = self.SCHEMA_OBJECT_TYPE.model_validate(merged_dict)
 
+        if (
+            merged_schema.enum
+            and not self.ignore_enum_constraints
+            and not self.should_parse_enum_as_literal(merged_schema, property_name=name)
+        ):
+            return self.parse_enum(name, merged_schema, path)
         return self.parse_root_type(name, merged_schema, path)
 
     def _merge_all_of_schema(

@@ -102,5 +102,42 @@
     ],
     "normal": true,
     "error_type": "string_too_short"
+  },
+  {
+    "name": "enum",
+    "valid": [
+      "a",
+      "bb"
+    ],
+    "invalid": [
+      "c",
+      ""
+    ],
+    "normal": false,
+    "error_type": "enum"
+  },
+  {
+    "name": "const",
+    "valid": [
+      "a"
+    ],
+    "invalid": [
+      "b",
+      ""
+    ],
+    "normal": false,
+    "error_type": "literal_error"
+  },
+  {
+    "name": "format",
+    "valid": [
+      "a@example.com"
+    ],
+    "invalid": [
+      "not-an-email",
+      ""
+    ],
+    "normal": false,
+    "error_type": "value_error"
   }
 ]
