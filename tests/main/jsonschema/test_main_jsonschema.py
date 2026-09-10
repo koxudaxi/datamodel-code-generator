@@ -21849,7 +21849,9 @@ def test_conditional_json_equality(
         "ref_siblings_draft7",
     ],
 )
-def test_inline_allof_validators(output_file: Path, entrypoint: str, case: str, formatter: str) -> None:
+def test_inline_allof_validators(
+    output_file: Path, monkeypatch: pytest.MonkeyPatch, entrypoint: str, case: str, formatter: str
+) -> None:
     """Validate native-schema and generated runtime behavior through both entrypoints."""
     source = JSON_SCHEMA_DATA_PATH / "inline_allof_validators" / f"{case}.json"
     payloads = DATA_PATH / "payloads/inline_allof_validators"
@@ -21861,7 +21863,9 @@ def test_inline_allof_validators(output_file: Path, entrypoint: str, case: str, 
         json.dumps([native.is_valid(values["valid"]), native.is_valid(values["invalid"])]) + "\n",
         payloads / "native.txt",
     )
-    # Black and the builtin formatter intentionally wrap the runtime helpers differently.
+    # These cases assert separate formatter goldens because their wrapping differs.
+    if case in {"anyof", "core"}:
+        monkeypatch.delenv("DATAMODEL_CODE_GENERATOR_CHECK_BUILTIN_FORMATTER_PARITY", raising=False)
     formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
     (output_file.parent / "pyproject.toml").write_text((source.parent / "pyproject.toml").read_text())
     suffix = "_builtin" if case in {"anyof", "core"} and formatter == "builtin" else ""
