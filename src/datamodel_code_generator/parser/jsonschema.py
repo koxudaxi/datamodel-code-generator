@@ -4103,8 +4103,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 if v1 is not None and v2 is not None:
                     return val1 if v1 <= v2 else val2
                 return val1  # pragma: no cover
-            case "pattern":
-                return _intersect_patterns((val1, val2))
             case "uniqueItems":
                 return val1 or val2
             case "multipleOf":
@@ -8997,7 +8995,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 merged_property_names.pattern = (
                     merged_pattern
                     if merged_property_names.pattern is None
-                    else self._intersect_constraint("pattern", merged_property_names.pattern, merged_pattern)
+                    else _intersect_patterns((merged_property_names.pattern, merged_pattern))
                 )
                 if merged_property_names.ref:
                     merged_property_names = self._merge_ref_with_schema(merged_property_names)
