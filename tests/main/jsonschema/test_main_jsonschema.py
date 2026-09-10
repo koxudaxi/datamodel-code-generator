@@ -22775,32 +22775,30 @@ def test_disjoint_allof_diagnostics(
     )
     with assert_inputs_not_mutated(schema):
         if entrypoint == "cli":
-            run_main_with_args(
-                [
-                    "--input",
-                    str(source),
-                    "--output",
-                    str(output_file),
-                    "--input-file-type",
-                    "jsonschema",
+            run_main_and_assert(
+                expected_exit=Exit.ERROR,
+                capsys=capsys,
+                expected_stderr=(DISJOINT_ALLOF_EXPECTED / f"{case}_cli_error.txt").read_text(encoding="utf-8"),
+                input_path=source,
+                output_path=output_file,
+                input_file_type="jsonschema",
+                extra_args=[
                     "--allof-merge-mode",
                     merge_mode.value,
                     *(["--field-constraints"] if field_constraints else []),
                 ],
-                expected_exit=Exit.ERROR,
-                capsys=capsys,
-                expected_stderr=(DISJOINT_ALLOF_EXPECTED / f"{case}_cli_error.txt").read_text(encoding="utf-8"),
+                skip_code_validation=True,
             )
         else:
-            with pytest.raises(SchemaParseError) as error:
-                generate(
-                    schema,
-                    input_file_type=InputFileType.JsonSchema,
-                    output=output_file,
-                    allof_merge_mode=merge_mode,
-                    field_constraints=field_constraints,
-                )
-            assert_output(str(error.value) + "\n", DISJOINT_ALLOF_EXPECTED / f"{case}_api_error.txt")
+            run_generate_and_assert(
+                input_=schema,
+                input_file_type=InputFileType.JsonSchema,
+                output=output_file,
+                allof_merge_mode=merge_mode,
+                field_constraints=field_constraints,
+                expected_file=DISJOINT_ALLOF_EXPECTED / f"{case}_api_error.txt",
+                expected_error=SchemaParseError,
+            )
 
 
 @pytest.mark.parametrize("case", [case for case, spec in DISJOINT_ALLOF_CASES.items() if not spec["error"]])
@@ -22827,37 +22825,34 @@ def test_compatible_allof_types(
     with assert_inputs_not_mutated(schema), warnings.catch_warnings(record=True) as captured:
         warnings.simplefilter("always", UserWarning)
         if entrypoint == "cli":
-            run_main_with_args([
-                "--input",
-                str(source),
-                "--output",
-                str(output_file),
-                "--input-file-type",
-                "jsonschema",
-                "--disable-timestamp",
-                "--custom-file-header-path",
-                str(DATA_PATH / "custom_file_header.txt"),
-                "--allof-merge-mode",
-                merge_mode.value,
-                *(["--field-constraints"] if field_constraints else []),
-                *(["--custom-template-dir", str(templates)] if custom_template else []),
-            ])
-        else:
-            generate(
-                schema,
-                **_default_formatter_generate_options({
-                    "input_file_type": InputFileType.JsonSchema,
-                    "output": output_file,
-                    "disable_timestamp": True,
-                    "custom_file_header_path": DATA_PATH / "custom_file_header.txt",
-                    "allof_merge_mode": merge_mode,
-                    "field_constraints": field_constraints,
-                    "custom_template_dir": templates if custom_template else None,
-                }),
+            run_main_and_assert(
+                input_path=source,
+                output_path=output_file,
+                input_file_type="jsonschema",
+                extra_args=[
+                    "--disable-timestamp",
+                    "--custom-file-header-path",
+                    str(DATA_PATH / "custom_file_header.txt"),
+                    "--allof-merge-mode",
+                    merge_mode.value,
+                    *(["--field-constraints"] if field_constraints else []),
+                    *(["--custom-template-dir", str(templates)] if custom_template else []),
+                ],
+                expected_file=DISJOINT_ALLOF_EXPECTED / DISJOINT_ALLOF_CASES[case]["outputs"][key],
+                skip_code_validation=True,
             )
-    assert_output(
-        output_file.read_text(encoding="utf-8"), DISJOINT_ALLOF_EXPECTED / DISJOINT_ALLOF_CASES[case]["outputs"][key]
-    )
+        else:
+            run_generate_and_assert(
+                input_=schema,
+                input_file_type=InputFileType.JsonSchema,
+                output=output_file,
+                disable_timestamp=True,
+                custom_file_header_path=DATA_PATH / "custom_file_header.txt",
+                allof_merge_mode=merge_mode,
+                field_constraints=field_constraints,
+                custom_template_dir=templates if custom_template else None,
+                expected_file=DISJOINT_ALLOF_EXPECTED / DISJOINT_ALLOF_CASES[case]["outputs"][key],
+            )
     assert_output(json.dumps([str(w.message) for w in captured]) + "\n", DISJOINT_ALLOF_EXPECTED / "no_warnings.txt")
     records = []
     with _generated_model(output_file, "compatible_allof", DISJOINT_ALLOF_CASES[case]["model"]) as model:
@@ -22886,34 +22881,30 @@ def test_allof_external_mappings_preserve_imports(output_file: Path, entrypoint:
     module = "tests.data.python.disjoint_allof_external"
     mapping = {"unavailable-mapped.json": module, "https://example.invalid/unavailable.json": module}
     if entrypoint == "cli":
-        run_main_with_args([
-            "--input",
-            str(source),
-            "--output",
-            str(output_file),
-            "--input-file-type",
-            "jsonschema",
-            "--disable-timestamp",
-            "--formatters",
-            *(formatter.value for formatter in formatters),
-            "--external-ref-mapping",
-            *(f"{ref}={package}" for ref, package in mapping.items()),
-        ])
-    else:
-        generate(
-            source,
-            **_default_formatter_generate_options({
-                "input_file_type": InputFileType.JsonSchema,
-                "output": output_file,
-                "disable_timestamp": True,
-                "external_ref_mapping": mapping,
-                "formatters": formatters,
-            }),
+        run_main_and_assert(
+            input_path=source,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            extra_args=[
+                "--disable-timestamp",
+                "--formatters",
+                *(formatter.value for formatter in formatters),
+                "--external-ref-mapping",
+                *(f"{ref}={package}" for ref, package in mapping.items()),
+            ],
+            expected_file=DISJOINT_ALLOF_EXPECTED / ("mapped_refs_builtin.py" if builtin else "mapped_refs.py"),
+            skip_code_validation=True,
         )
-    assert_output(
-        output_file.read_text(encoding="utf-8"),
-        DISJOINT_ALLOF_EXPECTED / ("mapped_refs_builtin.py" if builtin else "mapped_refs.py"),
-    )
+    else:
+        run_generate_and_assert(
+            input_=source,
+            input_file_type=InputFileType.JsonSchema,
+            output=output_file,
+            disable_timestamp=True,
+            external_ref_mapping=mapping,
+            formatters=formatters,
+            expected_file=DISJOINT_ALLOF_EXPECTED / ("mapped_refs_builtin.py" if builtin else "mapped_refs.py"),
+        )
     resource = Resource(contents={"$defs": {"Value": Value.model_json_schema()}}, specification=DRAFT202012)
     registry = Registry().with_resources((ref, resource) for ref in mapping)
     schema = json.loads(source.read_text(encoding="utf-8"))

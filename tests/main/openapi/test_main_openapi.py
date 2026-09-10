@@ -75,6 +75,7 @@ from tests.main.conftest import (
     _generated_package_module,
     assert_generated_model_json_invalid,
     assert_generated_model_json_validation,
+    run_generate_and_assert,
     run_generate_file_and_assert,
     run_main_and_assert,
     run_main_url_and_assert,
@@ -10143,9 +10144,13 @@ def test_openapi_allof_type_boundary(
                 output_should_not_exist=True,
             )
         else:
-            with pytest.raises(Error) as error:
-                generate(source, input_file_type=InputFileType.OpenAPI, output=output_file)
-            assert_output(str(error.value) + "\n", expected / "empty.txt")
+            run_generate_and_assert(
+                input_=source,
+                input_file_type=InputFileType.OpenAPI,
+                output=output_file,
+                expected_file=expected / "empty.txt",
+                expected_error=Error,
+            )
         return
     if entrypoint == "cli":
         run_main_and_assert(
