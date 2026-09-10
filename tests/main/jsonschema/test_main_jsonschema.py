@@ -22920,6 +22920,7 @@ def test_explicit_frozen_set_hashes(
 ) -> None:
     """Compare real generation, native hashes, and preserved opaque controls."""
     output = tmp_path / "model.py"
+    expected_file = EXPECTED_JSON_SCHEMA_PATH / "explicit_frozen_sets" / case.get("code", f"{case['name']}.py")
     (tmp_path / "pyproject.toml").write_text('[tool.isort]\nknown_first_party = ["tests"]\n')
     options = {"enable_faux_immutability": True, **case["options"]}
     extra_data = case.get("extra_data") or ("validators" if case.get("validators") else None)
@@ -22932,18 +22933,17 @@ def test_explicit_frozen_set_hashes(
         if case.get("packaged")
         else None
     )
-    formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
     if entrypoint == "cli":
         args = [
             "--input",
-            str(JSON_SCHEMA_DATA_PATH / "explicit_frozen_sets" / f"{case['name']}.json"),
+            str(JSON_SCHEMA_DATA_PATH / "explicit_frozen_sets" / f"{case.get('source', case['name'])}.json"),
             "--input-file-type",
             "jsonschema",
             "--output",
             str(output),
             "--disable-timestamp",
             "--formatters",
-            *formatters,
+            *(["builtin"] if formatter == "builtin" else ["black", "isort"]),
         ]
         if conversion:
             args.append("--use-unique-items-as-set")
@@ -22966,20 +22966,20 @@ def test_explicit_frozen_set_hashes(
                 dict, json.loads((DATA_PATH / "payloads/explicit_frozen_sets" / f"{extra_data}.json").read_text())
             )
         run_generate_and_assert(
-            input_=JSON_SCHEMA_DATA_PATH / "explicit_frozen_sets" / f"{case['name']}.json",
-            expected_file=EXPECTED_JSON_SCHEMA_PATH / "explicit_frozen_sets" / f"{case['name']}.py",
+            input_=JSON_SCHEMA_DATA_PATH / "explicit_frozen_sets" / f"{case.get('source', case['name'])}.json",
+            expected_file=expected_file,
             config=GenerateConfig(
                 input_file_type=InputFileType.JsonSchema,
                 output=output,
                 disable_timestamp=True,
                 use_unique_items_as_set=conversion,
                 custom_template_dir=directory,
-                formatters=[Formatter(f) for f in formatters],
+                formatters=[Formatter.BUILTIN] if formatter == "builtin" else [Formatter.BLACK, Formatter.ISORT],
                 **options,
             ),
         )
     code = output.read_text(encoding="utf-8")
-    assert_output(code, EXPECTED_JSON_SCHEMA_PATH / "explicit_frozen_sets" / f"{case['name']}.py")
+    assert_output(code, expected_file)
     with _generated_model(output, "explicit_set_output", "Container") as container:
         item = sys.modules[container.__module__].Item
         payload = {"value": case["payload"], **case.get("extra_payload", {})}
@@ -22995,9 +22995,12 @@ def test_explicit_frozen_set_hashes(
                 EXPECTED_JSON_SCHEMA_PATH / "explicit_frozen_sets/opaque.runtime.txt",
             )
             return
-        originals = [MODELS[case["name"]].model_validate(payload), MODELS[case["name"]].model_validate(payload)]
+        originals = [
+            MODELS[case.get("source", case["name"])].model_validate(payload),
+            MODELS[case.get("source", case["name"])].model_validate(payload),
+        ]
         runtime.update(
-            field_order=list(item.model_fields) == list(MODELS[case["name"]].model_fields),
+            field_order=list(item.model_fields) == list(MODELS[case.get("source", case["name"])].model_fields),
             native_dump=first.model_dump(mode="json") == originals[0].model_dump(mode="json"),
         )
         result = container.model_validate({"items": [payload, payload]})
@@ -23024,7 +23027,7 @@ def test_explicit_frozen_set_hashes(
         with pytest.raises(ValidationError):
             item.model_validate({})
         with pytest.raises(ValidationError):
-            MODELS[case["name"]].model_validate({})
+            MODELS[case.get("source", case["name"])].model_validate({})
 
 
 @pytest.mark.parametrize(

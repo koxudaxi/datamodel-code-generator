@@ -3632,7 +3632,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     validator = SetItemValidator(self.custom_template_dir)
                 if validator.has_native_pydantic_hash(model):
                     continue
-            model._append_internal_template_data("class_body_lines", "__hash__ = object.__hash__")  # noqa: SLF001
+            model._append_internal_template_data("class_body_lines", "__hash__ = object.__hash__")  # ruff: ignore[private-member-access]
 
     @classmethod
     def __set_reference_default_value_to_field(
@@ -6236,11 +6236,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
     ) -> None:
         """Finalize module processing: apply generic base class and remove unused imports."""
         all_models = [model for ctx in contexts for model in ctx.models]
-        if not self.use_unique_items_as_set:
-            self.__mark_set_item_models_hashable(all_models)
         self.__apply_generic_base_class(contexts)
-        if self.use_unique_items_as_set:
-            self.__mark_set_item_models_hashable(all_models)
+        self.__mark_set_item_models_hashable(all_models)
         self._finalize_structured_imports(contexts)
         if self.use_default_factory_for_optional_nested_models:
             # Inherited defaults may have changed since a consumer first queried its factory imports.

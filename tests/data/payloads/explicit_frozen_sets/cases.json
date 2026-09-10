@@ -143,5 +143,34 @@
         "value": 1
       }
     }
+  },
+  {
+    "name": "generic_integer",
+    "source": "integer",
+    "options": {
+      "use_generic_base_class": true
+    },
+    "payload": 1,
+    "safe": true
+  },
+  {
+    "name": "generic_inherited",
+    "source": "inherited",
+    "options": {
+      "use_generic_base_class": true
+    },
+    "payload": 1,
+    "safe": true
+  },
+  {
+    "name": "generic_mutable",
+    "source": "mutable",
+    "code": "mutable.py",
+    "options": {
+      "use_generic_base_class": true,
+      "enable_faux_immutability": false
+    },
+    "payload": 1,
+    "safe": false
   }
 ]
