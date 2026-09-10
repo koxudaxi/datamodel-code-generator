@@ -17,7 +17,7 @@ from functools import cached_property, lru_cache
 from itertools import accumulate
 from pathlib import Path
 from threading import RLock
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeVar
 from warnings import warn
 
 from pydantic import ConfigDict, Field
@@ -1756,40 +1756,35 @@ def _field_participates_in_constructor(_: DataModelFieldBase) -> bool:
     return True
 
 
-_EXPRESSION_ATTRIBUTES = ("type_hint", "base_type_hint", "annotated", "field", "represented_default")
-
-
-def _bind_expression(expression: str, bindings: dict[str, str]) -> str:
-    """Replace bound name spans while preserving every other source byte."""
-    source = expression.encode()
+def _bind_field_expressions(rendered: str, class_name: str, bindings: Mapping[str, str]) -> str:
+    """Bind names in field annotations and defaults without changing template objects."""
+    source = rendered.encode()
     offsets = [0, *accumulate(map(len, source.splitlines(keepends=True)))]
-    replacements = [
-        (
-            offsets[node.lineno - 1] + node.col_offset,
-            offsets[cast("int", node.end_lineno) - 1] + cast("int", node.end_col_offset),
-            bindings[node.id],
-        )
-        for node in ast.walk(ast.parse(expression, mode="eval"))
-        if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load) and node.id in bindings
-    ]
-    for start, end, replacement in sorted(replacements, reverse=True):
-        source = source[:start] + replacement.encode() + source[end:]
+    replacements: list[tuple[int, int, str]] = []
+    for statement in ast.parse(rendered).body:
+        if not isinstance(statement, ast.ClassDef) or statement.name != class_name:
+            continue
+        for field in statement.body:
+            if not isinstance(field, ast.AnnAssign):
+                continue
+            expressions = (field.annotation,) if field.value is None else (field.annotation, field.value)
+            for expression in expressions:
+                for node in ast.walk(expression):
+                    match node:
+                        case ast.Name(
+                            id=name,
+                            ctx=ast.Load(),
+                            end_lineno=int() as end_line,
+                            end_col_offset=int() as end_column,
+                        ) if (alias := bindings.get(name)) is not None:
+                            replacements.append((
+                                offsets[node.lineno - 1] + node.col_offset,
+                                offsets[end_line - 1] + end_column,
+                                alias,
+                            ))
+    for start, end, alias in sorted(replacements, reverse=True):
+        source = source[:start] + alias.encode() + source[end:]
     return source.decode()
-
-
-class _BoundFieldExpressions:
-    """Expose bound syntax while delegating all field metadata unchanged."""
-
-    def __init__(self, field: Any, bindings: dict[str, str]) -> None:
-        self._field = field
-        self._bindings = bindings
-
-    def __getattr__(self, name: str) -> Any:
-        value = getattr(self._field, name)
-        if name in _EXPRESSION_ATTRIBUTES and isinstance(value, str) and value:
-            value = _bind_expression(value, self._bindings)
-        self.__dict__[name] = value
-        return value
 
 
 class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
@@ -1797,6 +1792,8 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
 
     Handles template rendering, import collection, and model relationships.
     """
+
+    _field_name_bindings: Mapping[str, str] | None = None
 
     TEMPLATE_FILE_PATH: ClassVar[str] = ""
     BASE_CLASS: ClassVar[str] = ""
@@ -2439,12 +2436,10 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         """Render the model to a string using the template."""
         use_custom_template = self._uses_custom_root_template
         extra_template_data = self._custom_template_data() if use_custom_template else self._builtin_template_data()
-        fields = self._template_fields(use_custom_template=use_custom_template)
-        if bindings := self.__dict__.get("_field_name_bindings"):
-            fields = [_BoundFieldExpressions(field, bindings) for field in fields]
-        return self._render(
-            class_name=class_name or self.class_name,
-            fields=fields,
+        rendered_class_name = class_name or self.class_name
+        rendered = self._render(
+            class_name=rendered_class_name,
+            fields=self._template_fields(use_custom_template=use_custom_template),
             decorators=self.decorators,
             base_class=self.base_class,
             methods=self.methods,
@@ -2457,6 +2452,14 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
             path=self.path,
             **extra_template_data,
         )
+        if self._field_name_bindings is None:
+            return rendered
+        return _bind_field_expressions(rendered, rendered_class_name, self._field_name_bindings)
+
+    def set_field_name_bindings(self, bindings: Mapping[str, str]) -> None:
+        """Set module import names used by rendered field expressions."""
+        self._field_name_bindings = bindings
+        self.invalidate_render_caches()
 
     @property
     def _custom_template_fields(self) -> Sequence[DataModelFieldBase | _RenderedDataModelField]:

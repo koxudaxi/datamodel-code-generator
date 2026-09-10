@@ -463,8 +463,7 @@ def _bind_module_field_names(models: list[DataModel], imports: Imports) -> None:
         else:
             imports.apply_alias(aliased_import)
     for model in models:
-        model.__dict__["_field_name_bindings"] = bindings
-        model.invalidate_render_caches()
+        model.set_field_name_bindings(bindings)
 
 
 def _expand_export_module_path(module: ModulePath) -> ModulePath:
