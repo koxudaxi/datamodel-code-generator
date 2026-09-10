@@ -23021,7 +23021,25 @@ def test_root_alias_constraints(
 @pytest.mark.parametrize("case", ["integer", "multiple"])
 @pytest.mark.parametrize(
     "template_mode",
-    ["custom", "custom_alias", "custom_flat", "custom_flat_alias", "partial", "missing", "builtin", "builtin_alias"],
+    [
+        pytest.param(
+            mode,
+            marks=pytest.mark.skipif(
+                os.name == "nt" and mode.endswith("_alias"),
+                reason="directory symlink creation requires elevated privileges",
+            ),
+        )
+        for mode in (
+            "custom",
+            "custom_alias",
+            "custom_flat",
+            "custom_flat_alias",
+            "partial",
+            "missing",
+            "builtin",
+            "builtin_alias",
+        )
+    ],
 )
 @pytest.mark.parametrize(("field_constraints", "use_annotated"), [(False, False), (True, False), (True, True)])
 def test_root_alias_custom_template_constraints(
@@ -23035,8 +23053,6 @@ def test_root_alias_custom_template_constraints(
     use_annotated: bool,
 ) -> None:
     """Preserve an existing custom alias while fixing known built-in alias constraints."""
-    if os.name == "nt" and template_mode.endswith("_alias"):
-        pytest.skip("directory symlink creation requires elevated privileges")
     source = JSON_SCHEMA_DATA_PATH / "root_alias_constraints" / f"{case}.json"
     expected = EXPECTED_JSON_SCHEMA_PATH / "root_alias_constraints"
     custom_template = DATA_PATH / "templates/root_alias_constraints"
