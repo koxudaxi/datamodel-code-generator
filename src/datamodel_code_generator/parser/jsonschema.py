@@ -85,7 +85,6 @@ from datamodel_code_generator.model.runtime_validation import (
     _make_internal_schema_runtime_validation,
 )
 from datamodel_code_generator.parser.base import (
-    _ALIAS_RESOLUTION_CLASS_NAME_KEY,
     _DEFERRED_INHERITED_CLASS_KEY,
     _DEFERRED_INHERITED_FIELD_KEY,
     _DEFERRED_INHERITED_TYPE_KEY,
@@ -106,6 +105,7 @@ from datamodel_code_generator.parser.base import (
 from datamodel_code_generator.parser.schema_version import get_data_formats
 from datamodel_code_generator.python_literal import _semantic_value_text
 from datamodel_code_generator.reference import (
+    _ALIAS_RESOLUTION_CLASS_NAME_KEY,
     SPECIAL_PATH_MARKER,
     ModelType,
     Reference,

@@ -827,8 +827,9 @@ def run_generate_file_and_assert(
 def run_generate_and_assert(
     *,
     input_: Any,
-    expected_file: Path,
+    expected_file: Path | None = None,
     expected_error: type[Exception] | None = None,
+    expected_error_match: str | None = None,
     assert_input_unchanged: bool = False,
     unchanged_inputs: Mapping[str, object] | None = None,
     **generate_kwargs: Any,
@@ -843,9 +844,10 @@ def run_generate_and_assert(
     options = _default_formatter_generate_options(generate_kwargs)
     with _enable_test_parsed_source_cache(), assert_inputs_not_mutated(guarded_inputs or None):
         if expected_error is not None:
-            with pytest.raises(expected_error) as error:
+            with pytest.raises(expected_error, match=expected_error_match) as error:
                 generate(input_=input_, **options)
-            assert_output(f"{error.value}\n", expected_file)
+            if expected_file is not None:
+                assert_output(f"{error.value}\n", expected_file)
             return
         result = generate(input_=input_, **options)
     if (output_path := generate_kwargs.get("output")) is not None:
@@ -853,6 +855,7 @@ def run_generate_and_assert(
         result = output_path.read_text(encoding=generate_kwargs.get("encoding", "utf-8"))
     if not isinstance(result, str):  # pragma: no cover
         pytest.fail(f"Expected generate() to return str, got {type(result).__name__}")
+    assert expected_file is not None
     assert_output(result, expected_file)
 
 

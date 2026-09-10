@@ -10,7 +10,6 @@ import json
 import operator
 import os
 import shutil
-import subprocess
 import sys
 import tempfile
 import warnings
@@ -20361,15 +20360,16 @@ def test_explicit_alias_names_invalid(
         "conflicts with another field" if field_name == "b" or case == "snake_existing" else "is not a valid field name"
     )
     message = f"Alias {alias!r} for field {field_name!r} {reason}."
-    with pytest.raises(Error, match=re.escape(message)):
-        generate(
-            JSON_SCHEMA_DATA_PATH / "explicit_alias_names.json",
-            input_file_type=InputFileType.JsonSchema,
-            output=output_file,
-            aliases=aliases,
-            output_model_type=backend,
-            snake_case_field=case != "nfkc_duplicate",
-        )
+    run_generate_and_assert(
+        input_=JSON_SCHEMA_DATA_PATH / "explicit_alias_names.json",
+        expected_error=Error,
+        expected_error_match=re.escape(message),
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        aliases=aliases,
+        output_model_type=backend,
+        snake_case_field=case != "nfkc_duplicate",
+    )
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "explicit_alias_names.json",
         output_path=output_file,
@@ -20623,13 +20623,14 @@ def test_explicit_alias_names_graphql(case: str, output_file: Path, capsys: pyte
         if case == "duplicate"
         else "Alias 'model_config' for field 'a' is not a valid field name."
     )
-    with pytest.raises(Error, match=re.escape(message)):
-        generate(
-            GRAPHQL_DATA_PATH / "explicit_alias_names.graphql",
-            input_file_type=InputFileType.GraphQL,
-            output=output_file,
-            aliases=aliases,
-        )
+    run_generate_and_assert(
+        input_=GRAPHQL_DATA_PATH / "explicit_alias_names.graphql",
+        expected_error=Error,
+        expected_error_match=re.escape(message),
+        input_file_type=InputFileType.GraphQL,
+        output=output_file,
+        aliases=aliases,
+    )
     run_main_and_assert(
         input_path=GRAPHQL_DATA_PATH / "explicit_alias_names.graphql",
         output_path=output_file,
@@ -20717,15 +20718,16 @@ def test_explicit_alias_names_external_namespace_precedence(
     ]
     if not case["valid"]:
         message = "Alias 'model_validate' for field 'a' is not a valid field name."
-        with pytest.raises(Error, match=re.escape(message)):
-            generate(
-                input_path,
-                input_file_type=InputFileType.JsonSchema,
-                output=output_file,
-                aliases=aliases,
-                extra_template_data=extra,
-                base_class=base_class,
-            )
+        run_generate_and_assert(
+            input_=input_path,
+            expected_error=Error,
+            expected_error_match=re.escape(message),
+            input_file_type=InputFileType.JsonSchema,
+            output=output_file,
+            aliases=aliases,
+            extra_template_data=extra,
+            base_class=base_class,
+        )
         run_main_and_assert(
             input_path=input_path,
             output_path=output_file,
@@ -20759,18 +20761,28 @@ def test_explicit_alias_names_external_namespace_precedence(
                 assert_func=assert_file_content,
                 expected_file=expected,
             )
-        result = subprocess.run(
-            [
-                sys.executable,
-                str(JSON_SCHEMA_DATA_PATH.parent / "python" / "explicit_alias_namespace_runtime.py"),
-                str(output_file),
-            ],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            with _generated_model(output_file, "namespace_output", "Root") as root_model:
+                value = root_model.model_validate(
+                    json.loads(
+                        (JSON_SCHEMA_DATA_PATH.parent / "payloads" / "explicit_alias_namespace_input.json").read_text()
+                    )
+                )
+                child = type(value.child)
+                result = json.dumps(
+                    {
+                        "bases": [base.__name__ for base in child.__bases__],
+                        "namespaces": child.model_config["protected_namespaces"],
+                        "fields": list(child.model_fields),
+                        "attribute": value.child.model_validate,
+                        "dump": value.model_dump(by_alias=True),
+                        "warnings": [str(w.message) for w in caught],
+                    },
+                    indent=2,
+                )
         assert_output(
-            result.stdout,
+            f"{result}\n",
             JSON_SCHEMA_DATA_PATH.parent
             / "expected"
             / "main"

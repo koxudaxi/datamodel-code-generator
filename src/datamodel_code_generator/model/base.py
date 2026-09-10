@@ -2613,3 +2613,8 @@ def _rebuild_model_with_datamodel_namespace(model: type[Any]) -> None:
 _rebuild_model_with_datamodel_namespace(DataType)
 _rebuild_model_with_datamodel_namespace(BaseClassDataType)
 _rebuild_model_with_datamodel_namespace(DataModelFieldBase)
+
+
+def _find_base_classes(model: DataModel) -> list[DataModel]:
+    """Get direct base class DataModels."""
+    return [b.reference.source for b in model.base_classes if b.reference and isinstance(b.reference.source, DataModel)]
