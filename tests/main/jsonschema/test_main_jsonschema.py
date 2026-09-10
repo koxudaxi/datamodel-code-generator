@@ -21814,21 +21814,24 @@ def test_conditional_json_equality(
         )
         for value in payloads["valid"]:
             oracle.validate(value)
-            model.model_validate(value)
+            for container in (dict, UserDict, MappingProxyType):
+                model.model_validate(json.loads(json.dumps(value), object_hook=container))
             model.model_validate_json(json.dumps(value))
             model(**value)
         for value in payloads["invalid"]:
             with pytest.raises(SchemaValidationError):
                 oracle.validate(value)
             if enabled:
-                with pytest.raises(ValidationError):
-                    model.model_validate(value)
+                for container in (dict, UserDict, MappingProxyType):
+                    with pytest.raises(ValidationError):
+                        model.model_validate(json.loads(json.dumps(value), object_hook=container))
                 with pytest.raises(ValidationError):
                     model.model_validate_json(json.dumps(value))
                 with pytest.raises(ValidationError):
                     model(**value)
             else:
-                model.model_validate(value)
+                for container in (dict, UserDict, MappingProxyType):
+                    model.model_validate(json.loads(json.dumps(value), object_hook=container))
                 model.model_validate_json(json.dumps(value))
                 model(**value)
 
@@ -21994,11 +21997,19 @@ def test_schema_validator_mapping_inputs(
 
 
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
-def test_schema_validator_legacy_custom_helper(output_file: Path, entrypoint: str) -> None:
+@pytest.mark.parametrize(
+    ("template_dir", "expected"),
+    [
+        (DATA_PATH / "templates/mapping_legacy_helper", "mapping_schema_validators_legacy_helper.py"),
+        (TEMPLATE_DIR, "inline_allof_validators/oneof.py"),
+    ],
+    ids=["legacy", "bundled"],
+)
+def test_schema_validator_legacy_custom_helper(
+    output_file: Path, entrypoint: str, template_dir: Path, expected: str
+) -> None:
     """Preserve complete output and runtime behavior of an existing helper override."""
     source = JSON_SCHEMA_DATA_PATH / "inline_allof_validators/oneof.json"
-    template_dir = DATA_PATH / "templates/mapping_legacy_helper"
-    expected = "mapping_schema_validators_legacy_helper.py"
     if entrypoint == "cli":
         run_main_and_assert(
             input_path=source,
@@ -22027,5 +22038,7 @@ def test_schema_validator_legacy_custom_helper(output_file: Path, entrypoint: st
         )
     values = json.loads((DATA_PATH / "payloads/inline_allof_validators/oneof.json").read_text(encoding="utf-8"))
     with _generated_model(output_file, "mapping_legacy_helper", "Root") as model:
-        model.model_validate(values["valid"])
-        _assert_model_json_invalid(model.model_validate, values["invalid"], "value_error")
+        containers = (dict, UserDict, MappingProxyType) if template_dir == TEMPLATE_DIR else (dict,)
+        for container in containers:
+            model.model_validate(container(values["valid"]))
+            _assert_model_json_invalid(model.model_validate, container(values["invalid"]), "value_error")

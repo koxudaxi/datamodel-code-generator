@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping as _Mapping
 from typing import Any, ClassVar
 
 from pydantic import (

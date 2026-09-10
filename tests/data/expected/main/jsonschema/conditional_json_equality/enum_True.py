@@ -54,7 +54,7 @@ class _JsonSchemaRuntimeValidationBase(BaseModel):
                 return not isinstance(value, bool) and value == expected
             case dict():
                 return (
-                    isinstance(value, dict)
+                    (isinstance(value, dict) or isinstance(value, _Mapping))
                     and len(value) == len(expected)
                     and all(
                         key in value

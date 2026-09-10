@@ -25,6 +25,7 @@ from datamodel_code_generator.imports import IMPORT_ANNOTATED, IMPORT_ANY, IMPOR
 from datamodel_code_generator.model import _rebuild_model_with_datamodel_namespace
 from datamodel_code_generator.model.base import (
     ALL_MODEL,
+    TEMPLATE_DIR,
     UNDEFINED,
     BaseClassDataType,
     DataModel,
@@ -1127,7 +1128,11 @@ class BaseModel(BaseModelBase):
         """Add imports only when this module renders a shared runtime helper."""
         additional_imports = model._additional_imports  # noqa: SLF001
         helper_imports = (IMPORT_MODEL_VALIDATOR, IMPORT_ANY, IMPORT_CLASSVAR)
-        if has_local_property_count_helper or not cls._has_custom_schema_runtime_validation_helper(model):
+        if (
+            has_local_property_count_helper
+            or not cls._has_custom_schema_runtime_validation_helper(model)
+            or model.custom_template_dir == TEMPLATE_DIR
+        ):
             helper_imports += (Import(from_="collections.abc", import_="Mapping", alias="_Mapping"),)
         if not uses_generated_generic_base_class:
             helper_imports += (IMPORT_BASE_MODEL,)
