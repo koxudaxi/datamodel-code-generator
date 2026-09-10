@@ -15694,6 +15694,38 @@ def test_x_python_type_rejects_unsafe_value(
     )
 
 
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize(
+    ("case", "record"),
+    json.loads((JSON_SCHEMA_DATA_PATH / "generic_reuse_cycles.json").read_text()).items(),
+)
+def test_x_python_type_rejects_cyclic_imports(
+    case: str, record: dict, entrypoint: str, output_file: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Reject direct and mutual import-expression cycles before writing output."""
+    schema, expected = record["schema"], record["error"]
+    if entrypoint == "cli":
+        source = output_file.with_name(f"{case}.json")
+        source.write_text(json.dumps(schema))
+        run_main_and_assert(
+            input_path=source,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            expected_exit=Exit.ERROR,
+            expected_stderr=f"{expected}\n",
+            output_should_not_exist=True,
+            capsys=capsys,
+        )
+    else:
+        run_generate_and_assert(
+            input_=schema,
+            input_file_type=InputFileType.JsonSchema,
+            output=output_file,
+            expected_error=Error,
+            expected_error_match=re.escape(expected),
+        )
+
+
 def test_x_python_type_callable(output_file: Path) -> None:
     """Test x-python-type with Callable preserves the Callable type."""
     run_main_and_assert(

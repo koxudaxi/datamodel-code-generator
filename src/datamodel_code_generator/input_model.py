@@ -1115,7 +1115,12 @@ def _reused_python_type_expression(tp: object) -> PythonTypeExpr:
         if isinstance(argument, type):
             replacements[_runtime_python_type_expr(argument)] = _reused_python_type_expression(argument)
         elif isinstance(argument, PyEnum):
-            owner = cast("PythonTypeRuntimeSymbol", _reused_python_type_expression(type(argument)))
+            owner = _reused_python_type_expression(type(argument))
+            if not isinstance(owner, PythonTypeRuntimeSymbol):
+                msg = (
+                    f"Cannot safely reuse enum member {argument!r}: no importable type expression. Use regenerate-all."
+                )
+                raise Error(msg)
             replacements[PythonTypeOpaqueText(str(argument))] = PythonTypeRuntimeSymbol(
                 owner.module, (*owner.qualname_parts, argument.name)
             )
@@ -1854,7 +1859,7 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0915
                 if obj_name and "$defs" in schema and obj_name in schema["$defs"]:  # pragma: no cover
                     nested_models[obj_name] = obj_type
                 schema = _filter_defs_by_strategy(
-                    schema, nested_models, output_family, ref_strategy, expression_collector, [obj]
+                    schema, nested_models, output_family, ref_strategy, expression_collector, [obj_type]
                 )
 
             return schema

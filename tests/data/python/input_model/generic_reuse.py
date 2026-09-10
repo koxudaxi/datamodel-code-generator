@@ -119,3 +119,16 @@ class AnnotatedTypedRoot(TypedDict):
 
 class AnnotatedWrapperRoot(BaseModel):
     boxes: list[Annotated[NamedBox[Positive], "marker"]]
+
+
+def _local_enum_model():
+    class LocalTag(str, Enum):
+        A = "a"
+
+    class LocalEnumRoot(BaseModel):
+        box: Box[Literal[LocalTag.A]]
+
+    return LocalEnumRoot
+
+
+LocalEnumRoot = _local_enum_model()

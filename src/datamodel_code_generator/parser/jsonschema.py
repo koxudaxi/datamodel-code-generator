@@ -3682,6 +3682,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         imports: dict[Import, None] = {}
         bound_imports: dict[tuple[str | None, str], Import] = {}
         resolved_name_imports: dict[str, Import | PythonTypeExpr | None] = {}
+        resolving_names: set[str] | None = None
 
         def bind_import(import_: Import) -> tuple[Import, str]:
             key = python_type_import_key(import_)
@@ -3694,6 +3695,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return import_, name
 
         def bind_leaf(item: PythonTypeExpr) -> PythonTypeExpr:
+            nonlocal resolving_names
             match item:
                 case PythonTypeQualifiedName():
                     import_, name = bind_import(self._resolve_qualified_type_import(".".join(item.parts)))
@@ -3707,16 +3709,24 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                             is_builtin = self._is_target_python_builtin_type(name)
                             import_ = None if is_builtin else self._resolve_type_import(name)
                         except Error:
-                            if import_ := self._resolve_type_import_from_defs(name):
-                                resolved_name_imports[name] = import_
-                            else:
+                            if not (import_ := self._resolve_type_import_from_defs(name)):
                                 raise
+                            resolved_name_imports[name] = import_
                         else:
                             resolved_name_imports[name] = (
                                 None if is_builtin else import_ or self._resolve_type_import_from_defs(name)
                             )
                     if isinstance(resolved := resolved_name_imports[name], PythonTypeExpr):
-                        return rewrite_python_type_expr(resolved, bind_leaf)
+                        if resolving_names is None:
+                            resolving_names = set()
+                        if name in resolving_names:
+                            msg = f"Cyclic x-python-import type expression involving {name!r}"
+                            raise Error(msg)
+                        resolving_names.add(name)
+                        try:
+                            return rewrite_python_type_expr(resolved, bind_leaf)
+                        finally:
+                            resolving_names.remove(name)
                     if resolved:
                         import_, bound_name = bind_import(resolved)
                         return PythonTypeBoundName(bound_name, import_.from_, import_.import_)

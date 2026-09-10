@@ -2920,11 +2920,15 @@ def test_python_native_field_invalid_path(case: str, tmp_path: Path) -> None:
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
 @pytest.mark.parametrize("strategy", ["reuse-all", "reuse-foreign"])
 @pytest.mark.parametrize("formatter", ["builtin", "external"])
+@pytest.mark.parametrize(
+    "fixture",
+    json.loads((INPUT_GENERIC_FIXTURES / "generic_reuse_diagnostic.json").read_text()),
+    ids=lambda fixture: fixture["source"].rsplit(":", 1)[-1],
+)
 def test_python_inline_future_generic_diagnostic(
-    entrypoint: str, strategy: str, formatter: str, capsys: pytest.CaptureFixture[str], tmp_path: Path
+    entrypoint: str, strategy: str, formatter: str, capsys: pytest.CaptureFixture[str], tmp_path: Path, fixture: dict
 ) -> None:
-    """Diagnose only metadata which has neither a native path nor a stable export."""
-    fixture = json.loads((INPUT_GENERIC_FIXTURES / "generic_reuse_diagnostic.json").read_text())
+    """Diagnose annotations without a safe reusable expression."""
     if entrypoint == "cli":
         run_main_with_args(
             [
