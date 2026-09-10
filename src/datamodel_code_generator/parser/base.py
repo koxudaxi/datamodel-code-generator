@@ -374,6 +374,12 @@ def _normalize_result_module_path(module: ModulePath, *, treat_dot_as_module: bo
     return tuple(part[: part.rfind(".")].replace(".", "_") + part[part.rfind(".") :] for part in normalized)
 
 
+def _expand_export_module_path(module: ModulePath) -> ModulePath:
+    """Expand dotted module components while preserving the Python file suffix."""
+    parts = ".".join(module).split(".")
+    return (*parts[:-2], f"{parts[-2]}.{parts[-1]}")
+
+
 def _iter_import_bindings(imports: Imports) -> Iterator[str]:
     """Yield names bound by one generated import block."""
     for from_, imported_names in imports.items():
@@ -4723,7 +4729,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 _clear_model_imports_cache_if_retained(model, can_retain_cache=can_retain_cache)
 
     @classmethod
-    def __postprocess_result_modules(cls, results: dict[tuple[str, ...], Result]) -> dict[tuple[str, ...], Result]:
+    def __postprocess_result_modules(
+        cls, results: dict[tuple[str, ...], Result], *, empty_init: bool = False
+    ) -> dict[tuple[str, ...], Result]:
         def process(input_tuple: tuple[str, ...]) -> tuple[str, ...]:
             r = []
             for item in input_tuple:
@@ -4740,7 +4748,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
         results = {process(k): v for k, v in results.items()}
 
-        init_result = next(v for k, v in results.items() if k[-1] == "__init__.py")
+        init_result = Result(body="") if empty_init else next(v for k, v in results.items() if k[-1] == "__init__.py")
         folders = {t[:-1] if t[-1].endswith(".py") else t for t in results}
         for folder in folders:
             for i in range(len(folder)):
@@ -6575,6 +6583,14 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         future_imports = self.imports.extract_future()
         future_imports_str = str(future_imports)
 
+        # Export depth and collision prefixes must follow the final package layout.
+        if (
+            self.treat_dot_as_module
+            and config.all_exports_scope is not None
+            and any(_expand_export_module_path(ctx.module) != ctx.module for ctx in contexts)
+        ):
+            contexts = [ctx._replace(module=_expand_export_module_path(ctx.module)) for ctx in contexts]
+
         for ctx in contexts:
             result = self._generate_module_output(
                 ctx, config, contexts, forwarder_map, require_update_action_models, future_imports_str
@@ -6582,7 +6598,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             if result is not None:
                 results[ctx.module] = result
 
-        if config.all_exports_scope is not None:
+        if config.all_exports_scope is not None and not self.treat_dot_as_module:
             self._generate_empty_init_exports(results, contexts, config, future_imports_str)
 
         self._inspect_invalid_dotted_stdout(contexts, sorted_data_models, config, results)
@@ -6600,4 +6616,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             _normalize_result_module_path(module, treat_dot_as_module=self.treat_dot_as_module): result
             for module, result in results.items()
         }
-        return self.__postprocess_result_modules(results) if self.treat_dot_as_module else results
+        if self.treat_dot_as_module:
+            results = self.__postprocess_result_modules(results, empty_init=config.all_exports_scope is not None)
+            if config.all_exports_scope is not None:
+                self._generate_empty_init_exports(results, contexts, config, future_imports_str)
+        return results

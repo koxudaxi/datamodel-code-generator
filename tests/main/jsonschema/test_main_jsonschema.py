@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import importlib
 import importlib.util
 import itertools
@@ -91,6 +92,7 @@ from tests.main.conftest import (
     _generated_model,
     _generated_package_module,
     _model_json_validator,
+    _uses_builtin_test_default_formatter,
     _uses_external_test_default_formatter,
     assert_generated_model_json_invalid,
     assert_generated_model_json_validation,
@@ -20147,3 +20149,175 @@ def test_msgspec_inheritance_preserve_mixed_opaque_layout(output_file: Path, ent
     with pytest.raises(TypeError) as error:
         _assert_python_module_importable(output_file, "generated_mixed_opaque", "Payload")
     assert_output(f"{error.value}\n", MSGSPEC_INHERITANCE_EXPECTED / "dry_opaque.txt")
+
+
+_EXPORT_CASES = [
+    ("dotted_module_exports", "children", None, None, False, "plain", "children"),
+    ("dotted_module_exports", "recursive", None, None, False, "plain", "recursive"),
+    ("dotted_module_exports", "children", "single", None, False, "single", "children_single"),
+    ("dotted_module_exports", "recursive", "single", None, False, "single", "recursive_single"),
+    (
+        "dotted_module_exports_collision",
+        "recursive",
+        "single",
+        "minimal-prefix",
+        False,
+        "collision",
+        "collision_minimal",
+    ),
+    (
+        "dotted_module_exports_collision",
+        "recursive",
+        "single",
+        "full-prefix",
+        False,
+        "collision",
+        "collision_full",
+    ),
+    ("dotted_module_exports_reuse", "recursive", "single", "minimal-prefix", True, "reuse", "reuse"),
+    ("dotted_module_exports_cycle", "children", None, None, False, "cycle", "cycle_children"),
+    ("dotted_module_exports_cycle", "recursive", None, None, False, "cycle", "cycle_recursive"),
+    ("dotted_module_exports_cycle", "children", "single", None, False, "cycle_single", "cycle_children_single"),
+    (
+        "dotted_module_exports_cycle",
+        "recursive",
+        "single",
+        None,
+        False,
+        "cycle_single",
+        "cycle_recursive_single",
+    ),
+    (
+        "dotted_module_exports_cycle_collision",
+        "recursive",
+        None,
+        "minimal-prefix",
+        False,
+        "cycle",
+        "cycle_minimal",
+    ),
+    ("dotted_module_exports_cycle_collision", "recursive", None, "full-prefix", False, "cycle", "cycle_full"),
+]
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize(
+    ("fixture", "scope", "split", "strategy", "reuse", "runtime_case", "expected", "target_version"),
+    [
+        (*case, version)
+        for case in _EXPORT_CASES
+        for version in (list(PythonVersion) if "_cycle" in case[0] else [PythonVersion.PY_310])
+    ],
+)
+def test_dotted_module_exports(
+    output_dir: Path,
+    entrypoint: str,
+    target_version: PythonVersion,
+    fixture: str,
+    scope: str,
+    split: str | None,
+    strategy: str | None,
+    reuse: bool,
+    runtime_case: str,
+    expected: str,
+) -> None:
+    """Keep each export local to its final package and preserve model identities."""
+    if target_version == PythonVersion.PY_314:
+        expected += "_py314"
+    output_dir = output_dir.with_name(f"{expected}_{target_version.name.lower()}_{entrypoint}")
+    expected_directory = EXPECTED_MAIN_PATH / "jsonschema" / f"dotted_module_exports_{expected}"
+    formatters = (
+        [Formatter.BUILTIN]
+        if _uses_builtin_test_default_formatter() or not is_supported_in_black(target_version)
+        else [Formatter.BLACK, Formatter.ISORT]
+    )
+    if entrypoint == "cli":
+        extra_args = [
+            "--target-python-version",
+            target_version.value,
+            "--treat-dot-as-module",
+            "--all-exports-scope",
+            scope,
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-exact-imports",
+            "--disable-timestamp",
+            "--formatters",
+            *(formatter.value for formatter in formatters),
+        ]
+        if split:
+            extra_args.extend(["--module-split-mode", split])
+        if strategy:
+            extra_args.extend(["--all-exports-collision-strategy", strategy])
+        if reuse:
+            extra_args.extend(["--reuse-model", "--reuse-scope", "tree"])
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / fixture,
+            output_path=output_dir,
+            input_file_type="jsonschema",
+            expected_directory=expected_directory,
+            extra_args=extra_args,
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / fixture,
+            output_path=output_dir,
+            input_file_type=InputFileType.JsonSchema,
+            expected_directory=expected_directory,
+            target_python_version=target_version,
+            treat_dot_as_module=True,
+            all_exports_scope=scope,
+            module_split_mode=split,
+            all_exports_collision_strategy=strategy,
+            reuse_model=reuse,
+            reuse_scope="tree" if reuse else "module",
+            output_model_type="pydantic_v2.BaseModel",
+            use_exact_imports=True,
+            disable_timestamp=True,
+            formatters=formatters,
+        )
+    if "_cycle" in fixture and target_version.value != f"{sys.version_info.major}.{sys.version_info.minor}":
+        return
+    for path in output_dir.rglob("*.py"):
+        ast.parse(path.read_text(), feature_version=tuple(map(int, target_version.value.split("."))))
+    case = json.loads((DATA_PATH / "python/dotted_module_exports_runtime.json").read_text())[runtime_case]
+    results = []
+    with _generated_package_module(output_dir, case["modules"][0]):
+        for suffix in case["modules"]:
+            module = importlib.import_module(output_dir.name + (f".{suffix}" if suffix else ""))
+            exports = []
+            for name in getattr(module, "__all__", ()):
+                model = getattr(module, name)
+                validated = model.model_validate(case["payload"])
+                exports.append({
+                    "name": name,
+                    "origin": model.__module__.removeprefix(output_dir.name + "."),
+                    "is_definition": getattr(importlib.import_module(model.__module__), model.__name__) is model,
+                    "fields": list(model.model_fields),
+                    "dump": validated.model_dump(),
+                })
+                if runtime_case.startswith("cycle"):
+                    imported = {}
+                    exec(f"from {module.__name__} import {name}", imported)
+                    starred = {}
+                    exec(f"from {module.__name__} import *", starred)
+                    exports[-1]["access_identity"] = [
+                        vars(module)[name] is model,
+                        getattr(module, name) is model,
+                        imported[name] is model,
+                        starred[name] is model,
+                    ]
+                    exports[-1]["nested_identity"] = [
+                        getattr(importlib.import_module(type(value).__module__), type(value).__name__) is type(value)
+                        for value in vars(validated).values()
+                        if hasattr(type(value), "model_fields")
+                    ]
+            results.append({"module": suffix, "exports": exports})
+            if runtime_case.startswith("cycle"):
+                with pytest.raises(AttributeError, match="missing_for_export_probe"):
+                    _ = module.missing_for_export_probe
+                results[-1]["unknown_attribute"] = True
+    assert_output(
+        json.dumps(results, indent=2) + "\n",
+        expected_directory.with_name(f"{expected_directory.name}_runtime.txt"),
+    )
