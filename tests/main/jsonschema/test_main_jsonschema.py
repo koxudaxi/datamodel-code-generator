@@ -21933,30 +21933,30 @@ def test_schema_validator_mapping_inputs(output_file: Path, entrypoint: str, for
     suffix = "_builtin" if formatter == "builtin" else ""
     expected = f"mapping_schema_validators{suffix}.py"
     if entrypoint == "cli":
-        run_main_with_args([
-            "--input",
-            str(source),
-            "--output",
-            str(output_file),
-            "--input-file-type",
-            "jsonschema",
-            "--generate-schema-validators",
-            "--disable-timestamp",
-            "--formatters",
-            *(value.value for value in formatters),
-        ])
-    else:
-        generate(
-            source,
-            config=GenerateConfig(
-                output=output_file,
-                input_file_type=InputFileType.JsonSchema,
-                formatters=formatters,
-                generate_schema_validators=True,
-                disable_timestamp=True,
-            ),
+        run_main_and_assert(
+            input_path=source,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file=expected,
+            extra_args=[
+                "--generate-schema-validators",
+                "--disable-timestamp",
+                "--formatters",
+                *(value.value for value in formatters),
+            ],
         )
-    assert_file_content(output_file, expected)
+    else:
+        run_generate_file_and_assert(
+            input_path=source,
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            assert_func=assert_file_content,
+            expected_file=expected,
+            formatters=formatters,
+            generate_schema_validators=True,
+            disable_timestamp=True,
+        )
     for valid_path in sorted(payloads.glob("*_valid.txt")):
         case = valid_path.stem.removesuffix("_valid")
         invalid_path = payloads / f"{case}_invalid.txt"
