@@ -19020,6 +19020,67 @@ def test_main_msgspec_integer_fractional_constraints(output_file: Path) -> None:
     )
 
 
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("fixture", ["ordinary", "combined"])
+def test_main_msgspec_combined_numeric_bounds(output_file: Path, entrypoint: str, fixture: str) -> None:
+    """Keep the strongest bound when msgspec cannot represent both inclusive and exclusive metadata."""
+    import msgspec
+
+    input_path = JSON_SCHEMA_DATA_PATH / "integer_bound_comparisons" / f"{fixture}.json"
+    expected = f"integer_bound_comparisons/{fixture}_msgspec.py"
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            extra_args=[
+                "--output-model-type",
+                "msgspec.Struct",
+                "--use-annotated",
+                "--target-python-version",
+                "3.10",
+                "--disable-timestamp",
+                "--formatters",
+                "builtin",
+            ],
+            assert_func=assert_file_content,
+            expected_file=expected,
+            force_exec_validation=True,
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            output_model_type=DataModelType.MsgspecStruct,
+            use_annotated=True,
+            field_constraints=True,
+            target_python_version=PythonVersion.PY_310,
+            disable_timestamp=True,
+            formatters=[Formatter.BUILTIN],
+            assert_func=assert_file_content,
+            expected_file=expected,
+        )
+    payloads = json.loads(
+        (JSON_DATA_PATH / "integer_bound_comparisons" / f"{fixture}_payloads.json").read_text(encoding="utf-8")
+    )
+    results = {}
+    for model_name, payload in payloads.items():
+        with _generated_model(output_file, "generated_msgspec_combined_bounds", model_name) as model:
+            results[model_name] = {
+                "convert": msgspec.convert(payload["valid"], type=model),
+                "decode": msgspec.json.decode(json.dumps(payload["valid"]).encode(), type=model),
+            }
+            with pytest.raises(msgspec.ValidationError):
+                msgspec.convert(payload["invalid"], type=model)
+            with pytest.raises(msgspec.ValidationError):
+                msgspec.json.decode(json.dumps(payload["invalid"]).encode(), type=model)
+    assert_output(
+        json.dumps(results, indent=2) + "\n",
+        EXPECTED_JSON_SCHEMA_PATH / "integer_bound_comparisons" / f"{fixture}_msgspec_runtime.txt",
+    )
+
+
 def test_main_msgspec_non_finite_number_values(output_file: Path) -> None:
     """Test msgspec renders non-finite defaults as expressions and drops non-finite bounds."""
     run_main_and_assert(

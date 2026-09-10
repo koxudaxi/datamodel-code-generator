@@ -813,6 +813,11 @@ class DataModelField(DataModelFieldBase):
                     merge_normalized_constraint(constraint_data, normalized[0], normalized[1])
             data = {**data, **constraint_data}
 
+        if (gt := data.get("gt")) is not None and (ge := data.get("ge")) is not None:
+            data.pop("ge" if gt >= ge else "gt")
+        if (lt := data.get("lt")) is not None and (le := data.get("le")) is not None:
+            data.pop("le" if lt <= le else "lt")
+
         if (min_items := data.pop("min_items", None)) is not None:
             data["min_length"] = min_items
         if (max_items := data.pop("max_items", None)) is not None:
