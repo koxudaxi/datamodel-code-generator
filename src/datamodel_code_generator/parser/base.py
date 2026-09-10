@@ -4938,22 +4938,16 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         module: tuple[str, ...],
         processed_models: Sequence[ModuleContext],
         scope: AllExportsScope,
-        forwarder_map: ForwarderMap | None = None,
-    ) -> tuple[list[tuple[str, tuple[str, ...], str]], set[str]]:
-        """Collect exports and lazy forwarder modules for an initializer's scope."""
+    ) -> list[tuple[str, tuple[str, ...], str]]:
+        """Collect exports for __init__.py based on scope."""
         exports: list[tuple[str, tuple[str, ...], str]] = []
-        exported_modules: set[ModulePath] = set()
-        forwarded_modules: set[str] = set()
-        forwarders: list[tuple[ModulePath, list[tuple[str, str]], tuple[str, ...]]] = []
         normalized_module = tuple(part.replace("-", "_") for part in module)
         base = normalized_module[:-1] if normalized_module[-1] == "__init__.py" else normalized_module
         base_len = len(base)
 
-        for ctx in processed_models:
-            proc_module, _, proc_models, _, _, _ = ctx
-            forwarder = forwarder_map.get(ctx.module_key) if forwarder_map else None
+        for proc_module, _, proc_models, _, _, _ in processed_models:
             normalized_proc_module = tuple(part.replace("-", "_") for part in proc_module)
-            if (not proc_models and not forwarder) or normalized_proc_module == normalized_module:
+            if not proc_models or normalized_proc_module == normalized_module:
                 continue
             last = normalized_proc_module[-1]
             prefix = normalized_proc_module[:-1] if last == "__init__.py" else (*normalized_proc_module[:-1], last[:-3])
@@ -4962,22 +4956,12 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             if scope == AllExportsScope.Children and depth != 1:
                 continue
             rel = prefix[base_len:]
-            if forwarder:
-                internal_module, class_mappings = forwarder
-                forwarders.append((internal_module, class_mappings, rel))
-            else:
-                exported_modules.add(ctx.module_key)
             exports.extend(
                 (ref.short_name, rel, ".".join(rel))
                 for m in proc_models
                 if (ref := m.reference) and not ref.short_name.startswith("_")
             )
-        # Keep existing canonical exports; fill only scopes that cannot reach them.
-        for internal_module, class_mappings, rel in forwarders:
-            if internal_module not in exported_modules:
-                forwarded_modules.add(".".join(rel))
-                exports.extend((name, rel, ".".join(rel)) for name, _ in class_mappings if not name.startswith("_"))
-        return exports, forwarded_modules
+        return exports
 
     @classmethod
     def _resolve_export_collisions(
@@ -5047,39 +5031,15 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
     def _build_all_exports_code(
         cls,
         resolved: dict[str, list[tuple[str, tuple[str, ...], str]]],
-        forwarded_modules: set[str],
-    ) -> tuple[Imports, str]:
-        """Build eager imports and defer cycle forwarders until attribute access."""
+    ) -> Imports:
+        """Build import statements from resolved exports."""
         export_imports = Imports()
-        lazy_exports: dict[str, tuple[str, str]] = {}
         for export_name, items in resolved.items():
             for orig, _, short in items:
-                if short in forwarded_modules:
-                    lazy_exports[export_name] = (f".{short}", orig)
-                    export_imports.add_export(export_name)
-                else:
-                    export_imports.append(
-                        Import(from_=f".{short}", import_=orig, alias=export_name if export_name != orig else None)
-                    )
-        if not lazy_exports:
-            return export_imports, ""
-        # The canonical module may itself import a descendant of this package.
-        # Local helper imports cannot shadow generated public model names.
-        lazy_code = (
-            "def __getattr__(name):\n"
-            "    import builtins as _builtins\n"
-            "    from importlib import import_module as _import_module\n\n"
-            "    exports = {\n"
-            + "".join(f"        {name!r}: {target!r},\n" for name, target in lazy_exports.items())
-            + "    }\n"
-            "    if name not in exports:\n"
-            '        raise _builtins.AttributeError(f"module {__name__!r} has no attribute {name!r}")\n'
-            "    module_name, original_name = exports[name]\n"
-            "    value = _builtins.getattr(_import_module(module_name, __name__), original_name)\n"
-            "    _builtins.globals()[name] = value\n"
-            "    return value\n"
-        )
-        return export_imports, lazy_code
+                export_imports.append(
+                    Import(from_=f".{short}", import_=orig, alias=export_name if export_name != orig else None)
+                )
+        return export_imports
 
     @classmethod
     def _collect_used_names_from_models(
@@ -6202,13 +6162,10 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         """Generate output for a single module."""
         result: list[str] = []
         export_imports: Imports | None = None
-        lazy_export_code = ""
         module_future_imports_str = self._get_module_future_imports(ctx, config, future_imports_str)
 
         if config.all_exports_scope is not None and ctx.module[-1] == "__init__.py":
-            child_exports, forwarded_modules = self._collect_exports_for_init(
-                ctx.module, contexts, config.all_exports_scope, forwarder_map if self.treat_dot_as_module else None
-            )
+            child_exports = self._collect_exports_for_init(ctx.module, contexts, config.all_exports_scope)
             if child_exports:
                 local_model_names = {
                     m.reference.short_name
@@ -6218,21 +6175,19 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 resolved_exports = self._resolve_export_collisions(
                     child_exports, config.all_exports_collision_strategy, local_model_names
                 )
-                export_imports, lazy_export_code = self._build_all_exports_code(resolved_exports, forwarded_modules)
+                export_imports = self._build_all_exports_code(resolved_exports)
 
         if ctx.models:
             if config.with_import:
                 import_parts = [s for s in [module_future_imports_str, str(self.imports), str(ctx.imports)] if s]
                 result += [*import_parts, "\n"]
 
-            if export_imports is not None:
+            if export_imports:
                 result += [str(export_imports), ""]
                 for m in ctx.models:
                     if m.reference and not m.reference.short_name.startswith("_"):  # pragma: no branch
                         export_imports.add_export(m.reference.short_name)
                 result += [export_imports.dump_all(multiline=True) + "\n"]
-                if lazy_export_code:
-                    result += [lazy_export_code, ""]
 
             module_code = self.data_model_type.render_module_code(ctx.models)
             if module_code:
@@ -6287,7 +6242,6 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         contexts: list[ModuleContext],
         config: ParseConfig,
         future_imports_str: str,
-        forwarder_map: ForwarderMap | None = None,
     ) -> None:
         """Generate exports for empty __init__.py files."""
         if config.all_exports_scope is None:  # pragma: no cover
@@ -6296,17 +6250,13 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         for init_module, init_result in list(results.items()):
             if init_module[-1] != "__init__.py" or init_module in processed_init_modules or init_result.body:
                 continue
-            child_exports, forwarded_modules = self._collect_exports_for_init(
-                init_module, contexts, config.all_exports_scope, forwarder_map
-            )
+            child_exports = self._collect_exports_for_init(init_module, contexts, config.all_exports_scope)
             if child_exports:
                 resolved = self._resolve_export_collisions(child_exports, config.all_exports_collision_strategy, set())
-                export_imports, lazy_export_code = self._build_all_exports_code(resolved, forwarded_modules)
+                export_imports = self._build_all_exports_code(resolved)
                 import_parts = [s for s in [future_imports_str, str(self.imports)] if s] if config.with_import else []
                 parts = import_parts + (["\n"] if import_parts else [])
                 parts += [str(export_imports), "", export_imports.dump_all(multiline=True)]
-                if lazy_export_code:
-                    parts += ["", lazy_export_code]
                 body = "\n".join(parts)
                 if config.code_formatter:
                     body = _format_body_safe(
@@ -6669,5 +6619,5 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         if self.treat_dot_as_module:
             results = self.__postprocess_result_modules(results, empty_init=config.all_exports_scope is not None)
             if config.all_exports_scope is not None:
-                self._generate_empty_init_exports(results, contexts, config, future_imports_str, forwarder_map)
+                self._generate_empty_init_exports(results, contexts, config, future_imports_str)
         return results

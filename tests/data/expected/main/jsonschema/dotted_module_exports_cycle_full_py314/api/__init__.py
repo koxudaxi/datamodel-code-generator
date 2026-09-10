@@ -4,23 +4,5 @@
 from .v1 import Version
 
 __all__ = [
-    "V1ANode",
-    "V2BNode",
     "Version",
 ]
-
-
-def __getattr__(name):
-    import builtins as _builtins
-    from importlib import import_module as _import_module
-
-    exports = {
-        'V2BNode': ('.v2.b', 'Node'),
-        'V1ANode': ('.v1.a', 'Node'),
-    }
-    if name not in exports:
-        raise _builtins.AttributeError(f"module {__name__!r} has no attribute {name!r}")
-    module_name, original_name = exports[name]
-    value = _builtins.getattr(_import_module(module_name, __name__), original_name)
-    _builtins.globals()[name] = value
-    return value

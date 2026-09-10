@@ -80,38 +80,6 @@
     "module": "api.v1.a",
     "exports": [
       {
-        "name": "Apple",
-        "origin": "_internal",
-        "is_definition": true,
-        "fields": [
-          "b",
-          "zed",
-          "alpha"
-        ],
-        "dump": {
-          "b": {
-            "a": null
-          },
-          "zed": {
-            "value": "z"
-          },
-          "alpha": {
-            "count": 3
-          }
-        },
-        "access_identity": [
-          true,
-          true,
-          true,
-          true
-        ],
-        "nested_identity": [
-          true,
-          true,
-          true
-        ]
-      },
-      {
         "name": "Lemon",
         "origin": "api.v1.a.lemon",
         "is_definition": true,
@@ -152,32 +120,7 @@
   },
   {
     "module": "api.v2.b",
-    "exports": [
-      {
-        "name": "Banana",
-        "origin": "_internal",
-        "is_definition": true,
-        "fields": [
-          "a"
-        ],
-        "dump": {
-          "a": {
-            "b": null,
-            "zed": null,
-            "alpha": null
-          }
-        },
-        "access_identity": [
-          true,
-          true,
-          true,
-          true
-        ],
-        "nested_identity": [
-          true
-        ]
-      }
-    ],
+    "exports": [],
     "unknown_attribute": true
   },
   {

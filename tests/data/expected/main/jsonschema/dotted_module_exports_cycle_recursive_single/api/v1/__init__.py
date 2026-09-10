@@ -7,22 +7,6 @@ from .a.lemon import Lemon
 from .a.zebra import Zebra
 
 __all__ = [
-    "Apple",
     "Lemon",
     "Zebra",
 ]
-
-
-def __getattr__(name):
-    import builtins as _builtins
-    from importlib import import_module as _import_module
-
-    exports = {
-        'Apple': ('.a.apple', 'Apple'),
-    }
-    if name not in exports:
-        raise _builtins.AttributeError(f"module {__name__!r} has no attribute {name!r}")
-    module_name, original_name = exports[name]
-    value = _builtins.getattr(_import_module(module_name, __name__), original_name)
-    _builtins.globals()[name] = value
-    return value
