@@ -57,5 +57,10 @@
         "b": 2
       }
     }
+  },
+  {
+    "native": true,
+    "json": "rejected",
+    "python": "rejected"
   }
 ]

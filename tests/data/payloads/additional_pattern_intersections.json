@@ -177,6 +177,14 @@
         "y": {
           "b": 2
         }
+      },
+      {
+        "x": {
+          "a": 1
+        },
+        "y": {
+          "b": 2
+        }
       }
     ],
     "custom": false,
@@ -221,6 +229,14 @@
         }
       },
       {
+        "y": {
+          "b": 2
+        }
+      },
+      {
+        "x": {
+          "a": 1
+        },
         "y": {
           "b": 2
         }
@@ -608,6 +624,14 @@
         "y": {
           "b": 2
         }
+      },
+      {
+        "x": {
+          "a": 1
+        },
+        "y": {
+          "b": 2
+        }
       }
     ],
     "custom": false,
@@ -629,8 +653,7 @@
     },
     "runtime_names": {
       "False_True": "anchored_disjoint_False_False_runtime.txt",
-      "True_False": "anchored_disjoint_False_False_runtime.txt",
-      "True_True": "anchored_disjoint_False_False_runtime.txt"
+      "True_True": "anchored_disjoint_True_False_runtime.txt"
     }
   },
   "minimum_null": {

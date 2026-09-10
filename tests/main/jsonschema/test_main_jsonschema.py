@@ -23883,26 +23883,31 @@ def test_additional_pattern_intersections(
     template = JSON_SCHEMA_DATA_PATH.parent / "templates" / record["custom"] if record["custom"] else None
     output = tmp_path / "output.py"
     formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
+    mode = f"{enabled}_{field_constraints}_{formatter}"
     if entrypoint == "cli":
-        run_main_with_args([
-            "--input",
-            str(source),
-            "--output",
-            str(output),
-            "--input-file-type",
-            "jsonschema",
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-            "--disable-timestamp",
-            "--formatters",
-            *formatters,
-            *(["--generate-schema-validators"] if enabled else []),
-            *(["--field-constraints"] if field_constraints else []),
-            *(["--custom-template-dir", str(template)] if template else []),
-        ])
+        run_main_and_assert(
+            input_path=source,
+            output_path=output,
+            input_file_type="jsonschema",
+            extra_args=[
+                "--output-model-type",
+                "pydantic_v2.BaseModel",
+                "--disable-timestamp",
+                "--formatters",
+                *formatters,
+                *(["--generate-schema-validators"] if enabled else []),
+                *(["--field-constraints"] if field_constraints else []),
+                *(["--custom-template-dir", str(template)] if template else []),
+            ],
+            expected_file=ADDITIONAL_PATTERN_EXPECTED
+            / record.get("legacy_code_names", {}).get(
+                f"{mode}_{black.__version__.split('.')[0]}", record["code_names"][mode]
+            ),
+            skip_code_validation=True,
+        )
     else:
-        generate(
-            source,
+        run_generate_and_assert(
+            input_=source,
             config=GenerateConfig(
                 output=output,
                 input_file_type=InputFileType.JsonSchema,
@@ -23913,15 +23918,11 @@ def test_additional_pattern_intersections(
                 custom_template_dir=template,
                 formatters=[Formatter(value) for value in formatters],
             ),
+            expected_file=ADDITIONAL_PATTERN_EXPECTED
+            / record.get("legacy_code_names", {}).get(
+                f"{mode}_{black.__version__.split('.')[0]}", record["code_names"][mode]
+            ),
         )
-    mode = f"{enabled}_{field_constraints}_{formatter}"
-    assert_output(
-        output.read_text(),
-        ADDITIONAL_PATTERN_EXPECTED
-        / record.get("legacy_code_names", {}).get(
-            f"{mode}_{black.__version__.split('.')[0]}", record["code_names"][mode]
-        ),
-    )
     schema = json.loads(source.read_text())
     if record.get("invalid_schema"):
         with pytest.raises(JsonSchemaError):

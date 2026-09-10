@@ -6,16 +6,6 @@
   },
   {
     "native": true,
-    "json": "rejected",
-    "python": "rejected"
-  },
-  {
-    "native": false,
-    "json": "rejected",
-    "python": "rejected"
-  },
-  {
-    "native": true,
     "json": {
       "x": {
         "a": 1
