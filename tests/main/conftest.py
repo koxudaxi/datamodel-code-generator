@@ -850,11 +850,10 @@ def run_generate_and_assert(
                 assert_output(f"{error.value}\n", expected_file)
             return
         result = generate(input_=input_, **options)
-    match generate_kwargs.get("config"):
-        case GenerateConfig() as config:
-            output_path, encoding = config.output, config.encoding
-        case _:
-            output_path, encoding = generate_kwargs.get("output"), generate_kwargs.get("encoding", "utf-8")
+    if isinstance(config := generate_kwargs.get("config"), GenerateConfig):
+        output_path, encoding = config.output, config.encoding
+    else:
+        output_path, encoding = generate_kwargs.get("output"), generate_kwargs.get("encoding", "utf-8")
     if output_path is not None:
         assert_generate_wrote_file(result, output_path)
         result = output_path.read_text(encoding=encoding)
