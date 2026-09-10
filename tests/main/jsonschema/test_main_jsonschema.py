@@ -9,6 +9,7 @@ import itertools
 import json
 import operator
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -24,6 +25,7 @@ from pathlib import Path, PurePath
 from typing import TYPE_CHECKING, get_args, get_type_hints
 
 import black
+import msgspec
 import pytest
 from jinja2 import TemplateNotFound
 from packaging import version
