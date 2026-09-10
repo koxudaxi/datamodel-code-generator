@@ -22392,6 +22392,8 @@ def test_root_alias_custom_template_constraints(
     use_annotated: bool,
 ) -> None:
     """Preserve an existing custom alias while fixing known built-in alias constraints."""
+    if os.name == "nt" and template_mode.endswith("_alias"):
+        pytest.skip("directory symlink creation requires elevated privileges")
     source = JSON_SCHEMA_DATA_PATH / "root_alias_constraints" / f"{case}.json"
     expected = EXPECTED_JSON_SCHEMA_PATH / "root_alias_constraints"
     custom_template = DATA_PATH / "templates/root_alias_constraints"
