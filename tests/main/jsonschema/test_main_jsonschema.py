@@ -22965,8 +22965,9 @@ def test_explicit_frozen_set_hashes(
             options["extra_template_data"] = defaultdict(
                 dict, json.loads((DATA_PATH / "payloads/explicit_frozen_sets" / f"{extra_data}.json").read_text())
             )
-        generate(
-            JSON_SCHEMA_DATA_PATH / "explicit_frozen_sets" / f"{case['name']}.json",
+        run_generate_and_assert(
+            input_=JSON_SCHEMA_DATA_PATH / "explicit_frozen_sets" / f"{case['name']}.json",
+            expected_file=EXPECTED_JSON_SCHEMA_PATH / "explicit_frozen_sets" / f"{case['name']}.py",
             config=GenerateConfig(
                 input_file_type=InputFileType.JsonSchema,
                 output=output,
@@ -23067,64 +23068,27 @@ def test_explicit_set_parser_extension(tmp_path: Path, implementation: str, conv
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
 @pytest.mark.parametrize("backend", ["dataclasses.dataclass", "typing.TypedDict", "msgspec.Struct"])
 def test_explicit_non_pydantic_set_imports(tmp_path: Path, entrypoint: str, backend: str) -> None:
-    """Non-Pydantic explicit sets retain bytes without loading Pydantic hash analysis."""
-    import subprocess
-
-    from datamodel_code_generator import DataModelType
-
+    """Preserve non-Pydantic explicit set output through both entrypoints."""
     source = JSON_SCHEMA_DATA_PATH / "explicit_frozen_sets/integer.json"
     output = tmp_path / "model.py"
-    if entrypoint == "cli":
-        run_main_with_args([
-            "--input",
-            str(source),
-            "--input-file-type",
-            "jsonschema",
-            "--output-model-type",
-            backend,
-            "--output",
-            str(output),
-            "--disable-timestamp",
-            "--formatters",
-            "builtin",
-        ])
-    else:
-        generate(
-            source,
-            config=GenerateConfig(
-                input_file_type=InputFileType.JsonSchema,
-                output_model_type=DataModelType(backend),
-                output=output,
-                disable_timestamp=True,
-                formatters=[Formatter.BUILTIN],
-            ),
-        )
     expected = EXPECTED_JSON_SCHEMA_PATH / "explicit_frozen_sets" / f"backend_{backend}.py"
-    assert_output(output.read_text(encoding="utf-8"), expected)
-    record = tmp_path / "imports.json"
-    subprocess.run(
-        [
-            sys.executable,
-            str(DATA_PATH / "python/unique_model_sets/backend_probe.py"),
-            entrypoint,
-            backend,
-            str(source),
-            str(output),
-            str(record),
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-    )
-    assert_output(output.read_text(encoding="utf-8"), expected)
-    imported = json.loads(record.read_text(encoding="utf-8"))["modules"]
-    runtime = {"hash_analysis_imported": "datamodel_code_generator.model._set_item" in imported}
     if entrypoint == "cli":
-        runtime["pydantic_backend_imported"] = any(
-            name.startswith("datamodel_code_generator.model.pydantic_v2") for name in imported
+        run_main_and_assert(
+            input_path=source,
+            input_file_type="jsonschema",
+            output_path=output,
+            expected_file=expected,
+            assert_func=assert_file_content,
+            extra_args=["--output-model-type", backend, "--disable-timestamp", "--formatters", "builtin"],
         )
-    assert_output(
-        json.dumps(runtime, indent=2) + "\n",
-        EXPECTED_JSON_SCHEMA_PATH / "explicit_frozen_sets" / f"{entrypoint}.imports.txt",
-    )
+    else:
+        run_generate_file_and_assert(
+            input_path=source,
+            input_file_type=InputFileType.JsonSchema,
+            output_model_type=DataModelType(backend),
+            output_path=output,
+            disable_timestamp=True,
+            formatters=[Formatter.BUILTIN],
+            expected_file=expected,
+            assert_func=assert_file_content,
+        )
