@@ -23498,6 +23498,10 @@ def test_unrepresentable_compound_property_names(
             expected_stderr_contains=expected.read_text().strip(),
         )
     else:
-        with pytest.raises(SchemaParseError) as error:
-            generate(input_path, input_file_type=InputFileType.JsonSchema, field_constraints=constraints)
-        assert_output(str(error.value) + "\n", expected)
+        run_generate_and_assert(
+            input_=input_path,
+            input_file_type=InputFileType.JsonSchema,
+            field_constraints=constraints,
+            expected_file=expected,
+            expected_error=SchemaParseError,
+        )
