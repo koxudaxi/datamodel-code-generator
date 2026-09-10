@@ -10,10 +10,20 @@ class TestsDataPythonInputModelNestedFamilyTypesLeftOwnerInner(BaseModel):
     values: frozenset[int] = Field(..., title='Values')
 
 
+class TestsDataPythonInputModelNestedFamilyTypesLeftOwnerRecord(BaseModel):
+    values: frozenset[int] = Field(..., title='Values')
+
+
 class TestsDataPythonInputModelNestedFamilyTypesRightOwnerInner(BaseModel):
+    values: frozenset[str] = Field(..., title='Values')
+
+
+class TestsDataPythonInputModelNestedFamilyTypesRightOwnerRecord(BaseModel):
     values: frozenset[str] = Field(..., title='Values')
 
 
 class SameNames(BaseModel):
     left: TestsDataPythonInputModelNestedFamilyTypesLeftOwnerInner
     right: TestsDataPythonInputModelNestedFamilyTypesRightOwnerInner
+    left_typed: TestsDataPythonInputModelNestedFamilyTypesLeftOwnerRecord
+    right_typed: TestsDataPythonInputModelNestedFamilyTypesRightOwnerRecord

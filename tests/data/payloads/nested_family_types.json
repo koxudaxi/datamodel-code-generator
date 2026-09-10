@@ -216,6 +216,18 @@
           "a",
           "b"
         ]
+      },
+      "left_typed": {
+        "values": [
+          1,
+          2
+        ]
+      },
+      "right_typed": {
+        "values": [
+          "a",
+          "b"
+        ]
       }
     },
     "paths": [
@@ -224,6 +236,12 @@
       ],
       [
         "right"
+      ],
+      [
+        "left_typed"
+      ],
+      [
+        "right_typed"
       ]
     ]
   }

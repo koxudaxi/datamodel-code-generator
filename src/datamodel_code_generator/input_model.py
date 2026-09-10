@@ -513,15 +513,7 @@ def _get_input_model_json_schema_class(
             for name in self.definitions:
                 core_ref, _mode = self.defs_to_core_refs[name]
                 if core_ref not in core_types and not legacy_types_loaded:
-                    if preserve_type_identity:
-                        _collect_core_type_identities(model_classes or (), core_types)
-                    else:
-                        pending_models = list(model_classes or ())
-                        visited: set[type] = set()
-                        while pending_models:
-                            for nested in _collect_nested_models(pending_models.pop(), visited).values():
-                                core_types[f"{nested.__module__}.{nested.__qualname__}:{id(nested)}"] = nested
-                                pending_models.append(nested)
+                    _collect_core_type_identities(model_classes or (), core_types)
                     legacy_types_loaded = True
                 definition_types[name] = core_types.get(core_ref, core_ref)
             return result
@@ -543,6 +535,12 @@ def _collect_core_type_identities(models: Iterable[type], core_types: dict[str, 
             core_types[f"{annotation.__module__}.{annotation.__qualname__}:{id(annotation)}"] = annotation
             if fields := getattr(annotation, "model_fields", None):
                 pending.extend(field.annotation for field in fields.values())
+            elif (
+                is_dataclass(annotation)
+                or hasattr(annotation, "__required_keys__")
+                or hasattr(annotation, "__struct_fields__")
+            ):
+                pending.extend(_get_type_hints_safe(annotation).values())
         pending.extend(get_args(annotation))
 
 

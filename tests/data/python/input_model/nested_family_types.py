@@ -82,6 +82,9 @@ class LeftOwner:
 
         values: FrozenSet[int]
 
+    class Record(TypedDict):
+        values: FrozenSet[int]
+
 
 class RightOwner:
     """Own the second class with an identical short name."""
@@ -92,6 +95,9 @@ class RightOwner:
 
         values: FrozenSet[str]
 
+    class Record(TypedDict):
+        values: FrozenSet[str]
+
 
 @dataclass
 class SameNames:
@@ -99,3 +105,5 @@ class SameNames:
 
     left: LeftOwner.Inner
     right: RightOwner.Inner
+    left_typed: LeftOwner.Record
+    right_typed: RightOwner.Record
