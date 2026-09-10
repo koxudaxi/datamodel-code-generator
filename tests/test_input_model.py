@@ -2083,8 +2083,9 @@ def test_input_model_inherited_overrides(model_name: str, entrypoint: str, tmp_p
             else load_model_schema([source], InputFileType.JsonSchema)
         )
         with assert_inputs_not_mutated(schema):
-            generate(
-                deepcopy(schema),
+            run_generate_and_assert(
+                input_=deepcopy(schema),
+                expected_file=INPUT_OVERRIDE_EXPECTED / f"{model_name}{'_builtin' if use_builtin else ''}.py",
                 config=GenerateConfig(
                     input_file_type=InputFileType.JsonSchema,
                     input_filename=schema_path.name if schema_path else "<stdin>",
@@ -2096,7 +2097,10 @@ def test_input_model_inherited_overrides(model_name: str, entrypoint: str, tmp_p
                     output=output,
                 ),
             )
-    assert_output(output.read_text(), INPUT_OVERRIDE_EXPECTED / f"{model_name}{'_builtin' if use_builtin else ''}.py")
+    if entrypoint == "cli":
+        assert_output(
+            output.read_text(), INPUT_OVERRIDE_EXPECTED / f"{model_name}{'_builtin' if use_builtin else ''}.py"
+        )
     schema = (
         json.loads(schema_path.read_text()) if schema_path else load_model_schema([source], InputFileType.JsonSchema)
     )
