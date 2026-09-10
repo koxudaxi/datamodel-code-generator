@@ -23988,8 +23988,12 @@ UNDECLARED_REQUIRED_EXPECTED = EXPECTED_JSON_SCHEMA_PATH / "undeclared_required"
 @pytest.mark.parametrize("enabled", [False, True])
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
 @pytest.mark.parametrize("formatter", ["builtin", "external"])
-def test_undeclared_required(tmp_path: Path, case: str, enabled: bool, entrypoint: str, formatter: str) -> None:
+def test_undeclared_required(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, case: str, enabled: bool, entrypoint: str, formatter: str
+) -> None:
     """Compare native validity, Python/JSON validation, full output and model field order."""
+    # Each formatter has its own golden for intentionally different formatting.
+    monkeypatch.delenv("DATAMODEL_CODE_GENERATOR_CHECK_BUILTIN_FORMATTER_PARITY", raising=False)
     source = UNDECLARED_REQUIRED_FIXTURES / f"{case}.json"
     record = UNDECLARED_REQUIRED_CASES[case]
     options = dict(record["options"])
