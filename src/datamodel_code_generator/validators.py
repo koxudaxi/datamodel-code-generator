@@ -144,3 +144,15 @@ def normalize_validators(validators: Any) -> list[dict[str, Any]]:
     """Validate and normalize raw validators extra template data."""
     model_validators = ModelValidators.model_validate({"validators": validators})
     return [validator.model_dump(mode="json", exclude_none=True) for validator in model_validators.validators]
+
+
+def _reserve_validator_name(name: str, reserved_names: set[str], next_suffixes: dict[str, int]) -> str:
+    """Reserve a Python identifier without changing an available user spelling."""
+    count = next_suffixes.get(name, 0)
+    candidate = name if count == 0 else f"{name}_{count}"
+    while candidate in reserved_names:
+        count += 1
+        candidate = f"{name}_{count}"
+    reserved_names.add(candidate)
+    next_suffixes[name] = count + 1
+    return candidate
