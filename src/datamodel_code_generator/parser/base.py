@@ -7,6 +7,7 @@ code generation.
 
 from __future__ import annotations
 
+import ast
 import builtins
 import contextlib
 import operator
@@ -126,7 +127,7 @@ from datamodel_code_generator.types import (
 from datamodel_code_generator.util import camel_to_snake, record_watch_dependency
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Callable, Collection, Iterable, Iterator, Mapping, Sequence
 
     from datamodel_code_generator._types import ParserConfigDict
     from datamodel_code_generator.config import ParserConfig
@@ -380,6 +381,89 @@ def _normalize_result_module_path(module: ModulePath, *, treat_dot_as_module: bo
     if treat_dot_as_module:
         return normalized
     return tuple(part[: part.rfind(".")].replace(".", "_") + part[part.rfind(".") :] for part in normalized)
+
+
+def _expression_names(expression: ast.AST) -> set[str]:
+    """Find unqualified loads without treating literal or keyword text as bindings."""
+    return {node.id for node in ast.walk(expression) if isinstance(node, ast.Name)}
+
+
+def _model_field_name_collisions(model: DataModel, import_names: Collection[str]) -> set[str]:
+    """Find imported names hidden by assignments in the emitted model body."""
+    field_names = {field.name for field in model.fields if field.name is not None}
+    candidates = field_names.intersection(import_names)
+    if not candidates:
+        return set()
+    class_body = next(
+        (
+            node.body
+            for node in ast.parse(model.render()).body
+            if isinstance(node, ast.ClassDef) and node.name == model.class_name
+        ),
+        None,
+    )
+    if class_body is None:
+        return set()
+    fields = [
+        (node.target.id, node)
+        for node in class_body
+        if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name)
+    ]
+    # Struct creates slot descriptors even for fields without a default assignment.
+    assigned_names = (
+        field_names
+        if model.FIELD_NAME_MODEL_TYPE is ModelType.MSGSPEC
+        else {name for name, node in fields if node.value is not None}
+    )
+    candidates.intersection_update(assigned_names)
+    collisions: set[str] = set()
+    previous_names: set[str] = set()
+    for name, node in fields:
+        collisions.update(candidates.intersection(_expression_names(node.annotation)))
+        if node.value is not None:
+            collisions.update(candidates.intersection(previous_names, _expression_names(node.value)))
+            previous_names.add(name)
+    return collisions
+
+
+def _bind_module_field_names(models: list[DataModel], imports: Imports) -> None:
+    """Allocate aliases only where a property hides an emitted expression name."""
+    field_names = {field.name for model in models for field in model.fields if field.name is not None}
+    shadowable_imports = {
+        effective_name: (from_, name)
+        for from_, names in imports.items()
+        for name in names
+        if (effective_name := imports.get_effective_name(from_, name)) in field_names
+    }
+    if "list" in field_names and "list" not in shadowable_imports:
+        shadowable_imports["list"] = ("builtins", "list")
+    if not shadowable_imports:
+        return
+    collisions: set[str] = set()
+    reserved_names = field_names | {model.class_name for model in models}
+    for model in models:
+        collisions.update(_model_field_name_collisions(model, shadowable_imports))
+    if not collisions:
+        return
+    reserved_names.update(imports.get_effective_name(from_, name) for from_, names in imports.items() for name in names)
+    bindings: dict[str, str] = {}
+    for name, (from_, imported_name) in shadowable_imports.items():
+        if name not in collisions:
+            continue
+        alias = f"{name}_aliased"
+        suffix = 1
+        while alias in reserved_names:
+            alias = f"{name}_aliased_{suffix}"
+            suffix += 1
+        reserved_names.add(alias)
+        aliased_import = Import(from_=from_, import_=imported_name, alias=alias)
+        bindings[name] = alias
+        if from_ == "builtins":
+            imports.append(aliased_import)
+        else:
+            imports.apply_alias(aliased_import)
+    for model in models:
+        model.set_field_name_bindings(bindings)
 
 
 def _expand_export_module_path(module: ModulePath) -> ModulePath:
@@ -6163,6 +6247,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
         for ctx in contexts:
             self.data_model_type.resolve_module_import_conflicts(ctx.models, model_imports, ctx.imports)
+
+        for ctx in contexts:
+            _bind_module_field_names(ctx.models, ctx.imports)
 
         renamed_models = False
         for ctx in contexts:
