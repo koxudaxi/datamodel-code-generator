@@ -1299,7 +1299,7 @@ def _intersect_patterns(patterns: Sequence[str]) -> str:
             return left
     literals = [_literal_pattern_value(pattern) for pattern in patterns]
     if all(literal is not None for literal in literals):
-        longest = max((literal for literal in literals if literal is not None), key=len)
+        longest = max((literal for literal in literals if literal is not None), key=str.__len__)
         if any(literal is not None and not longest.startswith(literal) for literal in literals):
             return r"\A" + "".join(rf"(?=[\s\S]*{pattern})" for pattern in dict.fromkeys(patterns))
     match patterns:
