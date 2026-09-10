@@ -22773,7 +22773,7 @@ def test_disjoint_allof_diagnostics(
         + "\n",
         DISJOINT_ALLOF_EXPECTED / f"{case}_native.txt",
     )
-    with assert_inputs_not_mutated(schema):
+    with assert_inputs_not_mutated({"schema": schema}):
         if entrypoint == "cli":
             run_main_and_assert(
                 expected_exit=Exit.ERROR,
@@ -22822,7 +22822,7 @@ def test_compatible_allof_types(
     validator = validator_class(schema)
     templates = DATA_PATH / "templates_disjoint_allof"
     key = f"{merge_mode.value}_{int(field_constraints)}_{int(custom_template)}"
-    with assert_inputs_not_mutated(schema), warnings.catch_warnings(record=True) as captured:
+    with assert_inputs_not_mutated({"schema": schema}), warnings.catch_warnings(record=True) as captured:
         warnings.simplefilter("always", UserWarning)
         if entrypoint == "cli":
             run_main_and_assert(

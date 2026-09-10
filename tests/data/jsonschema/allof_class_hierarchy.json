@@ -22,7 +22,7 @@
                             "hidden": true
                         }
                     }
-                },
+                }
             }
         },
         "Entity2": {
@@ -48,7 +48,7 @@
                             "hidden": true
                         }
                     }
-                },
+                }
             }
         },
         "Thing": {

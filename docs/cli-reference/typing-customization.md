@@ -103,7 +103,7 @@ even in multiple inheritance scenarios where two parent schemas define the same 
                                 "hidden": true
                             }
                         }
-                    },
+                    }
                 }
             },
             "Entity2": {
@@ -129,7 +129,7 @@ even in multiple inheritance scenarios where two parent schemas define the same 
                                 "hidden": true
                             }
                         }
-                    },
+                    }
                 }
             },
             "Thing": {
