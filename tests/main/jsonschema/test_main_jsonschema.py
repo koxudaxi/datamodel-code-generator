@@ -66,7 +66,6 @@ from datamodel_code_generator import (
     load_data_from_path,
 )
 from datamodel_code_generator.__main__ import Exit
-from datamodel_code_generator.config import GenerateConfig
 from datamodel_code_generator.format import Formatter, is_supported_in_black
 from datamodel_code_generator.model import base as model_base
 from datamodel_code_generator.model import get_data_model_types
