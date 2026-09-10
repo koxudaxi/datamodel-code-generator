@@ -24101,9 +24101,17 @@ UNKNOWN_PATTERN_EXPECTED = EXPECTED_JSON_SCHEMA_PATH / "unknown_pattern_annotati
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
 @pytest.mark.parametrize("formatter", ["builtin", "external"])
 def test_unknown_pattern_root_annotations(
-    tmp_path: Path, case: str, enabled: bool, field_constraints: bool, entrypoint: str, formatter: str
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    case: str,
+    enabled: bool,
+    field_constraints: bool,
+    entrypoint: str,
+    formatter: str,
 ) -> None:
     """Preserve external bytes and metadata while comparing native JSON/Python acceptance."""
+    # Each formatter has its own golden for intentionally different formatting.
+    monkeypatch.delenv("DATAMODEL_CODE_GENERATOR_CHECK_BUILTIN_FORMATTER_PARITY", raising=False)
     record = UNKNOWN_PATTERN_CASES[case]
     source = UNKNOWN_PATTERN_FIXTURES / f"{record['source']}.json"
     output = tmp_path / "output.py"
