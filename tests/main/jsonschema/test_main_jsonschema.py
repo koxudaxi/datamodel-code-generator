@@ -23756,41 +23756,6 @@ def test_pattern_property_intersections(
     )
     output = tmp_path / "output.py"
     formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
-    if entrypoint == "cli":
-        run_main_with_args([
-            "--input",
-            str(source),
-            "--output",
-            str(output),
-            "--input-file-type",
-            "jsonschema",
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-            "--disable-timestamp",
-            "--formatters",
-            *formatters,
-            *(["--generate-schema-validators"] if enabled else []),
-            *(["--custom-template-dir", str(custom_template_dir)] if custom_template_dir else []),
-            *(
-                ["--base-class", PATTERN_INTERSECTION_CASES[case]["base_class"]]
-                if "base_class" in PATTERN_INTERSECTION_CASES[case]
-                else []
-            ),
-        ])
-    else:
-        generate(
-            source,
-            config=GenerateConfig(
-                input_file_type=InputFileType.JsonSchema,
-                output_model_type=DataModelType.PydanticV2BaseModel,
-                output=output,
-                disable_timestamp=True,
-                generate_schema_validators=enabled,
-                custom_template_dir=custom_template_dir,
-                base_class=PATTERN_INTERSECTION_CASES[case].get("base_class", ""),
-                formatters=[Formatter(value) for value in formatters],
-            ),
-        )
     suffix = case if enabled else f"{case}_disabled"
     golden_suffix = (
         f"{suffix}_builtin"
@@ -23806,13 +23771,49 @@ def test_pattern_property_intersections(
         }
         else suffix
     )
-    assert_output(
-        output.read_text(),
-        PATTERN_INTERSECTION_EXPECTED
-        / PATTERN_INTERSECTION_CASES[case]
-        .get("legacy_code_names", {})
-        .get(f"{formatter}_{black.__version__.split('.')[0]}_{enabled}", f"{golden_suffix}.py"),
-    )
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=source,
+            output_path=output,
+            input_file_type="jsonschema",
+            extra_args=[
+                "--output-model-type",
+                "pydantic_v2.BaseModel",
+                "--disable-timestamp",
+                "--formatters",
+                *formatters,
+                *(["--generate-schema-validators"] if enabled else []),
+                *(["--custom-template-dir", str(custom_template_dir)] if custom_template_dir else []),
+                *(
+                    ["--base-class", PATTERN_INTERSECTION_CASES[case]["base_class"]]
+                    if "base_class" in PATTERN_INTERSECTION_CASES[case]
+                    else []
+                ),
+            ],
+            expected_file=PATTERN_INTERSECTION_EXPECTED
+            / PATTERN_INTERSECTION_CASES[case]
+            .get("legacy_code_names", {})
+            .get(f"{formatter}_{black.__version__.split('.')[0]}_{enabled}", f"{golden_suffix}.py"),
+            skip_code_validation=True,
+        )
+    else:
+        run_generate_and_assert(
+            input_=source,
+            config=GenerateConfig(
+                input_file_type=InputFileType.JsonSchema,
+                output_model_type=DataModelType.PydanticV2BaseModel,
+                output=output,
+                disable_timestamp=True,
+                generate_schema_validators=enabled,
+                custom_template_dir=custom_template_dir,
+                base_class=PATTERN_INTERSECTION_CASES[case].get("base_class", ""),
+                formatters=[Formatter(value) for value in formatters],
+            ),
+            expected_file=PATTERN_INTERSECTION_EXPECTED
+            / PATTERN_INTERSECTION_CASES[case]
+            .get("legacy_code_names", {})
+            .get(f"{formatter}_{black.__version__.split('.')[0]}_{enabled}", f"{golden_suffix}.py"),
+        )
     schema = json.loads(source.read_text())
     Draft202012Validator.check_schema(schema)
     validator = Draft202012Validator(schema)
@@ -23841,18 +23842,18 @@ def test_invalid_pattern_does_not_change_generation(tmp_path: Path, formatter: s
     with pytest.raises(SchemaError):
         Draft202012Validator.check_schema(json.loads(source.read_text()))
     output = tmp_path / "output.py"
-    run_main_with_args([
-        "--input",
-        str(source),
-        "--output",
-        str(output),
-        "--input-file-type",
-        "jsonschema",
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-        "--disable-timestamp",
-        "--generate-schema-validators",
-        "--formatters",
-        *(["builtin"] if formatter == "builtin" else ["black", "isort"]),
-    ])
-    assert_output(output.read_text(), PATTERN_INTERSECTION_EXPECTED / "invalid_regex.py")
+    run_main_and_assert(
+        input_path=source,
+        output_path=output,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+            "--generate-schema-validators",
+            "--formatters",
+            *(["builtin"] if formatter == "builtin" else ["black", "isort"]),
+        ],
+        expected_file=PATTERN_INTERSECTION_EXPECTED / "invalid_regex.py",
+        skip_code_validation=True,
+    )
