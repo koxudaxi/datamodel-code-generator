@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import ast
 import importlib
 import importlib.util
 import itertools
 import json
+import operator
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -14,19 +17,22 @@ import warnings
 from collections import defaultdict
 from collections.abc import Callable as ABCCallable
 from collections.abc import Sequence
+from contextlib import nullcontext
 from dataclasses import Field as DataclassField
 from decimal import Decimal
+from operator import itemgetter
 from pathlib import Path, PurePath
 from typing import TYPE_CHECKING, get_args, get_type_hints
 
 import black
+import msgspec
 import pytest
 from jinja2 import TemplateNotFound
 from jsonschema import Draft7Validator
 from jsonschema import ValidationError as SchemaValidationError
 from packaging import version
 from pydantic import VERSION as PYDANTIC_VERSION
-from pydantic import ValidationError
+from pydantic import PydanticUserError, ValidationError
 
 from datamodel_code_generator import (
     MIN_VERSION,
@@ -82,15 +88,18 @@ from tests.main.conftest import (
     DATA_PATH,
     DEFAULT_VALUES_DATA_PATH,
     EXPECTED_MAIN_PATH,
+    GRAPHQL_DATA_PATH,
     JSON_DATA_PATH,
     JSON_SCHEMA_DATA_PATH,
     LEGACY_BLACK_SKIP,
     MSGSPEC_LEGACY_BLACK_SKIP,
     TIMESTAMP,
     _assert_model_json_invalid,
+    _assert_python_module_importable,
     _generated_model,
     _generated_package_module,
     _model_json_validator,
+    _uses_builtin_test_default_formatter,
     _uses_external_test_default_formatter,
     assert_generated_model_json_invalid,
     assert_generated_model_json_validation,
@@ -12195,6 +12204,167 @@ def test_main_jsonschema_type_mappings_invalid_format(output_file: Path, capsys:
     )
 
 
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("metadata", [False, True])
+@pytest.mark.parametrize("collapse", [False, True])
+@pytest.mark.parametrize("exact", [False, True])
+def test_reuse_tree_single_module_imports(
+    output_dir: Path, entrypoint: str, metadata: bool, collapse: bool, exact: bool
+) -> None:
+    """Resolve moved canonical models and retained wrappers with isolated package imports."""
+    fixture = "reuse_scope_tree_single" + ("_collapsed" if collapse else "") + ("_exact" if exact else "")
+    expected_directory = EXPECTED_MAIN_PATH / "jsonschema" / fixture
+    metadata_path = output_dir.parent / "model-map.json"
+    if entrypoint == "cli":
+        extra_args = [
+            "--reuse-model",
+            "--reuse-scope",
+            "tree",
+            "--module-split-mode",
+            "single",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+        ]
+        if metadata:
+            extra_args.extend(["--emit-model-metadata", str(metadata_path)])
+        if collapse:
+            extra_args.append("--collapse-reuse-models")
+        if exact:
+            extra_args.append("--use-exact-imports")
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree",
+            output_path=output_dir,
+            input_file_type="jsonschema",
+            expected_directory=expected_directory,
+            extra_args=extra_args,
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree",
+            output_path=output_dir,
+            input_file_type=InputFileType.JsonSchema,
+            expected_directory=expected_directory,
+            reuse_model=True,
+            reuse_scope="tree",
+            module_split_mode="single",
+            output_model_type="pydantic_v2.BaseModel",
+            disable_timestamp=True,
+            collapse_reuse_models=collapse,
+            use_exact_imports=exact,
+            emit_model_metadata=metadata_path if metadata else None,
+        )
+    if metadata:
+        assert_output(
+            metadata_path.read_text(encoding="utf-8"),
+            expected_directory.with_name(f"{fixture}_metadata.txt"),
+        )
+    case = json.loads((DATA_PATH / "payloads/reuse_tree.json").read_text())["single"]
+    results = []
+    with _generated_package_module(output_dir, "shared") as shared_module:
+        shared = shared_module.SharedModel
+        for module_name, field_name in case["modules"]:
+            model = importlib.import_module(f"{output_dir.name}.{module_name}").Model
+            value = model.model_validate({field_name: case["payload"]})
+            nested = getattr(value, field_name)
+            results.append({
+                "module": module_name,
+                "fields": list(model.model_fields),
+                "dump": value.model_dump(),
+                "nested_fields": list(type(nested).model_fields),
+                "canonical": type(nested) is shared,
+                "inherits_shared": isinstance(nested, shared),
+            })
+    assert_output(
+        json.dumps(results, indent=2) + "\n",
+        EXPECTED_MAIN_PATH / "jsonschema" / f"reuse_scope_tree_single_runtime{'_collapsed' if collapse else ''}.txt",
+    )
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("scenario", ["chain", "recursive", "mutual"])
+@pytest.mark.parametrize("collapse", [False, True])
+@pytest.mark.parametrize("exact", [False, True])
+def test_reuse_tree_single_first_root_validation(
+    output_dir: Path, entrypoint: str, scenario: str, collapse: bool, exact: bool
+) -> None:
+    """Resolve relocated shared forward references before a root's first validation."""
+    fixture = f"reuse_tree_nested_{scenario}"
+    expected = fixture + ("_collapsed" if collapse else "") + ("_exact" if exact else "")
+    expected_directory = EXPECTED_MAIN_PATH / "jsonschema" / expected
+    output_dir = output_dir.with_name(f"{expected}_{entrypoint}")
+    metadata_path = output_dir.parent / "model-map.json"
+    if entrypoint == "cli":
+        extra_args = [
+            "--reuse-model",
+            "--reuse-scope",
+            "tree",
+            "--module-split-mode",
+            "single",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+            "--emit-model-metadata",
+            str(metadata_path),
+        ]
+        if collapse:
+            extra_args.append("--collapse-reuse-models")
+        if exact:
+            extra_args.append("--use-exact-imports")
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / fixture,
+            output_path=output_dir,
+            input_file_type="jsonschema",
+            expected_directory=expected_directory,
+            extra_args=extra_args,
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / fixture,
+            output_path=output_dir,
+            input_file_type=InputFileType.JsonSchema,
+            expected_directory=expected_directory,
+            reuse_model=True,
+            reuse_scope="tree",
+            module_split_mode="single",
+            output_model_type="pydantic_v2.BaseModel",
+            disable_timestamp=True,
+            collapse_reuse_models=collapse,
+            use_exact_imports=exact,
+            emit_model_metadata=metadata_path,
+        )
+    assert_output(metadata_path.read_text(), expected_directory.with_name(f"{expected}_metadata.txt"))
+    cases = json.loads((DATA_PATH / "payloads/reuse_tree.json").read_text())
+    for order, payload in itertools.product(((0, 1, 2), (2, 0, 1)), ("nested", "empty")):
+        case = cases[payload]
+        results = []
+        with _generated_package_module(output_dir, f"schema_{order[0]}.root{order[0]}"):
+            for index in order:
+                module = importlib.import_module(f"{output_dir.name}.schema_{index}.root{index}")
+                model = getattr(module, f"Root{index}")
+                value = model.model_validate({f"data{index}": case} if case else {})
+                nested = getattr(value, f"data{index}")
+                result = {"root": index, "fields": list(model.model_fields), "dump": value.model_dump(by_alias=True)}
+                if nested is not None:
+                    result["nested"] = [
+                        {
+                            "origin": type(item).__module__.removeprefix(output_dir.name + "."),
+                            "name": type(item).__name__,
+                            "identity": getattr(importlib.import_module(type(item).__module__), type(item).__name__)
+                            is type(item),
+                            "fields": list(type(item).model_fields),
+                        }
+                        for item in (nested, nested.inner)
+                    ]
+                results.append(result)
+        assert_output(
+            json.dumps(results, indent=2) + "\n",
+            EXPECTED_MAIN_PATH
+            / "jsonschema"
+            / f"{fixture}{'_collapsed' if collapse else ''}_{order[0]}_{payload}_runtime.txt",
+        )
+
+
 @pytest.mark.cli_doc(
     options=["--reuse-scope"],
     option_description="""Scope for model reuse detection (root or tree).
@@ -19517,6 +19687,1865 @@ def test_custom_template_dependencies_bound_generation_roots(tmp_path: Path) -> 
         )
     finally:
         model_base._clear_custom_template_caches()
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize(
+    "case",
+    json.loads((DATA_PATH / "payloads/msgspec_enum_diagnostics/errors.json").read_text()),
+    ids=itemgetter("name"),
+)
+def test_msgspec_enum_diagnostics_reject_unsupported_members(
+    output_file: Path, capsys: pytest.CaptureFixture[str], entrypoint: str, case: dict
+) -> None:
+    """Reject unusable bool/float Enum members before CLI or API writes generated output."""
+    schema = JSON_SCHEMA_DATA_PATH / "msgspec_enum_diagnostics" / f"{case['schema']}.json"
+    expected = EXPECTED_JSON_SCHEMA_PATH / "msgspec_enum_diagnostics" / f"error_{case['name']}.txt"
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=schema,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            extra_args=["--output-model-type", "msgspec.Struct", *case["cli"]],
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr=expected.read_text(),
+            output_should_not_exist=True,
+        )
+    else:
+        run_generate_and_assert(
+            input_=schema,
+            output=output_file,
+            expected_file=expected,
+            expected_error=Error,
+            input_file_type=InputFileType.JsonSchema,
+            output_model_type=DataModelType.MsgspecStruct,
+            **case["options"],
+        )
+        assert_output(f"{output_file.exists()}\n", EXPECTED_JSON_SCHEMA_PATH / "msgspec_enum_diagnostics/absent.txt")
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize(
+    "case",
+    json.loads((DATA_PATH / "payloads/msgspec_enum_diagnostics/controls.json").read_text()),
+    ids=itemgetter("name"),
+)
+def test_msgspec_enum_diagnostics_preserve_supported_representations(
+    output_file: Path, entrypoint: str, case: dict
+) -> None:
+    """Keep supported Enum/subclass/Literal output and real convert/decode behavior unchanged."""
+    import msgspec
+
+    data = JSON_SCHEMA_DATA_PATH / "msgspec_enum_diagnostics"
+    expected = f"msgspec_enum_diagnostics/{case['name']}.py"
+    can_execute = sys.version_info[:2] >= tuple(map(int, case["python"].split(".")))
+    formatter_options = (
+        {"formatters": [Formatter.BUILTIN]}
+        if _uses_external_test_default_formatter() and not is_supported_in_black(PythonVersion(case["python"]))
+        else {}
+    )
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=data / f"{case['schema']}.json",
+            output_path=output_file,
+            input_file_type="jsonschema",
+            extra_args=[
+                "--output-model-type",
+                "msgspec.Struct",
+                "--target-python-version",
+                case["python"],
+                "--disable-timestamp",
+                *case["cli"],
+                *(["--formatters", "builtin"] if formatter_options else []),
+            ],
+            assert_func=assert_file_content,
+            expected_file=expected,
+            force_exec_validation=can_execute,
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=data / f"{case['schema']}.json",
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            output_model_type=DataModelType.MsgspecStruct,
+            target_python_version=PythonVersion(case["python"]),
+            disable_timestamp=True,
+            assert_func=assert_file_content,
+            expected_file=expected,
+            unchanged_inputs={"options": case["options"]},
+            **case["options"],
+            **formatter_options,
+        )
+    if not can_execute:
+        return
+    results = []
+    with _generated_model(output_file, "generated_msgspec_enum_controls", "Payload") as model:
+        for payload in json.loads(
+            (DATA_PATH / "payloads/msgspec_enum_diagnostics" / f"{case['schema']}_valid.json").read_text()
+        ):
+            converted = msgspec.convert(payload, type=model)
+            decoded = msgspec.json.decode(json.dumps(payload).encode(), type=model)
+            results.append({"convert": msgspec.to_builtins(converted), "decode": msgspec.to_builtins(decoded)})
+        for payload in json.loads(
+            (DATA_PATH / "payloads/msgspec_enum_diagnostics" / f"{case['schema']}_invalid.json").read_text()
+        ):
+            with pytest.raises(msgspec.ValidationError):
+                msgspec.convert(payload, type=model)
+            with pytest.raises(msgspec.ValidationError):
+                msgspec.json.decode(json.dumps(payload).encode(), type=model)
+    assert_output(
+        json.dumps(results, indent=2) + "\n",
+        EXPECTED_JSON_SCHEMA_PATH / "msgspec_enum_diagnostics" / f"{case['name']}.txt",
+    )
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize(
+    "backend",
+    [
+        DataModelType.PydanticV2BaseModel,
+        DataModelType.PydanticV2Dataclass,
+        DataModelType.DataclassesDataclass,
+        DataModelType.TypingTypedDict,
+    ],
+)
+def test_msgspec_enum_diagnostics_preserve_other_backends(
+    output_file: Path, entrypoint: str, backend: DataModelType
+) -> None:
+    """Retain boolean and float Enum members, ordering, and runtime validation on other backends."""
+    data = JSON_SCHEMA_DATA_PATH / "msgspec_enum_diagnostics"
+    expected = f"msgspec_enum_diagnostics/other_{backend.value.replace('.', '_')}.py"
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=data / "other_backends.json",
+            output_path=output_file,
+            input_file_type="jsonschema",
+            extra_args=["--output-model-type", backend.value, "--target-python-version", "3.10", "--disable-timestamp"],
+            assert_func=assert_file_content,
+            expected_file=expected,
+            force_exec_validation=True,
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=data / "other_backends.json",
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            output_model_type=backend,
+            target_python_version=PythonVersion.PY_310,
+            disable_timestamp=True,
+            assert_func=assert_file_content,
+            expected_file=expected,
+        )
+    if backend is DataModelType.TypingTypedDict and sys.version_info[:2] < (3, 12):
+        return
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="generated_other_backend_enums",
+        model_name="Payload",
+        valid_json=(DATA_PATH / "payloads/msgspec_enum_diagnostics/other_backends_valid.json").read_text(),
+        invalid_json='{"always": false}',
+        expected_error_type="literal_error" if backend is DataModelType.TypingTypedDict else "enum",
+        expected_attribute_path=("enabled",) if backend is DataModelType.TypingTypedDict else ("enabled", "value"),
+        expected_attribute_value=False,
+    )
+
+
+@pytest.mark.parametrize(
+    "integer_type", ["IntValue", "UnhashableInt", "CustomHashInt", "CustomEqualInt", "HashRaisesInt"]
+)
+@pytest.mark.parametrize(
+    "case",
+    json.loads((DATA_PATH / "payloads/msgspec_enum_diagnostics/subclass_cases.json").read_text()),
+    ids=itemgetter("name"),
+)
+def test_msgspec_enum_diagnostics_integer_subclasses(
+    output_file: Path, capsys: pytest.CaptureFixture[str], integer_type: str, case: dict
+) -> None:
+    """Keep mapping integer aliases equivalent to canonical JSON and usable by msgspec."""
+    import msgspec
+
+    from tests.data.python import msgspec_enum_int_values
+
+    data = JSON_SCHEMA_DATA_PATH / "msgspec_enum_diagnostics"
+    schema_path = data / f"{case['name']}.json"
+    schema = json.loads(schema_path.read_text())
+    values = schema["properties"]["value"]["enum"]
+    for index in case["indices"]:
+        values[index] = getattr(msgspec_enum_int_values, integer_type)(values[index])
+    options = {
+        "input_file_type": InputFileType.JsonSchema,
+        "output_model_type": DataModelType.MsgspecStruct,
+        "target_python_version": PythonVersion.PY_310,
+        "custom_file_header": "# Integer subclass control",
+        "formatters": [Formatter.BLACK, Formatter.ISORT]
+        if _uses_external_test_default_formatter()
+        else [Formatter.BUILTIN],
+    }
+    cli = [
+        "--output-model-type",
+        "msgspec.Struct",
+        "--target-python-version",
+        "3.10",
+        "--custom-file-header",
+        "# Integer subclass control",
+    ]
+    if case["error"]:
+        message = "msgspec.Struct does not support float Enum members in 'Value'."
+        run_generate_and_assert(
+            input_=schema,
+            output=output_file,
+            expected_file=data / "subclass_error.txt",
+            expected_error=Error,
+            **options,
+        )
+        assert_output(
+            f"{output_file.exists()}\n",
+            EXPECTED_JSON_SCHEMA_PATH / "msgspec_enum_diagnostics" / "absent.txt",
+        )
+        run_main_and_assert(
+            input_path=schema_path,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            extra_args=cli,
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr=f"{message}\n",
+            output_should_not_exist=True,
+        )
+        return
+    expected = f"msgspec_enum_diagnostics/{case['name']}.py"
+    run_generate_and_assert(
+        input_=schema,
+        output=output_file,
+        expected_file=EXPECTED_JSON_SCHEMA_PATH / expected,
+        **options,
+    )
+    with _generated_model(output_file, "generated_integer_subclass", "Payload") as model:
+        results = {
+            "convert": msgspec.to_builtins(msgspec.convert(case["payload"], type=model)),
+            "decode": msgspec.to_builtins(msgspec.json.decode(json.dumps(case["payload"]), type=model)),
+        }
+    assert_output(
+        json.dumps(results, indent=2) + "\n",
+        EXPECTED_JSON_SCHEMA_PATH / "msgspec_enum_diagnostics" / f"{case['name']}.txt",
+    )
+    run_main_and_assert(
+        input_path=schema_path,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=cli,
+        assert_func=assert_file_content,
+        expected_file=expected,
+        force_exec_validation=True,
+    )
+
+
+def test_msgspec_enum_diagnostics_preserve_integer_comparison_error(output_file: Path) -> None:
+    """Retain the original first-equal lookup exception for custom API comparisons."""
+    from tests.data.python.msgspec_enum_int_values import EqualityRaisesInt
+
+    data = JSON_SCHEMA_DATA_PATH / "msgspec_enum_diagnostics"
+    schema = json.loads((data / "subclass_float.json").read_text())
+    schema["properties"]["value"]["enum"][0] = EqualityRaisesInt(1)
+    run_generate_and_assert(
+        input_=schema,
+        output=output_file,
+        expected_file=EXPECTED_JSON_SCHEMA_PATH / "msgspec_enum_diagnostics/comparison_error.txt",
+        expected_error=TypeError,
+        input_file_type=InputFileType.JsonSchema,
+        output_model_type=DataModelType.MsgspecStruct,
+    )
+    assert_output(f"{output_file.exists()}\n", EXPECTED_JSON_SCHEMA_PATH / "msgspec_enum_diagnostics/absent.txt")
+
+
+MSGSPEC_INHERITANCE_DATA = DATA_PATH / "msgspec_inheritance"
+
+
+MSGSPEC_INHERITANCE_EXPECTED = EXPECTED_MAIN_PATH / "msgspec_inheritance"
+
+
+MSGSPEC_INHERITANCE_CASES = json.loads((MSGSPEC_INHERITANCE_DATA / "cases.json").read_text())
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("case", [case for case in MSGSPEC_INHERITANCE_CASES if case["error"]], ids=itemgetter("name"))
+def test_msgspec_inheritance_reject_conflicting_layouts(
+    output_file: Path, capsys: pytest.CaptureFixture[str], entrypoint: str, case: dict
+) -> None:
+    """Diagnose actual slot conflicts without writing unusable generated modules."""
+    expected = MSGSPEC_INHERITANCE_EXPECTED / f"{case['name']}.txt"
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=MSGSPEC_INHERITANCE_DATA / case["schema"],
+            output_path=output_file,
+            input_file_type=case["format"],
+            extra_args=["--output-model-type", "msgspec.Struct", *case["cli"]],
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr=expected.read_text(),
+            output_should_not_exist=True,
+        )
+    else:
+        run_generate_and_assert(
+            input_=MSGSPEC_INHERITANCE_DATA / case["schema"],
+            output=output_file,
+            expected_file=expected,
+            expected_error=Error,
+            input_file_type=InputFileType(case["format"]),
+            output_model_type=DataModelType.MsgspecStruct,
+            **case["options"],
+        )
+        assert_output(f"{output_file.exists()}\n", MSGSPEC_INHERITANCE_EXPECTED / "absent.txt")
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize(
+    "case", [case for case in MSGSPEC_INHERITANCE_CASES if not case["error"]], ids=itemgetter("name")
+)
+def test_msgspec_inheritance_preserve_compatible_layouts(output_file: Path, entrypoint: str, case: dict) -> None:
+    """Preserve generated bytes, inherited slots, base order, MRO, and real decoding."""
+    import msgspec
+
+    options = case["options"].copy()
+    if "custom_template_dir" in options:
+        options["custom_template_dir"] = MSGSPEC_INHERITANCE_DATA / "templates"
+
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=MSGSPEC_INHERITANCE_DATA / case["schema"],
+            output_path=output_file,
+            input_file_type=case["format"],
+            extra_args=[
+                "--output-model-type",
+                "msgspec.Struct",
+                "--target-python-version",
+                "3.10",
+                "--disable-timestamp",
+                *case["cli"],
+            ],
+            assert_func=assert_file_content,
+            expected_file=MSGSPEC_INHERITANCE_EXPECTED / f"{case['name']}.py",
+            force_exec_validation=True,
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=MSGSPEC_INHERITANCE_DATA / case["schema"],
+            output_path=output_file,
+            input_file_type=InputFileType(case["format"]),
+            output_model_type=DataModelType.MsgspecStruct,
+            target_python_version=PythonVersion.PY_310,
+            disable_timestamp=True,
+            assert_func=assert_file_content,
+            expected_file=MSGSPEC_INHERITANCE_EXPECTED / f"{case['name']}.py",
+            unchanged_inputs={"options": options},
+            **options,
+        )
+    with _generated_model(output_file, "generated_msgspec_inheritance", "Payload") as model:
+        converted = msgspec.convert(case["payload"], type=model)
+        decoded = msgspec.json.decode(json.dumps(case["payload"]), type=model)
+        result = {
+            "convert": msgspec.to_builtins(converted),
+            "decode": msgspec.to_builtins(decoded),
+            "fields": model.__struct_fields__,
+            "bases": [base.__name__ for base in model.__bases__],
+            "mro": [base.__name__ for base in model.__mro__],
+        }
+        with pytest.raises(msgspec.ValidationError):
+            msgspec.convert({}, type=model)
+        with pytest.raises(msgspec.ValidationError):
+            msgspec.json.decode(b"{}", type=model)
+    assert_output(json.dumps(result, indent=2) + "\n", MSGSPEC_INHERITANCE_EXPECTED / f"{case['name']}.txt")
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("input_format", ["jsonschema", "graphql"])
+@pytest.mark.parametrize(
+    "backend",
+    [
+        DataModelType.PydanticV2BaseModel,
+        DataModelType.PydanticV2Dataclass,
+        DataModelType.DataclassesDataclass,
+        DataModelType.TypingTypedDict,
+    ],
+)
+def test_msgspec_inheritance_preserve_other_backends(
+    output_file: Path, entrypoint: str, input_format: str, backend: DataModelType
+) -> None:
+    """Retain valid multiple generated bases for every other model backend."""
+    case = next(case for case in MSGSPEC_INHERITANCE_CASES if case["name"] == f"{input_format}_independent")
+    expected = MSGSPEC_INHERITANCE_EXPECTED / f"other_{input_format}_{backend.value.replace('.', '_')}.py"
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=MSGSPEC_INHERITANCE_DATA / case["schema"],
+            output_path=output_file,
+            input_file_type=input_format,
+            extra_args=[
+                "--output-model-type",
+                backend.value,
+                "--target-python-version",
+                "3.10",
+                "--disable-timestamp",
+                *case["cli"],
+            ],
+            assert_func=assert_file_content,
+            expected_file=expected,
+            force_exec_validation=True,
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=MSGSPEC_INHERITANCE_DATA / case["schema"],
+            output_path=output_file,
+            input_file_type=InputFileType(input_format),
+            output_model_type=backend,
+            target_python_version=PythonVersion.PY_310,
+            disable_timestamp=True,
+            assert_func=assert_file_content,
+            expected_file=expected,
+            **case["options"],
+        )
+    if backend == DataModelType.TypingTypedDict:
+        import msgspec
+
+        with _generated_model(output_file, "generated_other_backend_inheritance", "Payload") as model:
+            converted = msgspec.convert(case["payload"], type=model)
+            decoded = msgspec.json.decode(json.dumps(case["payload"]), type=model)
+            assert_output(
+                json.dumps({"convert": converted, "decode": decoded}, sort_keys=True) + "\n",
+                DATA_PATH / "payloads/msgspec_inheritance_typed_dict.txt",
+            )
+            with pytest.raises(msgspec.ValidationError, match="missing required field"):
+                msgspec.convert({}, type=model)
+            with pytest.raises(msgspec.ValidationError, match="missing required field"):
+                msgspec.json.decode("{}", type=model)
+        return
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="generated_other_backend_inheritance",
+        model_name="Payload",
+        valid_json=json.dumps(case["payload"]),
+        invalid_json="{}",
+        expected_error_type="missing",
+        expected_attribute_path=("c",),
+        expected_attribute_value=3,
+    )
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+def test_msgspec_inheritance_preserve_mixed_opaque_layout(output_file: Path, entrypoint: str) -> None:
+    """Keep opaque ancestry conservative even after a known compact conflict."""
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=MSGSPEC_INHERITANCE_DATA / "dry_opaque.json",
+            output_path=output_file,
+            input_file_type="jsonschema",
+            extra_args=["--output-model-type", "msgspec.Struct", "--disable-timestamp"],
+            assert_func=assert_file_content,
+            expected_file=MSGSPEC_INHERITANCE_EXPECTED / "dry_opaque.py",
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=MSGSPEC_INHERITANCE_DATA / "dry_opaque.json",
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            output_model_type=DataModelType.MsgspecStruct,
+            disable_timestamp=True,
+            assert_func=assert_file_content,
+            expected_file=MSGSPEC_INHERITANCE_EXPECTED / "dry_opaque.py",
+        )
+    with pytest.raises(TypeError) as error:
+        _assert_python_module_importable(output_file, "generated_mixed_opaque", "Payload")
+    assert_output(f"{error.value}\n", MSGSPEC_INHERITANCE_EXPECTED / "dry_opaque.txt")
+
+
+_EXPORT_CASES = [
+    ("dotted_module_exports", "children", None, None, False, "plain", "children"),
+    ("dotted_module_exports", "recursive", None, None, False, "plain", "recursive"),
+    ("dotted_module_exports", "children", "single", None, False, "single", "children_single"),
+    ("dotted_module_exports", "recursive", "single", None, False, "single", "recursive_single"),
+    (
+        "dotted_module_exports_collision",
+        "recursive",
+        "single",
+        "minimal-prefix",
+        False,
+        "collision",
+        "collision_minimal",
+    ),
+    (
+        "dotted_module_exports_collision",
+        "recursive",
+        "single",
+        "full-prefix",
+        False,
+        "collision",
+        "collision_full",
+    ),
+    ("dotted_module_exports_reuse", "recursive", "single", "minimal-prefix", True, "reuse", "reuse"),
+    ("dotted_module_exports_cycle", "children", None, None, False, "cycle", "cycle_children"),
+    ("dotted_module_exports_cycle", "recursive", None, None, False, "cycle", "cycle_recursive"),
+    ("dotted_module_exports_cycle", "children", "single", None, False, "cycle_single", "cycle_children_single"),
+    (
+        "dotted_module_exports_cycle",
+        "recursive",
+        "single",
+        None,
+        False,
+        "cycle_single",
+        "cycle_recursive_single",
+    ),
+    (
+        "dotted_module_exports_cycle_collision",
+        "recursive",
+        None,
+        "minimal-prefix",
+        False,
+        "cycle",
+        "cycle_minimal",
+    ),
+    ("dotted_module_exports_cycle_collision", "recursive", None, "full-prefix", False, "cycle", "cycle_full"),
+]
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize(
+    ("fixture", "scope", "split", "strategy", "reuse", "runtime_case", "expected", "target_version"),
+    [
+        (*case, version)
+        for case in _EXPORT_CASES
+        for version in (list(PythonVersion) if "_cycle" in case[0] else [PythonVersion.PY_310])
+    ],
+)
+def test_dotted_module_exports(
+    output_dir: Path,
+    entrypoint: str,
+    target_version: PythonVersion,
+    fixture: str,
+    scope: str,
+    split: str | None,
+    strategy: str | None,
+    reuse: bool,
+    runtime_case: str,
+    expected: str,
+) -> None:
+    """Keep each export local to its final package and preserve model identities."""
+    if target_version == PythonVersion.PY_314:
+        expected += "_py314"
+    output_dir = output_dir.with_name(f"{expected}_{target_version.name.lower()}_{entrypoint}")
+    expected_directory = EXPECTED_MAIN_PATH / "jsonschema" / f"dotted_module_exports_{expected}"
+    formatters = (
+        [Formatter.BUILTIN]
+        if _uses_builtin_test_default_formatter() or not is_supported_in_black(target_version)
+        else [Formatter.BLACK, Formatter.ISORT]
+    )
+    if entrypoint == "cli":
+        extra_args = [
+            "--target-python-version",
+            target_version.value,
+            "--treat-dot-as-module",
+            "--all-exports-scope",
+            scope,
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-exact-imports",
+            "--disable-timestamp",
+            "--formatters",
+            *(formatter.value for formatter in formatters),
+        ]
+        if split:
+            extra_args.extend(["--module-split-mode", split])
+        if strategy:
+            extra_args.extend(["--all-exports-collision-strategy", strategy])
+        if reuse:
+            extra_args.extend(["--reuse-model", "--reuse-scope", "tree"])
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / fixture,
+            output_path=output_dir,
+            input_file_type="jsonschema",
+            expected_directory=expected_directory,
+            extra_args=extra_args,
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / fixture,
+            output_path=output_dir,
+            input_file_type=InputFileType.JsonSchema,
+            expected_directory=expected_directory,
+            target_python_version=target_version,
+            treat_dot_as_module=True,
+            all_exports_scope=scope,
+            module_split_mode=split,
+            all_exports_collision_strategy=strategy,
+            reuse_model=reuse,
+            reuse_scope="tree" if reuse else "module",
+            output_model_type="pydantic_v2.BaseModel",
+            use_exact_imports=True,
+            disable_timestamp=True,
+            formatters=formatters,
+        )
+    if "_cycle" in fixture and target_version.value != f"{sys.version_info.major}.{sys.version_info.minor}":
+        return
+    for path in output_dir.rglob("*.py"):
+        ast.parse(path.read_text(), feature_version=tuple(map(int, target_version.value.split("."))))
+    case = json.loads((DATA_PATH / "python/dotted_module_exports_runtime.json").read_text())[runtime_case]
+    results = []
+    with _generated_package_module(output_dir, case["modules"][0]):
+        for suffix in case["modules"]:
+            module = importlib.import_module(output_dir.name + (f".{suffix}" if suffix else ""))
+            exports = []
+            for name in getattr(module, "__all__", ()):
+                model = getattr(module, name)
+                validated = model.model_validate(case["payload"])
+                exports.append({
+                    "name": name,
+                    "origin": model.__module__.removeprefix(output_dir.name + "."),
+                    "is_definition": getattr(importlib.import_module(model.__module__), model.__name__) is model,
+                    "fields": list(model.model_fields),
+                    "dump": validated.model_dump(),
+                })
+                if runtime_case.startswith("cycle"):
+                    imported = {}
+                    exec(f"from {module.__name__} import {name}", imported)
+                    starred = {}
+                    exec(f"from {module.__name__} import *", starred)
+                    exports[-1]["access_identity"] = [
+                        vars(module)[name] is model,
+                        getattr(module, name) is model,
+                        imported[name] is model,
+                        starred[name] is model,
+                    ]
+                    exports[-1]["nested_identity"] = [
+                        getattr(importlib.import_module(type(value).__module__), type(value).__name__) is type(value)
+                        for value in vars(validated).values()
+                        if hasattr(type(value), "model_fields")
+                    ]
+            results.append({"module": suffix, "exports": exports})
+            if runtime_case.startswith("cycle"):
+                with pytest.raises(AttributeError, match="missing_for_export_probe"):
+                    _ = module.missing_for_export_probe
+                results[-1]["unknown_attribute"] = True
+    assert_output(
+        json.dumps(results, indent=2) + "\n",
+        expected_directory.with_name(f"{expected_directory.name}_runtime.txt"),
+    )
+
+
+EXPLICIT_ALIAS_ALIASES = json.loads((ALIASES_DATA_PATH / "explicit_alias_names.json").read_text(encoding="utf-8"))
+
+
+@pytest.mark.parametrize(
+    ("case", "backend"),
+    [
+        (case, backend)
+        for case in ["duplicate", "existing", "scoped_duplicate", "keyword", "invalid", "empty"]
+        for backend in DataModelType
+        if backend != DataModelType.PydanticV2BaseModel or case not in {"keyword", "invalid", "empty"}
+    ]
+    + [
+        ("snake_existing", DataModelType.PydanticV2BaseModel),
+        ("snake_duplicate", DataModelType.PydanticV2BaseModel),
+        ("nfkc_duplicate", DataModelType.PydanticV2BaseModel),
+        ("snake_config", DataModelType.PydanticV2BaseModel),
+        ("reserved_config", DataModelType.PydanticV2BaseModel),
+        ("reserved_validate", DataModelType.PydanticV2BaseModel),
+        ("reserved_legacy", DataModelType.PydanticV2BaseModel),
+        ("reserved_legacy_prefix", DataModelType.PydanticV2BaseModel),
+        ("reserved_msgspec", DataModelType.MsgspecStruct),
+        ("discriminator_invalid", DataModelType.PydanticV2BaseModel),
+        ("discriminator_keyword", DataModelType.PydanticV2BaseModel),
+        ("discriminator_reserved", DataModelType.PydanticV2BaseModel),
+        ("discriminator_scoped_invalid", DataModelType.PydanticV2BaseModel),
+        ("discriminator_modular_collision", DataModelType.PydanticV2BaseModel),
+    ],
+)
+def test_explicit_alias_names_invalid(
+    case: str, backend: DataModelType, output_file: Path, capsys: pytest.CaptureFixture[str], tmp_path: Path
+) -> None:
+    """Reject collisions and invalid Python identifiers for every output model."""
+    aliases = EXPLICIT_ALIAS_ALIASES[case]
+    synthesized = case.startswith("discriminator_")
+    input_path = JSON_SCHEMA_DATA_PATH / (
+        "discriminator_no_literal.json" if synthesized else "explicit_alias_names.json"
+    )
+    if case == "discriminator_modular_collision":
+        output_file = output_file.with_suffix("")
+        input_path = tmp_path / "schemas"
+        input_path.mkdir()
+        for source, destination in (
+            ("explicit_alias_discriminator_union.json", "aaa_union.json"),
+            ("explicit_alias_names.json", "names.json"),
+            ("discriminator_no_literal.json", "variants.json"),
+        ):
+            shutil.copyfile(JSON_SCHEMA_DATA_PATH / source, input_path / destination)
+    target_version = TargetPydanticVersion.V2 if case.startswith("reserved_legacy") else None
+    field_name = (
+        "b" if case in {"duplicate", "existing", "scoped_duplicate", "snake_duplicate", "nfkc_duplicate"} else "a"
+    )
+    if synthesized:
+        field_name = "pet_type"
+    alias = aliases.get(f"{'ApiDog' if synthesized else 'AliasNames'}.{field_name}", aliases.get(field_name))
+    reason = (
+        "conflicts with another field"
+        if field_name == "b" or case in {"snake_existing", "discriminator_modular_collision"}
+        else "is not a valid field name"
+    )
+    message = f"Alias {alias!r} for field {field_name!r} {reason}."
+    run_generate_and_assert(
+        input_=input_path,
+        expected_error=Error,
+        expected_error_match=re.escape(message),
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        aliases=aliases,
+        class_name_prefix="Api" if synthesized and case != "discriminator_modular_collision" else None,
+        target_pydantic_version=target_version,
+        output_model_type=backend,
+        snake_case_field=case not in {"nfkc_duplicate", "discriminator_modular_collision"},
+    )
+    assert_output(f"{output_file.exists()}\n", EXPECTED_JSON_SCHEMA_PATH / "msgspec_enum_diagnostics/absent.txt")
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--aliases",
+            json.dumps(aliases),
+            "--output-model-type",
+            backend.value,
+            *(["--class-name-prefix", "Api"] if synthesized and case != "discriminator_modular_collision" else []),
+            *(["--target-pydantic-version", target_version.value] if target_version else []),
+            *([] if case in {"nfkc_duplicate", "discriminator_modular_collision"} else ["--snake-case-field"]),
+        ],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains=message,
+        output_should_not_exist=True,
+    )
+
+
+@pytest.mark.parametrize("case", ["normal", "global", "scoped", "choices", "neutral_reserved", "scoped_empty_choices"])
+def test_explicit_alias_names_valid(case: str, output_file: Path) -> None:
+    """Preserve valid aliases, spelling, precedence, field order and required fields."""
+    backend = DataModelType.DataclassesDataclass if case == "neutral_reserved" else DataModelType.PydanticV2BaseModel
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "explicit_alias_names.json",
+        output_path=output_file,
+        input_file_type=InputFileType.JsonSchema,
+        aliases=EXPLICIT_ALIAS_ALIASES[case],
+        output_model_type=backend,
+        snake_case_field=True,
+        disable_timestamp=True,
+        assert_func=assert_file_content,
+        expected_file=f"explicit_alias_names_{case}.py",
+        unchanged_inputs={"aliases": EXPLICIT_ALIAS_ALIASES[case]},
+    )
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "explicit_alias_names.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--aliases",
+            json.dumps(EXPLICIT_ALIAS_ALIASES[case]),
+            "--snake-case-field",
+            "--output-model-type",
+            backend.value,
+            "--disable-timestamp",
+        ],
+        assert_func=assert_file_content,
+        expected_file=f"explicit_alias_names_{case}.py",
+        force_exec_validation=True,
+    )
+    fields = {
+        "normal": ("a", "b"),
+        "scoped_empty_choices": ("value", "b"),
+        "global": ("camel_name", "count"),
+        "scoped": ("value", "count"),
+        "choices": ("first", "count"),
+        "neutral_reserved": ("model_config", "model_validate"),
+    }[case]
+    data = {fields[0]: "A", fields[1]: 1} if case == "neutral_reserved" else {"a": "A", "b": 1}
+    assert_generated_model_json_validation(
+        output_file,
+        module_name=f"explicit_alias_names_{case}",
+        model_name="AliasNames",
+        valid_json=json.dumps(data),
+        invalid_json=json.dumps({next(iter(data)): "A"}),
+        expected_error_type="missing",
+        expected_repr=f"AliasNames({fields[0]}='A', {fields[1]}=1)",
+    )
+
+
+@pytest.mark.parametrize(
+    ("case", "target_version"),
+    [
+        (case, None)
+        for case in [
+            "keyword",
+            "invalid",
+            "empty",
+            "msgspec_field",
+            "shadow_dict",
+            "shadow_json",
+            "shadow_copy",
+            "shadow_schema",
+            "shadow_validate",
+            "shadow_model_fields",
+            "namespace_warning",
+        ]
+    ]
+    + [("shadow_model_fields", version) for version in (TargetPydanticVersion.V2_11, TargetPydanticVersion.V2_12)],
+)
+def test_explicit_alias_names_valid_shadows(
+    case: str, target_version: TargetPydanticVersion | None, output_file: Path
+) -> None:
+    """Preserve baseline-valid identifiers, including warning-only Pydantic shadows."""
+    backend = DataModelType.MsgspecStruct if case == "msgspec_field" else DataModelType.PydanticV2BaseModel
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "explicit_alias_names.json",
+        output_path=output_file,
+        input_file_type=InputFileType.JsonSchema,
+        aliases=EXPLICIT_ALIAS_ALIASES[case],
+        output_model_type=backend,
+        target_pydantic_version=target_version,
+        disable_timestamp=True,
+        assert_func=assert_file_content,
+        expected_file=f"explicit_alias_names_{case}.py",
+        unchanged_inputs={"aliases": EXPLICIT_ALIAS_ALIASES[case]},
+    )
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "explicit_alias_names.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--aliases",
+            json.dumps(EXPLICIT_ALIAS_ALIASES[case]),
+            "--output-model-type",
+            backend.value,
+            *(["--target-pydantic-version", target_version.value] if target_version else []),
+            "--disable-timestamp",
+        ],
+        assert_func=assert_file_content,
+        expected_file=f"explicit_alias_names_{case}.py",
+        force_exec_validation=True,
+    )
+    name = {"keyword": "class_", "invalid": "not_valid", "empty": "field_", "msgspec_field": "field"}.get(
+        case, EXPLICIT_ALIAS_ALIASES[case]["a"]
+    )
+    if case == "msgspec_field":
+        with _generated_model(output_file, "explicit_alias_names_msgspec_field", "AliasNames") as model:
+            parsed = msgspec.json.decode(b'{"a": "A", "b": 1}', type=model)
+            assert_output(
+                json.dumps(msgspec.to_builtins(parsed), sort_keys=True) + "\n" + repr(parsed) + "\n",
+                JSON_SCHEMA_DATA_PATH.parent / "payloads" / "explicit_alias_msgspec_field.txt",
+            )
+            with pytest.raises(msgspec.ValidationError, match="missing required field `b`"):
+                msgspec.json.decode(b'{"a": "A"}', type=model)
+        return
+    with (
+        pytest.warns(UserWarning, match="shadows an attribute|conflicts with protected namespace")
+        if case.startswith("shadow_") or case == "namespace_warning"
+        else nullcontext()
+    ):
+        assert_generated_model_json_validation(
+            output_file,
+            module_name=f"explicit_alias_names_{case}",
+            model_name="AliasNames",
+            valid_json='{"a": "A", "b": 1}',
+            invalid_json='{"a": "A"}',
+            expected_error_type="missing",
+            expected_repr=f"AliasNames({name}='A', b=1)",
+        )
+
+
+@pytest.mark.parametrize("target_version", [None, TargetPydanticVersion.V2, TargetPydanticVersion.V2_11])
+@pytest.mark.parametrize("inherited", [False, True])
+def test_explicit_alias_names_configured_namespace(
+    inherited: bool, target_version: TargetPydanticVersion | None, output_file: Path
+) -> None:
+    """Honor generated protected namespace configuration and inherited configuration."""
+    input_path = JSON_SCHEMA_DATA_PATH / (
+        "explicit_alias_names_inherited.json" if inherited else "explicit_alias_names.json"
+    )
+    config_path = ALIASES_DATA_PATH / (
+        "explicit_alias_names_config_inherited.json" if inherited else "explicit_alias_names_config.json"
+    )
+    extra = json.loads(config_path.read_text())
+    aliases = {"a": "model_validate"}
+    expected_file = f"explicit_alias_names_configured_{inherited}.py"
+    run_generate_file_and_assert(
+        input_path=input_path,
+        output_path=output_file,
+        input_file_type=InputFileType.JsonSchema,
+        aliases=aliases,
+        extra_template_data=defaultdict(dict, extra),
+        target_pydantic_version=target_version,
+        disable_timestamp=True,
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+    )
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--aliases",
+            json.dumps(aliases),
+            "--extra-template-data",
+            str(config_path),
+            "--disable-timestamp",
+            *(["--target-pydantic-version", target_version.value] if target_version else []),
+        ],
+        force_exec_validation=True,
+    )
+    with pytest.warns(UserWarning, match="shadows an attribute"):
+        assert_generated_model_json_validation(
+            output_file,
+            module_name=f"explicit_alias_names_configured_{inherited}",
+            model_name="AliasNames",
+            valid_json='{"a": "A", "b": 1}',
+            invalid_json='{"a": "A"}',
+            expected_error_type="missing",
+            expected_attribute_path=("model_validate",),
+            expected_attribute_value="A",
+        )
+
+
+@pytest.mark.parametrize("backend", list(DataModelType))
+def test_explicit_alias_names_unicode(backend: DataModelType, output_file: Path) -> None:
+    """Preserve Unicode names alongside synthetic root and boolean-schema fields."""
+    expected_file = f"explicit_alias_names_unicode_{backend.name}.py"
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "explicit_alias_names_unicode.json",
+        output_path=output_file,
+        input_file_type=InputFileType.JsonSchema,
+        aliases=EXPLICIT_ALIAS_ALIASES["unicode"],
+        output_model_type=backend,
+        disable_timestamp=True,
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+    )
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "explicit_alias_names_unicode.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--aliases",
+            json.dumps(EXPLICIT_ALIAS_ALIASES["unicode"]),
+            "--output-model-type",
+            backend.value,
+            "--disable-timestamp",
+        ],
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        force_exec_validation=True,
+    )
+
+
+@pytest.mark.parametrize("case", ["global", "literal", "duplicate", "reserved_config"])
+def test_explicit_alias_names_graphql(case: str, output_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Use original wire names for aliases in GraphQL and ignore enum members."""
+    aliases = EXPLICIT_ALIAS_ALIASES["global" if case == "literal" else case]
+    if case in {"global", "literal"}:
+        expected_file = f"explicit_alias_names_graphql_{case}.py"
+        run_generate_file_and_assert(
+            input_path=GRAPHQL_DATA_PATH / "explicit_alias_names.graphql",
+            output_path=output_file,
+            input_file_type=InputFileType.GraphQL,
+            aliases=aliases,
+            enum_field_as_literal="all" if case == "literal" else None,
+            disable_timestamp=True,
+            assert_func=assert_file_content,
+            expected_file=expected_file,
+        )
+        run_main_and_assert(
+            input_path=GRAPHQL_DATA_PATH / "explicit_alias_names.graphql",
+            output_path=output_file,
+            input_file_type="graphql",
+            extra_args=[
+                "--aliases",
+                json.dumps(aliases),
+                "--disable-timestamp",
+                *(["--enum-field-as-literal", "all"] if case == "literal" else []),
+            ],
+            assert_func=assert_file_content,
+            expected_file=expected_file,
+            force_exec_validation=True,
+        )
+        return
+    message = (
+        "Alias 'same' for field 'b' conflicts with another field."
+        if case == "duplicate"
+        else "Alias 'model_config' for field 'a' is not a valid field name."
+    )
+    run_generate_and_assert(
+        input_=GRAPHQL_DATA_PATH / "explicit_alias_names.graphql",
+        expected_error=Error,
+        expected_error_match=re.escape(message),
+        input_file_type=InputFileType.GraphQL,
+        output=output_file,
+        aliases=aliases,
+    )
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "explicit_alias_names.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        extra_args=["--aliases", json.dumps(aliases)],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains=message,
+        output_should_not_exist=True,
+    )
+
+
+@pytest.mark.parametrize("inherited", [False, True])
+def test_explicit_alias_names_custom_namespace(
+    inherited: bool, output_file: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Do not assume default protected namespaces for an external custom base."""
+    input_path = JSON_SCHEMA_DATA_PATH / (
+        "explicit_alias_names_inherited.json" if inherited else "explicit_alias_names.json"
+    )
+    monkeypatch.syspath_prepend(str(JSON_SCHEMA_DATA_PATH.parent / "python"))
+    base_class = "explicit_alias_base.NamespaceBase"
+    expected_file = f"explicit_alias_names_custom_{inherited}.py"
+    run_generate_file_and_assert(
+        input_path=input_path,
+        output_path=output_file,
+        input_file_type=InputFileType.JsonSchema,
+        aliases={"a": "model_validate"},
+        base_class=base_class,
+        disable_timestamp=True,
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+    )
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--aliases", '{"a": "model_validate"}', "--base-class", base_class, "--disable-timestamp"],
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        force_exec_validation=True,
+    )
+    with pytest.warns(UserWarning, match="shadows an attribute"):
+        assert_generated_model_json_validation(
+            output_file,
+            module_name=f"explicit_alias_names_custom_{inherited}",
+            model_name="AliasNames",
+            valid_json='{"a": "A", "b": 1}',
+            invalid_json='{"a": "A"}',
+            expected_error_type="missing",
+            expected_attribute_path=("model_validate",),
+            expected_attribute_value="A",
+        )
+
+
+@pytest.mark.parametrize(
+    "case",
+    json.loads(
+        (JSON_SCHEMA_DATA_PATH.parent / "payloads" / "explicit_alias_namespace_inheritance_cases.json").read_text()
+    ),
+    ids=operator.itemgetter("name"),
+)
+def test_explicit_alias_names_external_namespace_precedence(
+    case: dict, output_file: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Use effective base precedence and preserve uncertainty from an external base."""
+    directory = JSON_SCHEMA_DATA_PATH / "explicit_alias_namespace_inheritance"
+    input_path = directory / f"{case['schema']}.json"
+    extra = defaultdict(dict, case["config"])
+    aliases = {"Child.a": "model_validate"}
+    base_class = "explicit_alias_base.NamespaceBase"
+    monkeypatch.syspath_prepend(str(JSON_SCHEMA_DATA_PATH.parent / "python"))
+    args = [
+        "--aliases",
+        json.dumps(aliases),
+        "--extra-template-data",
+        str(
+            JSON_SCHEMA_DATA_PATH.parent
+            / "payloads/explicit_alias_namespace_inheritance"
+            / f"{case['name']}_config.json"
+        ),
+        "--base-class",
+        base_class,
+        "--disable-timestamp",
+    ]
+    if not case["valid"]:
+        message = "Alias 'model_validate' for field 'a' is not a valid field name."
+        run_generate_and_assert(
+            input_=input_path,
+            expected_error=Error,
+            expected_error_match=re.escape(message),
+            input_file_type=InputFileType.JsonSchema,
+            output=output_file,
+            aliases=aliases,
+            extra_template_data=extra,
+            base_class=base_class,
+        )
+        run_main_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            extra_args=args,
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr_contains=message,
+            output_should_not_exist=True,
+        )
+        return
+    expected = f"explicit_alias_namespace_inheritance/{case['name']}.py"
+    run_generate_file_and_assert(
+        input_path=input_path,
+        output_path=output_file,
+        input_file_type=InputFileType.JsonSchema,
+        aliases=aliases,
+        extra_template_data=extra,
+        base_class=base_class,
+        disable_timestamp=True,
+        assert_func=assert_file_content,
+        expected_file=expected,
+    )
+    for entrypoint in ("api", "cli"):
+        if entrypoint == "cli":
+            run_main_and_assert(
+                input_path=input_path,
+                output_path=output_file,
+                input_file_type="jsonschema",
+                extra_args=args,
+                assert_func=assert_file_content,
+                expected_file=expected,
+            )
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            with _generated_model(output_file, "namespace_output", "Root") as root_model:
+                value = root_model.model_validate(
+                    json.loads(
+                        (JSON_SCHEMA_DATA_PATH.parent / "payloads" / "explicit_alias_namespace_input.json").read_text()
+                    )
+                )
+                child = type(value.child)
+                result = json.dumps(
+                    {
+                        "bases": [base.__name__ for base in child.__bases__],
+                        "namespaces": child.model_config["protected_namespaces"],
+                        "fields": list(child.model_fields),
+                        "attribute": value.child.model_validate,
+                        "dump": value.model_dump(by_alias=True),
+                        "warnings": [str(w.message) for w in caught],
+                    },
+                    indent=2,
+                )
+        assert_output(
+            f"{result}\n",
+            JSON_SCHEMA_DATA_PATH.parent
+            / "expected"
+            / "main"
+            / "jsonschema"
+            / "explicit_alias_namespace_inheritance"
+            / f"{case['name']}_runtime.txt",
+        )
+
+
+SCOPED_ALIAS_DATA = JSON_SCHEMA_DATA_PATH / "allof_scoped_aliases"
+
+
+SCOPED_ALIAS_PAYLOADS = JSON_SCHEMA_DATA_PATH.parent / "payloads"
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize(
+    "case",
+    json.loads((SCOPED_ALIAS_PAYLOADS / "allof_scoped_aliases_cases.json").read_text()),
+    ids=itemgetter("name"),
+)
+def test_allof_final_scoped_aliases(output_file: Path, entrypoint: str, case: dict) -> None:
+    """Keep final/raw/global precedence, alias choices, required fields and baseline class order."""
+    with (
+        pytest.warns(UserWarning, match="Field name `renamed` is duplicated on ApiChildSchema")
+        if case["name"] == "repeated"
+        else nullcontext()
+    ):
+        expected = f"allof_scoped_aliases/{case['name']}.py"
+        if entrypoint == "api":
+            run_generate_file_and_assert(
+                input_path=SCOPED_ALIAS_DATA / f"{case['schema']}.json",
+                input_file_type=InputFileType.JsonSchema,
+                output_path=output_file,
+                aliases=case["aliases"],
+                disable_timestamp=True,
+                assert_func=assert_file_content,
+                expected_file=expected,
+                unchanged_inputs={"aliases": case["aliases"], "options": case["options"]},
+                **case["options"],
+            )
+        else:
+            args = ["--disable-timestamp", "--aliases", json.dumps(case["aliases"])]
+            for key, value in case["options"].items():
+                args.append(f"--{key.replace('_', '-')}")
+                if value is not True:
+                    args.append(str(value))
+            run_main_and_assert(
+                input_path=SCOPED_ALIAS_DATA / f"{case['schema']}.json",
+                input_file_type="jsonschema",
+                output_path=output_file,
+                extra_args=args,
+                assert_func=assert_file_content,
+                expected_file=expected,
+                force_exec_validation=True,
+            )
+        if case["options"].get("output_model_type") == "msgspec.Struct":
+            import msgspec
+
+            with _generated_model(output_file, "allof_scoped_msgspec", "ApiRootSchema") as model:
+                value = msgspec.json.decode(
+                    (SCOPED_ALIAS_PAYLOADS / "allof_scoped_aliases_valid.json").read_bytes(), type=model
+                )
+                assert_output(
+                    f"{value.child.renamed}\n", EXPECTED_JSON_SCHEMA_PATH / "allof_scoped_aliases/attribute.txt"
+                )
+                assert_output(
+                    json.dumps(msgspec.to_builtins(value), indent=2) + "\n",
+                    EXPECTED_JSON_SCHEMA_PATH / "allof_scoped_aliases/msgspec-runtime.txt",
+                )
+                with pytest.raises(msgspec.ValidationError):
+                    msgspec.json.decode(
+                        (SCOPED_ALIAS_PAYLOADS / "allof_scoped_aliases_invalid.json").read_bytes(), type=model
+                    )
+            return
+        valid_data = json.loads((SCOPED_ALIAS_PAYLOADS / "allof_scoped_aliases_valid.json").read_text())
+        if case["options"].get("output_model_type") in {"dataclasses.dataclass", "typing.TypedDict"}:
+            valid_data["child"][case["attribute"]] = valid_data["child"].pop("x")
+        if case["options"].get("output_model_type") == "typing.TypedDict":
+            try:
+                assert_generated_model_json_validation(
+                    DATA_PATH / "python/allof_scoped_aliases/native_typeddict.py",
+                    module_name="native_scoped_typeddict",
+                    model_name="NativeRoot",
+                    valid_json=json.dumps(valid_data),
+                    invalid_json=(SCOPED_ALIAS_PAYLOADS / "allof_scoped_aliases_invalid.json").read_text(),
+                    expected_error_type="missing",
+                )
+            except PydanticUserError as native_error:
+                expected_error = EXPECTED_JSON_SCHEMA_PATH / "allof_scoped_aliases/typed_dict_native_error.txt"
+                assert_output(f"{native_error.code}\n", expected_error)
+                with pytest.raises(PydanticUserError) as generated_error:
+                    assert_generated_model_json_validation(
+                        output_file,
+                        module_name="generated_scoped_typeddict",
+                        model_name="ApiRootSchema",
+                        valid_json=json.dumps(valid_data),
+                        invalid_json=(SCOPED_ALIAS_PAYLOADS / "allof_scoped_aliases_invalid.json").read_text(),
+                        expected_error_type="missing",
+                    )
+                assert_output(f"{generated_error.value.code}\n", expected_error)
+                return
+        assert_generated_model_json_validation(
+            output_file,
+            module_name=f"allof_scoped_{case['name']}_{entrypoint}",
+            model_name="ApiRootSchema" if case["options"].get("class_name_prefix") else "Root",
+            valid_json=json.dumps(valid_data),
+            invalid_json=(SCOPED_ALIAS_PAYLOADS / "allof_scoped_aliases_invalid.json").read_text(),
+            expected_error_type="missing",
+            expected_attribute_path=("child", case["attribute"]),
+            expected_attribute_value="ok",
+        )
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+def test_allof_final_scoped_aliases_modular(output_dir: Path, entrypoint: str) -> None:
+    """Preserve the generated package layout and module-qualified alias scopes."""
+    expected = EXPECTED_JSON_SCHEMA_PATH / "allof_scoped_aliases/modular"
+    aliases = {"pkg.ApiChildSchema.x": "renamed"}
+    if entrypoint == "api":
+        run_generate_file_and_assert(
+            input_path=SCOPED_ALIAS_DATA / "modular.json",
+            input_file_type=InputFileType.JsonSchema,
+            output_path=output_dir,
+            expected_directory=expected,
+            aliases=aliases,
+            class_name_prefix="Api",
+            class_name_suffix="Schema",
+            disable_timestamp=True,
+            formatters=[Formatter.BLACK, Formatter.ISORT]
+            if _uses_external_test_default_formatter()
+            else [Formatter.BUILTIN],
+        )
+    else:
+        run_main_and_assert(
+            input_path=SCOPED_ALIAS_DATA / "modular.json",
+            input_file_type="jsonschema",
+            output_path=output_dir,
+            extra_args=[
+                "--aliases",
+                json.dumps(aliases),
+                "--class-name-prefix",
+                "Api",
+                "--class-name-suffix",
+                "Schema",
+                "--disable-timestamp",
+            ],
+            expected_directory=expected,
+        )
+    with _generated_package_module(output_dir, "pkg") as module:
+        model = module.ApiChildSchema
+        value = model.model_validate(
+            json.loads((SCOPED_ALIAS_PAYLOADS / "allof_scoped_aliases_valid.json").read_text())["child"]
+        )
+        assert_output(
+            json.dumps({"fields": list(model.model_fields), "data": value.model_dump(by_alias=True)}, indent=2) + "\n",
+            EXPECTED_JSON_SCHEMA_PATH / "allof_scoped_aliases/modular-runtime.txt",
+        )
+        _assert_model_json_invalid(model.model_validate, {"base": 1}, "missing")
+    with _generated_package_module(output_dir, "_internal") as module:
+        payload = json.loads((SCOPED_ALIAS_PAYLOADS / "allof_scoped_aliases_valid.json").read_text())
+        assert_output(
+            json.dumps(
+                {
+                    "data": module.ApiRootSchema.model_validate(payload).model_dump(by_alias=True),
+                    "schema": module.ApiRootSchema.model_json_schema(),
+                },
+                indent=2,
+            )
+            + "\n",
+            EXPECTED_JSON_SCHEMA_PATH / "allof_scoped_aliases/modular_root_runtime.txt",
+        )
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize(
+    "case", json.loads((SCOPED_ALIAS_PAYLOADS / "allof_scoped_aliases_errors.json").read_text()), ids=itemgetter("name")
+)
+def test_allof_final_scoped_aliases_invalid(
+    output_file: Path, entrypoint: str, case: dict, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Validate the selected final alias before writing conflicting or reserved field names."""
+    expected = EXPECTED_JSON_SCHEMA_PATH / "allof_scoped_aliases" / f"error_{case['name']}.txt"
+    if entrypoint == "api":
+        run_generate_and_assert(
+            input_=SCOPED_ALIAS_DATA / "allof.json",
+            input_file_type=InputFileType.JsonSchema,
+            output=output_file,
+            aliases=case["aliases"],
+            class_name_prefix="Api",
+            class_name_suffix="Schema",
+            expected_error=Error,
+            expected_file=expected,
+        )
+        assert_output(f"{output_file.exists()}\n", EXPECTED_JSON_SCHEMA_PATH / "allof_scoped_aliases/absent.txt")
+    else:
+        run_main_and_assert(
+            input_path=SCOPED_ALIAS_DATA / "allof.json",
+            input_file_type="jsonschema",
+            output_path=output_file,
+            extra_args=[
+                "--aliases",
+                json.dumps(case["aliases"]),
+                "--class-name-prefix",
+                "Api",
+                "--class-name-suffix",
+                "Schema",
+            ],
+            expected_exit=Exit.ERROR,
+            capsys=capsys,
+            expected_stderr=expected.read_text(),
+            output_should_not_exist=True,
+        )
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize(
+    ("case", "serialization_aliases"),
+    json.loads((SCOPED_ALIAS_PAYLOADS / "allof_serialization_alias_cases.json").read_text()).items(),
+)
+def test_allof_final_serialization_aliases(
+    output_file: Path, entrypoint: str, case: str, serialization_aliases: dict[str, str]
+) -> None:
+    """Resolve final serialization keys while preserving established raw/global fallbacks."""
+    source = SCOPED_ALIAS_DATA / "allof.json"
+    expected = EXPECTED_JSON_SCHEMA_PATH / "allof_scoped_aliases/serialization" / f"{case}.py"
+    aliases = {"ApiChildSchema.x": "renamed"}
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=source,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            expected_file=expected,
+            extra_args=[
+                "--disable-timestamp",
+                "--class-name-prefix",
+                "Api",
+                "--class-name-suffix",
+                "Schema",
+                "--aliases",
+                json.dumps(aliases),
+                "--serialization-aliases",
+                json.dumps(serialization_aliases),
+            ],
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=source,
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            assert_func=assert_file_content,
+            expected_file=expected,
+            disable_timestamp=True,
+            class_name_prefix="Api",
+            class_name_suffix="Schema",
+            aliases=aliases,
+            serialization_aliases=serialization_aliases,
+            unchanged_inputs={"aliases": aliases, "serialization_aliases": serialization_aliases},
+        )
+    wire_name = json.loads((SCOPED_ALIAS_PAYLOADS / "allof_serialization_wire_names.json").read_text())[case]
+    with (
+        _generated_model(
+            DATA_PATH / "python/allof_scoped_aliases/native_serialization.py", "native_serialization", "root_model"
+        ) as make_root,
+        _generated_model(output_file, "generated_serialization", "ApiRootSchema") as generated,
+    ):
+        for model in (make_root(wire_name), generated):
+            payload = json.loads((SCOPED_ALIAS_PAYLOADS / "allof_scoped_aliases_valid.json").read_text())
+            assert_output(
+                json.dumps(model.model_validate(payload).model_dump(by_alias=True), indent=2) + "\n",
+                expected.with_suffix(".txt"),
+            )
+            _assert_model_json_invalid(
+                model.model_validate_json,
+                (SCOPED_ALIAS_PAYLOADS / "allof_scoped_aliases_invalid.json").read_text(),
+                "missing",
+            )
+
+
+@pytest.mark.parametrize("config_source", ["validators", "extra_template_data"])
+@pytest.mark.parametrize("case", ["collisions", "single"])
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("custom_template", [False, True])
+def test_validator_collisions(
+    output_file: Path, entrypoint: str, case: str, config_source: str, custom_template: bool
+) -> None:
+    """Keep repeated, inherited and independently imported validators active."""
+    shutil.copyfile(
+        DATA_PATH / "python" / "validator_formatters" / "pyproject.toml", output_file.parent / "pyproject.toml"
+    )
+    schema = JSON_SCHEMA_DATA_PATH / f"validator_{case}.json"
+    config_path = DATA_PATH / "payloads/validator_runtime" / f"validator_{case}_config.json"
+    template = DATA_PATH / "templates_validator_context" if custom_template else None
+    expected = f"validator_{case}{'_custom' if custom_template else ''}.py"
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=schema,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file=expected,
+            extra_args=[
+                f"--{config_source.replace('_', '-')}",
+                str(config_path),
+                "--output-model-type",
+                "pydantic_v2.BaseModel",
+                "--disable-timestamp",
+                *(["--custom-template-dir", str(template)] if template else []),
+            ],
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=schema,
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            assert_func=assert_file_content,
+            expected_file=expected,
+            output_model_type=DataModelType.PydanticV2BaseModel,
+            **{config_source: json.loads(config_path.read_text())},
+            custom_template_dir=template,
+            disable_timestamp=True,
+        )
+    if case == "single":
+        with _generated_model(output_file, "validator_single", "Single") as model:
+            assert_output(
+                json.dumps({"value": model(value="V").value}, indent=2) + "\n",
+                DATA_PATH / "payloads/validator_runtime/single.txt",
+            )
+        return
+    with _generated_model(output_file, "validator_collisions", "Collision") as model:
+        data = {
+            "x": "X",
+            "y": "Y",
+            "validate_validator": "required",
+            "validate_validator_1": "also required",
+            "other": {"value": "O"},
+            "child": {"value": "C"},
+        }
+        assert_output(
+            json.dumps(
+                {"result": model.model_validate(data).model_dump(), "fields": list(model.model_fields)}, indent=2
+            )
+            + "\n",
+            DATA_PATH / "payloads/validator_runtime/collision.txt",
+        )
+        for field in ("validate_validator", "validate_validator_1"):
+            _assert_model_json_invalid(
+                model.model_validate, {key: value for key, value in data.items() if key != field}, "missing"
+            )
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("first", ["base", "child"])
+def test_validator_inheritance_definition_order(output_file: Path, entrypoint: str, first: str) -> None:
+    """Retain base and child registrations regardless of definition declaration order."""
+    shutil.copyfile(
+        DATA_PATH / "python" / "validator_formatters" / "pyproject.toml", output_file.parent / "pyproject.toml"
+    )
+    schema = JSON_SCHEMA_DATA_PATH / f"validator_inheritance_{first}_first.json"
+    config = DATA_PATH / "payloads/validator_runtime/validator_inheritance_config.json"
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=schema,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file=f"validator_inheritance_{first}_first.py",
+            extra_args=[
+                "--validators",
+                str(config),
+                "--output-model-type",
+                "pydantic_v2.BaseModel",
+                "--disable-timestamp",
+            ],
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=schema,
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            assert_func=assert_file_content,
+            expected_file=f"validator_inheritance_{first}_first.py",
+            output_model_type=DataModelType.PydanticV2BaseModel,
+            validators=json.loads(config.read_text()),
+            disable_timestamp=True,
+        )
+    with _generated_model(output_file, "validator_inheritance_order", "Child") as model:
+        assert_output(
+            json.dumps(
+                {"value": model(value="v").value, "validators": list(model.__pydantic_decorators__.field_validators)},
+                indent=2,
+            )
+            + "\n",
+            DATA_PATH / "payloads/validator_runtime/inheritance.txt",
+        )
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("exact", [False, True])
+def test_validator_finalized_model_import(output_dir: Path, entrypoint: str, exact: bool) -> None:
+    """Reserve model imports that are finalized after per-model imports are collected."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(DATA_PATH / "python" / "validator_formatters" / "pyproject.toml", output_dir / "pyproject.toml")
+    schema = JSON_SCHEMA_DATA_PATH / "validator_import_models"
+    config = DATA_PATH / "payloads/validator_runtime/validator_import_models_config.json"
+    expected = EXPECTED_JSON_SCHEMA_PATH / "validator_import_models"
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=schema,
+            output_path=output_dir,
+            input_file_type="jsonschema",
+            expected_directory=expected,
+            extra_args=[
+                "--validators",
+                str(config),
+                "--output-model-type",
+                "pydantic_v2.BaseModel",
+                "--disable-timestamp",
+                *(["--use-exact-imports"] if exact else []),
+            ],
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=schema,
+            output_path=output_dir,
+            expected_directory=expected,
+            input_file_type=InputFileType.JsonSchema,
+            output_model_type=DataModelType.PydanticV2BaseModel,
+            validators=json.loads(config.read_text()),
+            use_exact_imports=exact,
+            disable_timestamp=True,
+            formatters=[Formatter.BLACK, Formatter.ISORT]
+            if _uses_external_test_default_formatter()
+            else [Formatter.BUILTIN],
+        )
+    with _generated_package_module(output_dir, "child") as module:
+        assert_output(
+            json.dumps(
+                {"value": module.Child(value="v").value, "base_identity": module.Child.__bases__[0] is module.Base},
+                indent=2,
+            )
+            + "\n",
+            DATA_PATH / "payloads/validator_runtime/imports.txt",
+        )
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize(
+    ("backend", "case", "union", "target"),
+    [
+        (backend, case, union, target)
+        for backend in (
+            DataModelType.PydanticV2BaseModel,
+            DataModelType.PydanticV2Dataclass,
+            DataModelType.DataclassesDataclass,
+            DataModelType.MsgspecStruct,
+        )
+        for case in ("collision", "control", "required", "late", "unused", "forward", "wire")
+        for union in (False, True)
+        for target in (PythonVersion.PY_310, PythonVersion.PY_314)
+    ]
+    + [
+        (backend, "typing", False, PythonVersion.PY_310)
+        for backend in (DataModelType.PydanticV2BaseModel, DataModelType.MsgspecStruct)
+    ],
+)
+def test_field_name_bindings(
+    output_file: Path, entrypoint: str, target: PythonVersion, union: bool, case: str, backend: DataModelType
+) -> None:
+    """Preserve fields, literal text and runtime types when class names shadow imports."""
+    schema_path = JSON_SCHEMA_DATA_PATH / "field_name_bindings" / f"{case}.json"
+    expected = f"field_name_bindings/{case}/{backend.name}_{target.value}_{union}.py"
+    alias_path = DATA_PATH / "payloads/field_name_bindings_runtime/wire_aliases.json"
+    aliases = json.loads(alias_path.read_text(encoding="utf-8")) if case == "wire" else {}
+    use_builtin = not is_supported_in_black(target)
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=schema_path,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file=expected,
+            extra_args=[
+                "--output-model-type",
+                backend.value,
+                "--target-python-version",
+                target.value,
+                "--use-standard-collections",
+                "--use-union-operator" if union else "--no-use-union-operator",
+                "--enum-field-as-literal",
+                "all",
+                "--disable-timestamp",
+                *(["--formatters", "builtin"] if use_builtin else []),
+                *(["--aliases", str(alias_path)] if case == "wire" else []),
+                *(["--use-annotated", "--field-constraints"] if case == "typing" else []),
+                *(
+                    ["--disable-future-imports", "--use-schema-description", "--use-field-description"]
+                    if case == "forward"
+                    else []
+                ),
+            ],
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=schema_path,
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            assert_func=assert_file_content,
+            expected_file=expected,
+            output_model_type=backend,
+            target_python_version=target,
+            use_standard_collections=True,
+            use_annotated=backend == DataModelType.MsgspecStruct or case == "typing",
+            field_constraints=backend == DataModelType.MsgspecStruct or case == "typing",
+            use_union_operator=union,
+            enum_field_as_literal="all",
+            disable_timestamp=True,
+            aliases=aliases,
+            disable_future_imports=case == "forward",
+            use_schema_description=case == "forward",
+            use_field_description=case == "forward",
+            **({"formatters": [Formatter.BUILTIN]} if use_builtin else {}),
+        )
+    if case == "forward" and target == PythonVersion.PY_314 and backend != DataModelType.MsgspecStruct:
+        try:
+            _assert_python_module_importable(
+                DATA_PATH / "python/field_name_bindings/native_delayed_annotations.py", "native_delayed", "Child"
+            )
+        except NameError as native_error:
+            with pytest.raises(NameError) as generated_error:
+                _assert_python_module_importable(output_file, "generated_delayed", "Record")
+            assert_output(
+                f"native: {native_error}\ngenerated: {generated_error.value}\n",
+                DATA_PATH / "payloads/field_name_bindings_runtime/native_delayed_error.txt",
+            )
+            return
+    properties = json.loads(schema_path.read_text(encoding="utf-8"))["properties"]
+    with _generated_model(output_file, "field_name_binding_model", "Record") as model:
+        hints = get_type_hints(model)
+        observations = {"fields": list(hints)}
+        data = dict.fromkeys(properties, "list")
+        if "items" in properties:
+            data.update(items=[1, 2], count=3, child={"value": 4})
+            observations["items_annotation"] = list[int] in get_args(hints["items"])
+            observations["choice_literals"] = get_args(next(arg for arg in get_args(hints["choice"]) if get_args(arg)))
+        elif "count" in properties:
+            data["count"] = 3
+        if backend == DataModelType.MsgspecStruct:
+            parsed = msgspec.convert(data, type=model)
+            assert_output(
+                json.dumps(
+                    {"decode_matches_convert": msgspec.json.decode(json.dumps(data), type=model) == parsed}, indent=2
+                )
+                + "\n",
+                DATA_PATH / "payloads/field_name_bindings_runtime/decode.txt",
+            )
+        else:
+            payload = (
+                {aliases.get(name, name): value for name, value in data.items()}
+                if backend == DataModelType.DataclassesDataclass
+                else data
+            )
+            parsed = _model_json_validator(model)(json.dumps(payload))
+        observations["values"] = {
+            aliases.get(name, name): getattr(parsed, aliases.get(name, name))
+            for name in properties
+            if name not in {"child", "items"}
+        }
+        if "items" in properties:
+            observations["items"] = parsed.items
+            observations["child_value"] = parsed.child.value
+        if case == "forward":
+            observations["docstring_preserved"] = "Field Optional list metadata" in model.__doc__
+            defaulted = (
+                msgspec.convert({}, type=model)
+                if backend == DataModelType.MsgspecStruct
+                else _model_json_validator(model)("{}")
+            )
+            observations["default_value"] = defaulted.list
+            observations["forward_identity"] = get_args(get_type_hints(type(parsed.child))["sibling"])[0] is type(
+                parsed.child
+            )
+        assert_output(
+            json.dumps(observations, ensure_ascii=False, indent=2) + "\n",
+            DATA_PATH / "payloads/field_name_bindings_runtime" / f"{case}.txt",
+        )
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("template", ["factory", "wrapper", "nested"])
+@pytest.mark.parametrize("formatter", ["builtin", "external"])
+def test_field_name_factory_template(output_file: Path, entrypoint: str, template: str, formatter: str) -> None:
+    """Keep custom factories that resolve annotations outside a class body unchanged."""
+    schema = JSON_SCHEMA_DATA_PATH / "field_name_bindings/factory.json"
+    template_dir = JSON_SCHEMA_DATA_PATH.parent / f"templates_field_name_{template}"
+    expected = f"field_name_bindings/{template}.py"
+    formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=schema,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file=expected,
+            extra_args=[
+                "--output-model-type",
+                "dataclasses.dataclass",
+                "--target-python-version",
+                "3.10",
+                "--use-standard-collections",
+                "--no-use-union-operator",
+                "--enum-field-as-literal",
+                "all",
+                "--disable-timestamp",
+                "--custom-template-dir",
+                str(template_dir),
+                "--formatters",
+                *formatters,
+            ],
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=schema,
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            assert_func=assert_file_content,
+            expected_file=expected,
+            output_model_type=DataModelType.DataclassesDataclass,
+            target_python_version=PythonVersion.PY_310,
+            use_standard_collections=True,
+            use_union_operator=False,
+            enum_field_as_literal="all",
+            disable_timestamp=True,
+            custom_template_dir=template_dir,
+            formatters=[Formatter(value) for value in formatters],
+        )
+    with _generated_model(output_file, "field_name_factory", "Record") as model:
+        hints = get_type_hints(model)
+        observations = {"fields": list(hints), "items_annotation": dict[str, list[int]] in get_args(hints["items"])}
+        result = _model_json_validator(model)('{"items": {"first": [1, 2]}}')
+        observations.update(items=result.items, Optional=result.Optional, choice=result.choice)
+        assert_output(
+            json.dumps(observations, ensure_ascii=False, indent=2) + "\n",
+            DATA_PATH / "payloads/field_name_bindings_runtime/factory.txt",
+        )
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("formatter", ["builtin", "external"])
+@pytest.mark.parametrize("case", ["helper_normal", "helper_collision"])
+def test_field_name_template_helper(output_file: Path, entrypoint: str, formatter: str, case: str) -> None:
+    """Inspect the actual model instead of an unrelated preceding helper class."""
+    schema = JSON_SCHEMA_DATA_PATH / f"field_name_bindings/{case}.json"
+    template_dir = JSON_SCHEMA_DATA_PATH.parent / f"templates_field_name_{case}"
+    expected = f"field_name_bindings/{case}.py"
+    formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=schema,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file=expected,
+            extra_args=[
+                "--output-model-type",
+                "dataclasses.dataclass",
+                "--target-python-version",
+                "3.10",
+                "--use-standard-collections",
+                "--no-use-union-operator",
+                "--disable-timestamp",
+                "--custom-template-dir",
+                str(template_dir),
+                "--formatters",
+                *formatters,
+            ],
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=schema,
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            assert_func=assert_file_content,
+            expected_file=expected,
+            output_model_type=DataModelType.DataclassesDataclass,
+            target_python_version=PythonVersion.PY_310,
+            use_standard_collections=True,
+            use_union_operator=False,
+            disable_timestamp=True,
+            custom_template_dir=template_dir,
+            formatters=[Formatter(value) for value in formatters],
+        )
+    with _generated_model(output_file, "field_name_helper", "Record") as model:
+        hints = get_type_hints(model)
+        observations = {"fields": list(hints), "items_annotation": list[int] in get_args(hints["items"])}
+        result = _model_json_validator(model)('{"Optional": "ok", "items": [1, 2]}')
+        observations.update(Optional=result.Optional, items=result.items)
+        assert_output(
+            json.dumps(observations, indent=2) + "\n",
+            DATA_PATH / "payloads/field_name_bindings_runtime/helper_model.txt",
+        )
+    with _generated_model(output_file, "field_name_helper", "Helper") as helper:
+        observations = {"value": helper().value}
+        if case == "helper_normal":
+            observations["annotation_preserved"] = get_type_hints(helper)["value"] == int | None
+        assert_output(
+            json.dumps(observations, indent=2) + "\n",
+            DATA_PATH / "payloads/field_name_bindings_runtime" / f"{case}.txt",
+        )
 
 
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])

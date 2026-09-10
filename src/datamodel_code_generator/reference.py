@@ -22,6 +22,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     ClassVar,
+    Final,
     NamedTuple,
     Optional,
     Protocol,
@@ -46,10 +47,14 @@ if TYPE_CHECKING:
 
     import inflect
 
-    from datamodel_code_generator.model.base import DataModel
+    from datamodel_code_generator.model import base as model_base
     from datamodel_code_generator.types import DataType
 
     DEFAULT_FIELD_NAME_RESOLVERS: dict[ModelType, type[FieldNameResolver]]
+
+
+_ALIAS_RESOLUTION_CLASS_NAME_KEY: Final = "_alias_resolution_class_name"
+_EXPLICIT_FIELD_ALIAS_KEY: Final = "_explicit_field_alias"
 
 
 def split_module_name(
@@ -109,7 +114,7 @@ def _is_data_type(value: object) -> TypeIs[DataType]:
     return isinstance(value, DataType_)
 
 
-def _is_data_model(value: object) -> TypeIs[DataModel]:
+def _is_data_model(value: object) -> TypeIs[model_base.DataModel]:
     """Check if value is a DataModel instance."""
     from datamodel_code_generator.model.base import DataModel as DataModel_  # noqa: PLC0415
 
@@ -291,6 +296,8 @@ def _get_builtin_type_attributes_for_target(target: PythonVersion) -> frozenset[
 class FieldNameResolver:
     """Converts schema field names to valid Python identifiers."""
 
+    FIELD_ASSIGNMENT_HELPER: ClassVar[str | None] = None
+
     def __init__(  # noqa: PLR0913, PLR0917
         self,
         aliases: Mapping[str, str | list[str]] | None = None,
@@ -323,6 +330,67 @@ class FieldNameResolver:
         self.no_alias = no_alias
         self.use_subclass_enum: bool = use_subclass_enum
         self.target_python_version = target_python_version
+
+    def prepare_explicit_field_aliases(self, fields: list[model_base.DataModelFieldBase], reference: Reference) -> None:
+        """Retain selected explicit aliases until all emitted field names are finalized."""
+        aliases = self.aliases
+        for field in fields:
+            if (original_name := field.alias if field.alias is not None else field.original_name) is None:
+                continue
+            class_name = field.__dict__.get(_ALIAS_RESOLUTION_CLASS_NAME_KEY, reference.original_name)
+            alias = aliases.get(f"{class_name}.{original_name}")
+            if not isinstance(alias, str) and not alias:
+                alias = aliases.get(original_name)
+            if isinstance(alias, str):
+                field.__dict__[_EXPLICIT_FIELD_ALIAS_KEY] = (alias, original_name)
+            else:
+                field.__dict__.pop(_EXPLICIT_FIELD_ALIAS_KEY, None)
+        self.validate_explicit_field_aliases(fields, final=False)
+
+    @classmethod
+    def validate_explicit_field_aliases(cls, fields: list[model_base.DataModelFieldBase], *, final: bool) -> None:
+        """Diagnose collisions without applying automatic naming policy to user choices."""
+        if not any(_EXPLICIT_FIELD_ALIAS_KEY in field.__dict__ for field in fields):
+            return
+        helper_name = cls.FIELD_ASSIGNMENT_HELPER if final else None
+        names: dict[str, model_base.DataModelFieldBase] = {}
+        field_helper: model_base.DataModelFieldBase | None = None
+        for field in fields:
+            name = cast("str", field.name)
+            if final and not name.isascii():
+                from unicodedata import normalize  # noqa: PLC0415
+
+                name = normalize("NFKC", name)
+            original_name = field.alias if field.alias is not None else field.original_name
+            explicit = _EXPLICIT_FIELD_ALIAS_KEY in field.__dict__
+            if (
+                (previous := names.get(name)) is not None
+                and (previous.alias if previous.alias is not None else previous.original_name) != original_name
+                and (explicit or _EXPLICIT_FIELD_ALIAS_KEY in previous.__dict__)
+            ):
+                conflict = field if explicit else previous
+                alias, original_name = conflict.__dict__[_EXPLICIT_FIELD_ALIAS_KEY]
+                msg = f"Alias {alias!r} for field {original_name!r} conflicts with another field."
+                raise Error(msg)
+            names[name] = field
+            if not final:
+                continue
+            invalid = explicit and (not cast("str", field.name).isidentifier() or iskeyword(cast("str", field.name)))
+            if (
+                explicit
+                and (conflicts_with_alias := cast("model_base.DataModel", field.parent).EXPLICIT_ALIAS_CONFLICT_CHECKER)
+                is not None
+            ):
+                invalid |= conflicts_with_alias(field, name)
+            if field_helper is not None and str(field).startswith(f"{helper_name}("):
+                field = field_helper  # noqa: PLW2901
+                invalid = True
+            if explicit and name == helper_name:
+                field_helper = field
+            if invalid:
+                alias, original_name = field.__dict__[_EXPLICIT_FIELD_ALIAS_KEY]
+                msg = f"Alias {alias!r} for field {original_name!r} is not a valid field name."
+                raise Error(msg)
 
     def _validate_field_name(self, field_name: str) -> bool:  # noqa: ARG002, PLR6301
         """Check if a field name is valid. Subclasses may override."""
@@ -1635,6 +1703,17 @@ class ModelResolver:  # noqa: PLR0904
     ) -> str:
         """Get a valid field name for the specified model type."""
         return self._field_name_resolvers[model_type].get_valid_name(name, excludes)
+
+    def prepare_explicit_field_aliases(
+        self, fields: list[model_base.DataModelFieldBase], reference: Reference, model_type: ModelType
+    ) -> None:
+        """Record explicit choices before model transforms can combine fields."""
+        self._field_name_resolvers[model_type].prepare_explicit_field_aliases(fields, reference)
+
+    @staticmethod
+    def validate_explicit_field_aliases(fields: list[model_base.DataModelFieldBase], model_type: ModelType) -> None:
+        """Check finalized names against output model rules without renaming them."""
+        _default_field_name_resolver_class(model_type).validate_explicit_field_aliases(fields, final=True)
 
     def _get_unique_field_name(self, name: str) -> str:
         """Return a unique class field name without creating a Reference."""

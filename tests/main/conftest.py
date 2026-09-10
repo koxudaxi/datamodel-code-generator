@@ -36,6 +36,7 @@ from tests.conftest import (
     _infer_expected_file,
     _validation_stats,
     assert_directory_content,
+    assert_generate_wrote_file,
     assert_inputs_not_mutated,
     assert_output,
     assert_warnings_contain,
@@ -321,7 +322,7 @@ def _assert_python_module_importable(path: Path, module_name: str, attribute: st
 def _generated_package_module(output_path: Path, module_path: str) -> Generator[Any, None, None]:
     """Temporarily import a generated package module without leaking module cache state."""
     package_name = output_path.name
-    module_name = f"{package_name}.{module_path}"
+    module_name = f"{package_name}.{module_path}" if module_path else package_name
     module_prefix = f"{package_name}."
     previous_modules = {
         name: module for name, module in sys.modules.items() if name == package_name or name.startswith(module_prefix)
@@ -760,14 +761,15 @@ def run_generate_file_and_assert(
     input_path: Path,
     output_path: Path,
     input_file_type: InputFileType | None = None,
-    assert_func: AssertFileContent,
+    assert_func: AssertFileContent | None = None,
     expected_file: str | Path | None = None,
+    expected_directory: Path | None = None,
     transform: Callable[[str], str] | None = None,
     expected_warnings: Sequence[str] | None = None,
     unchanged_inputs: Mapping[str, object] | None = None,
     **generate_kwargs: Any,
 ) -> None:
-    """Execute generate() for a file input and assert the generated output."""
+    """Execute generate() for a path input and assert file or directory output."""
     __tracebackhide__ = True
 
     input_: Path = input_path
@@ -801,14 +803,18 @@ def run_generate_file_and_assert(
                 )
             assert_warnings_contain(warning_records, *expected_warnings)
 
-    if expected_file is None:
-        frame = inspect.currentframe()
-        assert frame is not None
-        assert frame.f_back is not None
-        expected_file = _infer_expected_file(frame.f_back.f_code.co_name)
-        del frame
+    if expected_directory is not None:
+        assert_directory_content(output_path, expected_directory)
+    else:
+        if expected_file is None:
+            frame = inspect.currentframe()
+            assert frame is not None
+            assert frame.f_back is not None
+            expected_file = _infer_expected_file(frame.f_back.f_code.co_name)
+            del frame
 
-    assert_func(output_path, expected_file, transform=transform)
+        assert assert_func is not None
+        assert_func(output_path, expected_file, transform=transform)
     with _enable_test_parsed_source_cache(), assert_inputs_not_mutated(unchanged_inputs):
         _assert_builtin_generate_formatter_parity(
             input_=input_,
@@ -821,22 +827,35 @@ def run_generate_file_and_assert(
 def run_generate_and_assert(
     *,
     input_: Any,
-    expected_file: Path,
+    expected_file: Path | None = None,
+    expected_error: type[Exception] | None = None,
+    expected_error_match: str | None = None,
     assert_input_unchanged: bool = False,
     unchanged_inputs: Mapping[str, object] | None = None,
     **generate_kwargs: Any,
 ) -> None:
-    """Execute generate(output=None) and assert the returned text output."""
+    """Execute generate() and assert returned text, written text, or an expected error."""
     __tracebackhide__ = True
 
     guarded_inputs = dict(unchanged_inputs or {})
     if assert_input_unchanged:
         guarded_inputs["input_"] = input_
 
+    options = _default_formatter_generate_options(generate_kwargs)
     with _enable_test_parsed_source_cache(), assert_inputs_not_mutated(guarded_inputs or None):
-        result = generate(input_=input_, **_default_formatter_generate_options(generate_kwargs))
+        if expected_error is not None:
+            with pytest.raises(expected_error, match=expected_error_match) as error:
+                generate(input_=input_, **options)
+            if expected_file is not None:
+                assert_output(f"{error.value}\n", expected_file)
+            return
+        result = generate(input_=input_, **options)
+    if (output_path := generate_kwargs.get("output")) is not None:
+        assert_generate_wrote_file(result, output_path)
+        result = output_path.read_text(encoding=generate_kwargs.get("encoding", "utf-8"))
     if not isinstance(result, str):  # pragma: no cover
         pytest.fail(f"Expected generate() to return str, got {type(result).__name__}")
+    assert expected_file is not None
     assert_output(result, expected_file)
 
 

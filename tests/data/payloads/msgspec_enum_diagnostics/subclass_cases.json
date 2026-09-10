@@ -1,0 +1,62 @@
+[
+  {
+    "name": "subclass_float",
+    "indices": [
+      0
+    ],
+    "error": false,
+    "payload": {
+      "value": 1
+    }
+  },
+  {
+    "name": "subclass_bool",
+    "indices": [
+      0
+    ],
+    "error": false,
+    "payload": {
+      "value": 0
+    }
+  },
+  {
+    "name": "subclass_late",
+    "indices": [
+      2
+    ],
+    "error": false,
+    "payload": {
+      "value": 0
+    }
+  },
+  {
+    "name": "subclass_only",
+    "indices": [
+      0
+    ],
+    "error": false,
+    "payload": {
+      "value": 1
+    }
+  },
+  {
+    "name": "subclass_rejected",
+    "indices": [
+      0
+    ],
+    "error": true,
+    "payload": {
+      "value": 1
+    }
+  },
+  {
+    "name": "subclass_reverse",
+    "indices": [
+      1
+    ],
+    "error": true,
+    "payload": {
+      "value": 1
+    }
+  }
+]

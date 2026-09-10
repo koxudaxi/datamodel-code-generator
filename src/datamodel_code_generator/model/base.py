@@ -14,6 +14,7 @@ from collections import OrderedDict, defaultdict
 from copy import deepcopy
 from dataclasses import dataclass, replace
 from functools import cached_property, lru_cache
+from itertools import accumulate
 from pathlib import Path
 from threading import RLock
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeVar
@@ -1755,11 +1756,44 @@ def _field_participates_in_constructor(_: DataModelFieldBase) -> bool:
     return True
 
 
+def _bind_field_expressions(rendered: str, class_name: str, bindings: Mapping[str, str]) -> str:
+    """Bind names in field annotations and defaults without changing template objects."""
+    source = rendered.encode()
+    offsets = [0, *accumulate(map(len, source.splitlines(keepends=True)))]
+    replacements: list[tuple[int, int, str]] = []
+    for statement in ast.parse(rendered).body:
+        if not isinstance(statement, ast.ClassDef) or statement.name != class_name:
+            continue
+        for field in statement.body:
+            if not isinstance(field, ast.AnnAssign):
+                continue
+            expressions = (field.annotation,) if field.value is None else (field.annotation, field.value)
+            for expression in expressions:
+                for node in ast.walk(expression):
+                    match node:
+                        case ast.Name(
+                            id=name,
+                            ctx=ast.Load(),
+                            end_lineno=int() as end_line,
+                            end_col_offset=int() as end_column,
+                        ) if (alias := bindings.get(name)) is not None:
+                            replacements.append((
+                                offsets[node.lineno - 1] + node.col_offset,
+                                offsets[end_line - 1] + end_column,
+                                alias,
+                            ))
+    for start, end, alias in sorted(replacements, reverse=True):
+        source = source[:start] + alias.encode() + source[end:]
+    return source.decode()
+
+
 class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     """Abstract base class for all data model types.
 
     Handles template rendering, import collection, and model relationships.
     """
+
+    _field_name_bindings: Mapping[str, str] | None = None
 
     TEMPLATE_FILE_PATH: ClassVar[str] = ""
     BASE_CLASS: ClassVar[str] = ""
@@ -1778,6 +1812,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     # Kept opaque so this generic layer does not import reference-layer policy.
     FIELD_NAME_MODEL_TYPE: ClassVar[Any] = None
     FIELD_NAME_RESOLVER_CLASS: ClassVar[Any] = None
+    EXPLICIT_ALIAS_CONFLICT_CHECKER: ClassVar[Callable[[DataModelFieldBase, str], bool] | None] = None
     USES_DATACLASS_ARGUMENTS: ClassVar[bool] = False
     SUPPORTS_REQUIRED_INHERITED_FIELD_ASSIGNMENT: ClassVar[bool] = False
     REQUIRES_EXPLICIT_INHERITED_FACTORY_OVERRIDE: ClassVar[bool] = False
@@ -2401,8 +2436,9 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         """Render the model to a string using the template."""
         use_custom_template = self._uses_custom_root_template
         extra_template_data = self._custom_template_data() if use_custom_template else self._builtin_template_data()
-        return self._render(
-            class_name=class_name or self.class_name,
+        rendered_class_name = class_name or self.class_name
+        rendered = self._render(
+            class_name=rendered_class_name,
             fields=self._template_fields(use_custom_template=use_custom_template),
             decorators=self.decorators,
             base_class=self.base_class,
@@ -2416,6 +2452,14 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
             path=self.path,
             **extra_template_data,
         )
+        if self._field_name_bindings is None:
+            return rendered
+        return _bind_field_expressions(rendered, rendered_class_name, self._field_name_bindings)
+
+    def set_field_name_bindings(self, bindings: Mapping[str, str]) -> None:
+        """Set module import names used by rendered field expressions."""
+        self._field_name_bindings = bindings
+        self.invalidate_render_caches()
 
     @property
     def _custom_template_fields(self) -> Sequence[DataModelFieldBase | _RenderedDataModelField]:
@@ -2613,3 +2657,8 @@ def _rebuild_model_with_datamodel_namespace(model: type[Any]) -> None:
 _rebuild_model_with_datamodel_namespace(DataType)
 _rebuild_model_with_datamodel_namespace(BaseClassDataType)
 _rebuild_model_with_datamodel_namespace(DataModelFieldBase)
+
+
+def _find_base_classes(model: DataModel) -> list[DataModel]:
+    """Get direct base class DataModels."""
+    return [b.reference.source for b in model.base_classes if b.reference and isinstance(b.reference.source, DataModel)]

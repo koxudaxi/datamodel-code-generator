@@ -15,11 +15,12 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 from warnings import warn
 
+from pydantic import BaseModel as PydanticBaseModel
 from pydantic import Field, ValidationError, field_validator, model_validator
 from pydantic.alias_generators import to_camel, to_pascal, to_snake
 
 from datamodel_code_generator import Error
-from datamodel_code_generator.enums import AliasGenerator
+from datamodel_code_generator.enums import AliasGenerator, TargetPydanticVersion, _is_pydantic_version_at_least
 from datamodel_code_generator.imports import IMPORT_ANNOTATED, IMPORT_ANY, IMPORT_DICT, IMPORT_UNION, Import
 from datamodel_code_generator.model import _rebuild_model_with_datamodel_namespace
 from datamodel_code_generator.model.base import (
@@ -28,6 +29,7 @@ from datamodel_code_generator.model.base import (
     BaseClassDataType,
     DataModel,
     DataModelFieldBase,
+    _find_base_classes,
     _get_template_with_custom_dir,
     _uses_original_template_loader,
 )
@@ -77,13 +79,16 @@ from datamodel_code_generator.python_literal import (
     _normalize_string,
     represent_untrusted_python_value,
 )
-from datamodel_code_generator.reference import FieldNameResolver, ModelResolver, ModelType
+from datamodel_code_generator.reference import FieldNameResolver, ModelType
 from datamodel_code_generator.types import chain_as_tuple
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Mapping
+
     from jinja2 import Template
     from typing_extensions import TypedDict, Unpack
 
+    from datamodel_code_generator.imports import Imports
     from datamodel_code_generator.model.pydantic_v2._schema_runtime_validation import (
         SchemaRuntimeValidationModulePlan,
     )
@@ -809,6 +814,35 @@ def has_lookaround_pattern(
     return False
 
 
+def _explicit_alias_conflicts_with_pydantic(field: DataModelFieldBase, name: str) -> bool:
+    """Respect generated namespace configuration without importing custom bases."""
+    if name == "model_config" or name.startswith("_"):
+        return True
+    model = cast("DataModel", field.parent)
+    match model.extra_template_data.get("target_pydantic_version"):
+        case TargetPydanticVersion() | str() as target_version if not _is_pydantic_version_at_least(
+            target_version, "2.10"
+        ):
+            namespaces = ("model_",)
+        case _:
+            if not hasattr(PydanticBaseModel, name):
+                return False
+            namespaces = ("model_validate", "model_dump")
+    pending = [model]
+    while pending:
+        model = pending.pop()
+        config = model.extra_template_data.get("config")
+        if (configured := getattr(config, "protected_namespaces", None)) is not None:
+            namespaces = configured
+            break
+        base_classes = _find_base_classes(model)
+        if not base_classes and model.custom_base_class and model.custom_base_class != "pydantic.BaseModel":
+            # This later external base may override any earlier generated base's namespaces.
+            return False
+        pending.extend(base_classes)
+    return name.startswith(namespaces)
+
+
 class BaseModel(BaseModelBase):
     """Pydantic v2 BaseModel with ConfigDict and pattern-based regex_engine support."""
 
@@ -826,6 +860,7 @@ class BaseModel(BaseModelBase):
     SUPPORTS_TREE_SCOPE_REUSE_MODEL_INHERITANCE: ClassVar[bool] = True
     FIELD_NAME_MODEL_TYPE: ClassVar[ModelType] = ModelType.PYDANTIC
     FIELD_NAME_RESOLVER_CLASS: ClassVar[type[FieldNameResolver]] = PydanticFieldNameResolver
+    EXPLICIT_ALIAS_CONFLICT_CHECKER = staticmethod(_explicit_alias_conflicts_with_pydantic)
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = True
     SUPPORTS_INHERITED_DISCRIMINATOR_ENUM: ClassVar[bool] = True
     SUPPORTS_FIELD_RENAMING: ClassVar[bool] = True
@@ -1564,7 +1599,10 @@ class BaseModel(BaseModelBase):
         if not validators:
             return
 
-        from datamodel_code_generator.validators import format_validation_error, normalize_validators  # noqa: PLC0415
+        from datamodel_code_generator.validators import (  # noqa: PLC0415
+            format_validation_error,
+            normalize_validators,
+        )
 
         try:
             validators = normalize_validators(validators)
@@ -1573,7 +1611,7 @@ class BaseModel(BaseModelBase):
             raise Error(msg) from e
 
         prepared_validators: list[dict[str, Any]] = []
-        scoped_resolver = ModelResolver(custom_class_name_generator=lambda name: name)
+        validator_bindings: list[tuple[dict[str, Any], Import]] = []
         for validator in validators:
             fields = validator.get("fields") or [validator.get("field")]
             fields = [f for f in fields if f]
@@ -1584,24 +1622,20 @@ class BaseModel(BaseModelBase):
             function_name = function_path.rsplit(".", 1)[-1]
             mode = validator.get("mode", "after")
 
-            fields_str = ", ".join(repr(f) for f in fields)
-
-            base_method_name = f"{function_name}_validator"
-            method_name = scoped_resolver.add([base_method_name], base_method_name, unique=True, class_name=True).name
-
-            mode_str = f"mode={mode!r}"
-
-            prepared_validators.append({
-                "fields_str": fields_str,
-                "mode_str": mode_str,
-                "method_name": method_name,
+            prepared = {
+                "fields_str": ", ".join(repr(f) for f in fields),
+                "mode_str": f"mode={mode!r}",
+                "method_name": f"{function_name}_validator",
                 "function_name": function_name,
                 "mode": mode,
-            })
+            }
+            prepared_validators.append(prepared)
+            validator_bindings.append((prepared, import_ := Import.from_full_path(function_path)))
 
-            self._additional_imports.append(Import.from_full_path(function_path))
+            self._additional_imports.append(import_)
 
         if prepared_validators:
+            self._validator_bindings = validator_bindings
             self._set_internal_template_data("prepared_validators", prepared_validators)
             self._additional_imports.append(IMPORT_FIELD_VALIDATOR)
             self._additional_imports.append(IMPORT_ANY)
@@ -1611,6 +1645,72 @@ class BaseModel(BaseModelBase):
                 self._additional_imports.append(IMPORT_VALIDATION_INFO)
             if "wrap" in modes:
                 self._additional_imports.append(IMPORT_VALIDATOR_FUNCTION_WRAP_HANDLER)
+            self._prepare_validator_method_names(self, {})
+
+    @classmethod
+    def _prepare_validator_method_names(cls, model: DataModel, scopes: dict[str, set[str]]) -> set[str]:
+        """Reserve inherited methods after their model references have been resolved."""
+        if (reserved_names := scopes.get(model.path)) is not None:
+            return reserved_names
+        reserved_names = scopes[model.path] = {field.name for field in model.fields if field.name is not None}
+        reserved_names.update(re.findall(r"\bdef\s+(\w+)\s*\(", "\n".join(model.methods)))
+        for ancestor in cls._get_schema_runtime_validation_base_models(model):
+            reserved_names.update(cls._prepare_validator_method_names(ancestor, scopes))
+        from datamodel_code_generator.validators import _reserve_validator_name  # noqa: PLC0415
+
+        next_suffixes: dict[str, int] = {}
+        for validator, import_ in getattr(model, "_validator_bindings", ()):
+            name = _reserve_validator_name(f"{import_.import_}_validator", reserved_names, next_suffixes)
+            if name != validator["method_name"]:
+                validator["method_name"] = name
+                model.invalidate_render_caches()
+        return reserved_names
+
+    @classmethod
+    def resolve_module_import_conflicts(
+        cls,
+        models: Iterable[DataModel],
+        model_imports: Mapping[DataModel, tuple[Import, ...]],
+        imports: Imports,
+    ) -> None:
+        """Bind external validators consistently across every model in a module."""
+        if IMPORT_FIELD_VALIDATOR.import_ not in imports.get(IMPORT_FIELD_VALIDATOR.from_, ()):
+            return
+        models = tuple(models)
+        validator_models = [
+            (model, validators) for model in models if (validators := getattr(model, "_validator_bindings", None))
+        ]
+        method_scopes: dict[str, set[str]] = {}
+        for model, _ in validator_models:
+            cls._prepare_validator_method_names(model, method_scopes)
+        validator_imports = {import_ for _, validators in validator_models for _, import_ in validators}
+        reserved_names = {model.class_name for model in models}
+        reserved_names.update(
+            import_.binding_name
+            for model in models
+            for import_ in model_imports[model]
+            if import_ not in validator_imports
+        )
+        validator_import_keys = {(import_.from_, import_.import_) for import_ in validator_imports}
+        reserved_names.update(
+            imports.get_effective_name(from_, name)
+            for from_, import_names in imports.items()
+            for name in import_names
+            if (from_, name) not in validator_import_keys
+        )
+        from datamodel_code_generator.validators import _reserve_validator_name  # noqa: PLC0415
+
+        names: dict[Import, str] = {}
+        next_suffixes: dict[str, int] = {}
+        for model, validators in validator_models:
+            for validator, import_ in validators:
+                if (name := names.get(import_)) is None:
+                    name = names[import_] = _reserve_validator_name(import_.import_, reserved_names, next_suffixes)
+                if name == validator["function_name"]:
+                    continue
+                validator["function_name"] = name
+                imports.apply_alias(Import(from_=import_.from_, import_=import_.import_, alias=name))
+                model.invalidate_render_caches()
 
     @classmethod
     def create_base_class_model(
@@ -1655,4 +1755,5 @@ class BaseModel(BaseModelBase):
         return base_model
 
 
+_rebuild_model_with_datamodel_namespace(Constraints)
 _rebuild_model_with_datamodel_namespace(DataModelField)

@@ -7,6 +7,7 @@ code generation.
 
 from __future__ import annotations
 
+import ast
 import builtins
 import contextlib
 import operator
@@ -87,6 +88,7 @@ from datamodel_code_generator.model.base import (
     ConstraintsBase,
     DataModel,
     DataModelFieldBase,
+    _find_base_classes,
     _refresh_custom_template_paths,
     _set_nested_model_default_factory_order,
     get_inherited_fields,
@@ -107,7 +109,13 @@ from datamodel_code_generator.python_literal import (
     rewrite_runtime_expressions,
     rewrite_runtime_imports,
 )
-from datamodel_code_generator.reference import ModelResolver, ModelType, Reference, split_module_name
+from datamodel_code_generator.reference import (
+    _ALIAS_RESOLUTION_CLASS_NAME_KEY,
+    ModelResolver,
+    ModelType,
+    Reference,
+    split_module_name,
+)
 from datamodel_code_generator.types import (
     ANY,
     NONE,
@@ -119,7 +127,7 @@ from datamodel_code_generator.types import (
 from datamodel_code_generator.util import camel_to_snake, record_watch_dependency
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Callable, Collection, Iterable, Iterator, Mapping, Sequence
 
     from datamodel_code_generator._types import ParserConfigDict
     from datamodel_code_generator.config import ParserConfig
@@ -142,6 +150,7 @@ _MODEL_MODULE_PREFIX: Final = "datamodel_code_generator.model."
 _CLASS_NAME_SEPARATOR_PATTERN: Final = re.compile(r"[^A-Za-z0-9]+")
 _TOP_LEVEL_FUTURE_IMPORT_PATTERN: Final = re.compile(r"(?m)^from __future__ import ")
 _TOP_LEVEL_RELATIVE_IMPORT_PATTERN: Final = re.compile(r"(?m)^from \.")
+
 _DEFERRED_INHERITED_CLASS_KEY: Final = "_deferred_inherited_class"
 _DEFERRED_INHERITED_FIELD_KEY: Final = "_deferred_inherited_field"
 _DEFERRED_INHERITED_TYPE_KEY: Final = "_deferred_inherited_type"
@@ -372,6 +381,95 @@ def _normalize_result_module_path(module: ModulePath, *, treat_dot_as_module: bo
     if treat_dot_as_module:
         return normalized
     return tuple(part[: part.rfind(".")].replace(".", "_") + part[part.rfind(".") :] for part in normalized)
+
+
+def _expression_names(expression: ast.AST) -> set[str]:
+    """Find unqualified loads without treating literal or keyword text as bindings."""
+    return {node.id for node in ast.walk(expression) if isinstance(node, ast.Name)}
+
+
+def _model_field_name_collisions(model: DataModel, import_names: Collection[str]) -> set[str]:
+    """Find imported names hidden by assignments in the emitted model body."""
+    field_names = {field.name for field in model.fields if field.name is not None}
+    candidates = field_names.intersection(import_names)
+    if not candidates:
+        return set()
+    class_body = next(
+        (
+            node.body
+            for node in ast.parse(model.render()).body
+            if isinstance(node, ast.ClassDef) and node.name == model.class_name
+        ),
+        None,
+    )
+    if class_body is None:
+        return set()
+    fields = [
+        (node.target.id, node)
+        for node in class_body
+        if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name)
+    ]
+    # Struct creates slot descriptors even for fields without a default assignment.
+    assigned_names = (
+        field_names
+        if model.FIELD_NAME_MODEL_TYPE is ModelType.MSGSPEC
+        else {name for name, node in fields if node.value is not None}
+    )
+    candidates.intersection_update(assigned_names)
+    collisions: set[str] = set()
+    previous_names: set[str] = set()
+    for name, node in fields:
+        collisions.update(candidates.intersection(_expression_names(node.annotation)))
+        if node.value is not None:
+            collisions.update(candidates.intersection(previous_names, _expression_names(node.value)))
+            previous_names.add(name)
+    return collisions
+
+
+def _bind_module_field_names(models: list[DataModel], imports: Imports) -> None:
+    """Allocate aliases only where a property hides an emitted expression name."""
+    field_names = {field.name for model in models for field in model.fields if field.name is not None}
+    shadowable_imports = {
+        effective_name: (from_, name)
+        for from_, names in imports.items()
+        for name in names
+        if (effective_name := imports.get_effective_name(from_, name)) in field_names
+    }
+    if "list" in field_names and "list" not in shadowable_imports:
+        shadowable_imports["list"] = ("builtins", "list")
+    if not shadowable_imports:
+        return
+    collisions: set[str] = set()
+    reserved_names = field_names | {model.class_name for model in models}
+    for model in models:
+        collisions.update(_model_field_name_collisions(model, shadowable_imports))
+    if not collisions:
+        return
+    reserved_names.update(imports.get_effective_name(from_, name) for from_, names in imports.items() for name in names)
+    bindings: dict[str, str] = {}
+    for name, (from_, imported_name) in shadowable_imports.items():
+        if name not in collisions:
+            continue
+        alias = f"{name}_aliased"
+        suffix = 1
+        while alias in reserved_names:
+            alias = f"{name}_aliased_{suffix}"
+            suffix += 1
+        reserved_names.add(alias)
+        aliased_import = Import(from_=from_, import_=imported_name, alias=alias)
+        bindings[name] = alias
+        if from_ == "builtins":
+            imports.append(aliased_import)
+        else:
+            imports.apply_alias(aliased_import)
+    for model in models:
+        model.set_field_name_bindings(bindings)
+
+
+def _expand_export_module_path(module: ModulePath) -> ModulePath:
+    """Expand dotted module components while preserving the Python file suffix."""
+    parts = ".".join(module).split(".")
+    return (*parts[:-2], f"{parts[-2]}.{parts[-1]}")
 
 
 def _iter_import_bindings(imports: Imports) -> Iterator[str]:
@@ -1354,11 +1452,6 @@ def title_to_class_name(title: str) -> str:
     return "".join(x for x in classname.title() if not x.isspace())
 
 
-def _find_base_classes(model: DataModel) -> list[DataModel]:
-    """Get direct base class DataModels."""
-    return [b.reference.source for b in model.base_classes if b.reference and isinstance(b.reference.source, DataModel)]
-
-
 def _find_field(field_name: str, models: list[DataModel]) -> DataModelFieldBase | None:
     """Find a field using generated models' C3 inheritance order."""
     return get_inherited_fields(models).get(field_name)
@@ -2247,6 +2340,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
     def _create_data_model(self, model_type: type[DataModel] | None = None, **kwargs: Any) -> DataModel:
         """Create data model instance with dataclass_arguments support for DataClass."""
+        if self.config.aliases and (fields := kwargs.get("fields")):
+            self.model_resolver.prepare_explicit_field_aliases(fields, kwargs["reference"], self.field_name_model_type)
         # Add class decorators if not already provided
         if "decorators" not in kwargs and self.class_decorators:
             kwargs["decorators"] = list(self.class_decorators)
@@ -2675,6 +2770,52 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             if key in self.serialization_aliases:
                 return self.serialization_aliases[key]
         return None
+
+    def _apply_final_class_field_aliases(
+        self, fields: list[DataModelFieldBase], class_name: str, original_class_name: str
+    ) -> None:
+        """Apply final class scopes after name allocation, retaining already resolved fallback aliases."""
+        if class_name == original_class_name or not (aliases := self.config.aliases):
+            return
+        prefix = f"{class_name}."
+        if not any(key.startswith(prefix) for key in aliases):
+            return
+        scoped_aliases = {
+            field.original_name
+            for field in fields
+            if field.original_name is not None
+            and (isinstance(alias_value := aliases.get(f"{class_name}.{field.original_name}"), str) or alias_value)
+        }
+        if not scoped_aliases:
+            return
+        reserved_names = {field.name for field in fields if field.original_name not in scoped_aliases and field.name}
+        resolved_aliases: dict[str, tuple[str, str | None, list[str] | None]] = {}
+        for field in fields:
+            if (original_name := field.original_name) is None or original_name not in scoped_aliases:
+                continue
+            if original_name not in resolved_aliases:
+                field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
+                    original_name,
+                    excludes=reserved_names,
+                    model_type=self.field_name_model_type,
+                    class_name=class_name,
+                )
+                field_alias, validation_aliases = self._split_field_alias(alias)
+                resolved_aliases[original_name] = field_name, field_alias, validation_aliases
+                reserved_names.add(field_name)
+            field.name, field.alias, field.validation_aliases = resolved_aliases[original_name]
+            if (
+                self.serialization_aliases
+                and (
+                    field.serialization_alias is None
+                    or f"{class_name}.{original_name}" in self.serialization_aliases
+                    or f"{class_name}.{field.name}" in self.serialization_aliases
+                )
+                and (serialization_alias := self.get_serialization_alias(original_name, field.name, class_name))
+                is not None
+            ):
+                field.serialization_alias = serialization_alias
+            field.__dict__[_ALIAS_RESOLUTION_CLASS_NAME_KEY] = class_name
 
     @staticmethod
     def _parse_type_mappings(type_mappings: list[str] | None) -> dict[tuple[str, str], str]:
@@ -3375,7 +3516,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                         single_alias, validation_aliases = self._split_field_alias(alias)
                         self.generation_store.append_field(
                             discriminator_model,
-                            self.data_model_field_type(
+                            discriminator_field := self.data_model_field_type(
                                 name=field_name,
                                 data_type=new_data_type,
                                 required=True,
@@ -3388,6 +3529,13 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                                 **self._data_model_field_common_kwargs(),
                             ),
                         )
+                        if self.config.aliases:
+                            discriminator_field.__dict__[_ALIAS_RESOLUTION_CLASS_NAME_KEY] = (
+                                discriminator_model.class_name
+                            )
+                            self.model_resolver.prepare_explicit_field_aliases(
+                                [discriminator_field], discriminator_model.reference, self.field_name_model_type
+                            )
             has_imported_literal = any(import_ == IMPORT_LITERAL for import_ in imports)
             if has_imported_literal:  # pragma: no cover
                 imports.append(IMPORT_LITERAL)
@@ -3544,6 +3692,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         module_models: list[tuple[tuple[str, ...], list[DataModel]]],
         duplicates: list[tuple[tuple[str, ...], DataModel, tuple[str, ...], DataModel]],
         require_update_action_models: list[str],
+        reference_models: list[DataModel] | None,
     ) -> tuple[tuple[str, ...], list[DataModel]]:
         """Create shared module with canonical models and replace duplicates with inherited models."""
         shared_module = self.shared_module_name
@@ -3578,14 +3727,15 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             for module, models in module_models:  # pragma: no branch
                 if module != duplicate_module:
                     continue
+                referring_models = reference_models if reference_models is not None else models
                 if isinstance(duplicate_model, Enum) or not supports_inheritance or self.collapse_reuse_models:
-                    self.generation_store.redirect_model_reference_users(duplicate_model, models, shared_ref)
+                    self.generation_store.redirect_model_reference_users(duplicate_model, referring_models, shared_ref)
                     models_to_remove[module].add(duplicate_model)
                 else:
                     inherited_model = duplicate_model.create_reuse_model(shared_ref)
                     self.generation_store.redirect_model_reference_users(
                         duplicate_model,
-                        models,
+                        referring_models,
                         inherited_model.reference,
                     )
                     if shared_ref.path in require_update_action_models:
@@ -3607,12 +3757,21 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             if to_remove:
                 models[:] = [m for m in models if m not in to_remove]
 
+        if reference_models is not None:
+            # Relocation can introduce forward references after the initial sort.
+            later_shared_paths: set[str] = set()
+            for model in reversed(shared_models):
+                if self.generation_store.index.reference_classes_for_model(model) & later_shared_paths:
+                    add_model_path_to_list(require_update_action_models, model)
+                later_shared_paths.add(model.path)
+
         return (shared_module,), shared_models
 
     def __reuse_model_tree_scope(
         self,
         module_models: list[tuple[tuple[str, ...], list[DataModel]]],
         require_update_action_models: list[str],
+        module_split_mode: ModuleSplitMode | None,
     ) -> tuple[tuple[str, ...], list[DataModel]] | None:
         """Deduplicate models across all modules, placing shared models in shared.py."""
         if not self.reuse_model or self.reuse_scope != ReuseScope.Tree:
@@ -3623,7 +3782,15 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             return None
 
         self.__validate_shared_module_name(module_models)
-        return self.__create_shared_module_from_duplicates(module_models, duplicates, require_update_action_models)
+        # Single-model splitting puts users outside the duplicate's original module.
+        reference_models = (
+            [model for _, models in module_models for model in models]
+            if module_split_mode == ModuleSplitMode.Single
+            else None
+        )
+        return self.__create_shared_module_from_duplicates(
+            module_models, duplicates, require_update_action_models, reference_models
+        )
 
     def __collapse_root_models(
         self,
@@ -4704,7 +4871,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 _clear_model_imports_cache_if_retained(model, can_retain_cache=can_retain_cache)
 
     @classmethod
-    def __postprocess_result_modules(cls, results: dict[tuple[str, ...], Result]) -> dict[tuple[str, ...], Result]:
+    def __postprocess_result_modules(
+        cls, results: dict[tuple[str, ...], Result], *, empty_init: bool = False
+    ) -> dict[tuple[str, ...], Result]:
         def process(input_tuple: tuple[str, ...]) -> tuple[str, ...]:
             r = []
             for item in input_tuple:
@@ -4721,7 +4890,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
         results = {process(k): v for k, v in results.items()}
 
-        init_result = next(v for k, v in results.items() if k[-1] == "__init__.py")
+        init_result = Result(body="") if empty_init else next(v for k, v in results.items() if k[-1] == "__init__.py")
         folders = {t[:-1] if t[-1].endswith(".py") else t for t in results}
         for folder in folders:
             for i in range(len(folder)):
@@ -5797,9 +5966,15 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             )
             model_to_module_models, model_path_to_module_name = _index_module_models(module_models, module_split_mode)
 
-        shared_module_entry = self.__reuse_model_tree_scope(module_models, require_update_action_models)
+        shared_module_entry = self.__reuse_model_tree_scope(
+            module_models, require_update_action_models, module_split_mode
+        )
         if shared_module_entry:
             module_models.insert(0, shared_module_entry)
+            if module_split_mode == ModuleSplitMode.Single:
+                model_to_module_models, model_path_to_module_name = _index_module_models(
+                    module_models, module_split_mode
+                )
 
         module_models, internal_modules, forwarder_map, path_mapping = self.__resolve_circular_imports(module_models)
 
@@ -6054,6 +6229,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 imports.remove(model_imports.get(unused_model, unused_model.imports))
                 models.remove(unused_model)
 
+        if self.config.aliases:
+            for ctx in contexts:
+                for model in ctx.models:
+                    self.model_resolver.validate_explicit_field_aliases(model.fields, self.field_name_model_type)
+
         if self.generate_schema_validators:
             self._prepare_schema_runtime_validation_module_code(contexts)
             self._sync_schema_runtime_validation_module_imports(contexts, model_imports)
@@ -6067,6 +6247,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
         for ctx in contexts:
             self.data_model_type.resolve_module_import_conflicts(ctx.models, model_imports, ctx.imports)
+
+        for ctx in contexts:
+            _bind_module_field_names(ctx.models, ctx.imports)
 
         renamed_models = False
         for ctx in contexts:
@@ -6550,6 +6733,14 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         future_imports = self.imports.extract_future()
         future_imports_str = str(future_imports)
 
+        # Export depth and collision prefixes must follow the final package layout.
+        if (
+            self.treat_dot_as_module
+            and config.all_exports_scope is not None
+            and any(_expand_export_module_path(ctx.module) != ctx.module for ctx in contexts)
+        ):
+            contexts = [ctx._replace(module=_expand_export_module_path(ctx.module)) for ctx in contexts]
+
         for ctx in contexts:
             result = self._generate_module_output(
                 ctx, config, contexts, forwarder_map, require_update_action_models, future_imports_str
@@ -6557,7 +6748,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             if result is not None:
                 results[ctx.module] = result
 
-        if config.all_exports_scope is not None:
+        if config.all_exports_scope is not None and not self.treat_dot_as_module:
             self._generate_empty_init_exports(results, contexts, config, future_imports_str)
 
         self._inspect_invalid_dotted_stdout(contexts, sorted_data_models, config, results)
@@ -6575,4 +6766,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             _normalize_result_module_path(module, treat_dot_as_module=self.treat_dot_as_module): result
             for module, result in results.items()
         }
-        return self.__postprocess_result_modules(results) if self.treat_dot_as_module else results
+        if self.treat_dot_as_module:
+            results = self.__postprocess_result_modules(results, empty_init=config.all_exports_scope is not None)
+            if config.all_exports_scope is not None:
+                self._generate_empty_init_exports(results, contexts, config, future_imports_str)
+        return results

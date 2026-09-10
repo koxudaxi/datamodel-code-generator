@@ -199,7 +199,8 @@ class User(BaseModel):
 - This feature only supports Pydantic v2 (`--output-model-type pydantic_v2.BaseModel`)
 - The `ModelName` in the validators JSON must match the generated Python class name
 - Validator functions are imported automatically based on the `function` path
-- When the same validator function is used multiple times, an incrementing suffix (`_1`, `_2`, etc.) is added to ensure method name uniqueness
+- When validator method names collide with another validator, an existing field, or an inherited validator, an incrementing suffix (`_1`, `_2`, etc.) is added in registration order.
+- Functions with the same name from different modules receive stable import aliases using the same suffix format. Repeated uses of the same function share its import binding; every validator registration is retained.
 
 ---
 

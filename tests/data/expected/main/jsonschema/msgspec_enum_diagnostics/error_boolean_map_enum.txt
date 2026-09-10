@@ -1,0 +1,1 @@
+msgspec.Struct does not support bool Enum members in 'Enabled'.

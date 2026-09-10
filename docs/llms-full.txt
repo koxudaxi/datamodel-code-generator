@@ -4879,6 +4879,12 @@ Common `google.protobuf` well-known types are mapped through the generator's nor
 | `FieldMask` | `str` |
 | Wrapper types | Optional scalar fields |
 
+Referenced standard types without a built-in mapping are generated from their
+compiled descriptors; unrelated standard types remain omitted. This includes the
+`NullValue` enum, represented by its `NULL_VALUE` member like other generated enums.
+This enum representation does not implement ProtoJSON's special `null` serialization;
+acceptance of `None` follows the selected output backend.
+
 ## Schema Version
 
 Protocol Buffers syntax is detected from each compiled `.proto` descriptor:
@@ -8026,6 +8032,7 @@ class Root(BaseModel):
 ## 📌 Notes
 
 - The `ClassName` in scoped format must match the generated Python class name (after title conversion)
+- For `allOf` models, the final generated class name includes any configured prefix, suffix, or collision suffix. A matching final-name alias takes priority over a legacy alias using the original schema name; legacy aliases remain a fallback when no final-name alias is supplied.
 - When using `--use-title-as-name`, the class name is derived from the `title` property in the schema
 - Aliases are applied during code generation, so the original field names are preserved as Pydantic `alias` values for proper serialization/deserialization
 
@@ -8242,7 +8249,8 @@ class User(BaseModel):
 - This feature only supports Pydantic v2 (`--output-model-type pydantic_v2.BaseModel`)
 - The `ModelName` in the validators JSON must match the generated Python class name
 - Validator functions are imported automatically based on the `function` path
-- When the same validator function is used multiple times, an incrementing suffix (`_1`, `_2`, etc.) is added to ensure method name uniqueness
+- When validator method names collide with another validator, an existing field, or an inherited validator, an incrementing suffix (`_1`, `_2`, etc.) is added in registration order.
+- Functions with the same name from different modules receive stable import aliases using the same suffix format. Repeated uses of the same function share its import binding; every validator registration is retained.
 
 ---
 

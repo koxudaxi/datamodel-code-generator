@@ -337,10 +337,10 @@ jobs:
             gh pr list \
               --repo "$TARGET_REPO" \
               --base main \
-              --head "${target_owner}:${sync_branch}" \
+              --head "$sync_branch" \
               --state open \
-              --json number \
-              --jq '.[0].number // empty'
+              --json number,isCrossRepository \
+              --jq 'map(select(.isCrossRepository == false)) | .[0].number // empty'
           )"
 
           if [ -n "$existing_pr" ]; then

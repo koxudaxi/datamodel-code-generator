@@ -62,6 +62,7 @@ from datamodel_code_generator.model.base import UNDEFINED, c3_merge, get_inherit
 from datamodel_code_generator.model.enum import (
     NULL_ENUM_MEMBER_VALUE,
     SPECIALIZED_ENUM_TYPE_MATCH,
+    SUBCLASS_BASE_CLASSES,
     Enum,
     EnumMemberValue,
     StrEnum,
@@ -104,6 +105,7 @@ from datamodel_code_generator.parser.base import (
 from datamodel_code_generator.parser.schema_version import get_data_formats
 from datamodel_code_generator.python_literal import _semantic_value_text
 from datamodel_code_generator.reference import (
+    _ALIAS_RESOLUTION_CLASS_NAME_KEY,
     SPECIAL_PATH_MARKER,
     ModelType,
     Reference,
@@ -7822,6 +7824,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 if self.model_resolver.default_value_overrides:
                     field.__dict__[_DEFERRED_INHERITED_CLASS_KEY] = name
                 self.generation_store.replace_field_type(field, self.data_type())
+        original_class_name = name
         name = self._apply_title_as_name(name, obj)  # pragma: no cover
         reference = self.model_resolver.add(path, name, class_name=True, loaded=True)
         extra_field = self._get_typed_additional_properties_field(reference.name, obj, path)
@@ -7857,6 +7860,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 field_name_to_field[required_name] = field
         for field in fields:
             self._finalize_required_inherited_field(field)
+        self._apply_final_class_field_aliases(fields, reference.name, original_class_name)
         if extra_field is not None:
             fields.insert(0, extra_field)
         self._set_schema_metadata(reference.path, obj)
@@ -8549,6 +8553,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     class_name=class_name,
                 )
             )
+        if self.config.aliases:
+            for field in fields:
+                field.__dict__[_ALIAS_RESOLUTION_CLASS_NAME_KEY] = class_name
         return fields
 
     def _get_typed_additional_properties_field(
@@ -9943,6 +9950,36 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             is_optional=has_null,
         )
 
+    def _get_unsupported_msgspec_enum_member(self, enum_values: list[Any]) -> str | None:  # noqa: PLR6301
+        """Find unsupported bool/float members, using a linear ordinary-integer fast path.
+
+        This is an instance method because snooper_to_methods does not preserve
+        staticmethod descriptors.
+        """
+        seen_ints: set[int] | None = None
+        for index, value in enumerate(enum_values):
+            if isinstance(value, (bool, float)):
+                if seen_ints is None:
+                    seen_ints = {previous for i in range(index) if isinstance(previous := enum_values[i], int)}
+                if value not in seen_ints:
+                    return type(value).__name__
+            elif isinstance(value, int):
+                if type(value) is not int and (
+                    type(value).__eq__ is not int.__eq__ or type(value).__hash__ is not int.__hash__
+                ):
+                    # Preserve first-equal aliases for public API values with custom equality or hashing.
+                    return next(
+                        (
+                            type(member).__name__
+                            for position, member in enumerate(enum_values)
+                            if isinstance(member, (bool, float)) and enum_values.index(member) == position
+                        ),
+                        None,
+                    )
+                if seen_ints is not None:
+                    seen_ints.add(value)
+        return None
+
     def _get_enum_model_class(self, type_: Types | None, enum_values: list[Any]) -> tuple[type[Enum], Types | None]:
         """Return the enum model class and remaining subtype for schema enum generation."""
         if not (self.use_specialized_enum and type_ and (specialized_type := SPECIALIZED_ENUM_TYPE_MATCH.get(type_))):
@@ -10100,6 +10137,19 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 self._get_type_with_mappings(obj.type, obj.format) if isinstance(obj.type, str) else None
             )
             enum_cls, type_ = self._get_enum_model_class(type_, enum_times)
+            # Enum subclasses coerce values; plain Enum aliases retain the first equal value.
+            if (
+                self.field_name_model_type is ModelType.MSGSPEC
+                and enum_cls is Enum
+                and not (self.use_subclass_enum and type_ and SUBCLASS_BASE_CLASSES.get(type_) in {"int", "str"})
+                and (
+                    unsupported := "float"
+                    if self.use_subclass_enum and type_ and SUBCLASS_BASE_CLASSES.get(type_) == "float"
+                    else self._get_unsupported_msgspec_enum_member(enum_times)
+                )
+            ):
+                msg = f"msgspec.Struct does not support {unsupported} Enum members in {reference_.name!r}."
+                raise Error(msg)
             self._set_schema_metadata(reference_.path, obj)
             self.set_schema_extensions(reference_.path, obj)
 

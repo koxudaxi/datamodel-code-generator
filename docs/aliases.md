@@ -122,6 +122,7 @@ class Root(BaseModel):
 ## 📌 Notes
 
 - The `ClassName` in scoped format must match the generated Python class name (after title conversion)
+- For `allOf` models, the final generated class name includes any configured prefix, suffix, or collision suffix. A matching final-name alias takes priority over a legacy alias using the original schema name; legacy aliases remain a fallback when no final-name alias is supplied.
 - When using `--use-title-as-name`, the class name is derived from the `title` property in the schema
 - Aliases are applied during code generation, so the original field names are preserved as Pydantic `alias` values for proper serialization/deserialization
 

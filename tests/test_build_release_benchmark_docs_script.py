@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 from contextlib import redirect_stderr
 from io import StringIO
 from pathlib import Path
+
+import pytest
 
 from scripts import (
     build_release_benchmark_docs,
@@ -169,6 +172,8 @@ def test_release_benchmark_workflow_keeps_one_safe_sync_branch() -> None:
     push_coalescing = "cancel-in-progress: ${{ github.event_name == 'push' }}"
     independent_runs = "github.run_id"
     data_writer = "group: release-benchmark-data"
+    existing_pr = workflow[workflow.index("gh pr list") : workflow.index('if [ -n "$existing_pr" ]; then')]
+    branch_only_lookup = '--head "$sync_branch"' in existing_pr
     new_pr = workflow[workflow.index("gh pr create") :]
     new_pr_body_empty = '--body ""' in new_pr
     output = "\n".join((
@@ -181,12 +186,33 @@ def test_release_benchmark_workflow_keeps_one_safe_sync_branch() -> None:
         f"pending diff guard: {pending_diff in workflow}",
         f"pending data extraction: {pending_data in workflow}",
         f"current sha guard: {current_sha in workflow}",
+        f"existing PR lookup uses branch name: {branch_only_lookup}",
         f"existing PR body preserved: {'gh pr edit' not in workflow}",
         f"new PR body empty: {new_pr_body_empty}",
         "",
     ))
 
     assert_output(output, EXPECTED_RELEASE_BENCHMARK_DOCS_PATH / "release_benchmark_workflow_sync_contract.txt")
+
+
+@pytest.mark.skipif(shutil.which("jq") is None, reason="release benchmark PR filtering requires jq")
+def test_release_benchmark_pr_lookup_ignores_forks() -> None:
+    """Execute the workflow filter against same-name fork and target repository PRs."""
+    workflow = (ROOT / ".github" / "workflows" / "release-benchmarks.yaml").read_text(encoding="utf-8")
+    lookup = workflow[workflow.index("gh pr list") :]
+    query = lookup.split("--jq '", 1)[1].split("'", 1)[0]
+    cases = json.loads((FIXTURE_DIR / "pr_lookup.json").read_text(encoding="utf-8"))
+    outputs = []
+    for case in cases:
+        result = subprocess.run(
+            ["jq", "-r", query],
+            input=json.dumps(case["pull_requests"]),
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        outputs.append(f"{case['name']}: {result.stdout.strip() or '(none)'}")
+    assert_output("\n".join(outputs) + "\n", EXPECTED_RELEASE_BENCHMARK_DOCS_PATH / "release_benchmark_pr_lookup.txt")
 
 
 def test_release_benchmark_docs_cli_writes_expected_outputs(tmp_path: Path) -> None:
