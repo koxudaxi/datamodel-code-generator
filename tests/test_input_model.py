@@ -2294,13 +2294,11 @@ def test_input_model_equal_native_schemas() -> None:
 @pytest.mark.parametrize(
     "case", ["Plain", "Aliased", "Validation", "Choices", "Paths", "Serialization", "Swapped", "Nested", "Hidden"]
 )
-def test_input_model_wire_types(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, entrypoint: str, formatter: str, case: str
-) -> None:
+def test_input_model_wire_types(tmp_path: Path, entrypoint: str, formatter: str, case: str) -> None:
     """Restore source types using the validation schema's actual property names."""
     from pydantic import ValidationError
 
-    from datamodel_code_generator import GenerateConfig, InputFileType, generate
+    from datamodel_code_generator import GenerateConfig, InputFileType
     from datamodel_code_generator.format import Formatter
     from datamodel_code_generator.input_model import load_model_schema
 
@@ -2326,42 +2324,41 @@ def test_input_model_wire_types(
             formatters=[Formatter(value) for value in formatters],
         )
         schema = load_model_schema(paths, InputFileType.JsonSchema)
-        generate(schema, config=config)
-    code = output.read_text()
-    assert_output(code, EXPECTED_INPUT_MODEL_PATH / f"wire_types_{case.lower()}.py")
-    module = types.ModuleType("wire_types_output")
-    monkeypatch.setitem(sys.modules, module.__name__, module)
-    exec(code, module.__dict__)
-    model = getattr(module, case)
-    values_name, callback_name = (
-        ("wire_values", "wire_callback")
-        if case in {"Aliased", "Validation", "Choices", "Nested"}
-        else ("callback", "values")
-        if case == "Swapped"
-        else ("values", "callback")
-    )
-    payload = {"first": 1, values_name: 1 if case == "Nested" else [1, 2, 1], callback_name: int, "last": "end"}
-    source_payload = dict(payload)
-    if case == "Paths":
-        source_payload["data"] = {"values": source_payload.pop("values")}
-    source_model = getattr(importlib.import_module("tests.data.python.input_model.wire_types"), case)
-    source = source_model.model_validate({"item": source_payload} if case == "Nested" else source_payload)
-    result = model.model_validate({"item": payload} if case == "Nested" else payload)
-    if case == "Nested":
-        source, result = source.item, result.item
-    assert getattr(result, values_name) == source.values
-    assert type(getattr(result, values_name)) is type(source.values)
-    if case != "Nested":
-        assert source.values == frozenset({1, 2})
-    assert getattr(result, callback_name) is source.callback is int
-    assert list(type(result).model_fields) == ["first", values_name, callback_name, "last"]
-    for invalid in ("not callable", 3):
-        payload[callback_name] = invalid
-        source_payload[callback_name] = invalid
-        with pytest.raises(ValidationError):
-            model.model_validate({"item": payload} if case == "Nested" else payload)
-        with pytest.raises(ValidationError):
-            source_model.model_validate({"item": source_payload} if case == "Nested" else source_payload)
+        run_generate_and_assert(
+            input_=schema, config=config, expected_file=EXPECTED_INPUT_MODEL_PATH / f"wire_types_{case.lower()}.py"
+        )
+    if entrypoint == "cli":
+        assert_output(output.read_text(), EXPECTED_INPUT_MODEL_PATH / f"wire_types_{case.lower()}.py")
+    with _generated_model(output, "wire_types_output", case) as model:
+        values_name, callback_name = (
+            ("wire_values", "wire_callback")
+            if case in {"Aliased", "Validation", "Choices", "Nested"}
+            else ("callback", "values")
+            if case == "Swapped"
+            else ("values", "callback")
+        )
+        payload = {"first": 1, values_name: 1 if case == "Nested" else [1, 2, 1], callback_name: int, "last": "end"}
+        source_payload = dict(payload)
+        if case == "Paths":
+            source_payload["data"] = {"values": source_payload.pop("values")}
+        source_model = getattr(importlib.import_module("tests.data.python.input_model.wire_types"), case)
+        source = source_model.model_validate({"item": source_payload} if case == "Nested" else source_payload)
+        result = model.model_validate({"item": payload} if case == "Nested" else payload)
+        if case == "Nested":
+            source, result = source.item, result.item
+        assert getattr(result, values_name) == source.values
+        assert type(getattr(result, values_name)) is type(source.values)
+        if case != "Nested":
+            assert source.values == frozenset({1, 2})
+        assert getattr(result, callback_name) is source.callback is int
+        assert list(type(result).model_fields) == ["first", values_name, callback_name, "last"]
+        for invalid in ("not callable", 3):
+            payload[callback_name] = invalid
+            source_payload[callback_name] = invalid
+            with pytest.raises(ValidationError):
+                model.model_validate({"item": payload} if case == "Nested" else payload)
+            with pytest.raises(ValidationError):
+                source_model.model_validate({"item": source_payload} if case == "Nested" else source_payload)
 
 
 INPUT_WIRE_SOURCE_MODULE = "tests.data.python.input_model.wire_winners"
@@ -2395,8 +2392,9 @@ def test_input_model_validation_property_winners(tmp_path: Path, case: str, entr
         assert_output(
             json.dumps(schema, indent=2), EXPECTED_INPUT_MODEL_PATH / f"wire_winner_{case.lower()}_schema.txt"
         )
-        generate(
-            schema,
+        run_generate_and_assert(
+            input_=schema,
+            expected_file=EXPECTED_INPUT_MODEL_PATH / f"wire_winner_{case.lower()}.py",
             config=GenerateConfig(
                 input_file_type=InputFileType.JsonSchema,
                 output=output,
@@ -2405,7 +2403,8 @@ def test_input_model_validation_property_winners(tmp_path: Path, case: str, entr
                 formatters=[Formatter(value) for value in formatters],
             ),
         )
-    assert_output(output.read_text(), EXPECTED_INPUT_MODEL_PATH / f"wire_winner_{case.lower()}.py")
+    if entrypoint == "cli":
+        assert_output(output.read_text(), EXPECTED_INPUT_MODEL_PATH / f"wire_winner_{case.lower()}.py")
     payload: dict[str, Any] = {"first": 1, "shared": int if options.get("callable") else [1, 1, 2], "last": "end"}
     if case == "PathWins":
         payload["values"] = payload.pop("shared")
@@ -2497,8 +2496,9 @@ def test_validation_property_owner_scope(tmp_path: Path, roots: str, entrypoint:
                 )
             )
         else:
-            generate(
-                load_model_schema(paths, InputFileType.JsonSchema),
+            run_generate_and_assert(
+                input_=load_model_schema(paths, InputFileType.JsonSchema),
+                expected_file=EXPECTED_INPUT_MODEL_PATH / f"wire_owner_scope_{roots}.py",
                 config=GenerateConfig(
                     input_file_type=InputFileType.JsonSchema,
                     output=output,
@@ -2509,7 +2509,8 @@ def test_validation_property_owner_scope(tmp_path: Path, roots: str, entrypoint:
             )
     finally:
         sys.setprofile(previous)
-    assert_output(output.read_text(), EXPECTED_INPUT_MODEL_PATH / f"wire_owner_scope_{roots}.py")
+    if entrypoint == "cli":
+        assert_output(output.read_text(), EXPECTED_INPUT_MODEL_PATH / f"wire_owner_scope_{roots}.py")
     assert_output(
         json.dumps(dict(source_module.owner_calls), indent=2),
         EXPECTED_INPUT_MODEL_PATH / f"wire_owner_scope_{roots}_counts.txt",
