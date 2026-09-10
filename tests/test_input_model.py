@@ -25,7 +25,6 @@ from datamodel_code_generator import (
     InputFileType,
     PythonVersion,
     arguments,
-    generate,
 )
 from datamodel_code_generator import __main__ as main_module
 from datamodel_code_generator.__main__ import Exit
@@ -3097,8 +3096,9 @@ def test_python_root_model_inputs(
             ref_strategy=InputModelRefStrategy(strategy),
             output_model_type=DataModelType.PydanticV2BaseModel,
         )
-        generate(
-            schema,
+        run_generate_and_assert(
+            input_=schema,
+            expected_file=expected,
             input_file_type=InputFileType.JsonSchema,
             output_model_type=DataModelType.PydanticV2BaseModel,
             target_python_version=PythonVersion.PY_310,
@@ -3107,7 +3107,6 @@ def test_python_root_model_inputs(
             formatters=formatters,
             output=output_file,
         )
-        assert_output(output_file.read_text(encoding="utf-8"), expected)
     if input_format == "file":
         monkeypatch.syspath_prepend(str(DATA_PATH / "python/input_model"))
     native = getattr(importlib.import_module("tests.data.python.input_model.root_models"), name)
