@@ -3,13 +3,11 @@
 
 from __future__ import annotations
 
-from typing import Literal
-
 from pydantic import Field, RootModel
 
 
-class Root(RootModel[Literal['a']]):
-    root: Literal['a'] = Field(..., min_length=1)
+class Root(RootModel[str]):
+    root: str = Field(..., min_length=2)
 
 
 class Base(RootModel[str]):

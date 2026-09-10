@@ -5,10 +5,10 @@
       "$ref": "#/definitions/Base"
     },
     {
-      "minLength": 1
+      "minLength": 2
     }
   ],
-  "const": "a",
+  "const": "ab",
   "definitions": {
     "Base": {
       "type": "string"

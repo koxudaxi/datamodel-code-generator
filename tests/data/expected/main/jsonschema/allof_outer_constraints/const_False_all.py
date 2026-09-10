@@ -3,13 +3,11 @@
 
 from __future__ import annotations
 
-from typing import Literal
-
-from pydantic import RootModel
+from pydantic import RootModel, constr
 
 
-class Root(RootModel[Literal['a']]):
-    root: Literal['a']
+class Root(RootModel[constr(min_length=2)]):
+    root: constr(min_length=2)
 
 
 class Base(RootModel[str]):

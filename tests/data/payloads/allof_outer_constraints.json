@@ -106,36 +106,42 @@
   {
     "name": "enum",
     "valid": [
-      "a",
       "bb"
     ],
     "invalid": [
-      "c",
+      "a",
       ""
     ],
     "normal": false,
-    "error_type": "enum"
+    "error_type": "string_too_short",
+    "literal_invalid": [
+      "ccc"
+    ]
   },
   {
     "name": "const",
     "valid": [
-      "a"
+      "ab"
     ],
     "invalid": [
-      "b",
       ""
     ],
     "normal": false,
-    "error_type": "literal_error"
+    "error_type": "string_too_short",
+    "validator_error_type": "value_error",
+    "literal_invalid": [
+      "bc"
+    ]
   },
   {
     "name": "format",
     "valid": [
-      "a@example.com"
+      "long-email@example.com"
     ],
     "invalid": [
       "not-an-email",
-      ""
+      "",
+      "a@example.com"
     ],
     "normal": false,
     "error_type": "value_error"

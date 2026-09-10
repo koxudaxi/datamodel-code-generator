@@ -5,7 +5,7 @@
       "$ref": "#/definitions/Base"
     },
     {
-      "minLength": 1
+      "minLength": 18
     }
   ],
   "format": "email",

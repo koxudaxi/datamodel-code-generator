@@ -7,7 +7,7 @@ from pydantic import EmailStr, Field, RootModel
 
 
 class Root(RootModel[EmailStr]):
-    root: EmailStr = Field(..., min_length=1)
+    root: EmailStr = Field(..., min_length=18)
 
 
 class Base(RootModel[str]):

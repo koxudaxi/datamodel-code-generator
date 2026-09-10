@@ -21644,28 +21644,32 @@ def test_allof_literal_patterns(
 @pytest.mark.parametrize("constraints", [False, True])
 @pytest.mark.parametrize("merge", ["none", "all"])
 @pytest.mark.parametrize(
-    "case",
+    ("case", "validators"),
     [
-        "length",
-        "minimum",
-        "number",
-        "multiple",
-        "redundant",
-        "description",
-        "ordinary",
-        "same_pattern",
-        "enum",
-        "const",
-        "format",
-    ],
+        (case, False)
+        for case in (
+            "length",
+            "minimum",
+            "number",
+            "multiple",
+            "redundant",
+            "description",
+            "ordinary",
+            "same_pattern",
+            "format",
+        )
+    ]
+    + [(case, enabled) for case in ("enum", "const") for enabled in (False, True)],
 )
 def test_allof_outer_constraints(
-    output_file: Path, entrypoint: str, formatter: str, constraints: bool, merge: str, case: str
+    output_file: Path, entrypoint: str, formatter: str, constraints: bool, merge: str, case: str, validators: bool
 ) -> None:
     """Compare real generated root validation with all schema assertions."""
     schema = JSON_SCHEMA_DATA_PATH / f"allof_outer_constraints/{case}.json"
     formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
-    expected = f"allof_outer_constraints/{case}_{constraints and case != 'enum'}_all.py"
+    suffix = "_validators" if validators else ""
+    expected_constraints = constraints or validators or case == "format"
+    expected = f"allof_outer_constraints/{case}{suffix}_{expected_constraints}_all.py"
     if entrypoint == "cli":
         run_main_and_assert(
             input_path=schema,
@@ -21680,6 +21684,7 @@ def test_allof_outer_constraints(
                 "--formatters",
                 *formatters,
                 *(["--field-constraints"] if constraints else []),
+                *(["--generate-schema-validators"] if validators else []),
             ],
         )
     else:
@@ -21692,18 +21697,19 @@ def test_allof_outer_constraints(
             disable_timestamp=True,
             allof_merge_mode=merge,
             field_constraints=constraints,
+            generate_schema_validators=validators,
             formatters=[Formatter(value) for value in formatters],
         )
     cases = json.loads((JSON_SCHEMA_DATA_PATH.parent / "payloads/allof_outer_constraints.json").read_text())
     payloads = next(item for item in cases if item["name"] == case)
+    error_type = payloads.get("validator_error_type", payloads["error_type"]) if validators else payloads["error_type"]
     validator = Draft7Validator(json.loads(schema.read_text()), format_checker=FormatChecker())
     with _generated_model(output_file, "allof_outer_constraints", "Root") as model:
         validate = _model_json_validator(model)
-        if case != "enum":
-            assert_output(
-                "\n".join(model.model_fields) + "\n",
-                EXPECTED_JSON_SCHEMA_PATH / "allof_outer_constraints/root_fields.txt",
-            )
+        assert_output(
+            "\n".join(model.model_fields) + "\n",
+            EXPECTED_JSON_SCHEMA_PATH / "allof_outer_constraints/root_fields.txt",
+        )
         for value in payloads["valid"]:
             validator.validate(value)
             assert_generated_model_json_validation(
@@ -21712,8 +21718,8 @@ def test_allof_outer_constraints(
                 model_name="Root",
                 valid_json=json.dumps(value),
                 invalid_json=json.dumps(payloads["invalid"][0]),
-                expected_error_type=payloads["error_type"],
-                expected_attribute_path=("value" if case == "enum" else "root",),
+                expected_error_type=error_type,
+                expected_attribute_path=("root",),
                 expected_attribute_value=value,
             )
         for value in payloads["invalid"]:
@@ -21721,3 +21727,20 @@ def test_allof_outer_constraints(
                 validator.validate(value)
             with pytest.raises(ValidationError):
                 validate(json.dumps(value))
+        for value in payloads.get("literal_invalid", []):
+            with pytest.raises(SchemaValidationError):
+                validator.validate(value)
+            if validators:
+                with pytest.raises(ValidationError):
+                    validate(json.dumps(value))
+            else:
+                assert_generated_model_json_validation(
+                    output_file,
+                    module_name="allof_outer_constraints_without_validators",
+                    model_name="Root",
+                    valid_json=json.dumps(value),
+                    invalid_json=json.dumps(payloads["invalid"][0]),
+                    expected_error_type=error_type,
+                    expected_attribute_path=("root",),
+                    expected_attribute_value=value,
+                )

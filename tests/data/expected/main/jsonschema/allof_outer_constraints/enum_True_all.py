@@ -3,11 +3,11 @@
 
 from __future__ import annotations
 
-from pydantic import RootModel, constr
+from pydantic import Field, RootModel
 
 
-class Root(RootModel[constr(min_length=2)]):
-    root: constr(min_length=2)
+class Root(RootModel[str]):
+    root: str = Field(..., min_length=2)
 
 
 class Base(RootModel[str]):
