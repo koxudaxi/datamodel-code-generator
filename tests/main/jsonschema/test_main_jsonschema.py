@@ -7694,14 +7694,17 @@ def test_main_jsonschema_property_names_pattern_field_constraints(output_file: P
     )
 
 
-def test_main_jsonschema_property_names_pattern_properties_intersection(output_file: Path) -> None:
+@pytest.mark.parametrize(
+    "case", ["property_names_pattern_properties_intersection", "property_names_pattern_properties_redundant_pattern"]
+)
+def test_main_jsonschema_property_names_pattern_properties_intersection(output_file: Path, case: str) -> None:
     """Test propertyNames constraints also apply to patternProperties keys."""
     run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "property_names_pattern_properties_intersection.json",
+        input_path=JSON_SCHEMA_DATA_PATH / f"{case}.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
-        expected_file="property_names_pattern_properties_intersection.py",
+        expected_file=f"{case}.py",
         extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
         force_exec_validation=True,
     )
