@@ -1118,13 +1118,13 @@ PAYLOAD_UNION_CASES = {
     suppress_health_check=[HealthCheck.filter_too_much, HealthCheck.too_slow, HealthCheck.function_scoped_fixture],
 )
 @given(data=st.data())
-def test_union_source_payloads(name: str, tmp_path: Path, data: st.DataObject) -> None:
+def test_union_source_payloads(name: str, generated_model_cache: dict[str, Any], data: st.DataObject) -> None:
     """Preserve source-valid payloads through actual generated model validation and dumping."""
     case = PAYLOAD_UNION_CASES[name]
     with assert_inputs_not_mutated({"schema": case.source_schema}):
         payload = data.draw(payload_strategy(case))
         validate_with_source_schema(case, payload)
-        adapter = load_generated_payload_adapter(case, {"base": tmp_path, "adapters": {}})
+        adapter = load_generated_payload_adapter(case, generated_model_cache)
         validated = adapter.validate_python(payload)
         validate_with_source_schema(case, adapter.dump_python(validated, mode="json", exclude_unset=True))
 
@@ -1139,7 +1139,7 @@ def test_union_rejection_capabilities() -> None:
         )
 
 
-def test_union_native_witnesses(tmp_path: Path) -> None:
+def test_union_native_witnesses(generated_model_cache: dict[str, Any]) -> None:
     """Missing optional branch fields remain valid while actual object type violations fail."""
     from jsonschema import ValidationError as SourceValidationError
 
@@ -1147,7 +1147,7 @@ def test_union_native_witnesses(tmp_path: Path) -> None:
         PAYLOAD_UNION_DATA_PATH.with_name("union_capabilities_values.json").read_text(encoding="utf-8")
     )["permissive_union"]
     case = PAYLOAD_UNION_CASES["permissive_union"]
-    adapter = load_generated_payload_adapter(case, {"base": tmp_path, "adapters": {}})
+    adapter = load_generated_payload_adapter(case, generated_model_cache)
     with assert_inputs_not_mutated({"schema": case.source_schema, "witnesses": witnesses}):
         for payload in witnesses["valid"]:
             validate_with_source_schema(case, payload)
