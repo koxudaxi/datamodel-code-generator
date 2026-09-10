@@ -272,34 +272,31 @@ _REF_SIBLING_KEYWORDS_DISABLED_VERSIONS = frozenset({
 })
 
 
-_NUMERIC_TYPE_DOMAINS = {
+_JSON_SCHEMA_TYPE_DOMAINS: dict[str, frozenset[str]] = {
+    "null": frozenset({"null"}),
+    "boolean": frozenset({"boolean"}),
     "integer": frozenset({"integer"}),
     "number": frozenset({"integer", "number"}),
-    "null": frozenset({"null"}),
+    "string": frozenset({"string"}),
+    "array": frozenset({"array"}),
+    "object": frozenset({"object"}),
 }
+_ALL_JSON_SCHEMA_TYPES = frozenset(_JSON_SCHEMA_TYPE_DOMAINS)
+_NUMERIC_JSON_SCHEMA_TYPES = frozenset({"integer", "number", "null"})
+
+
+def _json_schema_type_domain(schema_type: str | list[str]) -> frozenset[str]:
+    """Expand number to include integers; unknown types impose no restriction."""
+    if isinstance(schema_type, str):
+        return _JSON_SCHEMA_TYPE_DOMAINS.get(schema_type, _ALL_JSON_SCHEMA_TYPES)
+    return frozenset().union(*(_JSON_SCHEMA_TYPE_DOMAINS.get(type_, _ALL_JSON_SCHEMA_TYPES) for type_ in schema_type))
 
 
 def _numeric_type_domain(schema_type: str | list[str]) -> frozenset[str] | None:
-    """Expand number to its numeric subtypes within the numeric/null domain."""
-    if isinstance(schema_type, str):
-        return _NUMERIC_TYPE_DOMAINS.get(schema_type)
-    types = frozenset(schema_type)
-    if not types.issubset(_NUMERIC_TYPE_DOMAINS):
-        return None
-    return types | _NUMERIC_TYPE_DOMAINS["integer"] if "number" in types else types
-
-
-_JSON_SCHEMA_TYPE_MASKS = {"null": 1, "boolean": 2, "integer": 4, "number": 12, "string": 16, "array": 32, "object": 64}
-
-
-def _json_schema_type_mask(schema_type: str | list[str]) -> int:
-    """Represent explicit JSON types without equating booleans and numbers."""
-    if isinstance(schema_type, str):
-        return _JSON_SCHEMA_TYPE_MASKS.get(schema_type, 127)
-    mask = 0
-    for type_ in schema_type:
-        mask |= _JSON_SCHEMA_TYPE_MASKS.get(type_, 127)
-    return mask
+    """Return the common type representation only for numeric/null constraints."""
+    if (domain := _json_schema_type_domain(schema_type)).issubset(_NUMERIC_JSON_SCHEMA_TYPES):
+        return domain
+    return None
 
 
 def _field_source_name(field: DataModelFieldBase) -> str | None:
@@ -4437,43 +4434,43 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         )
 
     @cached_property
-    def _allof_ref_type_masks(self) -> dict[str, tuple[int, ...]]:
+    def _allof_ref_type_domains(self) -> dict[str, tuple[frozenset[str], ...]]:
         """Cache direct reference type facts only when an allOf traversal needs them."""
         return {}
 
-    def _iter_allof_type_masks(self, obj: JsonSchemaObject, visited: set[str]) -> Iterator[int]:
+    def _iter_allof_type_domains(self, obj: JsonSchemaObject, visited: set[str]) -> Iterator[frozenset[str]]:
         """Read only explicit type constraints connected by allOf or references."""
         if obj.ref:
             resolved_ref = self.model_resolver.resolve_ref(obj.ref)
             if self._resolve_external_ref_mapping(obj.ref) is None and resolved_ref not in visited:
                 visited.add(resolved_ref)
-                if (masks := self._allof_ref_type_masks.get(resolved_ref)) is None:
+                if (domains := self._allof_ref_type_domains.get(resolved_ref)) is None:
                     referenced = self._load_ref_schema_object(obj.ref)
                     if not referenced.ref and not referenced.allOf:
-                        masks = (_json_schema_type_mask(referenced.type),) if referenced.type else ()
-                        self._allof_ref_type_masks[resolved_ref] = masks
+                        domains = (_json_schema_type_domain(referenced.type),) if referenced.type else ()
+                        self._allof_ref_type_domains[resolved_ref] = domains
                     else:
                         with self._inherited_ref_context(resolved_ref):
-                            yield from self._iter_allof_type_masks(referenced, visited)
-                if masks is not None:
-                    yield from masks
+                            yield from self._iter_allof_type_domains(referenced, visited)
+                if domains is not None:
+                    yield from domains
             if not self._ref_sibling_keywords_enabled:
                 return
         if obj.type:
-            yield _json_schema_type_mask(obj.type)
+            yield _json_schema_type_domain(obj.type)
         for item in obj.allOf:
             if isinstance(item, JsonSchemaObject):
-                yield from self._iter_allof_type_masks(item, visited)
+                yield from self._iter_allof_type_domains(item, visited)
 
     def _check_allof_type_intersection(self, obj: JsonSchemaObject, path: list[str]) -> None:
         """Diagnose an empty JSON Schema type intersection without normalizing unions."""
         if self._input_file_type != InputFileType.JsonSchema:
             return
-        domain = 127
+        domain = _ALL_JSON_SCHEMA_TYPES
         numeric_only = True
-        for mask in self._iter_allof_type_masks(obj, set()):
-            domain &= mask
-            numeric_only = numeric_only and not mask & ~13
+        for types in self._iter_allof_type_domains(obj, set()):
+            domain &= types
+            numeric_only = numeric_only and types.issubset(_NUMERIC_JSON_SCHEMA_TYPES)
             if not domain:
                 kind = "numeric/null " if numeric_only else ""
                 message = f"allOf {kind}type constraints have no common value"
