@@ -59,13 +59,7 @@ from datamodel_code_generator.deprecations import warn_deprecated
 from datamodel_code_generator.enums import AliasGenerator
 from datamodel_code_generator.imports import IMPORT_ANY, Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
-from datamodel_code_generator.model.base import (
-    _SEQUENCE_ROOT_WRAPPED_KEY,
-    UNDEFINED,
-    c3_merge,
-    get_inherited_fields,
-    sanitize_module_name,
-)
+from datamodel_code_generator.model.base import UNDEFINED, c3_merge, get_inherited_fields, sanitize_module_name
 from datamodel_code_generator.model.enum import (
     NULL_ENUM_MEMBER_VALUE,
     SPECIALIZED_ENUM_TYPE_MATCH,
@@ -8454,7 +8448,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if "[" not in slice_type:
             slice_type = f"{slice_type}[{item_type}]"
         add_sequence_interface(item_type, slice_type)
-        data_model_root.__dict__[_SEQUENCE_ROOT_WRAPPED_KEY] = root_field.data_type is not root_type
 
     def _get_root_model_sequence_type(self, data_type: DataType) -> DataType | None:  # noqa: PLR6301
         """Return a sequence data type for RootModel helpers.

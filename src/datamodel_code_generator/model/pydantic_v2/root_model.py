@@ -9,7 +9,6 @@ from typing import Any, ClassVar
 
 from datamodel_code_generator import Error
 from datamodel_code_generator.imports import IMPORT_ANY, Import
-from datamodel_code_generator.model.base import _SEQUENCE_ROOT_WRAPPED_KEY
 from datamodel_code_generator.model.pydantic_v2.base_model import (
     _CONFIG_ITEMS_TEMPLATE_DATA_KEY,
     _NEUTRALIZE_ROOT_MODEL_EXTRA_CONFIG_TEMPLATE_DATA_KEY,
@@ -244,10 +243,13 @@ class RootModel(BaseModel):
             self._set_internal_template_data(key, value)
         self.clear_imports_cache()
 
-    def _sync_sequence_interface(self) -> None:
-        """Refresh helper annotations and discard helpers after a non-sequence conversion."""
-        field_type = self.fields[0].data_type
-        root_type = field_type.data_types[0] if self.__dict__[_SEQUENCE_ROOT_WRAPPED_KEY] else field_type
+    def finalize_sequence_interface(self) -> None:
+        """Refresh helpers once final root types and reference aliases are available."""
+        if _SEQUENCE_BASE_CLASS_TEMPLATE_DATA_KEY not in self._internal_template_data:
+            return
+        root_type = self.fields[0].data_type
+        if not (root_type.is_list or root_type.is_sequence or root_type.is_set):
+            root_type = root_type.data_types[0]
         if root_type.is_set:
             imports = [IMPORT_ABC_ITERATOR, IMPORT_ABC_SEQUENCE, IMPORT_OVERLOAD, IMPORT_SUPPORTS_INDEX]
             if self._internal_template_data[_SEQUENCE_ITEM_TYPE_TEMPLATE_DATA_KEY] == "Any":
@@ -260,7 +262,6 @@ class RootModel(BaseModel):
                 _SEQUENCE_SLICE_TYPE_TEMPLATE_DATA_KEY,
             ):
                 self._pop_internal_template_data(key)
-            self.__dict__.pop(_SEQUENCE_ROOT_WRAPPED_KEY)
             self.invalidate_render_caches()
             return
         # The eligible root is non-optional, so its outer container encloses the
@@ -273,17 +274,8 @@ class RootModel(BaseModel):
         self._set_internal_template_data(_SEQUENCE_ITEM_TYPE_TEMPLATE_DATA_KEY, item_type)
         self._set_internal_template_data(_SEQUENCE_SLICE_TYPE_TEMPLATE_DATA_KEY, slice_type)
 
-    @property
-    def imports(self) -> tuple[Import, ...]:
-        """Resolve final helper availability before module imports are collected."""
-        if _SEQUENCE_ROOT_WRAPPED_KEY in self.__dict__:
-            self._sync_sequence_interface()
-        return super().imports
-
     def render(self, *, class_name: str | None = None) -> str:
         """Render the RootModel and validate custom sequence templates when needed."""
-        if _SEQUENCE_ROOT_WRAPPED_KEY in self.__dict__:
-            self._sync_sequence_interface()
         use_custom_template = self._uses_custom_root_template
         fields = self._template_fields(use_custom_template=use_custom_template)
         if fields:
