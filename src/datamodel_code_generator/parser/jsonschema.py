@@ -8001,9 +8001,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             and self.config.extra_template_data is None
             else None
         )
-        if obj is self._pattern_validation_document_root:
-            if intersection is None and not self.force_optional_for_required_fields:
-                intersection = self._pattern_validation_with_undeclared_required(obj, pattern_value_types)
+        if (
+            obj is self._pattern_validation_document_root
+            and intersection is None
+            and not self.force_optional_for_required_fields
+        ):
+            intersection = self._pattern_validation_with_undeclared_required(obj, pattern_value_types)
         match intersection:
             case "declared":
                 rule_type = IndependentDeclaredPatternPropertiesRule
