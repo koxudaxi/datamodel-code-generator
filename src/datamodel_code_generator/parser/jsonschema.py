@@ -1389,7 +1389,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     _config_class_name: ClassVar[str] = "JSONSchemaParserConfig"
 
-    def __init__(
+    def __init__(  # noqa: PLR0915
         self,
         source: str | Path | list[Path] | ParseResult,
         *,
