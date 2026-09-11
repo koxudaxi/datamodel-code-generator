@@ -6227,6 +6227,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         if self.use_default_factory_for_optional_nested_models:
             # Inherited defaults may have changed since a consumer first queried its factory imports.
             _clear_model_imports_cache(all_models)
+        if self.use_root_model_sequence_interface:
+            for model in all_models:
+                model.finalize_sequence_interface()
         model_imports = {model: model.imports for ctx in contexts for model in ctx.models}
 
         for ctx in contexts:
@@ -6267,6 +6270,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             renamed_models = (
                 self.__change_imported_model_name(ctx.models, ctx.imports, ctx.scoped_model_resolver) or renamed_models
             )
+        if self.use_root_model_sequence_interface and renamed_models:
+            for model in all_models:
+                model.finalize_sequence_interface()
         if self.generate_schema_validators and renamed_models:
             # Helper-name reservations include referenced models from other modules,
             # so a rare import collision must invalidate every module plan.

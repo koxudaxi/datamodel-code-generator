@@ -248,6 +248,37 @@ class RootModel(BaseModel):
             self._set_internal_template_data(key, value)
         self.clear_imports_cache()
 
+    def finalize_sequence_interface(self) -> None:
+        """Refresh helpers once final root types and reference aliases are available."""
+        if _SEQUENCE_BASE_CLASS_TEMPLATE_DATA_KEY not in self._internal_template_data:
+            return
+        root_type = self.fields[0].data_type
+        if not (root_type.is_list or root_type.is_sequence or root_type.is_set):
+            root_type = root_type.data_types[0]
+        if root_type.is_set:
+            imports = [IMPORT_ABC_ITERATOR, IMPORT_ABC_SEQUENCE, IMPORT_OVERLOAD, IMPORT_SUPPORTS_INDEX]
+            if self._internal_template_data[_SEQUENCE_ITEM_TYPE_TEMPLATE_DATA_KEY] == "Any":
+                imports.append(IMPORT_ANY)
+            for import_ in imports:
+                self._additional_imports.remove(import_)
+            for key in (
+                _SEQUENCE_BASE_CLASS_TEMPLATE_DATA_KEY,
+                _SEQUENCE_ITEM_TYPE_TEMPLATE_DATA_KEY,
+                _SEQUENCE_SLICE_TYPE_TEMPLATE_DATA_KEY,
+            ):
+                self._pop_internal_template_data(key)
+            self.invalidate_render_caches()
+            return
+        # The eligible root is non-optional, so its outer container encloses the
+        # exact item hint, including final reference aliases and union syntax.
+        slice_type = root_type.type_hint
+        _, bracket, item_hint = slice_type.partition("[")
+        item_type = item_hint[:-1] if bracket else "Any"
+        slice_type = slice_type if bracket else f"{slice_type}[{item_type}]"
+        self._set_internal_template_data(_SEQUENCE_BASE_CLASS_TEMPLATE_DATA_KEY, f"Sequence[{item_type}]")
+        self._set_internal_template_data(_SEQUENCE_ITEM_TYPE_TEMPLATE_DATA_KEY, item_type)
+        self._set_internal_template_data(_SEQUENCE_SLICE_TYPE_TEMPLATE_DATA_KEY, slice_type)
+
     def render(self, *, class_name: str | None = None) -> str:
         """Render the RootModel and validate custom sequence templates when needed."""
         use_custom_template = self._uses_custom_root_template
