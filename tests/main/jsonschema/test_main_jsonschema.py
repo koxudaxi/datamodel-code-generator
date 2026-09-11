@@ -124,8 +124,6 @@ from tests.main.conftest import (
 from tests.main.jsonschema.conftest import EXPECTED_JSON_SCHEMA_PATH, assert_file_content
 
 if TYPE_CHECKING:
-    from typing import Any
-
     from datamodel_code_generator.parser.base import Result
 
 FixtureRequest = pytest.FixtureRequest
