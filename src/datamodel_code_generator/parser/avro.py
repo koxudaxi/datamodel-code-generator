@@ -111,7 +111,11 @@ def _logical_default_expression(kind: str, value: str) -> Any:
 
 class _AvroSchemaConverter:
     def __init__(
-        self, logical_default: Callable[[str, str, str], Any] | None = None, *, convert_logical_defaults: bool = True
+        self,
+        logical_default: Callable[[str, str, str], Any] | None = None,
+        *,
+        convert_logical_defaults: bool = True,
+        logical_default_enabled: Callable[[str, str], bool] | None = None,
     ) -> None:
         self.named_schemas: dict[str, JsonSchema] = {}
         self.names: dict[str, _Name] = {}
@@ -120,6 +124,7 @@ class _AvroSchemaConverter:
         self._building_definitions: set[str] = set()
         self._logical_default = logical_default
         self._convert_logical_defaults = convert_logical_defaults
+        self._logical_default_enabled = logical_default_enabled
 
     def convert_raw(self, raw_obj: YamlValue) -> dict[str, YamlValue]:
         self._collect_named_schemas(raw_obj)
@@ -466,6 +471,9 @@ class _AvroSchemaConverter:
             case _:
                 return value
 
+        if self._logical_default_enabled is not None and not self._logical_default_enabled(kind, logical_type):
+            return value
+
         from datetime import datetime, timedelta, timezone  # ruff: ignore[import-outside-top-level]
 
         microseconds = self._temporal_microseconds(value, logical_type)
@@ -527,6 +535,10 @@ class _AvroSchemaConverter:
     def _convert_logical_bytes_default(self, value: Any, schema: JsonSchema) -> Any:
         """Decode decimal and duration defaults using their distinct byte layouts."""
         value = self._decode_bytes_default(value)
+        if self._logical_default_enabled is not None and not self._logical_default_enabled(
+            "timedelta" if schema["logicalType"] == "duration" else "decimal", schema["logicalType"]
+        ):
+            return value
         if schema["logicalType"] == "duration":
             return self._convert_duration_default(value, schema)
         precision = schema.get("precision")
@@ -745,6 +757,7 @@ class AvroParser(JsonSchemaParser):
             lambda: _AvroSchemaConverter(
                 self._logical_default,
                 convert_logical_defaults=self.data_model_type.SUPPORTS_DESERIALIZED_DEFAULT_VALUES,
+                logical_default_enabled=self._logical_default_enabled if self.type_mappings else None,
             )
         )
         if self._has_runtime_expressions:
@@ -757,21 +770,29 @@ class AvroParser(JsonSchemaParser):
                     if imports := runtime_expression_imports(field.default):
                         field._set_runtime_expression_imports(imports)  # ruff: ignore[private-member-access]
 
-    def _logical_default(self, kind: str, logical_type: str, value: str) -> Any:
-        """Keep defaults compatible with the backend's existing logical type mapping."""
-        from datamodel_code_generator.types import Types  # ruff: ignore[import-outside-top-level]
-
+    @staticmethod
+    def _logical_default_format(kind: str, logical_type: str) -> str:
+        """Resolve the JSON Schema format used for an Avro logical default."""
         match kind:
             case "timedelta":
-                logical_type_kind = Types.timedelta
-            case "decimal":
-                logical_type_kind = Types.decimal
-            case "date":
-                logical_type_kind = Types.date
-            case "time":
-                logical_type_kind = Types.time
+                return "duration"
+            case "datetime":
+                return "date-time-local" if logical_type.startswith("local-") else "date-time"
             case _:
-                logical_type_kind = Types.date_time_local if logical_type.startswith("local-") else Types.date_time
+                return kind
+
+    def _logical_default_enabled(self, kind: str, logical_type: str) -> bool:
+        """Keep physical defaults when a mapping replaces their logical representation."""
+        format_ = self._logical_default_format(kind, logical_type)
+        mapped_type = self._get_type_with_mappings("string", format_)
+        return (
+            mapped_type == self._data_formats["string"][format_]
+            or self.data_type_manager.get_data_type(mapped_type).type == "str"
+        )
+
+    def _logical_default(self, kind: str, logical_type: str, value: str) -> Any:
+        """Keep defaults compatible with the backend's existing logical type mapping."""
+        logical_type_kind = self._get_type_with_mappings("string", self._logical_default_format(kind, logical_type))
         if self.data_type_manager.get_data_type(logical_type_kind).type == "str":
             return value
         self._register_runtime_expression()

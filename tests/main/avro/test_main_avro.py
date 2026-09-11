@@ -287,6 +287,90 @@ def test_avro_temporal_defaults_preserve_raw_input(output_file: Path) -> None:
     assert_output(f"{rendered}\n", AVRO_DATA_PATH.parent / "expected/main/avro/temporal_defaults_converted.txt")
 
 
+@pytest.mark.parametrize(
+    ("output_model_type", "backend"),
+    [
+        (DataModelType.PydanticV2BaseModel, "pydantic_v2"),
+        (DataModelType.DataclassesDataclass, "dataclass"),
+        (DataModelType.MsgspecStruct, "msgspec"),
+    ],
+)
+def test_avro_mapped_logical_defaults(output_file: Path, output_model_type: DataModelType, backend: str) -> None:
+    """Preserve physical defaults when temporal, decimal and duration formats are remapped."""
+    run_main_and_assert(
+        input_path=AVRO_DATA_PATH / "mapped_logical_defaults.avsc",
+        output_path=output_file,
+        input_file_type="avro",
+        assert_func=assert_file_content,
+        expected_file=f"mapped_logical_defaults_{backend}.py",
+        extra_args=[
+            "--target-python-version",
+            "3.10",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+            "--output-model-type",
+            output_model_type.value,
+            "--collapse-root-models",
+            "--type-mappings",
+            "date=integer",
+            "time=integer",
+            "date-time=integer",
+            "date-time-local=integer",
+            "decimal=binary",
+            "duration=binary",
+        ],
+        force_exec_validation=True,
+    )
+    runtime_file = AVRO_DATA_PATH.parent / "expected/main/avro/mapped_logical_defaults.txt"
+    with _generated_model(output_file, f"mapped_defaults_{backend}", "MappedDefaults") as model:
+        assert_output(f"{model()!r}\n", runtime_file)
+        if output_model_type == DataModelType.PydanticV2BaseModel:
+            model.model_config["validate_default"] = True
+            model.model_rebuild(force=True)
+            assert_output(f"{model()!r}\n", runtime_file)
+
+
+@pytest.mark.parametrize(
+    ("mappings", "expected_file", "runtime_file"),
+    [
+        (
+            ("date=date", "time=time"),
+            "temporal_defaults_simple_pydantic_v2.py",
+            "temporal_defaults_simple_pydantic_v2.txt",
+        ),
+        (
+            ("date=string", "time=string"),
+            "temporal_defaults_mapped_strings.py",
+            "temporal_defaults_simple_dataclass.txt",
+        ),
+    ],
+)
+def test_avro_mapped_temporal_strings(
+    output_file: Path, mappings: tuple[str, str], expected_file: str, runtime_file: str
+) -> None:
+    """Retain logical defaults for matching formats and explicit string output."""
+    run_main_and_assert(
+        input_path=AVRO_DATA_PATH / "temporal_defaults_simple.avsc",
+        output_path=output_file,
+        input_file_type="avro",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=[
+            "--target-python-version",
+            "3.10",
+            "--disable-timestamp",
+            "--type-mappings",
+            *mappings,
+        ],
+        force_exec_validation=True,
+    )
+    with _generated_model(output_file, "mapped_temporal_defaults", "TemporalDefaults") as model:
+        model.model_config["validate_default"] = True
+        model.model_rebuild(force=True)
+        assert_output(f"{model()!r}\n", AVRO_DATA_PATH.parent / f"expected/main/avro/{runtime_file}")
+
+
 def test_main_avro_temporal_default_controls(output_file: Path) -> None:
     """Leave ordinary defaults, unsupported annotations and temporal fields without defaults unchanged."""
     run_main_and_assert(
