@@ -121,6 +121,7 @@ class SchemaRuntimeValidation:
     conditional_required: list[ConditionalRequiredRule] = field(default_factory=list)
     property_count: PropertyCountRule | None = None
     unique_items: list[UniqueItemsRule] = field(default_factory=list)
+    replace_unique_items: bool = False
 
     def __bool__(self) -> bool:
         """Return whether any runtime validation rule is registered."""
@@ -130,6 +131,7 @@ class SchemaRuntimeValidation:
             or self.conditional_required
             or self.property_count
             or self.unique_items
+            or self.replace_unique_items
         )
 
     @property

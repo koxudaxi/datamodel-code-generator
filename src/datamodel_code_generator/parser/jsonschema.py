@@ -270,6 +270,7 @@ _REF_SIBLING_KEYWORDS_DISABLED_VERSIONS = frozenset({
     JsonSchemaVersion.Draft6,
     JsonSchemaVersion.Draft7,
 })
+_PYTHON_FIELD_OVERRIDES_KEY = "__python_field_overrides"
 
 
 def _field_source_name(field: DataModelFieldBase) -> str | None:
@@ -940,12 +941,23 @@ class JsonSchemaObject(BaseModel):
             return values
         alias_extras = values.get(cls.__extra_key__, {})
         raw_extras = {k: v for k, v in values.items() if k not in EXCLUDE_FIELD_KEYS}
+        if (overrides := getattr(values.get("allOf"), "_python_field_overrides", None)) is not None:
+            raw_extras[_PYTHON_FIELD_OVERRIDES_KEY] = overrides
         if not alias_extras and not raw_extras:
             return values
         extras = {**alias_extras, **raw_extras}
         if "const" in alias_extras:  # pragma: no cover
             extras["const"] = alias_extras["const"]
         return {**values, cls.__extra_key__: extras}
+
+    @property
+    def python_field_overrides(self) -> Mapping[str, str]:
+        """Read only converter-owned replacement metadata."""
+        if (annotation := self.extras.get(_PYTHON_FIELD_OVERRIDES_KEY)) is None:
+            return {}
+        from datamodel_code_generator.input_model_result import PythonFieldOverrides  # noqa: PLC0415
+
+        return annotation.fields if isinstance(annotation, PythonFieldOverrides) else {}
 
     @field_validator("ref")
     @classmethod
@@ -7468,6 +7480,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     ) -> None:
         """Register ``uniqueItems`` checks as compact paths through raw input data."""
         rules: list[UniqueItemsRule] = []
+        replace_inherited_rules = False
 
         def is_owned_path(unique_items_path: UniqueItemsPath, owned_paths: set[UniqueItemsPath]) -> bool:
             if unique_items_path in owned_paths:
@@ -7533,11 +7546,16 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 property_name: field for field in fields if (property_name := _field_source_name(field)) is not None
             }
             add_rules(obj, (), property_input_names=names_by_property)
+            overridden_properties: set[str] = set()
             for source in self._iter_schema_validation_sources(obj):
                 if not source.properties:
                     continue
                 for property_name, property_schema in source.properties.items():
                     if not isinstance(property_schema, JsonSchemaObject):
+                        continue
+                    if property_name in overridden_properties:
+                        if next(self._iter_unique_items_rules(property_schema, ()), None) is not None:
+                            replace_inherited_rules = True
                         continue
                     if (input_names := names_by_property.get(property_name)) is not None:
                         field = fields_by_property.get(property_name)
@@ -7553,10 +7571,15 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                             owned_paths,
                             get_data_type_property_input_names(field.data_type) if field is not None else None,
                         )
+                if overrides := source.python_field_overrides:
+                    overridden_properties.update(overrides)
+                    overridden_properties.update(overrides.values())
 
-        if not rules:
+        if not rules and not replace_inherited_rules:
             return
-        self._schema_runtime_validation(reference_path).unique_items.extend(rules)
+        runtime_validation = self._schema_runtime_validation(reference_path)
+        runtime_validation.unique_items.extend(rules)
+        runtime_validation.replace_unique_items = replace_inherited_rules
 
     def _collect_pattern_property_validators(
         self,
@@ -7808,6 +7831,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             inherited_fields = self._get_inherited_field_map(base_classes)
             inherited_properties = self._get_inherited_property_map(base_classes)
             inherited_required_names = self._get_inherited_required_names(base_classes)
+        python_overrides = obj.python_field_overrides
+        if python_overrides:
+            inherited_properties = {
+                key: value for key, value in inherited_properties.items() if key not in python_overrides
+            }
+            inherited_required_names = inherited_required_names.difference(python_overrides)
         if obj.properties:
             deferred_property_names = self._get_deferred_inherited_property_names(
                 obj,
@@ -7833,8 +7862,32 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             fields.extend(object_fields)
         if base_classes:
             reserved_names = {field.name for field in fields if field.name}
+            collected_inherited_fields: list[DataModelFieldBase] | None = None
             for index, field in enumerate(fields):
                 field_name = _field_source_name(field)
+                if field_name in python_overrides:
+                    parent_name = python_overrides[field_name]
+                    parent_field = inherited_fields.get(parent_name)
+                    if parent_field is None and parent_name != field_name:
+                        for resolved_ref in self._linearize_inherited_schema_refs(base_classes):
+                            parent_schema = self._load_inherited_schema_object(resolved_ref)
+                            parent_name = parent_schema.python_field_overrides.get(parent_name, parent_name)
+                        if collected_inherited_fields is None:
+                            collected_inherited_fields = self._collect_inherited_fields_for_request_response(
+                                base_classes
+                            )
+                        parent_field = next(
+                            (
+                                candidate
+                                for candidate in collected_inherited_fields
+                                if _field_source_name(candidate) == parent_name
+                            ),
+                            None,
+                        )
+                    if parent_field is not None:
+                        field.name = parent_field.name
+                        field.alias = field_name if field.name != field_name else None
+                    continue
                 inherited_field = inherited_fields.get(field_name) if field_name is not None else None
                 if (
                     field_name in inherited_required_names or (inherited_field is not None and inherited_field.required)

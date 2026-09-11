@@ -1591,7 +1591,7 @@ class BaseModel(BaseModelBase):
             if property_count_line not in self._internal_template_data.get("class_body_lines", ()):
                 self._append_internal_template_data("class_body_lines", property_count_line)
 
-        if runtime_validation.unique_items:
+        if runtime_validation.unique_items or runtime_validation.replace_unique_items:
             from datamodel_code_generator.model.pydantic_v2._schema_runtime_validation import (  # noqa: PLC0415
                 render_unique_items_rules,
             )
@@ -1602,7 +1602,11 @@ class BaseModel(BaseModelBase):
                 for line in unique_items_lines:
                     self._append_internal_template_data("class_body_lines", line)
 
-        if runtime_validation.property_count is not None or runtime_validation.unique_items:
+        if (
+            runtime_validation.property_count is not None
+            or runtime_validation.unique_items
+            or runtime_validation.replace_unique_items
+        ):
             self._additional_imports.append(IMPORT_ANY)
             self._additional_imports.append(IMPORT_CLASSVAR)
 
