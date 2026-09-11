@@ -12,10 +12,10 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from pathlib import Path
 from threading import Event
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
-from pydantic import ValidationError
+from pydantic import TypeAdapter, ValidationError
 
 from datamodel_code_generator import DataModelType, GenerateConfig, InputFileType, arguments
 from datamodel_code_generator import __main__ as main_module
@@ -2287,3 +2287,243 @@ def test_input_model_equal_native_schemas() -> None:
         json.dumps([TypeAdapter(left).json_schema() == TypeAdapter(right).json_schema() for left, right in TYPE_PAIRS]),
         EXPECTED_INPUT_MODEL_PATH / "equal_identity_native_schemas.txt",
     )
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("formatter", ["external", "builtin"])
+@pytest.mark.parametrize(
+    "case", ["Plain", "Aliased", "Validation", "Choices", "Paths", "Serialization", "Swapped", "Nested", "Hidden"]
+)
+def test_input_model_wire_types(tmp_path: Path, entrypoint: str, formatter: str, case: str) -> None:
+    """Restore source types using the validation schema's actual property names."""
+    from pydantic import ValidationError
+
+    from datamodel_code_generator import GenerateConfig, InputFileType
+    from datamodel_code_generator.format import Formatter
+    from datamodel_code_generator.input_model import load_model_schema
+
+    paths = [f"tests.data.python.input_model.wire_types:{case}"]
+    (tmp_path / "pyproject.toml").write_text(
+        (Path(__file__).parent / "data/python/input_model/collision_settings/pyproject.toml").read_text()
+    )
+    formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
+    output = tmp_path / "output.py"
+    if entrypoint == "cli":
+        run_main_with_args(
+            _input_model_args(
+                paths, output_path=output, extra_args=["--disable-timestamp", "--formatters", *formatters]
+            )
+        )
+    else:
+        config = GenerateConfig(
+            input_file_type=InputFileType.JsonSchema,
+            disable_timestamp=True,
+            input_filename="<stdin>",
+            output=output,
+            settings_path=tmp_path,
+            formatters=[Formatter(value) for value in formatters],
+        )
+        schema = load_model_schema(paths, InputFileType.JsonSchema)
+        run_generate_and_assert(
+            input_=schema, config=config, expected_file=EXPECTED_INPUT_MODEL_PATH / f"wire_types_{case.lower()}.py"
+        )
+    if entrypoint == "cli":
+        assert_output(output.read_text(), EXPECTED_INPUT_MODEL_PATH / f"wire_types_{case.lower()}.py")
+    with _generated_model(output, "wire_types_output", case) as model:
+        values_name, callback_name = (
+            ("wire_values", "wire_callback")
+            if case in {"Aliased", "Validation", "Choices", "Nested"}
+            else ("callback", "values")
+            if case == "Swapped"
+            else ("values", "callback")
+        )
+        payload = {"first": 1, values_name: 1 if case == "Nested" else [1, 2, 1], callback_name: int, "last": "end"}
+        source_payload = dict(payload)
+        if case == "Paths":
+            source_payload["data"] = {"values": source_payload.pop("values")}
+        source_model = getattr(importlib.import_module("tests.data.python.input_model.wire_types"), case)
+        source = source_model.model_validate({"item": source_payload} if case == "Nested" else source_payload)
+        result = model.model_validate({"item": payload} if case == "Nested" else payload)
+        if case == "Nested":
+            source, result = source.item, result.item
+        assert getattr(result, values_name) == source.values
+        assert type(getattr(result, values_name)) is type(source.values)
+        if case != "Nested":
+            assert source.values == frozenset({1, 2})
+        assert getattr(result, callback_name) is source.callback is int
+        assert list(type(result).model_fields) == ["first", values_name, callback_name, "last"]
+        for invalid in ("not callable", 3):
+            payload[callback_name] = invalid
+            source_payload[callback_name] = invalid
+            with pytest.raises(ValidationError):
+                model.model_validate({"item": payload} if case == "Nested" else payload)
+            with pytest.raises(ValidationError):
+                source_model.model_validate({"item": source_payload} if case == "Nested" else source_payload)
+
+
+INPUT_WIRE_SOURCE_MODULE = "tests.data.python.input_model.wire_winners"
+
+
+INPUT_WIRE_CASES = json.loads(
+    (EXPECTED_INPUT_MODEL_PATH.parents[2] / "python/input_model/wire_winners.json").read_text()
+)
+
+
+@pytest.mark.parametrize("case", INPUT_WIRE_CASES)
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("formatter", ["external", "builtin"])
+def test_input_model_validation_property_winners(tmp_path: Path, case: str, entrypoint: str, formatter: str) -> None:
+    """Only the field whose schema survives may supplement the emitted property."""
+    options = INPUT_WIRE_CASES[case]
+    formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
+    output = tmp_path / "model.py"
+    paths = [f"{INPUT_WIRE_SOURCE_MODULE}:{name}" for name in options.get("models", [case])]
+    model_name = options.get("model", case)
+    if entrypoint == "cli":
+        run_main_with_args(
+            _input_model_args(
+                paths, output_path=output, extra_args=["--disable-timestamp", "--formatters", *formatters]
+            )
+        )
+    else:
+        schema = load_model_schema(paths, InputFileType.JsonSchema)
+        if case == "InlinedWins":
+            assert_output(json.dumps(schema["examples"]), EXPECTED_INPUT_MODEL_PATH / "wire_winner_examples.txt")
+        assert_output(
+            json.dumps(schema, indent=2), EXPECTED_INPUT_MODEL_PATH / f"wire_winner_{case.lower()}_schema.txt"
+        )
+        run_generate_and_assert(
+            input_=schema,
+            expected_file=EXPECTED_INPUT_MODEL_PATH / f"wire_winner_{case.lower()}.py",
+            config=GenerateConfig(
+                input_file_type=InputFileType.JsonSchema,
+                output=output,
+                disable_timestamp=True,
+                input_filename="<stdin>",
+                formatters=[Formatter(value) for value in formatters],
+            ),
+        )
+    if entrypoint == "cli":
+        assert_output(output.read_text(), EXPECTED_INPUT_MODEL_PATH / f"wire_winner_{case.lower()}.py")
+    payload: dict[str, Any] = {"first": 1, "shared": int if options.get("callable") else [1, 1, 2], "last": "end"}
+    if case == "PathWins":
+        payload["values"] = payload.pop("shared")
+        payload["data"] = {"values": [7, 7]}
+    elif case in {"Serialization", "PlainData", "PlainTyped"}:
+        payload["values"] = payload.pop("shared")
+        if case == "Serialization":
+            payload["items"] = [3, 3, 4]
+    elif case == "Populated":
+        payload.update(values=[7, 7], items=[8, 8])
+    source_type = getattr(importlib.import_module(INPUT_WIRE_SOURCE_MODULE), model_name)
+    native = TypeAdapter(source_type).validate_python({"item": payload} if options.get("nested") else payload)
+    with _generated_model(output, f"generated_winner_{case}", model_name) as model:
+        generated = model.model_validate({"item": payload} if options.get("nested") else payload)
+        if options.get("nested"):
+            native, generated = native.item, generated.item
+        for instance, fields, order in (
+            (native, options["fields"], options["order"]),
+            (generated, {name: name for name in options["fields"]}, list(type(generated).model_fields)),
+        ):
+            values = {}
+            for wire_name, attribute_name in fields.items():
+                value = instance[attribute_name] if isinstance(instance, dict) else getattr(instance, attribute_name)
+                values[wire_name] = {
+                    "type": type(value).__name__,
+                    "value": value(7) if callable(value) else sorted(value) if isinstance(value, frozenset) else value,
+                }
+            assert_output(
+                json.dumps({"order": order, "values": values}, indent=2),
+                EXPECTED_INPUT_MODEL_PATH / f"wire_winner_{case.lower()}_runtime.txt",
+            )
+        if options.get("reject_noncallable"):
+            payload["shared"] = "not callable"
+            with pytest.raises(ValidationError):
+                TypeAdapter(source_type).validate_python(payload)
+            with pytest.raises(ValidationError):
+                model.model_validate(payload)
+
+
+@pytest.mark.parametrize("case", ["UserExtensions", "CollisionExtensions", "ExtensionContainer"])
+def test_validation_property_user_extensions(case: str) -> None:
+    """Internal ownership metadata preserves native schema extensions and instance data."""
+    source_type = getattr(importlib.import_module(INPUT_WIRE_SOURCE_MODULE), case)
+    native_schema = TypeAdapter(source_type).json_schema()
+    schema = load_model_schema([f"{INPUT_WIRE_SOURCE_MODULE}:{case}"], InputFileType.JsonSchema)
+    observed = schema["$defs"]["CollisionExtensions"] if case == "ExtensionContainer" else schema
+    expected = native_schema["$defs"]["CollisionExtensions"] if case == "ExtensionContainer" else native_schema
+    for candidate in (observed, expected):
+        keys = ("x-datamodel-code-generator-field-name", "x-datamodel-code-generator-field-names")
+        records = {
+            "root": {key: candidate[key] for key in (*keys, "examples")},
+            "property": {key: candidate["properties"]["shared"][key] for key in keys},
+            "default": candidate["properties"]["metadata"]["default"],
+        }
+        assert_output(
+            json.dumps(records, indent=2), EXPECTED_INPUT_MODEL_PATH / f"wire_winner_{case.lower()}_extensions.txt"
+        )
+
+
+@pytest.mark.parametrize("roots", ["ordinary", "before", "after", "nested", "nested_duplicate", "inline_duplicate"])
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("formatter", ["external", "builtin"])
+def test_validation_property_owner_scope(tmp_path: Path, roots: str, entrypoint: str, formatter: str) -> None:
+    """Ordinary roots do not install owner hooks or inherit cleanup from prior roots."""
+    import sys
+
+    module_name = "tests.data.python.input_model.wire_owner_scope"
+    names = {
+        "ordinary": ["Plain"],
+        "before": ["Plain", "Duplicate"],
+        "after": ["Duplicate", "Plain"],
+        "nested": ["Container", "Plain"],
+        "nested_duplicate": ["NestedDuplicate", "Plain"],
+        "inline_duplicate": ["InlineDuplicate", "Plain"],
+    }[roots]
+    paths = [f"{module_name}:{name}" for name in names]
+    source_module = importlib.import_module(module_name)
+    source_module.owner_calls.clear()
+
+    formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
+    output = tmp_path / "model.py"
+    previous = sys.getprofile()
+    sys.setprofile(source_module.record_owner_calls)
+    try:
+        if entrypoint == "cli":
+            run_main_with_args(
+                _input_model_args(
+                    paths, output_path=output, extra_args=["--disable-timestamp", "--formatters", *formatters]
+                )
+            )
+        else:
+            run_generate_and_assert(
+                input_=load_model_schema(paths, InputFileType.JsonSchema),
+                expected_file=EXPECTED_INPUT_MODEL_PATH / f"wire_owner_scope_{roots}.py",
+                config=GenerateConfig(
+                    input_file_type=InputFileType.JsonSchema,
+                    output=output,
+                    disable_timestamp=True,
+                    input_filename="<stdin>",
+                    formatters=[Formatter(value) for value in formatters],
+                ),
+            )
+    finally:
+        sys.setprofile(previous)
+    if entrypoint == "cli":
+        assert_output(output.read_text(), EXPECTED_INPUT_MODEL_PATH / f"wire_owner_scope_{roots}.py")
+    assert_output(
+        json.dumps(dict(source_module.owner_calls), indent=2),
+        EXPECTED_INPUT_MODEL_PATH / f"wire_owner_scope_{roots}_counts.txt",
+    )
+    with _generated_model(output, f"owner_scope_{roots}", names[0]) as generated:
+        module = sys.modules[generated.__module__]
+        for name in names:
+            payload = {"first": 1, "second": 2, "third": 3} if name == "Plain" else {"wire": [1, 1, 2]}
+            if name in {"Container", "NestedDuplicate", "InlineDuplicate"}:
+                payload = {"item": payload}
+            for model in (getattr(source_module, name), getattr(module, name)):
+                instance = model.model_validate(payload)
+                assert_output(
+                    json.dumps(instance.model_dump(mode="json", by_alias=True), separators=(",", ":")),
+                    EXPECTED_INPUT_MODEL_PATH / f"wire_owner_scope_{name.lower()}_runtime.txt",
+                )
