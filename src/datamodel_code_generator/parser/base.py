@@ -6216,6 +6216,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.__mark_set_item_models_hashable(all_models)
         self.__apply_generic_base_class(contexts)
         self._finalize_structured_imports(contexts)
+        if self.use_default_factory_for_optional_nested_models:
+            # Inherited defaults may have changed since a consumer first queried its factory imports.
+            _clear_model_imports_cache(all_models)
         model_imports = {model: model.imports for ctx in contexts for model in ctx.models}
 
         for ctx in contexts:

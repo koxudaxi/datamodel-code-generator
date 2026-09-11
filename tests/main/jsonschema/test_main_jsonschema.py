@@ -26,7 +26,7 @@ from operator import itemgetter
 from pathlib import Path, PurePath
 from threading import Thread
 from types import MappingProxyType
-from typing import TYPE_CHECKING, get_args, get_type_hints
+from typing import TYPE_CHECKING, Any, get_args, get_type_hints
 from urllib.parse import urlparse
 
 import black
@@ -38,7 +38,7 @@ from jsonschema import ValidationError as SchemaValidationError
 from jsonschema.validators import validator_for
 from packaging import version
 from pydantic import VERSION as PYDANTIC_VERSION
-from pydantic import PydanticUserError, ValidationError
+from pydantic import PydanticUserError, TypeAdapter, ValidationError
 from referencing import Registry, Resource
 from referencing.exceptions import Unresolvable
 
@@ -14194,7 +14194,16 @@ The `--use-default-factory-for-optional-nested-models` flag generates default_fa
 for optional nested model fields instead of None default:
 - Dataclasses: `field: Model | None = field(default_factory=Model)`
 - Pydantic: `field: Model | None = Field(default_factory=Model)`
-- msgspec: `field: Model | UnsetType = field(default_factory=Model)`""",
+- msgspec: `field: Model | UnsetType = field(default_factory=Model)`
+
+When a built-in generated child has required constructor fields, including inherited fields,
+the field keeps its usual `None` or `UNSET` default. The child's required fields
+remain required. With `--strip-default-none`, the usual omission behavior can instead
+require the parent field to be supplied explicitly. Existing defaults enabled by
+`--use-default` and fields excluded
+from the constructor are respected. Custom root templates, decorators, and opaque
+base classes keep their existing factory behavior. Constructors and validators are
+not executed to determine whether a factory is usable.""",
     input_schema="jsonschema/default_factory_nested_model.json",
     cli_args=["--use-default-factory-for-optional-nested-models"],
     model_outputs={
@@ -22387,3 +22396,109 @@ def test_repeated_schema_documents(tmp_path: Path, formatter: str) -> None:
                 json.dumps(model.model_validate({"value": "ok"}).model_dump(mode="json")),
                 RESOURCES_EXPECTED / "duplicate_document_runtime.txt",
             )
+
+
+NESTED_FACTORY_DATA = JSON_SCHEMA_DATA_PATH / "optional_nested_factory_requirements"
+
+
+NESTED_FACTORY_EXPECTED = EXPECTED_JSON_SCHEMA_PATH / "optional_nested_factory_requirements"
+
+
+NESTED_FACTORY_CASES = json.loads((DATA_PATH / "payloads/optional_nested_factory_requirements_cases.json").read_text())
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("case", NESTED_FACTORY_CASES, ids=itemgetter("name"))
+def test_optional_nested_factory_constructor_requirements(
+    output_file: Path, entrypoint: str, case: dict[str, Any]
+) -> None:
+    """Keep omission usable without relaxing required children or replacing normal factories."""
+    options = case["options"].copy()
+    args = case["cli"].copy()
+    if "custom_template_dir" in options:
+        options["custom_template_dir"] = NESTED_FACTORY_DATA / options["custom_template_dir"]
+        args[-1] = str(options["custom_template_dir"])
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=NESTED_FACTORY_DATA / f"{case['schema']}.json",
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file=NESTED_FACTORY_EXPECTED / case["expected_code"],
+            extra_args=[
+                "--output-model-type",
+                case["backend"],
+                "--use-default-factory-for-optional-nested-models",
+                "--disable-timestamp",
+                *args,
+            ],
+            force_exec_validation=True,
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=NESTED_FACTORY_DATA / f"{case['schema']}.json",
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            output_model_type=DataModelType(case["backend"]),
+            use_default_factory_for_optional_nested_models=True,
+            disable_timestamp=True,
+            assert_func=assert_file_content,
+            expected_file=NESTED_FACTORY_EXPECTED / case["expected_code"],
+            unchanged_inputs={"options": options},
+            **options,
+        )
+    with _generated_model(output_file, f"generated_nested_factory_{case['name']}", "Root") as model:
+        if case.get("root_required"):
+            with pytest.raises((ValidationError, TypeError)):
+                model()
+            instances = []
+        else:
+            instances = [model()]
+        for instance in instances:
+            values = []
+            for path in case["paths"]:
+                value = instance
+                for name in path:
+                    value = getattr(value, name, "<missing>")
+                values.append(
+                    value if value is None or isinstance(value, (str, int, float, bool)) else type(value).__name__
+                )
+            assert_output(json.dumps(values, indent=2) + "\n", NESTED_FACTORY_EXPECTED / case["expected_values"])
+        if required_model := case["required_model"]:
+            module = sys.modules[model.__module__]
+            child_model = getattr(module, required_model)
+            with pytest.raises((ValidationError, TypeError)):
+                child_model()
+            child = child_model(value=1)
+            nested = module.Item(leaf=child) if required_model == "Leaf" else child
+            assert_output(
+                f"{getattr(model(item=nested).item, 'leaf', nested).value}\n", NESTED_FACTORY_EXPECTED / "explicit.txt"
+            )
+
+
+@pytest.mark.parametrize(
+    "case", [case for case in NESTED_FACTORY_CASES if case["schema"] == "required"], ids=itemgetter("name")
+)
+def test_optional_nested_factory_decoding(output_file: Path, case: dict[str, Any]) -> None:
+    """Decode omitted nested fields using actual backend validation."""
+    run_generate_file_and_assert(
+        input_path=NESTED_FACTORY_DATA / "required.json",
+        output_path=output_file,
+        input_file_type=InputFileType.JsonSchema,
+        output_model_type=DataModelType(case["backend"]),
+        use_default_factory_for_optional_nested_models=True,
+        disable_timestamp=True,
+        assert_func=assert_file_content,
+        expected_file=NESTED_FACTORY_EXPECTED / case["expected_code"],
+    )
+    with _generated_model(output_file, f"decoded_nested_factory_{case['name']}", "Root") as model:
+        if case["backend"] == "msgspec.Struct":
+            import msgspec
+
+            instances = [msgspec.convert({}, type=model), msgspec.json.decode(b"{}", type=model)]
+        else:
+            instances = [TypeAdapter(model).validate_json("{}")]
+        for instance in instances:
+            value = instance.item
+            values = [None if value is None else type(value).__name__]
+            assert_output(json.dumps(values, indent=2) + "\n", NESTED_FACTORY_EXPECTED / case["expected_values"])

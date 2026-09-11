@@ -73,6 +73,7 @@ _MAX_CUSTOM_TEMPLATE_DEPENDENCIES = 128
 _ORIGINAL_TEMPLATE_LOADER_MARKER = "__datamodel_code_generator_original_template_loader__"
 _NESTED_MODEL_DEFAULT_FACTORY_ORDER_KEY = "_nested_model_default_factory_order"
 _NESTED_MODEL_DEFAULT_FACTORY_RECURSIVE_PATHS_KEY = "_nested_model_default_factory_recursive_paths"
+_NESTED_MODEL_REQUIRED_CONSTRUCTOR_FIELDS_KEY = "_nested_model_required_constructor_fields"
 _REQUIRED_INHERITED_DEFAULT_FACTORY_KEY = "_required_inherited_default_factory"
 _RUNTIME_EXPRESSION_IMPORTS_FIELD_KEY = "_runtime_expression_imports"
 _EXTRA_TEMPLATE_DATA_MAPPING_ERROR = "extra template data must be a dictionary"
@@ -1204,6 +1205,10 @@ class DataModelFieldBase(_BaseModel):  # noqa: PLR0904
         """Return neutral constructor-default semantics for this field."""
         return _get_field_default_info(self)
 
+    def _has_default_for_nested_model_factory(self) -> bool:
+        """Return whether the emitted constructor supplies this field's default."""
+        return self._get_constructor_default_info()[0]
+
     @property
     def _has_forced_field_assignment(self) -> bool:
         """Return whether an explicit required-field assignment must be rendered."""
@@ -1282,6 +1287,37 @@ class DataModelFieldBase(_BaseModel):  # noqa: PLR0904
         self.invalidate_semantic_caches()
 
 
+def _nested_model_has_required_constructor_fields(source: DataModel) -> bool:
+    """Identify required constructor fields without executing opaque custom model code."""
+    inherited = any(base.reference for base in source.base_classes)
+    models = linearize_data_models([source]) if inherited else (source,)
+    for model in models:
+        if (
+            model.decorators or (model._custom_template_dir is not None and model._uses_custom_root_template)  # noqa: SLF001
+        ):
+            return False
+        if (
+            (custom_base_class := model.custom_base_class) is not None
+            and custom_base_class not in (model.BASE_CLASS, [model.BASE_CLASS])
+            and any(not base.reference for base in model.base_classes)
+        ):
+            return False
+    fields = get_effective_fields(source) if inherited else source.fields
+    return any(
+        (field.required or field.should_strip_default_none())
+        and (source.USES_DATACLASS_ARGUMENTS or not field.is_class_var)
+        and source.FIELD_PARTICIPATES_IN_CONSTRUCTOR(field)
+        and (
+            (field.required and not field.use_default_with_required)
+            or (
+                (field.default is UNDEFINED or field.default is None)
+                and not field._has_default_for_nested_model_factory()  # noqa: SLF001  # output-owned default policy
+            )
+        )
+        for field in fields
+    )
+
+
 def _nested_model_default_factory(field: DataModelFieldBase, model_cls: type[DataModel]) -> str | None:
     """Return the nested model name usable as a default_factory for optional fields."""
     for data_type in field.data_type.data_types or (field.data_type,):
@@ -1291,6 +1327,11 @@ def _nested_model_default_factory(field: DataModelFieldBase, model_cls: type[Dat
             if field.parent is not None and source.path in field.parent.__dict__.get(
                 _NESTED_MODEL_DEFAULT_FACTORY_RECURSIVE_PATHS_KEY, ()
             ):
+                return None
+            if (required_fields := source.__dict__.get(_NESTED_MODEL_REQUIRED_CONSTRUCTOR_FIELDS_KEY)) is None:
+                required_fields = _nested_model_has_required_constructor_fields(source)
+                source.__dict__[_NESTED_MODEL_REQUIRED_CONSTRUCTOR_FIELDS_KEY] = required_fields
+            if required_fields:
                 return None
             factory_name = data_type.alias or source.class_name
             parent_order = (
@@ -2276,6 +2317,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     def clear_imports_cache(self) -> None:
         """Clear cached imports after import-affecting model, field, or data type mutations."""
         self.__dict__.pop(self._IMPORTS_CACHE_KEY, None)
+        self.__dict__.pop(_NESTED_MODEL_REQUIRED_CONSTRUCTOR_FIELDS_KEY, None)
 
     def invalidate_render_caches(self) -> None:
         """Clear cached imports and render-derived model identity."""

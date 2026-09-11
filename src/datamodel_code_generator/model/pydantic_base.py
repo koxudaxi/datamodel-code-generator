@@ -207,6 +207,12 @@ class DataModelField(DataModelFieldBase):
         """
         return _nested_model_default_factory(self, BaseModelBase)
 
+    def _has_default_for_nested_model_factory(self) -> bool:
+        """Preserve optional None defaults retained by Pydantic model templates."""
+        if self.default is None and self.data_type.is_optional:
+            return True
+        return super()._has_default_for_nested_model_factory()
+
     def enable_structured_default_validation(self) -> bool:
         """Enable Pydantic validation for a structured default exactly once."""
         if self.extras.get("validate_default") is True:

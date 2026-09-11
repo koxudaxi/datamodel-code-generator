@@ -711,6 +711,10 @@ class DataModelField(DataModelFieldBase):
         """Return structured field() arguments before rendering."""
         return self._get_field_data_and_import_requirements()[0]
 
+    def _has_default_for_nested_model_factory(self) -> bool:
+        """Preserve the UNSET default emitted for optional Struct fields."""
+        return not self.required or super()._has_default_for_nested_model_factory()
+
     def _get_constructor_default_info(self) -> tuple[bool, bool]:
         """Return constructor-default semantics from structured field data."""
         if not has_field_assignment(self) or (self.required and not self.use_default_with_required):

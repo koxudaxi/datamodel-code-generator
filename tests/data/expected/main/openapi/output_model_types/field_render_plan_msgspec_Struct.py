@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from msgspec import Meta, Struct, UnsetType, convert, field
+from msgspec import UNSET, Meta, Struct, UnsetType, convert, field
 
 
 class Nested(Struct):
@@ -21,7 +21,7 @@ class RenderPlan(Struct):
     json_extra_marker: str | UnsetType = 'value'
     Field_: str | UnsetType = field(name='Field(', default='value')
     literal_convert_marker: str | UnsetType = 'lambda: convert'
-    nested_factory: Nested | UnsetType = field(default_factory=Nested)
+    nested_factory: Nested | UnsetType = UNSET
     nested_convert: Nested | UnsetType = field(
         default_factory=lambda: convert({'value': 'Field('}, type=Nested)
     )

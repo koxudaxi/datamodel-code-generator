@@ -26,7 +26,7 @@ class RenderPlan:
     ] = 'value'
     Field_: Annotated[str | None, Field(alias='Field(')] = 'value'
     literal_convert_marker: str | None = 'lambda: convert'
-    nested_factory: Nested | None = Field(default_factory=Nested)
+    nested_factory: Nested | None = None
     nested_convert: Nested | None = Field(
         default_factory=lambda: {'value': 'Field('}, validate_default=True
     )

@@ -18003,6 +18003,15 @@ for optional nested model fields instead of None default:
 - Pydantic: `field: Model | None = Field(default_factory=Model)`
 - msgspec: `field: Model | UnsetType = field(default_factory=Model)`
 
+When a built-in generated child has required constructor fields, including inherited fields,
+the field keeps its usual `None` or `UNSET` default. The child's required fields
+remain required. With `--strip-default-none`, the usual omission behavior can instead
+require the parent field to be supplied explicitly. Existing defaults enabled by
+`--use-default` and fields excluded
+from the constructor are respected. Custom root templates, decorators, and opaque
+base classes keep their existing factory behavior. Constructors and validators are
+not executed to determine whether a factory is usable.
+
 !!! tip "Usage"
 
     ```bash
