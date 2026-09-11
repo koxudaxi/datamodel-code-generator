@@ -10,6 +10,7 @@ class Item(BaseModel):
     model_config = ConfigDict(
         frozen=True,
     )
+    __hash__ = object.__hash__
     value: tuple[int, ...]
 
     def __hash__(self) -> int:

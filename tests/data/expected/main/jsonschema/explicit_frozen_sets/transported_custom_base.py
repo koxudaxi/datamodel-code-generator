@@ -14,6 +14,7 @@ class Item(IdentityBase):
     model_config = ConfigDict(
         frozen=True,
     )
+    __hash__ = object.__hash__
     value: date
 
 

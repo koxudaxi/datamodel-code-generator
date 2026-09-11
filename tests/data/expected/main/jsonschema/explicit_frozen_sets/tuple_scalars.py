@@ -10,7 +10,7 @@ class Item(BaseModel):
     model_config = ConfigDict(
         frozen=True,
     )
-    value: tuple[float, bool, bytes, None]
+    value: tuple[float, bool, str, None]
 
 
 class Container(BaseModel):

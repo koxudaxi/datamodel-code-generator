@@ -90,7 +90,7 @@ from tests.conftest import (
     validate_generated_code,
 )
 from tests.data.python.schema_resource_server import RecordingRequestHandler
-from tests.data.python.unique_model_sets.explicit_native import MODELS, SUBCLASS_VALUES
+from tests.data.python.unique_model_sets.explicit_native import HASH_SUBCLASS_CASES, MODELS
 from tests.main.conftest import (
     ALIASES_DATA_PATH,
     BACKEND_GOLDEN_CASES,
@@ -22527,7 +22527,7 @@ def test_optional_nested_factory_decoding(output_file: Path, case: dict[str, Any
 def test_explicit_frozen_set_hashes(
     tmp_path: Path, entrypoint: str, formatter: str, conversion: bool, case: dict
 ) -> None:
-    """Preserve native Pydantic hashing for mutable, frozen, and custom set items."""
+    """Use native hashes for safe frozen values and retain all other set inputs."""
     output = tmp_path / "model.py"
     expected_file = EXPECTED_JSON_SCHEMA_PATH / "explicit_frozen_sets" / case.get("code", f"{case['name']}.py")
     (tmp_path / "pyproject.toml").write_text('[tool.isort]\nknown_first_party = ["tests"]\n')
@@ -22567,7 +22567,7 @@ def test_explicit_frozen_set_hashes(
             if value:
                 args.append("--" + key.replace("_", "-"))
                 if not isinstance(value, bool):
-                    args.append(value)
+                    args.append(",".join(value) if isinstance(value, list) else value)
         run_main_with_args(args)
     else:
         if extra_data:
@@ -22591,37 +22591,31 @@ def test_explicit_frozen_set_hashes(
     assert_output(code, expected_file)
     with _generated_model(output, "explicit_set_output", "Container") as container:
         item = sys.modules[container.__module__].Item
-        payload = case["payload"] if case.get("root") else {"value": case["payload"], **case.get("extra_payload", {})}
+        payload = case.get(
+            "item_payload",
+            case["payload"] if case.get("root") else {"value": case["payload"], **case.get("extra_payload", {})},
+        )
         native_name = case.get("native", case.get("source", case["name"]))
         first, second = item.model_validate(payload), item.model_validate(payload)
         runtime = {"equal": first == second}
         if case.get("unhashable"):
             with pytest.raises(TypeError, match="unhashable type"):
-                hash(first)
-            with pytest.raises(TypeError, match="unhashable type"):
                 hash(MODELS[native_name].model_validate(payload))
-            for adapter in (
-                TypeAdapter(set[item]),
-                TypeAdapter(frozenset[item]),
-                TypeAdapter(set[MODELS[native_name]]),
-                TypeAdapter(frozenset[MODELS[native_name]]),
-            ):
-                assert_output(
-                    json.dumps({"empty_size": len(adapter.validate_python([]))}) + "\n",
-                    EXPECTED_JSON_SCHEMA_PATH / "explicit_frozen_sets/unhashable.runtime.txt",
-                )
-                with pytest.raises((TypeError, ValidationError)):
-                    adapter.validate_python([payload])
-            assert_output(
-                json.dumps({"empty_size": len(container.model_validate({"items": []}).items)}) + "\n",
-                EXPECTED_JSON_SCHEMA_PATH / "explicit_frozen_sets/unhashable.runtime.txt",
-            )
-            with pytest.raises((TypeError, ValidationError)):
-                container.model_validate({"items": [payload]})
         if not case["safe"]:
+            runtime["identity_hash"] = "__hash__ = object.__hash__" in code
+            with (
+                pytest.warns(UserWarning, match="Pydantic serializer warnings")
+                if case.get("default_warning")
+                else nullcontext()
+            ):
+                runtime["equal_dump"] = first.model_dump(mode="json") == second.model_dump(mode="json")
             runtime.update(
-                identity_hash="__hash__ = object.__hash__" in code,
-                equal_dump=first.model_dump(mode="json") == second.model_dump(mode="json"),
+                set_sizes=[
+                    len(container.model_validate({"items": []}).items),
+                    len(container.model_validate({"items": [payload]}).items),
+                    len(TypeAdapter(set[item]).validate_python([payload])),
+                    len(TypeAdapter(frozenset[item]).validate_python([payload])),
+                ],
             )
             assert_output(
                 json.dumps(runtime, indent=2) + "\n",
@@ -22674,7 +22668,8 @@ def test_explicit_frozen_set_hashes(
 
 
 @pytest.mark.parametrize(
-    "implementation", ["OpaqueModel", "ModelWithMethods", "DecoratedModel", "IncompleteReferenceModel"]
+    "implementation",
+    ["OpaqueModel", "ModelWithMethods", "DecoratedModel", "IncompleteReferenceModel", "ModelWithFields"],
 )
 @pytest.mark.parametrize("conversion", [False, True])
 def test_explicit_set_parser_extension(tmp_path: Path, implementation: str, conversion: bool) -> None:
@@ -22704,6 +22699,12 @@ def test_explicit_set_parser_extension(tmp_path: Path, implementation: str, conv
             "equal": first == second,
             "identity_hash": "__hash__ = object.__hash__" in code,
             "equal_dump": first.model_dump() == second.model_dump() == {"value": 1},
+            "set_sizes": [
+                len(container(items=[]).items),
+                len(container(items=[{"value": 1}]).items),
+                len(TypeAdapter(set[item]).validate_python([{"value": 1}])),
+                len(TypeAdapter(frozenset[item]).validate_python([{"value": 1}])),
+            ],
         }
         assert_output(
             json.dumps(runtime, indent=2) + "\n",
@@ -22740,9 +22741,11 @@ def test_explicit_non_pydantic_set_imports(tmp_path: Path, entrypoint: str, back
         )
 
 
-@pytest.mark.parametrize(("case", "value"), SUBCLASS_VALUES.items())
-def test_standard_frozen_unhashable_subclass(output_file: Path, case: str, value: object) -> None:
-    """Known annotations preserve native behavior even for unhashable user subclasses."""
+@pytest.mark.parametrize(("case", "value", "native_hashable"), HASH_SUBCLASS_CASES)
+def test_standard_frozen_unhashable_subclass(
+    output_file: Path, case: str, value: object, native_hashable: bool | None
+) -> None:
+    """Keep unhashable subclass inputs usable without changing value normalization."""
     run_main_with_args([
         "--input",
         str(JSON_SCHEMA_DATA_PATH / "explicit_frozen_sets" / f"{case}.json"),
@@ -22759,11 +22762,23 @@ def test_standard_frozen_unhashable_subclass(output_file: Path, case: str, value
         output_file.read_text(encoding="utf-8"), EXPECTED_JSON_SCHEMA_PATH / "explicit_frozen_sets" / f"{case}.py"
     )
     with _generated_model(output_file, "standard_frozen_subclass", "Container") as container:
-        for implementation in (sys.modules[container.__module__].Item, MODELS[case]):
-            instance = implementation(value=value)
-            assert_output(
-                f"{instance.value is value}\n",
-                EXPECTED_JSON_SCHEMA_PATH / "explicit_frozen_sets/subclass_identity.txt",
+        instance = sys.modules[container.__module__].Item(value=value)
+        native = MODELS[case](value=value)
+        assert_output(
+            json.dumps(
+                {
+                    "native_input_retention": (instance.value is value) == (native.value is value),
+                    "native_value_type": type(instance.value) is type(native.value),
+                    "hashable": isinstance(hash(instance), int),
+                    "set_size": len(container(items=[{"value": value}]).items),
+                },
+                indent=2,
             )
+            + "\n",
+            EXPECTED_JSON_SCHEMA_PATH / "explicit_frozen_sets/subclass_identity.txt",
+        )
+        if native_hashable:
+            hash(native)
+        elif native_hashable is False:
             with pytest.raises(TypeError, match="unhashable type"):
-                hash(instance)
+                hash(native)

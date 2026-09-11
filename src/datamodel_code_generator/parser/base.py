@@ -3600,15 +3600,22 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                             )
         return references
 
-    @classmethod
-    def __mark_set_item_models_hashable(cls, models: list[DataModel]) -> None:
+    def __mark_set_item_models_hashable(self, models: list[DataModel]) -> None:
         """Mark models used as set/frozenset items with hash flag for __hash__ generation."""
-        set_item_references = cls.__collect_set_item_references(models)
+        set_item_references = self.__collect_set_item_references(models)
         if not set_item_references:
             return
-
-        for model in models:
-            if model.USES_NATIVE_HASH or model.reference.path not in set_item_references or isinstance(model, Enum):
+        set_item_models = [
+            model for model in models if model.reference.path in set_item_references and not isinstance(model, Enum)
+        ]
+        # User imports may shadow the builtin annotations recognized by the backend.
+        native_hash_paths = (
+            set()
+            if self.config.additional_imports
+            else self.data_model_type.get_native_hash_model_paths(set_item_models)
+        )
+        for model in set_item_models:
+            if model.reference.path in native_hash_paths:
                 continue
             model._append_internal_template_data("class_body_lines", "__hash__ = object.__hash__")  # noqa: SLF001
 
@@ -6213,9 +6220,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         module_to_import: dict[ModulePath, Imports],
     ) -> None:
         """Finalize module processing: apply generic base class and remove unused imports."""
+        self.__apply_generic_base_class(contexts)
         all_models = [model for ctx in contexts for model in ctx.models]
         self.__mark_set_item_models_hashable(all_models)
-        self.__apply_generic_base_class(contexts)
         self._finalize_structured_imports(contexts)
         if self.use_default_factory_for_optional_nested_models:
             # Inherited defaults may have changed since a consumer first queried its factory imports.

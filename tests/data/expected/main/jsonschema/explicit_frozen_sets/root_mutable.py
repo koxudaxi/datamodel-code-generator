@@ -7,6 +7,7 @@ from pydantic import BaseModel, RootModel
 
 
 class Item(RootModel[int]):
+    __hash__ = object.__hash__
     root: int
 
 

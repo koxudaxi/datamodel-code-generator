@@ -7,6 +7,7 @@ from tests.data.python.unique_model_sets.explicit_native import CustomHashBase
 
 
 class Item(CustomHashBase):
+    __hash__ = object.__hash__
     value: int
 
 

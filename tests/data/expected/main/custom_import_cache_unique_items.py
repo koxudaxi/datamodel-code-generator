@@ -14,6 +14,7 @@ class Status(StrEnum):
 
 class Item(BaseModel):
     cache_clear_history = ['empty', 'cached', 'cached']
+    __hash__ = object.__hash__
     name: Optional[str] = None
 
 

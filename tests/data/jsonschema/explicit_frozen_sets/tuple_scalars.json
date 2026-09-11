@@ -20,7 +20,7 @@
       "properties": {
         "value": {
           "type": "string",
-          "x-python-type": "tuple[float, bool, bytes, None]"
+          "x-python-type": "tuple[float, bool, str, None]"
         }
       },
       "required": [

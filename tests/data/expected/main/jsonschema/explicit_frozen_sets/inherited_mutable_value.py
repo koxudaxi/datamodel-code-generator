@@ -17,6 +17,7 @@ class Item(Base):
     model_config = ConfigDict(
         frozen=True,
     )
+    __hash__ = object.__hash__
     label: str | None = 'x'
     parent: Base
 

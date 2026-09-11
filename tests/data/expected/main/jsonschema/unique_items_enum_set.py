@@ -16,6 +16,7 @@ class Status(Enum):
 
 
 class Item(BaseModel):
+    __hash__ = object.__hash__
     name: str | None = None
 
 

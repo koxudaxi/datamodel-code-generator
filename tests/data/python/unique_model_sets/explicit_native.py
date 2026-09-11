@@ -179,7 +179,7 @@ class FrozenTupleItem(TupleItem):
 class ScalarTupleItem(TupleItem):
     """Native frozen model for the transported tuple comparison."""
 
-    value: tuple[float, bool, bytes, None]
+    value: tuple[float, bool, str, None]
 
 
 MODELS.update({
@@ -315,3 +315,55 @@ class CustomHash(CustomHashBase):
 
 
 MODELS["custom_hash"] = CustomHash
+
+
+class UnhashableInt(int):
+    __hash__ = None
+
+
+class UnhashableStr(str):
+    __hash__ = None
+
+
+class UnhashableFloat(float):
+    __hash__ = None
+
+
+class UnhashableBytes(bytes):
+    __hash__ = None
+
+
+class UnhashableTuple(tuple):
+    __hash__ = None
+
+
+class UnhashableFrozenSet(frozenset):
+    __hash__ = None
+
+
+class BytesItem(Integer):
+    value: bytes
+
+
+class PrimitiveUnion(Integer):
+    value: int | float | str | bool | None
+
+
+class BoundUnion(Integer):
+    value: int | str
+
+
+MODELS.update({'bytes': BytesItem, 'primitive_union': PrimitiveUnion, 'bound_union': BoundUnion})
+SUBCLASS_VALUES['bytes'] = UnhashableBytes(b'x')
+HASH_SUBCLASS_CASES = [
+    *((name, value, False) for name, value in SUBCLASS_VALUES.items()),
+    ('integer', UnhashableInt(1), True),
+    ('tuple', UnhashableTuple((UnhashableInt(1),)), True),
+    ('tuple_fixed', (UnhashableInt(1), UnhashableStr('x')), True),
+    ('tuple_optional', (UnhashableInt(1), None), True),
+    ('tuple_frozen_typing', (UnhashableFrozenSet((1,)),), True),
+    ('tuple_scalars', (UnhashableFloat(1.5), True, UnhashableStr('x'), None), True),
+    # Pydantic 2.0 preserves these subclasses; newer versions normalize them.
+    ('primitive_union', UnhashableStr('a'), None),
+    ('bound_union', UnhashableInt(1), None),
+]

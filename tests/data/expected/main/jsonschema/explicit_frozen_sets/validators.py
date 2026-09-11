@@ -14,6 +14,7 @@ class Item(BaseModel):
     model_config = ConfigDict(
         frozen=True,
     )
+    __hash__ = object.__hash__
     value: int
 
     @field_validator('value', mode='after')

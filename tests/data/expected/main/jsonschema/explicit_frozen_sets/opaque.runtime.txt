@@ -1,5 +1,11 @@
 {
   "equal": true,
-  "identity_hash": false,
-  "equal_dump": true
+  "identity_hash": true,
+  "equal_dump": true,
+  "set_sizes": [
+    0,
+    1,
+    1,
+    1
+  ]
 }

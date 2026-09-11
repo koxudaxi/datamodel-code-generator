@@ -12,6 +12,7 @@ class Child(BaseModel):
 
 
 class Item(BaseModel):
+    __hash__ = object.__hash__
     value: Child
 
 

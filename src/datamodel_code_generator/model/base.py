@@ -1855,7 +1855,6 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     FIELD_NAME_RESOLVER_CLASS: ClassVar[Any] = None
     EXPLICIT_ALIAS_CONFLICT_CHECKER: ClassVar[Callable[[DataModelFieldBase, str], bool] | None] = None
     USES_DATACLASS_ARGUMENTS: ClassVar[bool] = False
-    USES_NATIVE_HASH: ClassVar[bool] = False
     SUPPORTS_REQUIRED_INHERITED_FIELD_ASSIGNMENT: ClassVar[bool] = False
     REQUIRES_EXPLICIT_INHERITED_FACTORY_OVERRIDE: ClassVar[bool] = False
     REQUIRED_ASSIGNMENT_COUNTS_AS_CONSTRUCTOR_DEFAULT: ClassVar[bool] = False
@@ -2420,6 +2419,11 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     def get_module_code_insertion_index(cls, models: list[DataModel]) -> int:  # noqa: ARG003
         """Return the number of models emitted before shared module code."""
         return 0
+
+    @classmethod
+    def get_native_hash_model_paths(cls, models: list[DataModel]) -> set[str]:  # noqa: ARG003
+        """Return models whose backend hash can replace the legacy set-item hash."""
+        return set()
 
     @classmethod
     def prepare_module_code(cls, models: list[DataModel]) -> None:

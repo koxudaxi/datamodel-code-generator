@@ -19,6 +19,7 @@ class Item(DateValue):
     model_config = ConfigDict(
         frozen=True,
     )
+    __hash__ = object.__hash__
 
 
 class Container(BaseModel):

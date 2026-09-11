@@ -33,7 +33,7 @@
     "name": "opaque",
     "options": {},
     "payload": "2026-09-08",
-    "safe": true
+    "safe": false
   },
   {
     "name": "tuple",
@@ -55,7 +55,7 @@
     "name": "enum",
     "options": {},
     "payload": "a",
-    "safe": true
+    "safe": false
   },
   {
     "name": "inherited",
@@ -67,7 +67,7 @@
     "name": "recursive",
     "options": {},
     "payload": 1,
-    "safe": true
+    "safe": false
   },
   {
     "name": "classvar",
@@ -83,7 +83,7 @@
     "payload": {
       "value": 1
     },
-    "safe": true
+    "safe": false
   },
   {
     "name": "custom",
@@ -131,13 +131,13 @@
     "name": "standard_datetime",
     "options": {},
     "payload": "2024-01-02T03:04:05Z",
-    "safe": true
+    "safe": false
   },
   {
     "name": "standard_local_datetime",
     "options": {},
     "payload": "2024-01-02T03:04:05",
-    "safe": true
+    "safe": false
   },
   {
     "name": "standard_naive_datetime",
@@ -145,37 +145,37 @@
       "output_datetime_class": "NaiveDatetime"
     },
     "payload": "2024-01-02T03:04:05",
-    "safe": true
+    "safe": false
   },
   {
     "name": "standard_time",
     "options": {},
     "payload": "03:04:05",
-    "safe": true
+    "safe": false
   },
   {
     "name": "standard_duration",
     "options": {},
     "payload": "P1D",
-    "safe": true
+    "safe": false
   },
   {
     "name": "standard_uuid",
     "options": {},
     "payload": "550e8400-e29b-41d4-a716-446655440000",
-    "safe": true
+    "safe": false
   },
   {
     "name": "standard_decimal",
     "options": {},
     "payload": "1.5",
-    "safe": true
+    "safe": false
   },
   {
     "name": "standard_optional",
     "options": {},
     "payload": null,
-    "safe": true
+    "safe": false
   },
   {
     "name": "standard_custom",
@@ -204,13 +204,13 @@
     "payload": {
       "value": "2024-01-02"
     },
-    "safe": true
+    "safe": false
   },
   {
     "name": "standard_inherited",
     "options": {},
     "payload": "2024-01-02",
-    "safe": true
+    "safe": false
   },
   {
     "name": "standard_plain_datetime",
@@ -218,13 +218,13 @@
       "output_datetime_class": "datetime"
     },
     "payload": "2024-01-02T03:04:05",
-    "safe": true
+    "safe": false
   },
   {
     "name": "standard_opaque_date",
     "options": {},
     "payload": "2024-01-02",
-    "safe": true
+    "safe": false
   },
   {
     "name": "standard_unknown_import",
@@ -424,13 +424,13 @@
     "payload": [
       "2026-09-08"
     ],
-    "safe": true
+    "safe": false
   },
   {
     "name": "transported_date",
     "options": {},
     "payload": "2026-09-08",
-    "safe": true
+    "safe": false
   },
   {
     "name": "transported_date_tuple",
@@ -438,13 +438,13 @@
     "payload": [
       "2026-09-08"
     ],
-    "safe": true
+    "safe": false
   },
   {
     "name": "transported_datetime",
     "options": {},
     "payload": "2026-09-08T12:00:00",
-    "safe": true
+    "safe": false
   },
   {
     "name": "transported_datetime_tuple",
@@ -452,13 +452,13 @@
     "payload": [
       "2026-09-08T12:00:00"
     ],
-    "safe": true
+    "safe": false
   },
   {
     "name": "transported_time",
     "options": {},
     "payload": "12:00:00",
-    "safe": true
+    "safe": false
   },
   {
     "name": "transported_time_tuple",
@@ -466,13 +466,13 @@
     "payload": [
       "12:00:00"
     ],
-    "safe": true
+    "safe": false
   },
   {
     "name": "transported_duration",
     "options": {},
     "payload": "P1D",
-    "safe": true
+    "safe": false
   },
   {
     "name": "transported_duration_tuple",
@@ -480,13 +480,13 @@
     "payload": [
       "P1D"
     ],
-    "safe": true
+    "safe": false
   },
   {
     "name": "transported_decimal",
     "options": {},
     "payload": "1.5",
-    "safe": true
+    "safe": false
   },
   {
     "name": "transported_decimal_tuple",
@@ -494,13 +494,13 @@
     "payload": [
       "1.5"
     ],
-    "safe": true
+    "safe": false
   },
   {
     "name": "transported_uuid",
     "options": {},
     "payload": "550e8400-e29b-41d4-a716-446655440000",
-    "safe": true
+    "safe": false
   },
   {
     "name": "transported_uuid_tuple",
@@ -508,13 +508,13 @@
     "payload": [
       "550e8400-e29b-41d4-a716-446655440000"
     ],
-    "safe": true
+    "safe": false
   },
   {
     "name": "transported_aware",
     "options": {},
     "payload": "2026-09-08T12:00:00Z",
-    "safe": true
+    "safe": false
   },
   {
     "name": "transported_aware_tuple",
@@ -522,13 +522,13 @@
     "payload": [
       "2026-09-08T12:00:00Z"
     ],
-    "safe": true
+    "safe": false
   },
   {
     "name": "transported_naive",
     "options": {},
     "payload": "2026-09-08T12:00:00",
-    "safe": true
+    "safe": false
   },
   {
     "name": "transported_naive_tuple",
@@ -536,7 +536,7 @@
     "payload": [
       "2026-09-08T12:00:00"
     ],
-    "safe": true
+    "safe": false
   },
   {
     "name": "transported_custom",
@@ -571,7 +571,7 @@
     "name": "transported_collision",
     "options": {},
     "payload": "2026-09-08",
-    "safe": true
+    "safe": false
   },
   {
     "name": "transported_foreign",
@@ -658,6 +658,88 @@
       "base_class": "tests.data.python.unique_model_sets.explicit_native.CustomHashBase"
     },
     "payload": 1,
-    "safe": true
+    "safe": false
+  },
+  {
+    "name": "primitive_union",
+    "options": {},
+    "payload": 1,
+    "safe": false
+  },
+  {
+    "name": "bound_union",
+    "options": {},
+    "payload": 1,
+    "safe": false
+  },
+  {
+    "name": "unvalidated_default",
+    "options": {},
+    "payload": null,
+    "item_payload": {},
+    "safe": false,
+    "default_warning": true
+  },
+  {
+    "name": "default_factory",
+    "options": {
+      "field_include_all_keys": true
+    },
+    "payload": null,
+    "item_payload": {},
+    "safe": false,
+    "default_warning": true
+  },
+  {
+    "name": "bytes",
+    "options": {},
+    "payload": "x",
+    "safe": false
+  },
+  {
+    "name": "diamond_frozen",
+    "source": "diamond",
+    "native": "integer",
+    "options": {
+      "enable_faux_immutability": false
+    },
+    "payload": 1,
+    "safe": true,
+    "packaged": true,
+    "extra_data": "frozen_base"
+  },
+  {
+    "name": "diamond_mutable",
+    "source": "diamond",
+    "native": "integer",
+    "options": {
+      "enable_faux_immutability": false
+    },
+    "payload": 1,
+    "safe": false,
+    "packaged": true
+  },
+  {
+    "name": "diamond_thawed",
+    "source": "diamond",
+    "native": "integer",
+    "options": {
+      "enable_faux_immutability": false
+    },
+    "payload": 1,
+    "safe": false,
+    "packaged": true,
+    "extra_data": "mutable_base"
+  },
+  {
+    "name": "additional_import",
+    "source": "integer",
+    "options": {
+      "additional_imports": [
+        "tests.data.python.unique_model_sets.opaque_values.int"
+      ]
+    },
+    "payload": 1,
+    "safe": false
   }
 ]
