@@ -1416,6 +1416,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self._dynamic_anchor_index: dict[tuple[str, ...], dict[str, str]] = {}
         self._recursive_anchor_index: dict[tuple[str, ...], list[str]] = {}
         self._ref_data_type_facts: dict[str, tuple[Any, bool]] = {}
+        self._python_imports: tuple[dict[str, Import], set[str], list[str]] | None = None
         self._false_schema_refs: set[str] | None = None
         self._inherited_schema_cache: dict[str, JsonSchemaObject] = {}
         self._inherited_schema_ancestor_cache: dict[str, frozenset[str]] = {}
@@ -3260,6 +3261,27 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             raise Error(msg)
         return _validate_schema_python_import_path(f"{module}.{type_name}", "x-python-import")
 
+    def _get_x_python_import(self, full_path: str) -> Import:
+        """Disambiguate imports of distinct runtime types sharing a class name."""
+        if self._python_imports is None:
+            self._python_imports = ({}, set(), [])
+        imports, binding_names, pending_bindings = self._python_imports
+        if import_ := imports.get(full_path):
+            return import_
+        import_ = Import.from_full_path(full_path)
+        if import_.import_ in binding_names:
+            # Preserve reservation timing without revisiting already reserved imports.
+            self.model_resolver.exclude_names.update(pending_bindings)
+            pending_bindings.clear()
+            alias = self.model_resolver.get_class_name(import_.import_).name
+            self.model_resolver.exclude_names.add(alias)
+            import_ = Import(from_=import_.from_, import_=import_.import_, alias=alias)
+        else:
+            pending_bindings.append(import_.binding_name)
+        imports[full_path] = import_
+        binding_names.add(import_.binding_name)
+        return import_
+
     def _cache_ref_data_type_facts(self, resolved_ref: str, obj: JsonSchemaObject) -> None:
         self._ref_data_type_facts[resolved_ref] = (
             obj.extras.get("x-python-import"),
@@ -3301,9 +3323,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             )
         x_python_import, is_optional = facts
         if isinstance(x_python_import, dict) and (full_path := self._get_x_python_import_path(x_python_import)):
-            import_ = Import.from_full_path(full_path)
+            import_ = self._get_x_python_import(full_path)
             self.imports.append(import_)
-            return self.data_type.from_import(import_)
+            return self.data_type(type=import_.import_, import_=import_, alias=import_.alias)
         reference = self.model_resolver.add_ref(ref)
         return self.data_type(reference=reference, is_optional=is_optional)
 
@@ -3554,7 +3576,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             ref_schema = self._load_ref_schema_object(f"#/$defs/{type_name}")
             x_python_import = ref_schema.extras.get("x-python-import")
             if isinstance(x_python_import, dict) and (full_path := self._get_x_python_import_path(x_python_import)):
-                return Import.from_full_path(full_path)
+                return self._get_x_python_import(full_path)
         except Error:
             raise
         except Exception:  # noqa: BLE001, S110
