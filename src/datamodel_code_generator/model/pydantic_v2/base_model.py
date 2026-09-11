@@ -997,10 +997,13 @@ class BaseModel(BaseModelBase):
     ]
 
     @classmethod
+    def _uses_builtin_hash_implementation(cls) -> bool:
+        """Return whether hash analysis can trust this model implementation."""
+        return cls is BaseModel
+
+    @classmethod
     def get_native_hash_model_paths(cls, models: list[DataModel]) -> set[str]:  # noqa: PLR0912
         """Preserve native hashes only for proven builtin frozen value models."""
-        from datamodel_code_generator.model.pydantic_v2.root_model import RootModel  # noqa: PLC0415
-
         native_paths: set[str] = set()
         frozen_configs: dict[str, bool | None] = {}
         checked_models: dict[str, bool] = {}
@@ -1019,7 +1022,8 @@ class BaseModel(BaseModelBase):
                 visited.add(path)
                 if path not in checked_models:
                     opaque = bool(
-                        type(current) not in {BaseModel, RootModel}
+                        not isinstance(current, BaseModel)
+                        or not current._uses_builtin_hash_implementation()  # noqa: SLF001
                         or current.custom_base_class
                         or current.methods
                         or current.decorators
