@@ -87,7 +87,8 @@
     "schema": "nested.json",
     "options": {
       "use_root_model_sequence_interface": true
-    }
+    },
+    "payload": "[]"
   },
   {
     "name": "nested_set",
@@ -95,6 +96,18 @@
     "options": {
       "use_root_model_sequence_interface": true,
       "use_unique_items_as_set": true
+    },
+    "payload": "[]"
+  },
+  {
+    "name": "reuse",
+    "schema": "reuse.json",
+    "payload": "[]",
+    "runtime": "nested",
+    "options": {
+      "use_root_model_sequence_interface": true,
+      "reuse_model": true,
+      "collapse_reuse_models": true
     }
   }
 ]

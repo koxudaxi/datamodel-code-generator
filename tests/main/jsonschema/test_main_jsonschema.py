@@ -22561,11 +22561,8 @@ def test_main_root_sequence_final_types(
         if package:
             instance = model.model_validate_json('[{"value":2},{"value":1}]')
             values = [item.value for item in instance.root]
-        elif case["schema"] == "nested.json":
-            instance = model.model_validate_json("[]")
-            values = []
         else:
-            instance = model.model_validate_json("[2,1,2]")
+            instance = model.model_validate_json(case.get("payload", "[2,1,2]"))
             values = sorted(instance.root) if isinstance(instance.root, set) else instance.root
         runtime = {
             "root_type": type(instance.root).__name__,
@@ -22578,7 +22575,10 @@ def test_main_root_sequence_final_types(
             runtime["iteration_matches_root"] = list(instance) == list(instance.root)
             runtime["first_matches_root"] = not instance.root or instance[0] == instance.root[0]
             runtime["count"] = instance.count(instance[0]) if instance.root else 0
-        assert_output(json.dumps(runtime, indent=2) + "\n", expected.parent / f"{case['name']}.runtime.txt")
+        assert_output(
+            json.dumps(runtime, indent=2) + "\n",
+            expected.parent / f"{case.get('runtime', case['name'])}.runtime.txt",
+        )
         if case["schema"] == "integers.json":
             with pytest.raises(ValidationError, match="int_parsing"):
                 model.model_validate_json('["invalid"]')
