@@ -97,6 +97,24 @@ class PythonTypeSubscript(PythonTypeExpr):
 
 
 @dataclass(frozen=True, slots=True)
+class PythonTypeModelField(PythonTypeExpr):
+    """An observed native Pydantic field annotation, with optional type arguments."""
+
+    model: PythonTypeExpr
+    field_name: str
+    arguments: tuple[int, ...] = ()
+    pydantic: bool = True
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.field_name, str) or not isinstance(self.pydantic, bool):
+            msg = "A native annotation path requires a string field and a boolean model family"
+            raise TypeError(msg)
+        if any(type(index) is not int or index < 0 for index in self.arguments):
+            msg = "Native annotation argument indexes must be nonnegative integers"
+            raise ValueError(msg)
+
+
+@dataclass(frozen=True, slots=True)
 class PythonTypeUnion(PythonTypeExpr):
     """A union rendered with the ``|`` spelling."""
 
@@ -202,7 +220,7 @@ def python_type_name(value: str) -> PythonTypeName:
     return _python_type_name(value)
 
 
-def render_python_type_expr(expression: PythonTypeExpr) -> str:  # noqa: PLR0911
+def render_python_type_expr(expression: PythonTypeExpr) -> str:  # ruff: ignore[too-many-return-statements, too-many-branches]
     """Render an expression with stable formatting and no AST round trip."""
     match expression:
         case PythonTypeName() | PythonTypeBoundName() | PythonTypeOpaqueText():
@@ -218,6 +236,14 @@ def render_python_type_expr(expression: PythonTypeExpr) -> str:  # noqa: PLR0911
                 rendered_base = f"({rendered_base})"
             arguments = ", ".join(map(render_python_type_expr, expression.arguments)) or "()"
             return f"{rendered_base}[{arguments}]"
+        case PythonTypeModelField():
+            member = "model_fields" if expression.pydantic else "__annotations__"
+            result = f"{render_python_type_expr(expression.model)}.{member}[{expression.field_name!r}]"
+            if expression.pydantic:
+                result += ".annotation"
+            for index in expression.arguments:
+                result += f".__args__[{index}]"
+            return result
         case PythonTypeUnion():
             return " | ".join(map(render_python_type_expr, expression.items))
         case PythonTypeParameterList():
@@ -280,6 +306,8 @@ def iter_python_type_expr_names(expression: PythonTypeExpr) -> Iterator[str]:
             yield from iter_python_type_expr_names(expression.base)
             for argument in expression.arguments:
                 yield from iter_python_type_expr_names(argument)
+        case PythonTypeModelField():
+            yield from iter_python_type_expr_names(expression.model)
         case PythonTypeStarred():
             yield from iter_python_type_expr_names(expression.value)
         case PythonTypeUnion() | PythonTypeParameterList() | PythonTypeTuple():
@@ -321,6 +349,8 @@ def iter_python_type_expr_qualified_names(expression: PythonTypeExpr) -> Iterato
             yield from iter_python_type_expr_qualified_names(expression.base)
             for argument in expression.arguments:
                 yield from iter_python_type_expr_qualified_names(argument)
+        case PythonTypeModelField():
+            yield from iter_python_type_expr_qualified_names(expression.model)
         case PythonTypeStarred():
             yield from iter_python_type_expr_qualified_names(expression.value)
         case PythonTypeUnion() | PythonTypeParameterList() | PythonTypeTuple():
@@ -334,6 +364,13 @@ def rewrite_python_type_expr(  # noqa: PLR0911
 ) -> PythonTypeExpr:
     """Rewrite leaves while sharing every unchanged immutable subtree."""
     match expression:
+        case PythonTypeModelField():
+            model = rewrite_python_type_expr(expression.model, transform_leaf)
+            return (
+                expression
+                if model is expression.model
+                else PythonTypeModelField(model, expression.field_name, expression.arguments, expression.pydantic)
+            )
         case PythonTypeSubscript():
             base = rewrite_python_type_expr(expression.base, transform_leaf)
             arguments = tuple(rewrite_python_type_expr(item, transform_leaf) for item in expression.arguments)
@@ -368,6 +405,7 @@ __all__ = [
     "PythonTypeEllipsis",
     "PythonTypeExpr",
     "PythonTypeLiteralValue",
+    "PythonTypeModelField",
     "PythonTypeName",
     "PythonTypeOpaqueText",
     "PythonTypeParameterList",

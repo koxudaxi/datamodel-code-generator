@@ -3,27 +3,21 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field, RootModel
+from pydantic import BaseModel, RootModel
 
-
-class BoxStr(BaseModel):
-    value: str = Field(..., title='Value')
+from tests.data.python.input_model.collision_a import Box
 
 
 class GenericRootB(BaseModel):
-    data: BoxStr
+    data: Box[str]
 
 
 class Arbitrary(BaseModel):
     pass
 
 
-class BoxInt(BaseModel):
-    value: int = Field(..., title='Value')
-
-
 class GenericRootA(BaseModel):
-    data: BoxInt
+    data: Box[int]
     arbitrary: Arbitrary | None = None
 
 

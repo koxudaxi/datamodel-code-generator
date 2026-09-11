@@ -38,6 +38,7 @@ from datamodel_code_generator._process_state import PROCESS_STATE_LOCK
 from datamodel_code_generator._python_type_annotation import (
     PythonTypeExpr,
     PythonTypeName,
+    PythonTypeOpaqueText,
     PythonTypeQualifiedName,
     PythonTypeRuntimeSymbol,
     PythonTypeSubscript,
@@ -48,7 +49,7 @@ from datamodel_code_generator._python_type_annotation import (
 from datamodel_code_generator.enums import InputModelRefStrategy, _get_output_model_family
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator
+    from collections.abc import Iterable, Iterator, Sequence
 
     from pydantic.json_schema import GenerateJsonSchema
     from typing_extensions import Sentinel as sentinel  # noqa: N813  # ty uses the pre-4.16 name
@@ -341,9 +342,10 @@ def _serialize_python_type_full(
 
 def _get_input_model_json_schema_class(
     definition_types: dict[str, type | str] | None = None,
-    model_classes: list[type[BaseModel]] | None = None,
+    model_classes: Sequence[type] | None = None,
     *,
     preserve_type_identity: bool = False,
+    preserve_generic_identity: bool = False,
 ) -> type[GenerateJsonSchema]:
     """Get the InputModelJsonSchema class lazily."""
     from pydantic.json_schema import GenerateJsonSchema  # noqa: PLC0415
@@ -463,9 +465,13 @@ def _get_input_model_json_schema_class(
                 _colliding_type_names(
                     core_types.get(self.defs_to_core_refs[defs_ref][0], "") for defs_ref in self.definitions
                 )
-                if preserve_type_identity and len(self.definitions) > 1
+                if (preserve_type_identity or preserve_generic_identity) and len(self.definitions) > 1
                 else None
             )
+            if collision_names and not preserve_type_identity:
+                collision_names.intersection_update(
+                    model.__name__ for model in core_types.values() if _pydantic_generic_metadata(model)
+                )
             if collision_names:
                 owners: dict[str, type] = {}
                 collisions: set[str] = set()
@@ -759,14 +765,19 @@ def _get_preserved_type_origins() -> dict[type, str]:
 def _serialize_python_type(
     tp: type,
     expression_collector: PythonTypeExpressionCollector | None = None,
+    generic_names: dict[type, str] | None = None,
 ) -> str | None:
     """Serialize Python type to a string for x-python-type field."""
     expression = _preserved_python_type_expr(tp)
+    if expression is not None and generic_names:
+        expression = _preserved_python_type_expr(tp, generic_names)
     return _transport_python_type_expr(expression, expression_collector) if expression is not None else None
 
 
-def _preserved_python_type_expr(tp: type) -> PythonTypeExpr | None:  # noqa: PLR0911
+def _preserved_python_type_expr(tp: type, generic_names: dict[type, str] | None = None) -> PythonTypeExpr | None:  # ruff: ignore[too-many-return-statements]
     """Build IR only when JSON Schema loses relevant runtime type structure."""
+    if generic_names and isinstance(tp, type) and (name := generic_names.get(tp)):
+        return PythonTypeName(name)
     origin: type | None = get_origin(tp)
     args = get_args(tp)
     preserved_origins = _get_preserved_type_origins()
@@ -774,7 +785,7 @@ def _preserved_python_type_expr(tp: type) -> PythonTypeExpr | None:  # noqa: PLR
     is_union = origin is Union or (hasattr(types, "UnionType") and origin is types.UnionType)
     if is_union:
         if args:
-            nested = tuple(_preserved_python_type_expr(argument) for argument in args)
+            nested = tuple(_preserved_python_type_expr(argument, generic_names) for argument in args)
             if any(expression is not None for expression in nested):
                 return PythonTypeUnion(
                     tuple(
@@ -786,7 +797,9 @@ def _preserved_python_type_expr(tp: type) -> PythonTypeExpr | None:  # noqa: PLR
 
     if origin is Annotated:
         if args:
-            return _preserved_python_type_expr(args[0]) or _runtime_python_type_expr(args[0], full_name=True)
+            return _preserved_python_type_expr(args[0], generic_names) or _runtime_python_type_expr(
+                args[0], full_name=True
+            )
         return None  # pragma: no cover
 
     type_name: str | None = None
@@ -799,14 +812,15 @@ def _preserved_python_type_expr(tp: type) -> PythonTypeExpr | None:  # noqa: PLR
             return PythonTypeSubscript(
                 PythonTypeName(type_name),
                 tuple(
-                    _preserved_python_type_expr(argument) or _runtime_python_type_expr(argument, full_name=True)
+                    _preserved_python_type_expr(argument, generic_names)
+                    or _runtime_python_type_expr(argument, full_name=True)
                     for argument in args
                 ),
             )
         return PythonTypeName(type_name)  # pragma: no cover
 
     if args:
-        nested = tuple(_preserved_python_type_expr(argument) for argument in args)
+        nested = tuple(_preserved_python_type_expr(argument, generic_names) for argument in args)
         if any(expression is not None for expression in nested):
             return PythonTypeSubscript(
                 PythonTypeName(_simple_type_name(origin or tp)),
@@ -865,7 +879,7 @@ def _collect_nested_models(model: type, visited: set[type] | None = None) -> dic
 
 def _find_models_in_type(tp: type, result: dict[str, type], visited: set[type]) -> None:
     """Recursively find BaseModel, Enum, dataclass, TypedDict, and msgspec in a type annotation."""
-    if isinstance(tp, type) and tp not in visited:
+    if get_origin(tp) is None and isinstance(tp, type) and tp not in visited:
         if issubclass(tp, BaseModel):
             result[tp.__name__] = tp
             result.update(_collect_nested_models(tp, visited))
@@ -893,6 +907,7 @@ def _add_python_type_to_properties(
     properties: dict[str, Any],
     model_fields: dict[str, Any],
     expression_collector: PythonTypeExpressionCollector | None = None,
+    generic_names: dict[type, str] | None = None,
 ) -> None:
     """Add x-python-type to properties dict for given model fields."""
     for field_name, field_info in model_fields.items():
@@ -902,7 +917,7 @@ def _add_python_type_to_properties(
         owner = prop.get(_FIELD_SCHEMA_NAME)
         if isinstance(owner, _FieldSchemaOwner) and owner.field_name != field_name:
             continue
-        if serialized := _serialize_python_type(field_info.annotation, expression_collector):
+        if serialized := _serialize_python_type(field_info.annotation, expression_collector, generic_names):
             prop["x-python-type"] = serialized
 
 
@@ -936,13 +951,15 @@ def _add_python_type_info(
     schema: dict[str, Any],
     model: type,
     expression_collector: PythonTypeExpressionCollector | None = None,
+    generic_definitions: dict[str, type | str] | None = None,
     *,
     clear_field_names: bool = False,
 ) -> dict[str, Any]:
     """Add x-python-type information to JSON Schema for types lost during conversion."""
+    generic_names = _generic_definition_names(generic_definitions)
     model_fields = getattr(model, "model_fields", None)
     if model_fields and "properties" in schema:
-        _add_python_type_to_properties(schema["properties"], model_fields, expression_collector)
+        _add_python_type_to_properties(schema["properties"], model_fields, expression_collector, generic_names)
 
     if "$defs" in schema:
         nested_models = _collect_nested_models(model)
@@ -955,7 +972,9 @@ def _add_python_type_info(
             nested_model = nested_models[def_name]
             nested_fields = getattr(nested_model, "model_fields", None)
             if nested_fields:
-                _add_python_type_to_properties(def_schema["properties"], nested_fields, expression_collector)
+                _add_python_type_to_properties(
+                    def_schema["properties"], nested_fields, expression_collector, generic_names
+                )
 
     if clear_field_names:
         _clear_field_schema_names(schema)
@@ -966,13 +985,15 @@ def _add_python_type_info_generic(
     schema: dict[str, Any],
     obj: type,
     expression_collector: PythonTypeExpressionCollector | None = None,
+    generic_definitions: dict[str, type | str] | None = None,
 ) -> dict[str, Any]:
     """Add x-python-type information using get_type_hints (for dataclass/TypedDict)."""
+    generic_names = _generic_definition_names(generic_definitions)
     type_hints = _get_type_hints_safe(obj)
     if type_hints and "properties" in schema:  # pragma: no branch
         for field_name, field_type in type_hints.items():
             if field_name in schema["properties"]:  # pragma: no branch
-                serialized = _serialize_python_type(field_type, expression_collector)
+                serialized = _serialize_python_type(field_type, expression_collector, generic_names)
                 if serialized:
                     schema["properties"][field_name]["x-python-type"] = serialized
 
@@ -1031,11 +1052,214 @@ def _has_qualified_type_export(nested_type: type, qualname: str) -> bool:
         return False
 
 
-def _filter_defs_by_strategy(
+def _pydantic_generic_metadata(tp: object) -> dict[str, Any] | None:
+    """Read specialization metadata without executing a metaclass attribute hook."""
+    if get_origin(tp) is None and isinstance(tp, type):
+        metadata = type.__dict__["__dict__"].__get__(tp).get("__pydantic_generic_metadata__")
+        if metadata and metadata.get("origin") is not None:
+            return metadata
+    return None
+
+
+def _reuses_pydantic_generics(strategy: InputModelRefStrategy | None, family: _OutputModelFamily | None) -> bool:
+    """Apply specialization references only when Pydantic types are reused."""
+    return strategy == InputModelRefStrategy.ReuseAll or (
+        strategy == InputModelRefStrategy.ReuseForeign and family == _TYPE_FAMILY_PYDANTIC
+    )
+
+
+def _generic_definition_names(definitions: dict[str, type | str] | None) -> dict[type, str] | None:
+    """Resolve generic annotation leaves through the same definitions as JSON references."""
+    if definitions is None:
+        return None
+    return {cast("type", model): name for name, model in definitions.items() if _pydantic_generic_metadata(model)}
+
+
+def _prepare_reused_model_types(
+    model: type, strategy: InputModelRefStrategy | None, family: _OutputModelFamily | None
+) -> tuple[dict[str, type] | None, dict[str, type | str] | None]:
+    """Capture generic definition identities only when referenced types are reused."""
+    if not strategy or strategy == InputModelRefStrategy.RegenerateAll:
+        return None, None
+    visited: set[type] = set()
+    nested = _collect_nested_models(model, visited)
+    identities = (
+        {}
+        if (strategy is InputModelRefStrategy.ReuseAll and nested)
+        or (_reuses_pydantic_generics(strategy, family) and any(_pydantic_generic_metadata(item) for item in visited))
+        else None
+    )
+    return nested, identities
+
+
+def _reused_python_type_expression(tp: object) -> PythonTypeExpr:
+    """Retain specialized models and the actual export paths of their arguments."""
+    if metadata := _pydantic_generic_metadata(tp):
+        return PythonTypeSubscript(
+            _reused_python_type_expression(metadata["origin"]),
+            tuple(_reused_python_type_expression(argument) for argument in metadata["args"]),
+        )
+    expression = _runtime_python_type_expr(tp)
+    if isinstance(tp, type) and isinstance(expression, PythonTypeRuntimeSymbol):
+        qualname = tp.__qualname__
+        parts = (
+            tuple(qualname.split("."))
+            if "." in qualname and _has_qualified_type_export(tp, qualname)
+            else (tp.__name__,)
+        )
+        return PythonTypeRuntimeSymbol(tp.__module__, parts)
+    replacements: dict[PythonTypeExpr, PythonTypeExpr] = {}
+    pending = list(get_args(tp))
+    while pending:
+        argument = pending.pop()
+        if isinstance(argument, type):
+            replacements[_runtime_python_type_expr(argument)] = _reused_python_type_expression(argument)
+        elif isinstance(argument, PyEnum):
+            owner = _reused_python_type_expression(type(argument))
+            if not isinstance(owner, PythonTypeRuntimeSymbol):
+                msg = (
+                    f"Cannot safely reuse enum member {argument!r}: no importable type expression. Use regenerate-all."
+                )
+                raise Error(msg)
+            replacements[PythonTypeOpaqueText(str(argument))] = PythonTypeRuntimeSymbol(
+                owner.module, (*owner.qualname_parts, argument.name)
+            )
+        else:
+            pending.extend(get_args(argument))
+    return rewrite_python_type_expr(expression, lambda item: replacements.get(item, item))
+
+
+def _has_annotated_generic_argument(tp: object) -> bool:
+    """Detect arguments whose metadata cannot be reconstructed by the type serializer."""
+    if get_origin(tp) is Annotated:
+        return True
+    metadata = _pydantic_generic_metadata(tp)
+    return any(_has_annotated_generic_argument(arg) for arg in (metadata["args"] if metadata else get_args(tp)))
+
+
+def _native_generic_field_paths(models: Sequence[type]) -> dict[type, dict[str, Any]]:
+    """Capture only observed native model_fields paths, retaining exact specialization identity."""
+    paths: dict[type, dict[str, Any]] = {}
+    pending = [
+        (model, {"module": symbol.module, "qualname": ".".join(symbol.qualname_parts), "fields": []})
+        for model in models
+        if (symbol := _exported_runtime_symbol(model, [model.__module__])) is not None
+    ]
+    visited: set[type] = set()
+    while pending:
+        model, path = pending.pop()
+        if model in visited:
+            continue
+        visited.add(model)
+        model_fields = getattr(model, "model_fields", None)
+        annotations = (
+            {name: info.annotation for name, info in model_fields.items()}
+            if model_fields is not None
+            else getattr(model, "__annotations__", {})
+        )
+        for name, field_annotation in annotations.items():
+            arguments: list[tuple[object, tuple[int, ...]]] = [(field_annotation, ())]
+            while arguments:
+                annotation, indexes = arguments.pop()
+                field_path = {
+                    **path,
+                    "fields": [
+                        *path["fields"],
+                        {"name": name, "arguments": indexes, "pydantic": model_fields is not None},
+                    ],
+                }
+                if _pydantic_generic_metadata(annotation):
+                    paths.setdefault(cast("type", annotation), field_path)
+                if get_origin(annotation) is None and isinstance(annotation, type):
+                    pending.append((annotation, field_path))
+                else:
+                    args = get_args(annotation)
+                    if get_origin(annotation) is Annotated:
+                        args = args[:1]
+                    arguments.extend((argument, (*indexes, index)) for index, argument in enumerate(args))
+    return paths
+
+
+def _exported_runtime_symbol(tp: object, modules: list[str]) -> PythonTypeRuntimeSymbol | None:
+    """Find a module export whose actual attribute access retains the supplied object."""
+    for module_name in modules:
+        module = sys.modules.get(module_name)
+        if issubclass(type(module), types.ModuleType):
+            for name, value in vars(module).items():
+                if value is tp and name.isidentifier():
+                    try:
+                        exported = getattr(module, name)
+                    except Exception:  # ruff: ignore[blind-except]
+                        # A module hook can refuse an otherwise visible static export.
+                        exported = None
+                    if exported is tp:
+                        return PythonTypeRuntimeSymbol(module_name, (name,))
+    if (
+        get_origin(tp) is None
+        and isinstance(tp, type)
+        and "." in (qualname := tp.__qualname__)
+        and (_has_qualified_type_export(tp, qualname))
+    ):
+        return PythonTypeRuntimeSymbol(tp.__module__, tuple(qualname.split(".")))
+    return None
+
+
+def _exported_generic_expression(  # ruff: ignore[too-many-return-statements]
+    tp: object, modules: list[str]
+) -> PythonTypeExpr | None:
+    """Reuse an actual exported metadata alias without reconstructing its values."""
+    if not _has_annotated_generic_argument(tp):
+        return _reused_python_type_expression(tp)
+    if exported := _exported_runtime_symbol(tp, modules):
+        return exported
+    if get_origin(tp) is Annotated:
+        return None
+    metadata = _pydantic_generic_metadata(tp)
+    expression = _runtime_python_type_expr(tp) if metadata is None else None
+    arguments = tuple(
+        _exported_generic_expression(argument, modules) for argument in (metadata["args"] if metadata else get_args(tp))
+    )
+    if any(argument is None for argument in arguments):
+        return None
+    resolved = cast("tuple[PythonTypeExpr, ...]", arguments)
+    if metadata:
+        return PythonTypeSubscript(_reused_python_type_expression(metadata["origin"]), resolved)
+    if isinstance(expression, PythonTypeUnion):
+        return PythonTypeUnion(resolved)
+    return PythonTypeSubscript(cast("PythonTypeSubscript", expression).base, resolved)
+
+
+def _generic_python_import(
+    tp: type,
+    origin: type,
+    expression_collector: PythonTypeExpressionCollector | None,
+    expression: PythonTypeExpr | None = None,
+) -> dict[str, Any]:
+    """Transport generic syntax and exact runtime leaves through the existing IR."""
+    expression = expression or _reused_python_type_expression(tp)
+    symbols: dict[str, dict[str, str]] = {}
+
+    def remember_symbol(item: PythonTypeExpr) -> PythonTypeExpr:
+        if isinstance(item, PythonTypeRuntimeSymbol) and len(item.qualname_parts) > 1:
+            symbols[render_python_type_expr(item)] = {"module": item.module, "qualname": ".".join(item.qualname_parts)}
+        return item
+
+    rewrite_python_type_expr(expression, remember_symbol)
+    return {
+        "module": origin.__module__,
+        "name": origin.__name__,
+        "x-python-type": _transport_python_type_expr(expression, expression_collector),
+        "symbols": symbols,
+    }
+
+
+def _filter_defs_by_strategy(  # ruff: ignore[too-many-branches, too-many-arguments, too-many-positional-arguments]
     schema: dict[str, Any],
     nested_models: dict[str, type],
     output_family: _OutputModelFamily | None,
     strategy: InputModelRefStrategy,
+    expression_collector: PythonTypeExpressionCollector | None = None,
+    model_classes: Sequence[type] | None = None,
 ) -> dict[str, Any]:
     """Filter $defs based on ref strategy, marking reused types with x-python-import."""
     if strategy == InputModelRefStrategy.RegenerateAll:  # pragma: no cover
@@ -1045,6 +1269,7 @@ def _filter_defs_by_strategy(
         return schema
 
     new_defs: dict[str, Any] = {}
+    native_paths = None
 
     for def_name, def_schema in schema["$defs"].items():
         if def_name not in nested_models:  # pragma: no cover
@@ -1063,6 +1288,37 @@ def _filter_defs_by_strategy(
                 should_reuse = False  # pragma: no cover
 
         if should_reuse:
+            if metadata := _pydantic_generic_metadata(nested_type):
+                expression = None
+                if _has_annotated_generic_argument(nested_type):
+                    if native_paths is None:
+                        native_paths = _native_generic_field_paths(model_classes or list(nested_models.values()))
+                    if path := native_paths.get(nested_type):
+                        new_defs[def_name] = {
+                            "x-python-import": {
+                                "module": path["module"],
+                                "name": path["qualname"].split(".")[0],
+                                "native-field": path,
+                            }
+                        }
+                        continue
+                    modules = list(
+                        dict.fromkeys([nested_type.__module__, *(model.__module__ for model in model_classes or ())])
+                    )
+                    expression = _exported_generic_expression(nested_type, modules)
+                    if expression is None:
+                        msg = (
+                            f"Cannot safely reuse {nested_type.__name__!r}: its Annotated metadata has no stable "
+                            "field annotation or exported alias. Export the Annotated type or specialization from "
+                            "the input module, use eager annotations, or select regenerate-all."
+                        )
+                        raise Error(msg)
+                new_defs[def_name] = {
+                    "x-python-import": _generic_python_import(
+                        nested_type, metadata["origin"], expression_collector, expression
+                    )
+                }
+                continue
             new_defs[def_name] = {
                 "x-python-import": {
                     "module": nested_type.__module__,
@@ -1155,6 +1411,7 @@ def _transform_single_model_to_inheritance(  # noqa: PLR0913, PLR0917
     processed_parents: dict[type[BaseModel], _ParentSchema] | None = None,
     expression_collector: PythonTypeExpressionCollector | None = None,
     definitions: _InputModelDefinitions | None = None,
+    generic_definitions: dict[str, type | str] | None = None,
 ) -> dict[str, object]:
     """Transform a single model's schema to use allOf inheritance structure."""
     if processed_parents is None:
@@ -1182,6 +1439,7 @@ def _transform_single_model_to_inheritance(  # noqa: PLR0913, PLR0917
             parent_schema,
             parent,
             expression_collector,
+            generic_definitions,
             clear_field_names=getattr(schema_generator, "has_field_schema_owners", False),
         )
         if definitions is not None:
@@ -1195,6 +1453,7 @@ def _transform_single_model_to_inheritance(  # noqa: PLR0913, PLR0917
             processed_parents,
             expression_collector,
             definitions,
+            generic_definitions,
         )
         processed_parents[parent] = parent_schema, parent_properties, parent_required
     parent_schema, parent_properties, parent_required = processed_parents[parent]
@@ -1272,7 +1531,7 @@ class _InputModelDefinitions:
                 name = self.name(old_name, model)
                 if (
                     isinstance(model, type)
-                    and model.__name__.isidentifier()
+                    and (model.__name__.isidentifier() or _pydantic_generic_metadata(model))
                     and _get_type_family(model) != _TYPE_FAMILY_OTHER
                 ):
                     self.nested_types[name] = model
@@ -1397,6 +1656,10 @@ def _load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
             definitions.current_types,
             model_classes,
             preserve_type_identity=ref_strategy is InputModelRefStrategy.ReuseAll,
+            preserve_generic_identity=_reuses_pydantic_generics(ref_strategy, output_family),
+        )
+        generic_definitions = (
+            definitions.current_types if _reuses_pydantic_generics(ref_strategy, output_family) else None
         )
         merged_defs: dict[str, object] = {}
         root_refs: list[dict[str, str]] = []
@@ -1413,6 +1676,7 @@ def _load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
                 schema,
                 model_class,
                 expression_collector,
+                generic_definitions,
                 clear_field_names=getattr(schema_generator, "has_field_schema_owners", False),
             )
             schema = definitions.normalize(schema, model_class)
@@ -1425,6 +1689,7 @@ def _load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
                 processed_parents,
                 expression_collector,
                 definitions,
+                generic_definitions,
             )
 
             if "$defs" in schema:
@@ -1444,7 +1709,9 @@ def _load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
         final_schema: dict[str, object] = {"$defs": merged_defs, "anyOf": root_refs}
 
         if ref_strategy and ref_strategy != InputModelRefStrategy.RegenerateAll:
-            final_schema = _filter_defs_by_strategy(final_schema, definitions.nested_types, output_family, ref_strategy)
+            final_schema = _filter_defs_by_strategy(
+                final_schema, definitions.nested_types, output_family, ref_strategy, expression_collector, model_classes
+            )
 
         return final_schema
     finally:
@@ -1508,15 +1775,21 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0915
                 )
                 raise Error(msg)
             _try_rebuild_model(obj)
-            nested_models = _collect_nested_models(obj) if ref_strategy is InputModelRefStrategy.ReuseAll else None
-            definition_types: dict[str, type | str] | None = {} if nested_models else None
-            schema_generator = (
-                _get_input_model_json_schema_class(definition_types, [obj], preserve_type_identity=True)
-                if definition_types is not None
-                else _get_input_model_json_schema_class()
+            nested_models, definition_types = _prepare_reused_model_types(obj, ref_strategy, output_family)
+            schema_generator = _get_input_model_json_schema_class(
+                definition_types,
+                [obj],
+                preserve_type_identity=ref_strategy is InputModelRefStrategy.ReuseAll,
+                preserve_generic_identity=_reuses_pydantic_generics(ref_strategy, output_family),
             )
             schema = obj.model_json_schema(schema_generator=schema_generator)
             identified_types = _colliding_definition_types(definition_types) if definition_types else None
+            if definition_types is not None:
+                cast("dict[str, type]", nested_models).update(
+                    (name, cast("type", model))
+                    for name, model in definition_types.items()
+                    if _pydantic_generic_metadata(model)
+                )
             schema = _add_python_type_for_unserializable(
                 schema,
                 obj,
@@ -1526,6 +1799,7 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0915
                 schema,
                 obj,
                 expression_collector,
+                definition_types,
                 clear_field_names=getattr(schema_generator, "has_field_schema_owners", False),
             )
 
@@ -1534,17 +1808,18 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0915
                 obj,
                 schema_generator,
                 expression_collector=expression_collector,
+                generic_definitions=definition_types,
             )
 
-            if ref_strategy and ref_strategy != InputModelRefStrategy.RegenerateAll:
-                if nested_models is None:
-                    nested_models = _collect_nested_models(obj)
+            if ref_strategy and nested_models is not None:
                 if identified_types:
                     nested_models.update(identified_types)
                 model_name = getattr(obj, "__name__", None)
                 if model_name and model_name in cast("dict[str, object]", schema.get("$defs", {})):  # pragma: no cover
                     nested_models[model_name] = obj
-                schema = _filter_defs_by_strategy(schema, nested_models, output_family, ref_strategy)
+                schema = _filter_defs_by_strategy(
+                    schema, nested_models, output_family, ref_strategy, expression_collector, [obj]
+                )
 
             return schema
 
@@ -1559,16 +1834,33 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0915
                 raise Error(msg)
             from pydantic import TypeAdapter  # noqa: PLC0415
 
-            schema = TypeAdapter(obj).json_schema()
-            schema = _add_python_type_info_generic(schema, cast("type", obj), expression_collector)
+            obj_type = cast("type", obj)
+            nested_models, definition_types = _prepare_reused_model_types(obj_type, ref_strategy, output_family)
+            schema = (
+                TypeAdapter(obj).json_schema()
+                if definition_types is None
+                else TypeAdapter(obj).json_schema(
+                    schema_generator=_get_input_model_json_schema_class(
+                        definition_types, [obj_type], preserve_generic_identity=True
+                    )
+                )
+            )
+            schema = _add_python_type_info_generic(schema, obj_type, expression_collector, definition_types)
 
             if ref_strategy and ref_strategy != InputModelRefStrategy.RegenerateAll:
-                obj_type = cast("type", obj)
-                nested_models = _collect_nested_models(obj_type)
+                nested_models = cast("dict[str, type]", nested_models)
+                if definition_types is not None:
+                    nested_models.update(
+                        (name, cast("type", model))
+                        for name, model in definition_types.items()
+                        if _pydantic_generic_metadata(model)
+                    )
                 obj_name = getattr(obj, "__name__", None)
                 if obj_name and "$defs" in schema and obj_name in schema["$defs"]:  # pragma: no cover
                     nested_models[obj_name] = obj_type
-                schema = _filter_defs_by_strategy(schema, nested_models, output_family, ref_strategy)
+                schema = _filter_defs_by_strategy(
+                    schema, nested_models, output_family, ref_strategy, expression_collector, [obj_type]
+                )
 
             return schema
 
