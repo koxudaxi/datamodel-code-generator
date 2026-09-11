@@ -1009,6 +1009,28 @@ def _should_reuse_type(source_family: str, output_family: _OutputModelFamily) ->
     return source_family == output_family
 
 
+def _has_qualified_type_export(nested_type: type, qualname: str) -> bool:
+    """Confirm that a static owner path resolves to the same runtime type."""
+    if not issubclass(type(module := sys.modules.get(nested_type.__module__)), types.ModuleType):
+        return False
+    namespace = vars(types.ModuleType)["__dict__"].__get__(module)
+    if namespace.get(nested_type.__name__) is nested_type:
+        return False
+    owner_path, _, name = qualname.rpartition(".")
+    parent: object = module
+    try:
+        for owner_name in owner_path.split("."):
+            owner = namespace.get(owner_name)
+            if not issubclass(type(owner), type) or getattr(parent, owner_name, None) is not owner:
+                return False
+            parent = owner
+            namespace = type.__dict__["__dict__"].__get__(owner)
+        return namespace.get(name) is nested_type and getattr(parent, name, None) is nested_type
+    except Exception:  # ruff: ignore[blind-except]
+        # A user attribute hook may reject this optional path while the short export still works.
+        return False
+
+
 def _filter_defs_by_strategy(
     schema: dict[str, Any],
     nested_models: dict[str, type],
@@ -1047,6 +1069,8 @@ def _filter_defs_by_strategy(
                     "name": nested_type.__name__,
                 },
             }
+            if "." in (qualname := nested_type.__qualname__) and _has_qualified_type_export(nested_type, qualname):
+                new_defs[def_name]["x-python-import"]["qualname"] = qualname
         else:
             new_defs[def_name] = def_schema
 

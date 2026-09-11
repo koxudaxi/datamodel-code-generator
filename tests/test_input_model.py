@@ -2527,3 +2527,218 @@ def test_validation_property_owner_scope(tmp_path: Path, roots: str, entrypoint:
                     json.dumps(instance.model_dump(mode="json", by_alias=True), separators=(",", ":")),
                     EXPECTED_INPUT_MODEL_PATH / f"wire_owner_scope_{name.lower()}_runtime.txt",
                 )
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("formatter", ["builtin", "external"])
+@pytest.mark.parametrize("strategy", ["regenerate-all", "reuse-all", "reuse-foreign"])
+@pytest.mark.parametrize("case", ["nested", "direct", "export", "alias", "multiple", "reverse"])
+def test_input_model_nested_reuse(tmp_path: Path, entrypoint: str, formatter: str, strategy: str, case: str) -> None:
+    """Reuse exact nested identities without importing their owners as modules."""
+    from pydantic import ValidationError
+
+    from datamodel_code_generator import DataModelType, GenerateConfig, InputFileType
+    from datamodel_code_generator.enums import InputModelRefStrategy
+    from datamodel_code_generator.format import Formatter
+    from datamodel_code_generator.input_model import load_model_schema
+
+    fixture_dir = Path(__file__).parent / "data/python/input_model"
+    record = next(
+        item for item in json.loads((fixture_dir / "nested_reuse_cases.json").read_text()) if item["name"] == case
+    )
+    paths = [f"tests.data.python.input_model.{source}" for source in record["sources"]]
+    (tmp_path / "pyproject.toml").write_text((fixture_dir / "collision_settings/pyproject.toml").read_text())
+    formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
+    output = tmp_path / "output.py"
+    if entrypoint == "cli":
+        run_main_with_args(
+            _input_model_args(
+                paths,
+                output_path=output,
+                extra_args=["--disable-timestamp", "--input-model-ref-strategy", strategy, "--formatters", *formatters],
+            )
+        )
+    else:
+        config = GenerateConfig(
+            input_file_type=InputFileType.JsonSchema,
+            disable_timestamp=True,
+            input_filename="<stdin>",
+            output=output,
+            settings_path=tmp_path,
+            formatters=[Formatter(value) for value in formatters],
+        )
+        schema = load_model_schema(
+            paths, InputFileType.JsonSchema, InputModelRefStrategy(strategy), DataModelType.PydanticV2BaseModel
+        )
+        run_generate_and_assert(
+            input_=schema, config=config, expected_file=EXPECTED_INPUT_MODEL_PATH / f"nested_reuse_{case}_{strategy}.py"
+        )
+    if entrypoint == "cli":
+        assert_output(output.read_text(), EXPECTED_INPUT_MODEL_PATH / f"nested_reuse_{case}_{strategy}.py")
+    with _generated_model(output, "nested_reuse_output", paths[0].split(":")[1]):
+        module = sys.modules["nested_reuse_output"]
+        for path, payload in zip(paths, record["payloads"], strict=True):
+            module_name, model_name = path.split(":")
+            native_model = getattr(importlib.import_module(module_name), model_name)
+            native = native_model.model_validate(payload)
+            generated_model = getattr(module, model_name)
+            generated = generated_model.model_validate(payload)
+            assert generated.model_dump(mode="json", exclude_unset=True) == native.model_dump(
+                mode="json", exclude_unset=True
+            )
+            assert list(generated_model.model_fields) == list(native_model.model_fields)
+            if len(paths) > 1:
+                assert module.Model.model_validate(payload).root.model_dump(
+                    mode="json", exclude_unset=True
+                ) == native.model_dump(mode="json", exclude_unset=True)
+            with pytest.raises(ValidationError):
+                generated_model.model_validate({"child": {}})
+            with pytest.raises(ValidationError):
+                native_model.model_validate({"child": {}})
+            if strategy != "regenerate-all":
+                assert type(generated.child) is type(native.child)
+            if model_name == "NestedRoot" and strategy != "regenerate-all":
+                assert type(generated.leaf) is type(native.leaf)
+                assert type(generated.kind) is type(native.kind)
+                assert type(generated.node.child) is type(native.node.child)
+                if strategy == "reuse-all":
+                    assert type(generated.record) is type(native.record)
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("formatter", ["builtin", "external"])
+def test_input_model_nested_reuse_type_binding(tmp_path: Path, entrypoint: str, formatter: str) -> None:
+    """Bind preserved containers to nested definitions using the same runtime symbol."""
+    from pydantic import ValidationError
+
+    from datamodel_code_generator import GenerateConfig, InputFileType
+    from datamodel_code_generator.format import Formatter
+    from tests.data.python.input_model.nested_reuse import ContainerRoot, Outer
+
+    fixture = Path(__file__).parent / "data/jsonschema/nested_reuse_type.json"
+    output = tmp_path / "output.py"
+    (tmp_path / "pyproject.toml").write_text(
+        (Path(__file__).parent / "data/python/input_model/collision_settings/pyproject.toml").read_text()
+    )
+    formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
+    if entrypoint == "cli":
+        run_main_with_args([
+            "--input",
+            str(fixture),
+            "--output",
+            str(output),
+            "--input-file-type",
+            "jsonschema",
+            "--disable-timestamp",
+            "--formatters",
+            *formatters,
+        ])
+    else:
+        run_generate_and_assert(
+            input_=fixture,
+            expected_file=EXPECTED_INPUT_MODEL_PATH / "nested_reuse_type.py",
+            config=GenerateConfig(
+                input_file_type=InputFileType.JsonSchema,
+                output=output,
+                disable_timestamp=True,
+                settings_path=tmp_path,
+                formatters=[Formatter(value) for value in formatters],
+            ),
+        )
+    if entrypoint == "cli":
+        assert_output(output.read_text(), EXPECTED_INPUT_MODEL_PATH / "nested_reuse_type.py")
+    with _generated_model(output, "nested_reuse_type_output", "ContainerRoot") as model:
+        payload = {"items": [{"value": 1}]}
+        native = ContainerRoot.model_validate(payload)
+        generated = model.model_validate(payload)
+        assert type(generated.items) is type(native.items)
+        assert type(generated.items[0]) is Outer.Inner
+        assert generated.model_dump(mode="json", exclude_unset=True) == native.model_dump(
+            mode="json", exclude_unset=True
+        )
+        with pytest.raises(ValidationError):
+            model.model_validate({"items": [{"value": "bad"}]})
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("formatter", ["builtin", "external"])
+@pytest.mark.parametrize("strategy", ["regenerate-all", "reuse-all", "reuse-foreign"])
+@pytest.mark.parametrize(
+    "case",
+    [
+        "Deleted",
+        "Scalar",
+        "Changed",
+        "Descriptor",
+        "Live",
+        "Lazy",
+        "Redirected",
+        "Raising",
+        "Chained",
+        "ModuleRedirected",
+        "Proxy",
+    ],
+)
+def test_input_model_dynamic_nested_exports(
+    tmp_path: Path, entrypoint: str, formatter: str, strategy: str, case: str
+) -> None:
+    """Check owner identity while preserving existing dynamic short exports."""
+    from pydantic import ValidationError
+
+    from datamodel_code_generator import DataModelType, GenerateConfig, InputFileType
+    from datamodel_code_generator.enums import InputModelRefStrategy
+    from datamodel_code_generator.format import Formatter
+    from datamodel_code_generator.input_model import load_model_schema
+    from tests.data.python.input_model import nested_dynamic_exports
+
+    output = tmp_path / "output.py"
+    (tmp_path / "pyproject.toml").write_text(
+        (Path(__file__).parent / "data/python/input_model/collision_settings/pyproject.toml").read_text()
+    )
+    paths = [f"tests.data.python.input_model.nested_dynamic_exports:{case}Root"]
+    formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
+    nested_dynamic_exports.calls.clear()
+    if entrypoint == "cli":
+        run_main_with_args(
+            _input_model_args(
+                paths,
+                output_path=output,
+                extra_args=["--disable-timestamp", "--input-model-ref-strategy", strategy, "--formatters", *formatters],
+            )
+        )
+    else:
+        config = GenerateConfig(
+            input_file_type=InputFileType.JsonSchema,
+            disable_timestamp=True,
+            input_filename="<stdin>",
+            output=output,
+            settings_path=tmp_path,
+            formatters=[Formatter(value) for value in formatters],
+        )
+        schema = load_model_schema(
+            paths, InputFileType.JsonSchema, InputModelRefStrategy(strategy), DataModelType.PydanticV2BaseModel
+        )
+        if case == "Deleted":
+            assert schema["x-caller-root"] == "kept"
+        run_generate_and_assert(
+            input_=schema,
+            config=config,
+            expected_file=EXPECTED_INPUT_MODEL_PATH / f"dynamic_nested_{case}_{strategy}.py",
+        )
+    assert nested_dynamic_exports.calls == []
+    if entrypoint == "cli":
+        assert_output(output.read_text(), EXPECTED_INPUT_MODEL_PATH / f"dynamic_nested_{case}_{strategy}.py")
+    with _generated_model(output, "dynamic_nested_output", f"{case}Root") as model:
+        native = getattr(nested_dynamic_exports, f"{case}Root")(child={"value": 1})
+        generated = model(child={"value": 1})
+        assert generated.model_dump() == native.model_dump() == {"child": {"value": 1}}
+        assert list(type(generated).model_fields) == ["child"]
+        with pytest.raises(ValidationError):
+            type(native).model_validate({"child": {"value": "invalid"}})
+        with pytest.raises(ValidationError):
+            type(generated).model_validate({"child": {"value": "invalid"}})
+        if strategy != "regenerate-all":
+            assert type(generated.child) is type(native.child) is nested_dynamic_exports.exports[case]
+        assert nested_dynamic_exports.calls == (
+            ["__path__", case] if strategy != "regenerate-all" and case not in {"Live", "Lazy", "Proxy"} else []
+        )
