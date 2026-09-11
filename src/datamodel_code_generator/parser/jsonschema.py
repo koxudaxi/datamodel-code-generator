@@ -368,9 +368,7 @@ def _intersect_all_of_enum(parent: list[Any], child: list[Any]) -> list[Any]:
             any(_json_literal_values_equal(item, candidate) for candidate in parent) for item in child
         ):
             return parent + child
-    if not intersection:
-        raise SchemaParseError(message="allOf enum intersection is empty and cannot be represented")
-    return intersection
+    return intersection or parent + child
 
 
 def _align_all_of_enum_metadata(parent: dict[str, Any], child: dict[str, Any], result: dict[str, Any]) -> None:
@@ -4218,8 +4216,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     return base_dict
                 domain &= item_domain
         if not domain:
-            message = "allOf numeric/null type constraints have no common value"
-            raise SchemaParseError(message)
+            return base_dict
         if domain != original_domain:
             types = original_type if isinstance(original_type, list) else [original_type]
             narrowed_types = dict.fromkeys(

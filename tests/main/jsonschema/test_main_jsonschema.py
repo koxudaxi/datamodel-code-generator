@@ -55,7 +55,6 @@ from datamodel_code_generator import (
     InvalidFileFormatError,
     PythonVersion,
     PythonVersionMin,
-    SchemaParseError,
     SchemaValidatorType,
     TargetPydanticVersion,
     _clear_parser_source_data_cache,
@@ -23299,42 +23298,43 @@ def test_numeric_allof_types(
 
 
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
-@pytest.mark.parametrize("case", json.loads((DATA_PATH / "python/numeric_allof_types/errors.json").read_text()))
-@pytest.mark.parametrize("merge_mode", list(AllOfMergeMode))
-def test_numeric_allof_empty_intersection(
-    output_file: Path, capsys: pytest.CaptureFixture[str], entrypoint: str, case: str, merge_mode: AllOfMergeMode
-) -> None:
-    """Reject an empty numeric/null intersection instead of widening its type."""
-    source = JSON_SCHEMA_DATA_PATH / "numeric_allof_types" / f"{case}.json"
-    schema = json.loads(source.read_text())
-    validator = Draft7Validator(schema)
-    payloads = json.loads((DATA_PATH / "python/numeric_allof_types/errors.json").read_text())[case]
-    assert_output(
-        json.dumps([{"payload": payload, "native": validator.is_valid(payload)} for payload in payloads], indent=2)
-        + "\n",
-        EXPECTED_JSON_SCHEMA_PATH / "numeric_allof_types" / f"{case}_runtime.txt",
-    )
-    message = "allOf numeric/null type constraints have no common value"
+@pytest.mark.parametrize("schema_validators", [False, True])
+def test_optional_disjoint_allof_types(output_file: Path, entrypoint: str, *, schema_validators: bool) -> None:
+    """Keep valid empty objects usable without requiring allOf fields to have a common type."""
+    source = JSON_SCHEMA_DATA_PATH / "numeric_allof_types/optional_disjoint.json"
+    expected_file = "numeric_allof_types/optional_disjoint.py"
     if entrypoint == "cli":
         run_main_and_assert(
             input_path=source,
             output_path=output_file,
-            extra_args=["--allof-merge-mode", merge_mode.value],
-            expected_exit=Exit.ERROR,
-            capsys=capsys,
-            expected_stderr_contains=message,
-            output_should_not_exist=True,
+            input_file_type="jsonschema",
+            extra_args=[
+                "--disable-timestamp",
+                *(["--generate-schema-validators"] if schema_validators else []),
+            ],
+            assert_func=assert_file_content,
+            expected_file=expected_file,
         )
     else:
-        run_generate_and_assert(
-            input_=schema,
+        run_generate_file_and_assert(
+            input_path=source,
+            output_path=output_file,
             input_file_type=InputFileType.JsonSchema,
-            output=output_file,
-            allof_merge_mode=merge_mode,
-            assert_input_unchanged=True,
-            expected_error=SchemaParseError,
-            expected_error_match=message,
+            disable_timestamp=True,
+            generate_schema_validators=schema_validators,
+            assert_func=assert_file_content,
+            expected_file=expected_file,
         )
+    payloads = json.loads((DATA_PATH / "python/numeric_allof_types/optional_disjoint.json").read_text())
+    Draft202012Validator(json.loads(source.read_text())).validate(payloads["valid"])
+    assert_generated_model_json_validation(
+        output_file,
+        module_name=f"optional_disjoint_allof_{entrypoint}_{schema_validators}",
+        model_name="Root",
+        valid_json=json.dumps(payloads["valid"]),
+        invalid_json=json.dumps(payloads["invalid"]),
+        expected_error_type="model_type",
+    )
 
 
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
