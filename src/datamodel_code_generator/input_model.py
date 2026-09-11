@@ -46,6 +46,8 @@ from datamodel_code_generator._python_type_annotation import (
 from datamodel_code_generator.enums import InputModelRefStrategy, _get_output_model_family
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from datamodel_code_generator import DataModelType, InputFileType
     from datamodel_code_generator.enums import _OutputModelFamily
     from datamodel_code_generator.input_model_result import LoadedInputModelSchema
@@ -248,6 +250,8 @@ _PRESERVED_TYPE_ORIGINS: dict[type, str] = {}
 
 # Marker for types that Pydantic cannot serialize to JSON Schema
 _UNSERIALIZABLE_MARKER = "x-python-unserializable"
+_UNION_BRANCH_MARKER = "x-python-union-branch"
+_UNSERIALIZABLE_SCHEMA_KEYS = frozenset({"anyOf", "oneOf", "allOf", "items", "prefixItems", "additionalProperties"})
 
 # Type family constants
 _TYPE_FAMILY_ENUM = "enum"
@@ -312,25 +316,44 @@ def _get_input_model_json_schema_class() -> type:
     class InputModelJsonSchema(GenerateJsonSchema):
         """Custom schema generator that handles ALL unserializable types."""
 
-        def handle_invalid_for_json_schema(  # noqa: PLR6301
+        _unserializable_count = 0
+
+        def union_schema(self, schema: Any) -> dict[str, Any]:
+            """Bind original choices only when this union needs annotation recovery."""
+            before = self._unserializable_count
+            result = super().union_schema(schema)
+            if before == self._unserializable_count:
+                return result
+            targets = {
+                item[_UNSERIALIZABLE_MARKER]: branch
+                for branch in result.get("anyOf", [result])
+                for item in _iter_unserializable_schemas(branch)
+            }
+            for index, choice in enumerate(schema["choices"]):
+                _bind_union_choice(choice, targets, index)
+            return result
+
+        def handle_invalid_for_json_schema(
             self,
-            schema: Any,  # noqa: ARG002
+            schema: Any,
             error_info: Any,  # noqa: ARG002
         ) -> dict[str, Any]:
             """Catch ALL types that Pydantic can't serialize to JSON Schema."""
+            self._unserializable_count += 1
             return {
                 "type": "object",
-                _UNSERIALIZABLE_MARKER: True,
+                _UNSERIALIZABLE_MARKER: id(schema),
             }
 
-        def callable_schema(  # noqa: PLR6301
+        def callable_schema(
             self,
-            schema: Any,  # noqa: ARG002
+            schema: Any,
         ) -> dict[str, Any]:
             """Handle Callable types - these raise before handle_invalid_for_json_schema."""
+            self._unserializable_count += 1
             return {
                 "type": "string",
-                _UNSERIALIZABLE_MARKER: True,
+                _UNSERIALIZABLE_MARKER: id(schema),
             }
 
     return InputModelJsonSchema
@@ -342,26 +365,103 @@ def _is_type_origin(annotation: type) -> bool:
     return origin is type
 
 
+def _iter_unserializable_schemas(value: Any) -> Iterator[dict[str, Any]]:
+    if isinstance(value, dict):
+        if value.get(_UNSERIALIZABLE_MARKER):
+            yield value
+        for key, item in value.items():
+            if key in _UNSERIALIZABLE_SCHEMA_KEYS:
+                yield from _iter_unserializable_schemas(item)
+    elif isinstance(value, list):
+        for item in value:
+            yield from _iter_unserializable_schemas(item)
+
+
+class _UnionBranchIndex(int):
+    """Identify generated provenance while retaining a caller's same-named extension."""
+
+    original: tuple[Any, ...] = ()
+
+
+def _consume_union_branch(schema: dict[str, Any]) -> int | None:
+    """Consume only provenance produced by the schema generator."""
+    if not isinstance(index := schema.get(_UNION_BRANCH_MARKER), _UnionBranchIndex):
+        return None
+    if index.original:
+        schema[_UNION_BRANCH_MARKER] = index.original[0]
+    else:
+        schema.pop(_UNION_BRANCH_MARKER)
+    return index
+
+
+def _bind_union_choice(value: Any, targets: dict[int, dict[str, Any]], index: int) -> None:
+    if not targets:
+        return
+    if (branch := targets.pop(id(value), None)) is not None:
+        marker = _UnionBranchIndex(index)
+        if _UNION_BRANCH_MARKER in branch:
+            previous = branch[_UNION_BRANCH_MARKER]
+            marker.original = previous.original if isinstance(previous, _UnionBranchIndex) else (previous,)
+        branch[_UNION_BRANCH_MARKER] = marker
+        return
+    if isinstance(value, dict):
+        for item in value.values():
+            _bind_union_choice(item, targets, index)
+    elif isinstance(value, (list, tuple)):
+        for item in value:
+            _bind_union_choice(item, targets, index)
+
+
+def _has_unserializable_schema(value: Any) -> bool:
+    if isinstance(value, dict):
+        return bool(value.get(_UNSERIALIZABLE_MARKER)) or any(
+            _has_unserializable_schema(item) for key, item in value.items() if key in _UNSERIALIZABLE_SCHEMA_KEYS
+        )
+    return isinstance(value, list) and any(_has_unserializable_schema(item) for item in value)
+
+
+def _remove_unserializable_markers(value: Any) -> None:
+    if isinstance(value, dict):
+        value.pop(_UNSERIALIZABLE_MARKER, None)
+        _consume_union_branch(value)
+        for key, item in value.items():
+            if key in _UNSERIALIZABLE_SCHEMA_KEYS:
+                _remove_unserializable_markers(item)
+    elif isinstance(value, list):
+        for item in value:
+            _remove_unserializable_markers(item)
+
+
 def _process_unserializable_property(
     prop: dict[str, Any],
     annotation: type,
     expression_collector: PythonTypeExpressionCollector | None = None,
+    *,
+    in_union: bool = False,
 ) -> None:
     """Process a single property, handling anyOf/oneOf/items structures."""
-    if "anyOf" in prop:
-        for item in prop["anyOf"]:
-            if item.get(_UNSERIALIZABLE_MARKER):
-                _set_python_type_for_unserializable(item, annotation, expression_collector)
-    elif "oneOf" in prop:  # pragma: no cover
-        for item in prop["oneOf"]:
-            if item.get(_UNSERIALIZABLE_MARKER):
-                _set_python_type_for_unserializable(item, annotation, expression_collector)
+    if branches := prop.get("anyOf", prop.get("oneOf")):
+        if not in_union and not _has_unserializable_schema(prop):
+            return
+        while (origin := get_origin(annotation)) is Annotated:
+            annotation = get_args(annotation)[0]
+        args = (
+            tuple(arg for arg in get_args(annotation) if arg is not type(None))
+            if origin is Union or origin is types.UnionType
+            else ()
+        )
+        for item in branches:
+            index = _consume_union_branch(item)
+            branch_annotation = args[index] if args and index is not None else args[0] if len(args) == 1 else annotation
+            _process_unserializable_property(item, branch_annotation, expression_collector, in_union=True)
     elif prop.get(_UNSERIALIZABLE_MARKER):
         _set_python_type_for_unserializable(prop, annotation, expression_collector)
-    elif "items" in prop and prop["items"].get(_UNSERIALIZABLE_MARKER):
+    elif ("items" in prop or "prefixItems" in prop or "additionalProperties" in prop or "allOf" in prop) and (
+        _has_unserializable_schema(prop)
+    ):
         prop["x-python-type"] = _serialize_python_type_full(annotation, expression_collector)
-        prop["items"].pop(_UNSERIALIZABLE_MARKER, None)
-    elif _is_type_origin(annotation):
+        _remove_unserializable_markers(prop)
+    elif not in_union and _is_type_origin(annotation):
         prop["x-python-type"] = _serialize_python_type_full(annotation, expression_collector)
 
 
@@ -371,16 +471,7 @@ def _set_python_type_for_unserializable(
     expression_collector: PythonTypeExpressionCollector | None = None,
 ) -> None:
     """Set x-python-type and clean up markers."""
-    origin = get_origin(annotation)
-    actual_type = annotation
-
-    if origin is Union:
-        for arg in get_args(annotation):  # pragma: no branch
-            if arg is not type(None):  # pragma: no branch
-                actual_type = arg
-                break
-
-    item["x-python-type"] = _serialize_python_type_full(actual_type, expression_collector)
+    item["x-python-type"] = _serialize_python_type_full(annotation, expression_collector)
     item.pop(_UNSERIALIZABLE_MARKER, None)
 
 
