@@ -25,7 +25,6 @@ class Data3(BaseModel):
 
 
 class Data2(BaseModel):
-    __hash__ = object.__hash__
     reserved: bool = Field(..., title='Reserved')
 
 

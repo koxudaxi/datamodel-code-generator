@@ -1855,6 +1855,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     FIELD_NAME_RESOLVER_CLASS: ClassVar[Any] = None
     EXPLICIT_ALIAS_CONFLICT_CHECKER: ClassVar[Callable[[DataModelFieldBase, str], bool] | None] = None
     USES_DATACLASS_ARGUMENTS: ClassVar[bool] = False
+    USES_NATIVE_HASH: ClassVar[bool] = False
     SUPPORTS_REQUIRED_INHERITED_FIELD_ASSIGNMENT: ClassVar[bool] = False
     REQUIRES_EXPLICIT_INHERITED_FACTORY_OVERRIDE: ClassVar[bool] = False
     REQUIRED_ASSIGNMENT_COUNTS_AS_CONSTRUCTOR_DEFAULT: ClassVar[bool] = False

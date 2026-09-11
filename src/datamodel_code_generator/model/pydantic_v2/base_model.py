@@ -868,6 +868,7 @@ class BaseModel(BaseModelBase):
     SUPPORTS_FIELD_RENAMING: ClassVar[bool] = True
     SUPPORTS_ANNOTATED_CONSTRAINTS: ClassVar[bool] = True
     SUPPORTS_SCHEMA_RUNTIME_VALIDATION: ClassVar[bool] = True
+    USES_NATIVE_HASH: ClassVar[bool] = True
     SCHEMA_RUNTIME_VALIDATION_ROOT_MODEL = staticmethod(_get_schema_runtime_validation_root_model)
     ANNOTATED_CONSTRAINTS_CONTEXT: ClassVar[object | None] = _ANNOTATED_CONSTRAINTS_CONTEXT
     SUPPORTS_CONFIG_EXTRA: ClassVar[bool] = True

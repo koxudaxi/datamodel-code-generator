@@ -3604,12 +3604,13 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
     def __mark_set_item_models_hashable(cls, models: list[DataModel]) -> None:
         """Mark models used as set/frozenset items with hash flag for __hash__ generation."""
         set_item_references = cls.__collect_set_item_references(models)
+        if not set_item_references:
+            return
 
         for model in models:
-            if model.reference.path in set_item_references:
-                if isinstance(model, Enum):
-                    continue
-                model._append_internal_template_data("class_body_lines", "__hash__ = object.__hash__")  # noqa: SLF001
+            if model.USES_NATIVE_HASH or model.reference.path not in set_item_references or isinstance(model, Enum):
+                continue
+            model._append_internal_template_data("class_body_lines", "__hash__ = object.__hash__")  # noqa: SLF001
 
     @classmethod
     def __set_reference_default_value_to_field(
