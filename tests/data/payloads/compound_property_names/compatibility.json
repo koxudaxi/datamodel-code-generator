@@ -1,0 +1,41 @@
+{
+  "unsupported_allof": {
+    "valid": {},
+    "invalid": []
+  },
+  "unsupported_oneof": {
+    "valid": {},
+    "invalid": []
+  },
+  "unsupported_sibling": {
+    "valid": {},
+    "invalid": []
+  },
+  "unsupported_nonstring": {
+    "valid": {},
+    "invalid": []
+  },
+  "unsupported_mixed": {
+    "valid": {},
+    "invalid": []
+  },
+  "unsupported_one_constrained": {
+    "valid": {},
+    "invalid": []
+  },
+  "unsupported_one_sibling": {
+    "valid": {},
+    "invalid": []
+  },
+  "unsupported_nonstring_union": {
+    "valid": {},
+    "invalid": []
+  },
+  "unconstrained_oneof": {
+    "valid": {
+      "x": 1
+    },
+    "invalid": [],
+    "expected": "unsupported_one_constrained.py"
+  }
+}

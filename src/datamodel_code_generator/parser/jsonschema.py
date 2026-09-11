@@ -9375,35 +9375,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         match property_names:
             case JsonSchemaObject() if property_names.anyOf or property_names.oneOf or property_names.allOf:
-                unrestricted = False
                 if property_names.anyOf:
-                    key_type, unrestricted = self._parse_string_property_name_union(property_names)
+                    key_type, _ = self._parse_string_property_name_union(property_names)
                     if key_type is not None:
                         return key_type
-                elif property_names.oneOf and not property_names.has_constraint:
-                    branches = (branch for branch in property_names.oneOf if not self._is_false_schema_item(branch))
-                    branch = next(branches, None)
-                    if branch is not None and next(branches, None) is None:
-                        unrestricted = branch is True or self._parse_string_property_name_union(branch)[1]
-                key_path = get_special_path("propertyNames/key", path)
-                key_type = self.parse_item(name, property_names, key_path)
-                for data_type in key_type.all_data_types:
-                    if data_type.type == ANY or (unrestricted and data_type.type == "str"):
-                        if unrestricted:
-                            # JSON keys reach this branch unchanged; later model branches cannot win.
-                            break
-                    elif not (
-                        data_type.reference
-                        and isinstance(source := data_type.reference.source, DataModel)
-                        and not isinstance(source, Enum)
-                        and not source.IS_ALIAS
-                    ):
-                        continue
-                    raise SchemaParseError(
-                        message="Compound propertyNames constraints cannot be represented as scalar dictionary keys",
-                        path=key_path,
-                    )
-                return key_type
+                return self.parse_item(name, property_names, get_special_path("propertyNames/key", path))
         return self._parse_property_name_key_schema(property_names)
 
     def _parse_simple_property_name_key_type(

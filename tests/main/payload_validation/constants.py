@@ -112,13 +112,15 @@ EXCLUDED_FILES: dict[str, str] = {
 ALLOF_REF_SIBLING_DIAGNOSTICS = json.loads(
     (DATA_PATH / "payloads/allof_ref_sibling_diagnostics.json").read_text(encoding="utf-8")
 )
-COMPOUND_PROPERTY_NAMES_DIAGNOSTIC_CASES: dict[str, str] = json.loads(
-    (DATA_PATH / "payloads/compound_property_names/diagnostics.json").read_text(encoding="utf-8")
-)
 EXCLUDED_CASES: dict[str, str] = {
     **dict.fromkeys(
-        COMPOUND_PROPERTY_NAMES_DIAGNOSTIC_CASES,
-        "expects SchemaParseError; every listed input is exercised by test_unrepresentable_compound_property_names",
+        (
+            "jsonschema/compound_property_names/unsupported_allof.json",
+            "jsonschema/compound_property_names/unsupported_one_sibling.json",
+            "jsonschema/compound_property_names/unsupported_sibling.json",
+        ),
+        "legacy propertyNames model keys cannot validate nonempty dictionaries; "
+        "valid empty dictionaries are covered by test_compound_property_names_compatibility",
     ),
     **{
         f"jsonschema/allof_ref_siblings/{name}.json": (

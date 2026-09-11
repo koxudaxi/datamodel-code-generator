@@ -126,7 +126,6 @@ from tests.main.conftest import (
     run_main_with_system_exit,
 )
 from tests.main.jsonschema.conftest import EXPECTED_JSON_SCHEMA_PATH, assert_file_content
-from tests.main.payload_validation.constants import COMPOUND_PROPERTY_NAMES_DIAGNOSTIC_CASES
 
 if TYPE_CHECKING:
     from datamodel_code_generator.parser.base import Result
@@ -23470,37 +23469,50 @@ def test_compound_property_name_generation(name: str, constraints: bool, entry: 
     )
 
 
-@pytest.mark.parametrize(("case_id", "expected_file"), COMPOUND_PROPERTY_NAMES_DIAGNOSTIC_CASES.items())
-@pytest.mark.parametrize("constraints", [False, True])
+@pytest.mark.parametrize(
+    ("name", "schema_validators"),
+    [
+        *[(name, False) for name in json.loads((COMPOUND_PROPERTY_PAYLOADS / "compatibility.json").read_text())],
+        ("unconstrained_oneof", True),
+    ],
+)
 @pytest.mark.parametrize("entry", ["cli", "api"])
-def test_unrepresentable_compound_property_names(
-    case_id: str,
-    expected_file: str,
-    constraints: bool,
-    entry: str,
-    output_file: Path,
-    capsys: pytest.CaptureFixture[str],
+def test_compound_property_names_compatibility(
+    name: str, entry: str, output_file: Path, *, schema_validators: bool
 ) -> None:
-    """Diagnose unsupported key intersections instead of emitting invalid models."""
-    input_path = DATA_PATH / case_id
-    expected = EXPECTED_JSON_SCHEMA_PATH / expected_file
-    Draft202012Validator.check_schema(json.loads(input_path.read_text(encoding="utf-8")))
+    """Preserve valid dictionaries when their key constraint has no native type representation."""
+    input_path = COMPOUND_PROPERTY_INPUTS / f"{name}.json"
+    payload = json.loads((COMPOUND_PROPERTY_PAYLOADS / "compatibility.json").read_text())[name]
+    expected_file = "compound_property_names/" + payload.get("expected", f"{name}.py")
     if entry == "cli":
         run_main_and_assert(
             input_path=input_path,
             output_path=output_file,
             input_file_type="jsonschema",
-            extra_args=["--field-constraints"] if constraints else [],
-            expected_exit=Exit.ERROR,
-            output_should_not_exist=True,
-            capsys=capsys,
-            expected_stderr_contains=expected.read_text().strip(),
+            extra_args=[
+                "--custom-file-header",
+                "# Compound property names",
+                *(["--generate-schema-validators"] if schema_validators else []),
+            ],
+            assert_func=assert_file_content,
+            expected_file=expected_file,
         )
     else:
-        run_generate_and_assert(
-            input_=input_path,
+        run_generate_file_and_assert(
+            input_path=input_path,
+            output_path=output_file,
             input_file_type=InputFileType.JsonSchema,
-            field_constraints=constraints,
-            expected_file=expected,
-            expected_error=SchemaParseError,
+            custom_file_header="# Compound property names",
+            generate_schema_validators=schema_validators,
+            assert_func=assert_file_content,
+            expected_file=expected_file,
         )
+    Draft202012Validator(json.loads(input_path.read_text())).validate(payload["valid"])
+    assert_generated_model_json_validation(
+        output_file,
+        module_name=f"compound_property_compatibility_{entry}_{name}",
+        model_name="Root",
+        valid_json=json.dumps(payload["valid"]),
+        invalid_json=json.dumps(payload["invalid"]),
+        expected_error_type="dict_type",
+    )
