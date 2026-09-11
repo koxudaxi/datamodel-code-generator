@@ -1,1 +1,0 @@
-XML Schema cannot represent both simple content 'value' and attribute 'value' as property 'value'.
