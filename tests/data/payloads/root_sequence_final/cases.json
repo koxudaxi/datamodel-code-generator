@@ -109,5 +109,17 @@
       "reuse_model": true,
       "collapse_reuse_models": true
     }
+  },
+  {
+    "name": "reuse_validators",
+    "schema": "reuse.json",
+    "payload": "[]",
+    "runtime": "nested",
+    "options": {
+      "use_root_model_sequence_interface": true,
+      "reuse_model": true,
+      "collapse_reuse_models": true,
+      "generate_schema_validators": true
+    }
   }
 ]

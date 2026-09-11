@@ -16,16 +16,16 @@
     "A": {
       "type": "array",
       "items": {
-        "$ref": "#/$defs/ItemA"
+        "$ref": "#/$defs/TypeAdapter"
       }
     },
     "B": {
       "type": "array",
       "items": {
-        "$ref": "#/$defs/ItemB"
+        "$ref": "#/$defs/ClassVar"
       }
     },
-    "ItemA": {
+    "TypeAdapter": {
       "type": "object",
       "properties": {
         "value": {
@@ -36,7 +36,7 @@
         "value"
       ]
     },
-    "ItemB": {
+    "ClassVar": {
       "type": "object",
       "properties": {
         "value": {
@@ -46,6 +46,15 @@
       "required": [
         "value"
       ]
+    },
+    "Pattern": {
+      "type": "object",
+      "patternProperties": {
+        "^x": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": true
     }
   }
 }

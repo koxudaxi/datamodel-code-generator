@@ -6,28 +6,34 @@ from __future__ import annotations
 from collections.abc import Iterator, Sequence
 from typing import SupportsIndex, overload
 
-from pydantic import BaseModel, Field, RootModel
+from pydantic import BaseModel, Field, RootModel, constr
 
 
-class ItemA(BaseModel):
+class TypeAdapter(BaseModel):
     value: int
 
 
-class A(RootModel[list[ItemA]], Sequence[ItemA]):
-    root: list[ItemA]
+class Pattern(RootModel[dict[constr(pattern=r'^x'), int]]):
+    root: dict[constr(pattern=r'^x'), int]
 
-    def __iter__(self) -> Iterator[ItemA]:
+
+class A(RootModel[list[TypeAdapter]], Sequence[TypeAdapter]):
+    root: list[TypeAdapter]
+
+    def __iter__(self) -> Iterator[TypeAdapter]:
         return iter(self.root)
 
     @overload
-    def __getitem__(self, index: SupportsIndex) -> ItemA:
+    def __getitem__(self, index: SupportsIndex) -> TypeAdapter:
         pass
 
     @overload
-    def __getitem__(self, index: slice) -> list[ItemA]:
+    def __getitem__(self, index: slice) -> list[TypeAdapter]:
         pass
 
-    def __getitem__(self, index: SupportsIndex | slice) -> ItemA | list[ItemA]:
+    def __getitem__(
+        self, index: SupportsIndex | slice
+    ) -> TypeAdapter | list[TypeAdapter]:
         return self.root[index]
 
     def __len__(self) -> int:

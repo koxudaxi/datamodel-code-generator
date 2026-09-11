@@ -6262,6 +6262,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             renamed_models = (
                 self.__change_imported_model_name(ctx.models, ctx.imports, ctx.scoped_model_resolver) or renamed_models
             )
+        if self.use_root_model_sequence_interface and renamed_models:
+            for model in all_models:
+                model.finalize_sequence_interface()
         if self.generate_schema_validators and renamed_models:
             # Helper-name reservations include referenced models from other modules,
             # so a rare import collision must invalidate every module plan.
