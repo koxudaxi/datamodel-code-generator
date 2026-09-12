@@ -91,6 +91,19 @@
   "namespace_warning": {
     "a": "model_validate_custom"
   },
+  "namespace_prefix": {
+    "a": "model_foo"
+  },
+  "namespace_scoped": {
+    "a": "model_config",
+    "AliasNames.a": "model_foo"
+  },
+  "namespace_choices": {
+    "a": [
+      "model_foo",
+      "alt"
+    ]
+  },
   "scoped_empty_choices": {
     "a": "value",
     "AliasNames.a": []
@@ -114,8 +127,5 @@
   "discriminator_modular_collision": {
     "AliasNames.a": "K",
     "pet_type": "K"
-  },
-  "reserved_legacy_prefix": {
-    "a": "model_validate_custom"
   }
 }
