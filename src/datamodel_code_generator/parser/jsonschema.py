@@ -6428,7 +6428,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return False
         return not obj.enum or self.ignore_enum_constraints
 
-    def _handle_allof_root_model_with_constraints(  # noqa: PLR0911, PLR0912
+    def _handle_allof_root_model_with_constraints(  # noqa: PLR0911, PLR0912, PLR0915
         self,
         name: str,
         obj: JsonSchemaObject,
@@ -6501,7 +6501,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             and hasattr(self.data_model_root_type, "add_literal_validation")
             and ("enum" in obj.model_fields_set or "const" in obj.extras)
         )
-        if obj.has_constraint or obj.description or obj.format or has_literals:
+        if obj.has_constraint or obj.description or obj.format or has_literals or self.field_constraints:
             merged_dict = merged_schema.model_dump(exclude_unset=True, by_alias=True)
             if obj.has_constraint:
                 self._merge_schema_constraints(merged_dict, [obj], intersect=True)
@@ -6511,9 +6511,22 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 self._merge_all_of_root_validation_keywords(merged_dict, [*all_items, obj])
             if obj.description:
                 merged_dict["description"] = obj.description
+            if isinstance(schema_type := merged_schema.type, list) and not merged_schema.has_multiple_types:
+                schema_type = next((item for item in schema_type if item != "null"), None)
+            if isinstance(schema_type, str):
+                constraint_types = frozenset({schema_type})
+                if (format_ := merged_dict.get("format")) and (
+                    format_ in self._data_formats.get(schema_type, {}) or (schema_type, format_) in self.type_mappings
+                ):
+                    mapped_type = self._get_type_with_mappings(schema_type, format_)
+                    if mapped_type in {Types.date_time, Types.date_time_local}:
+                        constraint_types = frozenset()
+                    elif mapped_type in _NUMBER_CONSTRAINT_TYPES:
+                        constraint_types = frozenset({"number"})
+                merged_dict = self._drop_incompatible_inherited_constraints(merged_dict, constraint_types)
             merged_schema = self.SCHEMA_OBJECT_TYPE.model_validate(merged_dict)
 
-        if has_literals or obj.format:
+        if has_literals or (obj.format and merged_schema.has_constraint):
             with self._temporarily_enable_field_constraints():
                 if has_literals:
                     return self._parse_all_of_root_value(name, merged_schema, path)

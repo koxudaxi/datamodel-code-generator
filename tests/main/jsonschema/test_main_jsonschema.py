@@ -21894,6 +21894,15 @@ def test_allof_literal_patterns(
             "ordinary",
             "same_pattern",
             "format",
+            "unknown_format",
+            "no_format",
+            "date_time",
+            "unknown_length",
+            "date_time_length",
+            "date_time_as_string",
+            "mapped_date_time_length",
+            "nullable_date_time_length",
+            "mapped_number",
         )
     ]
     + [(case, enabled) for case in ("enum", "const") for enabled in (False, True)],
@@ -21902,43 +21911,46 @@ def test_allof_outer_constraints(
     output_file: Path, entrypoint: str, formatter: str, constraints: bool, merge: str, case: str, validators: bool
 ) -> None:
     """Compare real generated root validation with all schema assertions."""
-    schema = JSON_SCHEMA_DATA_PATH / f"allof_outer_constraints/{case}.json"
-    formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
-    suffix = "_validators" if validators else ""
-    expected_constraints = constraints or validators or case == "format"
-    expected = f"allof_outer_constraints/{case}{suffix}_{expected_constraints}_all.py"
-    if entrypoint == "cli":
-        run_main_and_assert(
-            input_path=schema,
-            output_path=output_file,
-            input_file_type="jsonschema",
-            assert_func=assert_file_content,
-            expected_file=expected,
-            extra_args=[
-                "--disable-timestamp",
-                "--allof-merge-mode",
-                merge,
-                "--formatters",
-                *formatters,
-                *(["--field-constraints"] if constraints else []),
-                *(["--generate-schema-validators"] if validators else []),
-            ],
-        )
-    else:
-        run_generate_file_and_assert(
-            input_path=schema,
-            output_path=output_file,
-            input_file_type=InputFileType.JsonSchema,
-            assert_func=assert_file_content,
-            expected_file=expected,
-            disable_timestamp=True,
-            allof_merge_mode=merge,
-            field_constraints=constraints,
-            generate_schema_validators=validators,
-            formatters=[Formatter(value) for value in formatters],
-        )
     cases = json.loads((JSON_SCHEMA_DATA_PATH.parent / "payloads/allof_outer_constraints.json").read_text())
     payloads = next(item for item in cases if item["name"] == case)
+    schema = JSON_SCHEMA_DATA_PATH / "allof_outer_constraints" / f"{payloads.get('schema', case)}.json"
+    formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
+    suffix = "_validators" if validators else ""
+    expected_constraints = payloads.get("expected_constraints", constraints or validators or case == "format")
+    expected = f"allof_outer_constraints/{case}{suffix}_{expected_constraints}_all.py"
+    with pytest.warns(UserWarning, match=payloads["warning"]) if "warning" in payloads else nullcontext():
+        if entrypoint == "cli":
+            run_main_and_assert(
+                input_path=schema,
+                output_path=output_file,
+                input_file_type="jsonschema",
+                assert_func=assert_file_content,
+                expected_file=expected,
+                extra_args=[
+                    "--disable-timestamp",
+                    "--allof-merge-mode",
+                    merge,
+                    "--formatters",
+                    *formatters,
+                    *(["--field-constraints"] if constraints else []),
+                    *(["--generate-schema-validators"] if validators else []),
+                    *(["--type-mappings", *payloads["type_mappings"]] if "type_mappings" in payloads else []),
+                ],
+            )
+        else:
+            run_generate_file_and_assert(
+                input_path=schema,
+                output_path=output_file,
+                input_file_type=InputFileType.JsonSchema,
+                assert_func=assert_file_content,
+                expected_file=expected,
+                disable_timestamp=True,
+                allof_merge_mode=merge,
+                field_constraints=constraints,
+                generate_schema_validators=validators,
+                type_mappings=payloads.get("type_mappings"),
+                formatters=[Formatter(value) for value in formatters],
+            )
     error_type = payloads.get("validator_error_type", payloads["error_type"]) if validators else payloads["error_type"]
     validator = Draft7Validator(json.loads(schema.read_text()), format_checker=FormatChecker())
     with _generated_model(output_file, "allof_outer_constraints", "Root") as model:
@@ -21956,8 +21968,13 @@ def test_allof_outer_constraints(
                 valid_json=json.dumps(value),
                 invalid_json=json.dumps(payloads["invalid"][0]),
                 expected_error_type=error_type,
-                expected_attribute_path=("root",),
+                expected_attribute_path=() if "dump_file" in payloads else ("root",),
                 expected_attribute_value=value,
+            )
+        if "dump_file" in payloads:
+            assert_output(
+                json.dumps([model.model_validate(value).model_dump(mode="json") for value in payloads["valid"]]) + "\n",
+                EXPECTED_JSON_SCHEMA_PATH / "allof_outer_constraints" / payloads["dump_file"],
             )
         for value in payloads["invalid"]:
             with pytest.raises(SchemaValidationError):
