@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+from re import compile
+
 from pydantic import BaseModel, ConfigDict, Field, RootModel, constr
 
 
@@ -10,7 +12,7 @@ class Branches(RootModel[str]):
     model_config = ConfigDict(
         regex_engine="python-re",
     )
-    root: constr(pattern=r'(?=\A)(?:ab|cd|xy|[0-9]{2})\Z') = Field(
+    root: constr(pattern=compile('(?=\\A)(?:ab|cd|xy|[0-9]{2})\\Z')) = Field(
         ..., title='Branches'
     )
 
@@ -19,7 +21,7 @@ class Deeper(RootModel[str]):
     model_config = ConfigDict(
         regex_engine="python-re",
     )
-    root: constr(pattern=r'(?=\A(?:(?=\A(?:(?=\A)(?:[A-Z]+|[0-9]+)\Z)\Z)(?:(?=\A)(?:[A-M]+|[3-7]+)\Z)\Z)\Z)(?:(?=\A)(?:[A-C]+|[4-5]+)\Z)\Z') = Field(
+    root: constr(pattern=compile('(?=\\A(?:(?=\\A(?:(?=\\A)(?:[A-Z]+|[0-9]+)\\Z)\\Z)(?:(?=\\A)(?:[A-M]+|[3-7]+)\\Z)\\Z)\\Z)(?:(?=\\A)(?:[A-C]+|[4-5]+)\\Z)\\Z')) = Field(
         ..., title='Deeper'
     )
 
@@ -28,7 +30,7 @@ class Derived(RootModel[str]):
     model_config = ConfigDict(
         regex_engine="python-re",
     )
-    root: constr(pattern=r'(?=\A(?:(?=\A)(?:[A-Z]+|[0-9]+)\Z)\Z)(?:(?=\A)(?:[A-M]+|[3-7]+)\Z)\Z') = Field(
+    root: constr(pattern=compile('(?=\\A(?:(?=\\A)(?:[A-Z]+|[0-9]+)\\Z)\\Z)(?:(?=\\A)(?:[A-M]+|[3-7]+)\\Z)\\Z')) = Field(
         ..., title='Derived'
     )
 
@@ -37,28 +39,32 @@ class Empty(RootModel[str]):
     model_config = ConfigDict(
         regex_engine="python-re",
     )
-    root: constr(pattern=r'(?=\A)(?:|Q)\Z') = Field(..., title='Empty')
+    root: constr(pattern=compile('(?=\\A)(?:|Q)\\Z')) = Field(..., title='Empty')
 
 
 class Escaped(RootModel[str]):
     model_config = ConfigDict(
         regex_engine="python-re",
     )
-    root: constr(pattern=r'(?=\A)(?:a\+b|x\.y)\Z') = Field(..., title='Escaped')
+    root: constr(pattern=compile('(?=\\A)(?:a\\+b|x\\.y)\\Z')) = Field(
+        ..., title='Escaped'
+    )
 
 
 class Newline(RootModel[str]):
     model_config = ConfigDict(
         regex_engine="python-re",
     )
-    root: constr(pattern=r'(?=\A)(?:A\nB|C)\Z') = Field(..., title='Newline')
+    root: constr(pattern=compile('(?=\\A)(?:A\nB|C)\\Z')) = Field(..., title='Newline')
 
 
 class Reversed(RootModel[str]):
     model_config = ConfigDict(
         regex_engine="python-re",
     )
-    root: constr(pattern=r'(?=\A)(?:[0-9]+|[A-Z]+)\Z') = Field(..., title='Reversed')
+    root: constr(pattern=compile('(?=\\A)(?:[0-9]+|[A-Z]+)\\Z')) = Field(
+        ..., title='Reversed'
+    )
 
 
 class SingleBase(RootModel[constr(pattern=r'[A-Z]{2}|[0-9]{3}')]):
@@ -69,7 +75,7 @@ class SingleDerived(RootModel[str]):
     model_config = ConfigDict(
         regex_engine="python-re",
     )
-    root: constr(pattern=r'(?=\A(?:[A-Z]{2}|[0-9]{3})\Z)(?:[A-Z]+)\Z') = Field(
+    root: constr(pattern=compile('(?=\\A(?:[A-Z]{2}|[0-9]{3})\\Z)(?:[A-Z]+)\\Z')) = Field(
         ..., title='SingleDerived'
     )
 
@@ -78,7 +84,9 @@ class Token(RootModel[str]):
     model_config = ConfigDict(
         regex_engine="python-re",
     )
-    root: constr(pattern=r'(?=\A)(?:[A-Z]+|[0-9]+)\Z') = Field(..., title='Token')
+    root: constr(pattern=compile('(?=\\A)(?:[A-Z]+|[0-9]+)\\Z')) = Field(
+        ..., title='Token'
+    )
 
 
 class Root(BaseModel):
@@ -94,4 +102,4 @@ class Root(BaseModel):
     empty: Empty
     escaped: Escaped
     newline: Newline
-    inline: constr(pattern=r'(?=\A(?:[ab]+)\Z)(?:(?=\A)(?:a+|b+)\Z)\Z')
+    inline: constr(pattern=compile('(?=\\A(?:[ab]+)\\Z)(?:(?=\\A)(?:a+|b+)\\Z)\\Z'))

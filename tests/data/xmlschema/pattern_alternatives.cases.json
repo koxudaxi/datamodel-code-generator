@@ -1,4 +1,5 @@
 {
+  "alias": {"valid": "ABC", "invalid": "ABC\n"},
   "base": {
     "token": "ABC",
     "reversed": "ABC",

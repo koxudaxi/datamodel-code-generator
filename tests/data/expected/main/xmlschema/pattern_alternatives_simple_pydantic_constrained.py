@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+from re import compile
+
 from pydantic import BaseModel, ConfigDict, Field, RootModel, constr
 
 
@@ -10,7 +12,9 @@ class Token(RootModel[str]):
     model_config = ConfigDict(
         regex_engine="python-re",
     )
-    root: constr(pattern=r'(?=\A)(?:[A-Z]+|[0-9]+)\Z') = Field(..., title='Token')
+    root: constr(pattern=compile('(?=\\A)(?:[A-Z]+|[0-9]+)\\Z')) = Field(
+        ..., title='Token'
+    )
 
 
 class Root(BaseModel):
