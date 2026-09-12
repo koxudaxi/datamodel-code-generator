@@ -6974,6 +6974,24 @@ def test_main_openapi_msgspec_use_annotated_with_field_constraints(output_file: 
         extra_args=["--field-constraints", "--target-python-version", "3.10", "--output-model-type", "msgspec.Struct"],
     )
 
+    import msgspec
+
+    cases = json.loads((DATA_PATH / "payloads/openapi_msgspec_numeric_unions.json").read_text())
+    actual = []
+    with _generated_model(output_file, "openapi_msgspec_numeric_unions", "User") as model:
+        decoder = msgspec.json.Decoder(model)
+        for case in cases:
+            payload = json.dumps(case["input"])
+            if case["valid"]:
+                actual.append(msgspec.to_builtins(decoder.decode(payload)))
+            else:
+                with pytest.raises(msgspec.ValidationError):
+                    decoder.decode(payload)
+    assert_output(
+        json.dumps(actual, indent=2) + "\n",
+        EXPECTED_OPENAPI_PATH / "msgspec_numeric_unions_runtime.txt",
+    )
+
 
 @pytest.mark.parametrize(
     ("output_model", "expected_file"),
@@ -10155,3 +10173,42 @@ def test_external_discriminator_parent_load_order(output_file: Path, entrypoint:
                     json.dumps(model.model_validate(payloads[tag]).model_dump(), sort_keys=True) + "\n",
                     DATA_PATH / "payloads/external_discriminator_outputs" / f"local_{tag}.txt",
                 )
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+def test_numeric_union_preserves_nullable_warning(output_file: Path, entrypoint: str) -> None:
+    """Keep strict OpenAPI nullable diagnostics when numeric bounds belong to the field."""
+    from datamodel_code_generator.enums import VersionMode
+
+    source = OPEN_API_DATA_PATH / "type_union_nullable.json"
+    with warnings.catch_warnings(record=True) as recorded:
+        warnings.simplefilter("always", DeprecationWarning)
+        if entrypoint == "cli":
+            run_main_and_assert(
+                input_path=source,
+                output_path=output_file,
+                input_file_type="openapi",
+                extra_args=[
+                    "--disable-timestamp",
+                    "--field-constraints",
+                    "--schema-version-mode",
+                    "strict",
+                    "--formatters",
+                    "builtin",
+                ],
+                assert_func=assert_file_content,
+                expected_file="type_union_nullable.py",
+            )
+        else:
+            run_generate_file_and_assert(
+                input_path=source,
+                output_path=output_file,
+                input_file_type=InputFileType.OpenAPI,
+                disable_timestamp=True,
+                field_constraints=True,
+                schema_version_mode=VersionMode.Strict,
+                formatters=[Formatter.BUILTIN],
+                assert_func=assert_file_content,
+                expected_file="type_union_nullable.py",
+            )
+    assert_warnings_contain(recorded, "nullable keyword is deprecated")

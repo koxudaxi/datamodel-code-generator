@@ -17,7 +17,7 @@ import warnings
 from collections import UserDict, defaultdict
 from collections.abc import Callable as ABCCallable
 from collections.abc import Sequence
-from contextlib import ExitStack, nullcontext
+from contextlib import ExitStack, nullcontext, suppress
 from dataclasses import Field as DataclassField
 from decimal import Decimal
 from functools import partial
@@ -4377,7 +4377,7 @@ def test_main_hostname_multiple_types_pydantic_v2(output_file: Path) -> None:
 
 
 def test_main_root_multiple_primitive_constraints_pydantic_v2(output_file: Path) -> None:
-    """Test root constraints are skipped when multiple primitive types are allowed."""
+    """Keep each primitive constraint on its corresponding root union branch."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "root_multiple_primitive_constraints.json",
         output_path=output_file,
@@ -7097,6 +7097,14 @@ def test_main_jsonschema_additional_properties_value_constraints_annotated(
             module_name = f"additional_properties_constraints_{output_model_type.name}"
             assert_generated_model_json_validation(
                 output_file,
+                module_name="heterogeneous_mapping_constraints",
+                model_name="Payload",
+                valid_json=(DATA_PATH / "payloads/type_union_constraints/legacy_mapping_valid.json").read_text(),
+                invalid_json=(DATA_PATH / "payloads/type_union_constraints/legacy_mapping_invalid.json").read_text(),
+                expected_error_type="greater_than_equal",
+            )
+            assert_generated_model_json_validation(
+                output_file,
                 module_name=module_name,
                 model_name="Payload",
                 valid_json=_ADDITIONAL_PROPERTIES_CONSTRAINTS_VALID_JSON,
@@ -7221,6 +7229,15 @@ def test_main_jsonschema_additional_properties_value_constraints_annotated(
 
             with _generated_model(output_file, "additional_properties_constraints_msgspec", "Payload") as model:
                 instance = msgspec.json.decode(_ADDITIONAL_PROPERTIES_CONSTRAINTS_VALID_JSON.encode(), type=model)
+                msgspec.json.decode(
+                    (DATA_PATH / "payloads/type_union_constraints/legacy_mapping_valid.json").read_bytes(),
+                    type=model,
+                )
+                with pytest.raises(msgspec.ValidationError):
+                    msgspec.json.decode(
+                        (DATA_PATH / "payloads/type_union_constraints/legacy_mapping_invalid.json").read_bytes(),
+                        type=model,
+                    )
                 if (actual := instance.nestedMap["ok"]) != 1:  # pragma: no cover
                     pytest.fail(f"Expected nestedMap value to remain int 1, got {actual!r}")
                 invalid_fragments = (
@@ -7306,6 +7323,14 @@ def test_main_jsonschema_additional_properties_value_constraints_schema_validato
             "--disable-timestamp",
         ],
         force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="heterogeneous_mapping_schema_validators",
+        model_name="Payload",
+        valid_json=(DATA_PATH / "payloads/type_union_constraints/legacy_mapping_valid.json").read_text(),
+        invalid_json=(DATA_PATH / "payloads/type_union_constraints/legacy_mapping_invalid.json").read_text(),
+        expected_error_type="greater_than_equal",
     )
     valid_json = _ADDITIONAL_PROPERTIES_CONSTRAINTS_VALID_JSON.replace('"extra":3', '"pattern_value":0,"extra":3')
     assert_generated_model_json_validation(
@@ -23516,3 +23541,193 @@ def test_compound_property_names_compatibility(
         invalid_json=json.dumps(payload["invalid"]),
         expected_error_type="dict_type",
     )
+
+
+TYPE_UNION_INPUTS = JSON_SCHEMA_DATA_PATH / "type_union_constraints"
+
+
+TYPE_UNION_PAYLOADS = DATA_PATH / "payloads" / "type_union_constraints"
+
+
+TYPE_UNION_EXPECTED = EXPECTED_JSON_SCHEMA_PATH / "type_union_constraints"
+
+
+TYPE_UNION_CASES = json.loads((TYPE_UNION_PAYLOADS / "cases.json").read_text())
+
+
+@pytest.mark.parametrize("name", TYPE_UNION_CASES)
+@pytest.mark.parametrize("constraints", [False, True])
+@pytest.mark.parametrize("entry", ["cli", "api", "dynamic"])
+def test_type_union_constraints(name: str, constraints: bool, entry: str, output_file: Path) -> None:
+    """Validate branches without changing normal order or disabled-option behavior."""
+    input_path = TYPE_UNION_INPUTS / f"{name}.json"
+    expected_file = TYPE_UNION_CASES[name].get(f"{name}_{int(constraints)}.py", f"{name}_{int(constraints)}.py")
+    expected_file = f"type_union_constraints/{expected_file}"
+    if entry == "cli":
+        run_main_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            extra_args=[
+                "--custom-file-header",
+                "# Type-specific union constraints",
+                *(["--field-constraints"] if constraints else []),
+            ],
+            assert_func=assert_file_content,
+            expected_file=expected_file,
+        )
+    elif entry == "api":
+        run_generate_file_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            custom_file_header="# Type-specific union constraints",
+            field_constraints=constraints,
+            assert_func=assert_file_content,
+            expected_file=expected_file,
+        )
+    schema = json.loads(input_path.read_text())
+    Draft202012Validator.check_schema(schema)
+    validator = Draft202012Validator(schema)
+    payloads = json.loads((TYPE_UNION_PAYLOADS / f"{name}.json").read_text())
+    assert_output(
+        json.dumps([validator.is_valid(value) for value in payloads], indent=2) + "\n",
+        TYPE_UNION_EXPECTED / TYPE_UNION_CASES[name].get(f"{name}_native.txt", f"{name}_native.txt"),
+    )
+    runtime_name = f"{name}_native.txt" if constraints else f"{name}_0_runtime.txt"
+    runtime_path = TYPE_UNION_EXPECTED / TYPE_UNION_CASES[name].get(runtime_name, runtime_name)
+    context = (
+        nullcontext(
+            generate_dynamic_models(schema, config=GenerateConfig(field_constraints=constraints), cache_size=0)["Root"]
+        )
+        if entry == "dynamic"
+        else _generated_model(output_file, "type_union_constraints", "Root")
+    )
+    actual = []
+    with context as model:
+        for value in payloads:
+            accepted = False
+            with suppress(ValidationError):
+                model.model_validate(value)
+                accepted = True
+            actual.append(accepted)
+    assert_output(json.dumps(actual, indent=2) + "\n", runtime_path)
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["string_length_field", "both_root", "array_minimum_field", "plain_field", "modeled_field", "numeric_min_field"],
+)
+@pytest.mark.parametrize(
+    "mode", ["annotated", "legacy_union", "strict", "msgspec", "pydantic_dataclass", "msgspec_plain"]
+)
+@pytest.mark.parametrize("entry", ["cli", "api"])
+def test_type_union_constraint_options(name: str, mode: str, entry: str, output_file: Path) -> None:
+    """Respect supported annotation, strictness, backend, and union-syntax choices."""
+    import msgspec
+    from pydantic import TypeAdapter
+
+    from datamodel_code_generator import DataModelType
+    from datamodel_code_generator.types import StrictTypes
+
+    options = {
+        "annotated": {"use_annotated": True},
+        "legacy_union": {"use_union_operator": False},
+        "strict": {"strict_types": [StrictTypes.str, StrictTypes.int]},
+        "msgspec": {"output_model_type": DataModelType.MsgspecStruct, "use_annotated": True},
+        "pydantic_dataclass": {"output_model_type": DataModelType.PydanticV2Dataclass},
+        "msgspec_plain": {"output_model_type": DataModelType.MsgspecStruct, "use_annotated": False},
+    }[mode]
+    arguments = {
+        "annotated": ["--use-annotated"],
+        "legacy_union": ["--no-use-union-operator"],
+        "strict": ["--strict-types", "str", "int"],
+        "msgspec": ["--output-model-type", "msgspec.Struct", "--use-annotated"],
+        "pydantic_dataclass": ["--output-model-type", "pydantic_v2.dataclass"],
+        "msgspec_plain": ["--output-model-type", "msgspec.Struct", "--no-use-annotated"],
+    }[mode]
+    input_path = TYPE_UNION_INPUTS / f"{name}.json"
+    expected_file = TYPE_UNION_CASES[name].get(f"{name}_{mode}.py", f"{name}_{mode}.py")
+    expected_file = f"type_union_constraints/{expected_file}"
+    if entry == "cli":
+        run_main_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            extra_args=["--custom-file-header", "# Type-specific union constraints", "--field-constraints", *arguments],
+            assert_func=assert_file_content,
+            expected_file=expected_file,
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            custom_file_header="# Type-specific union constraints",
+            field_constraints=True,
+            assert_func=assert_file_content,
+            expected_file=expected_file,
+            **options,
+        )
+    payloads = json.loads((TYPE_UNION_PAYLOADS / f"{name}.json").read_text())
+    runtime_name = f"{name}_{mode}_runtime.txt" if mode == "msgspec_plain" else f"{name}_native.txt"
+    expected_runtime = TYPE_UNION_EXPECTED / TYPE_UNION_CASES[name].get(runtime_name, runtime_name)
+    actual = []
+    with _generated_model(output_file, "type_union_options", "Root") as model:
+        validate = (
+            partial(msgspec.convert, type=model) if mode.startswith("msgspec") else TypeAdapter(model).validate_python
+        )
+        for value in payloads:
+            accepted = False
+            with suppress(ValidationError, msgspec.ValidationError):
+                validate(value)
+                accepted = True
+            actual.append(accepted)
+    assert_output(json.dumps(actual, indent=2) + "\n", expected_runtime)
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("schema_validators", [False, True])
+def test_type_union_pattern_properties(output_file: Path, entrypoint: str, *, schema_validators: bool) -> None:
+    """Retain pattern value types and scalar alternatives through existing object parsing."""
+    source = TYPE_UNION_INPUTS / "pattern_properties.json"
+    expected = f"type_union_constraints/pattern_properties_{int(schema_validators)}.py"
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=source,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            extra_args=[
+                "--disable-timestamp",
+                "--field-constraints",
+                "--formatters",
+                "builtin",
+                *(["--generate-schema-validators"] if schema_validators else []),
+            ],
+            assert_func=assert_file_content,
+            expected_file=expected,
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=source,
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            disable_timestamp=True,
+            field_constraints=True,
+            generate_schema_validators=schema_validators,
+            formatters=[Formatter.BUILTIN],
+            assert_func=assert_file_content,
+            expected_file=expected,
+        )
+    payload = json.loads((TYPE_UNION_PAYLOADS / "pattern_properties.json").read_text())
+    native = Draft202012Validator(json.loads(source.read_text()))
+    for valid in payload["valid"]:
+        native.validate(valid)
+        assert_generated_model_json_validation(
+            output_file,
+            module_name=f"type_union_patterns_{entrypoint}_{schema_validators}",
+            model_name="Root",
+            valid_json=json.dumps(valid),
+            invalid_json=json.dumps(payload["invalid"]),
+            expected_error_type="int_parsing",
+        )

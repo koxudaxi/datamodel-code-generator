@@ -205,6 +205,12 @@ MISSING_SENTINEL_PAYLOAD_CASE_IDS = (
 )
 PAYLOAD_BACKEND_EXTRA_ARGS_BY_CASE_ID: dict[str, dict[PayloadBackend, tuple[str, ...]]] = {
     **{
+        f"jsonschema/type_union_constraints/{name}.json": {
+            PayloadBackend.PYDANTIC_V2: ("--field-constraints",),
+        }
+        for name in ("keys_field", "keys_root", "keys_count_field", "keys_count_root")
+    },
+    **{
         case_id: {PayloadBackend.PYDANTIC_V2: ("--use-missing-sentinel",)}
         for case_id in MISSING_SENTINEL_PAYLOAD_CASE_IDS
     },
