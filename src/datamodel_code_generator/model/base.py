@@ -2155,6 +2155,8 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         if cached is not None:
             return cached
 
+        if self.IS_ROOT_MODEL:
+            self.finalize_sequence_interface()
         render_class_name = class_name if class_name is not None or not use_default else "M"
         result = tuple(to_hashable(v) for v in (self.render(class_name=render_class_name), self.imports))
         self._dedup_key_cache[cache_key] = result
@@ -2419,6 +2421,14 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     def get_module_code_insertion_index(cls, models: list[DataModel]) -> int:  # noqa: ARG003
         """Return the number of models emitted before shared module code."""
         return 0
+
+    def finalize_sequence_interface(self) -> None:
+        """Finalize sequence helper metadata after parser type transformations."""
+
+    @classmethod
+    def get_native_hash_model_paths(cls, models: list[DataModel]) -> set[str]:  # noqa: ARG003
+        """Return models whose backend hash can replace the legacy set-item hash."""
+        return set()
 
     @classmethod
     def prepare_module_code(cls, models: list[DataModel]) -> None:
