@@ -1,15 +1,11 @@
 [
   {
     "schema_valid": false,
-    "generated": {
-      "x": 2
-    }
+    "generated": "rejected"
   },
   {
     "schema_valid": false,
-    "generated": {
-      "x": 1
-    }
+    "generated": "rejected"
   },
   {
     "schema_valid": false,

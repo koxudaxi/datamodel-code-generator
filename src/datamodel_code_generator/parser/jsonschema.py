@@ -7949,6 +7949,34 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             previous.append((data_type.reference.path, properties))
         return None
 
+    @classmethod
+    def _pattern_validation_with_undeclared_required(
+        cls, obj: JsonSchemaObject, pattern_value_types: list[tuple[str, DataType]]
+    ) -> Literal["models"] | None:
+        """Reuse the object compatibility proof after missing names receive raw required validation."""
+        pair_size = 2
+        if not obj.patternProperties or len(obj.patternProperties) != pair_size:
+            return None
+        patterns = {}
+        for pattern, schema in obj.patternProperties.items():
+            if (
+                isinstance(schema, JsonSchemaObject)
+                and schema.properties
+                and not set(schema.required) <= schema.properties.keys()
+            ):
+                patterns[pattern] = schema.model_copy(
+                    update={"required": [name for name in schema.required if name in schema.properties]}
+                )
+        if (
+            patterns
+            and cls._pattern_validation_loses_raw_value(
+                obj.model_copy(update={"patternProperties": {**obj.patternProperties, **patterns}}), pattern_value_types
+            )
+            == "models"
+        ):
+            return "models"
+        return None
+
     def _add_pattern_properties_validator(  # noqa: PLR0913, PLR0917
         self,
         reference_path: str,
@@ -7973,6 +8001,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             and self.config.extra_template_data is None
             else None
         )
+        if (
+            obj is self._pattern_validation_document_root
+            and intersection is None
+            and not self.force_optional_for_required_fields
+        ):
+            intersection = self._pattern_validation_with_undeclared_required(obj, pattern_value_types)
         match intersection:
             case "declared":
                 rule_type = IndependentDeclaredPatternPropertiesRule
@@ -8085,6 +8119,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         self._add_pattern_properties_validator(reference_path, name, obj, path, fields, base_classes)
         names_by_property = self._get_input_names_by_property(fields, base_classes)
+        if (
+            not self.force_optional_for_required_fields
+            and not obj.custom_base_path
+            and not any((self.config.base_class, self.config.base_class_map, self.config.custom_template_dir))
+            and self.config.extra_template_data is None
+            and (missing_required := [name for name in obj.required if name not in names_by_property])
+        ):
+            self._add_required_groups_validator(reference_path, "anyOf", [missing_required], names_by_property)
         self._add_required_groups_validator(
             reference_path, "oneOf", self._get_required_groups(obj.oneOf), names_by_property
         )

@@ -5,6 +5,12 @@
   },
   {
     "schema_valid": true,
-    "generated": "rejected"
+    "generated": {
+      "x": {
+        "c": 3,
+        "a": 1,
+        "b": 2
+      }
+    }
   }
 ]
