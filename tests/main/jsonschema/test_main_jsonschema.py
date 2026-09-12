@@ -23731,3 +23731,131 @@ def test_type_union_pattern_properties(output_file: Path, entrypoint: str, *, sc
             invalid_json=json.dumps(payload["invalid"]),
             expected_error_type="int_parsing",
         )
+
+
+PATTERN_INTERSECTION_EXPECTED = EXPECTED_JSON_SCHEMA_PATH / "pattern_intersections"
+
+
+PATTERN_INTERSECTION_CASES = json.loads((PATTERN_INTERSECTION_EXPECTED / "cases.json").read_text())
+
+
+@pytest.mark.parametrize("case", PATTERN_INTERSECTION_CASES)
+@pytest.mark.parametrize("enabled", [False, True])
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("formatter", ["external", "builtin"])
+def test_pattern_property_intersections(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, case: str, enabled: bool, entrypoint: str, formatter: str
+) -> None:
+    """Validate raw values independently while preserving ordinary generated code."""
+    # Each formatter has its own golden for intentionally different formatting.
+    monkeypatch.delenv("DATAMODEL_CODE_GENERATOR_CHECK_BUILTIN_FORMATTER_PARITY", raising=False)
+    source_case = PATTERN_INTERSECTION_CASES[case].get("source", case)
+    source = JSON_SCHEMA_DATA_PATH / "pattern_intersections" / f"{source_case}.json"
+    custom_template_dir = (
+        JSON_SCHEMA_DATA_PATH.parent / "templates" / template
+        if (template := PATTERN_INTERSECTION_CASES[case].get("custom_template"))
+        else None
+    )
+    output = tmp_path / "output.py"
+    formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
+    suffix = case if enabled else f"{case}_disabled"
+    golden_suffix = (
+        f"{suffix}_builtin"
+        if formatter == "builtin"
+        and suffix
+        in {
+            "complex_disabled",
+            "rejected",
+            "custom_base",
+            "custom_base_disabled",
+            "single_custom",
+            "single_custom_disabled",
+        }
+        else suffix
+    )
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=source,
+            output_path=output,
+            input_file_type="jsonschema",
+            extra_args=[
+                "--output-model-type",
+                "pydantic_v2.BaseModel",
+                "--disable-timestamp",
+                "--formatters",
+                *formatters,
+                *(["--generate-schema-validators"] if enabled else []),
+                *(["--custom-template-dir", str(custom_template_dir)] if custom_template_dir else []),
+                *(
+                    ["--base-class", PATTERN_INTERSECTION_CASES[case]["base_class"]]
+                    if "base_class" in PATTERN_INTERSECTION_CASES[case]
+                    else []
+                ),
+            ],
+            expected_file=PATTERN_INTERSECTION_EXPECTED
+            / PATTERN_INTERSECTION_CASES[case]
+            .get("legacy_code_names", {})
+            .get(f"{formatter}_{black.__version__.split('.')[0]}_{enabled}", f"{golden_suffix}.py"),
+            skip_code_validation=True,
+        )
+    else:
+        run_generate_and_assert(
+            input_=source,
+            config=GenerateConfig(
+                input_file_type=InputFileType.JsonSchema,
+                output_model_type=DataModelType.PydanticV2BaseModel,
+                output=output,
+                disable_timestamp=True,
+                generate_schema_validators=enabled,
+                custom_template_dir=custom_template_dir,
+                base_class=PATTERN_INTERSECTION_CASES[case].get("base_class", ""),
+                formatters=[Formatter(value) for value in formatters],
+            ),
+            expected_file=PATTERN_INTERSECTION_EXPECTED
+            / PATTERN_INTERSECTION_CASES[case]
+            .get("legacy_code_names", {})
+            .get(f"{formatter}_{black.__version__.split('.')[0]}_{enabled}", f"{golden_suffix}.py"),
+        )
+    schema = json.loads(source.read_text())
+    Draft202012Validator.check_schema(schema)
+    validator = Draft202012Validator(schema)
+    records = []
+    with _generated_model(output, "generated_pattern_intersection", "Root") as model:
+        for payload in PATTERN_INTERSECTION_CASES[source_case]["payloads"]:
+            record = {"schema_valid": validator.is_valid(payload)}
+            with assert_inputs_not_mutated({"payload": payload}):
+                try:
+                    value = model.model_validate(payload)
+                except ValidationError:
+                    record["generated"] = "rejected"
+                else:
+                    record["generated"] = value.model_dump(mode="json", by_alias=True)
+            records.append(record)
+    runtime_suffix = source_case if enabled else f"{source_case}_disabled"
+    assert_output(json.dumps(records, indent=2), PATTERN_INTERSECTION_EXPECTED / f"{runtime_suffix}_runtime.txt")
+
+
+@pytest.mark.parametrize("formatter", ["external", "builtin"])
+def test_invalid_pattern_does_not_change_generation(tmp_path: Path, formatter: str) -> None:
+    """Keep unsupported regex generation unchanged while limiting intersection detection."""
+    from jsonschema.exceptions import SchemaError
+
+    source = JSON_SCHEMA_DATA_PATH / "pattern_intersections_invalid_regex.json"
+    with pytest.raises(SchemaError):
+        Draft202012Validator.check_schema(json.loads(source.read_text()))
+    output = tmp_path / "output.py"
+    run_main_and_assert(
+        input_path=source,
+        output_path=output,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+            "--generate-schema-validators",
+            "--formatters",
+            *(["builtin"] if formatter == "builtin" else ["black", "isort"]),
+        ],
+        expected_file=PATTERN_INTERSECTION_EXPECTED / "invalid_regex.py",
+        skip_code_validation=True,
+    )

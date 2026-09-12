@@ -49,8 +49,12 @@ class {{ schema_runtime_validation_base_class_name }}(BaseModel):
             pattern_adapters = None
             additional_adapter = None
             for key, value in data.items():
+{%- if has_pattern_property_intersections %}
+                declared = key in rule['declared_properties']
+{%- else %}
                 if key in rule['declared_properties']:
                     continue
+{%- endif %}
                 if any(
                     re.search(pattern, key) for pattern in rule['rejected_patterns']
                 ):
@@ -69,11 +73,21 @@ class {{ schema_runtime_validation_base_class_name }}(BaseModel):
                     if (adapter := pattern_adapters.get(index)) is None:
                         adapter = TypeAdapter(value_type)
                         pattern_adapters[index] = adapter
+{%- if has_pattern_property_intersections %}
+                    validated = adapter.validate_python(value)
+                if declared:
+                    continue
+{%- else %}
                     value = adapter.validate_python(value)
+{%- endif %}
                 if matched:
                     if values is data:
                         values = dict(data)
+{%- if has_pattern_property_intersections %}
+                    values[key] = validated
+{%- else %}
                     values[key] = value
+{%- endif %}
                     continue
                 if rule['additional_property_type'] is not None:
                     if additional_adapter is None:
