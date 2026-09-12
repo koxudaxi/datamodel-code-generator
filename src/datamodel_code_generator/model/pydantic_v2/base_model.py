@@ -11,7 +11,7 @@ import keyword
 import re
 from collections import defaultdict
 from pathlib import Path
-from types import MappingProxyType
+from types import MappingProxyType, NoneType
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, cast
 from warnings import warn
 
@@ -33,6 +33,7 @@ from datamodel_code_generator.model.base import (
     _find_base_classes,
     _get_template_with_custom_dir,
     _uses_original_template_loader,
+    get_effective_fields,
 )
 from datamodel_code_generator.model.field_name import PydanticFieldNameResolver
 from datamodel_code_generator.model.imports import IMPORT_CLASSVAR
@@ -90,6 +91,7 @@ if TYPE_CHECKING:
     from jinja2 import Template
     from typing_extensions import TypedDict, Unpack
 
+    from datamodel_code_generator._python_type_binding import BoundPythonType
     from datamodel_code_generator.imports import Imports
     from datamodel_code_generator.model.pydantic_v2._schema_runtime_validation import (
         SchemaRuntimeValidationModulePlan,
@@ -845,6 +847,106 @@ def _explicit_alias_conflicts_with_pydantic(field: DataModelFieldBase, name: str
     return name.startswith(namespaces)
 
 
+_NATIVE_HASH_SCALARS = frozenset({"str", "int", "float", "bool", "None"})
+
+
+def _has_native_bound_hash(bound_type: BoundPythonType) -> bool:  # noqa: PLR0912
+    """Recognize containers whose validated values have builtin scalar hashes."""
+    from datamodel_code_generator._python_type_annotation import (  # noqa: PLC0415
+        PythonTypeBoundName,
+        PythonTypeEllipsis,
+        PythonTypeName,
+        PythonTypeSubscript,
+        PythonTypeUnion,
+    )
+
+    pending = [bound_type.expression]
+    while pending:
+        expression = pending.pop()
+        if isinstance(expression, PythonTypeUnion):
+            # Pydantic 2.0 can retain unhashable subclasses in a multi-type union.
+            if len(expression.items) != 2 or PythonTypeName("None") not in expression.items:  # noqa: PLR2004
+                return False
+            pending.extend(expression.items)
+            continue
+        arguments = None
+        if isinstance(expression, PythonTypeSubscript):
+            arguments = expression.arguments
+            expression = expression.base
+        match expression:
+            case PythonTypeName(value=name):
+                module = "builtins"
+            case PythonTypeBoundName(import_from=module, import_name=name):
+                pass
+            case _:
+                return False
+        if arguments is None:
+            if module != "builtins" or name not in _NATIVE_HASH_SCALARS:
+                return False
+            continue
+        match module, name:
+            case ("builtins", "tuple") | ("typing", "Tuple"):
+                match arguments:
+                    case (_, PythonTypeEllipsis()):
+                        arguments = arguments[:1]
+            case ("builtins", "frozenset") | ("typing", "FrozenSet") if len(arguments) == 1:
+                pass
+            case _:
+                return False
+        pending.extend(arguments)
+    return True
+
+
+def _has_native_hash_type(data_type: DataType) -> bool:
+    """Recognize types whose validation produces hashable builtin values."""
+    if data_type.is_list or data_type.is_sequence or data_type.is_dict or data_type.is_mapping or data_type.is_set:
+        return False
+    # Model instances, including frozen ones, can retain unhashable user subclasses.
+    if data_type.reference or data_type.data_types or data_type.is_custom_type or data_type.is_func or data_type.kwargs:
+        return False
+    if data_type.python_type:
+        return _has_native_bound_hash(data_type.python_type)
+    if data_type.literals:
+        return all(type(value) in {str, int, float, bool, NoneType} for value in data_type.literals)
+    # In particular, bytes/date/UUID can preserve an unhashable subclass instance.
+    return not data_type.import_ and data_type.type in _NATIVE_HASH_SCALARS
+
+
+def _has_native_hash_field(field: DataModelFieldBase) -> bool:
+    """Exclude arbitrary defaults, which Pydantic need not validate."""
+    return (
+        type(field) is DataModelField
+        and not field.has_default_factory
+        and (field.default is UNDEFINED or type(field.default) in {str, int, float, bool, NoneType})
+        and all(_has_native_hash_type(data_type) for data_type in field.data_type.all_data_types)
+    )
+
+
+def _has_frozen_hash_config(model: DataModel, cache: dict[str, bool | None]) -> bool:
+    """Read effective Pydantic frozen configuration in base declaration order."""
+    from datamodel_code_generator.model.pydantic_v2 import ConfigDict  # noqa: PLC0415
+
+    pending = [model]
+    visited: set[str] = set()
+    value = None
+    while pending:
+        current = pending.pop()
+        path = current.reference.path
+        if path in visited:
+            continue
+        visited.add(path)
+        if path in cache:
+            if (value := cache[path]) is not None:
+                break
+            continue
+        if isinstance(config := current.extra_template_data.get("config"), ConfigDict) and config.frozen is not None:
+            value = config.frozen
+            break
+        pending.extend(_find_base_classes(current))
+    cache[model.reference.path] = value
+    return value is True
+
+
 class BaseModel(BaseModelBase):
     """Pydantic v2 BaseModel with ConfigDict and pattern-based regex_engine support."""
 
@@ -893,6 +995,61 @@ class BaseModel(BaseModelBase):
         ConfigAttribute("frozen", "frozen", False),  # noqa: FBT003
         ConfigAttribute("use_attribute_docstrings", "use_attribute_docstrings", False),  # noqa: FBT003
     ]
+
+    @classmethod
+    def _uses_builtin_hash_implementation(cls) -> bool:
+        """Return whether hash analysis can trust this model implementation."""
+        return cls is BaseModel
+
+    @classmethod
+    def get_native_hash_model_paths(cls, models: list[DataModel]) -> set[str]:  # noqa: PLR0912
+        """Preserve native hashes only for proven builtin frozen value models."""
+        native_paths: set[str] = set()
+        frozen_configs: dict[str, bool | None] = {}
+        checked_models: dict[str, bool] = {}
+        checked_fields: dict[int, bool] = {}
+        template_dirs: dict[Path, bool] = {}
+        for model in models:
+            if not _has_frozen_hash_config(model, frozen_configs):
+                continue
+            pending = [model]
+            visited: set[str] = set()
+            while pending:
+                current = pending.pop()
+                path = current.reference.path
+                if path in visited:
+                    continue
+                visited.add(path)
+                if path not in checked_models:
+                    opaque = bool(
+                        not isinstance(current, BaseModel)
+                        or not current._uses_builtin_hash_implementation()  # noqa: SLF001
+                        or current.custom_base_class
+                        or current.methods
+                        or current.decorators
+                        or current.extra_template_data.get("validators")
+                        or current.extra_template_data.get("class_body_lines")
+                    )
+                    if (directory := current._custom_template_dir) is not None:  # noqa: SLF001
+                        if directory not in template_dirs:
+                            template_dirs[directory] = directory.resolve() == TEMPLATE_DIR.resolve()
+                        opaque = opaque or not template_dirs[directory]
+                    checked_models[path] = not opaque
+                if not checked_models[path]:
+                    break
+                pending.extend(_find_base_classes(current))
+            else:
+                for field in get_effective_fields(model):
+                    if field.is_class_var:
+                        continue
+                    key = id(field)
+                    if key not in checked_fields:
+                        checked_fields[key] = _has_native_hash_field(field)
+                    if not checked_fields[key]:
+                        break
+                else:
+                    native_paths.add(model.reference.path)
+        return native_paths
 
     @classmethod
     def resolve_nested_constrained_model_type(
