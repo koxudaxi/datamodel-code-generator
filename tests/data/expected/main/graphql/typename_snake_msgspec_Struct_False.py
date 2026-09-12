@@ -28,35 +28,33 @@ The `String` scalar type represents textual data, represented as UTF-8 character
 
 class Base(Struct):
     value: Int
-    typename___1: Literal['Base'] | UnsetType = field(name='__typename', default='Base')
+    typename__: Literal['Base'] | UnsetType = field(name='__typename', default='Base')
 
 
 class ZNode(Struct):
     camel_value: Int = field(name='camelValue')
     typename__: String
-    typename___2: Literal['ZNode'] | UnsetType = field(
+    typename___1: Literal['ZNode'] | UnsetType = field(
         name='__typename', default='ZNode'
     )
 
 
 class Cross(Base, kw_only=True):
-    typename__: String
+    typename___1: String = field(name='typename__')
     value: Int
-    typename___1: Literal['Cross'] | UnsetType = field(
-        name='__typename', default='Cross'
-    )
+    typename__: Literal['Cross'] | UnsetType = field(name='__typename', default='Cross')
 
 
 class Item(ZNode, kw_only=True):
     camel_value: Int = field(name='camelValue')
     typename__: String
-    typename___1: Int
-    typename___2: Literal['Item'] | UnsetType = field(name='__typename', default='Item')
+    typename___1_1: Int = field(name='typename___1')
+    typename___1: Literal['Item'] | UnsetType = field(name='__typename', default='Item')
 
 
 class Ordinary(Base):
     value: Int
-    typename___1: Literal['Ordinary'] | UnsetType = field(
+    typename__: Literal['Ordinary'] | UnsetType = field(
         name='__typename', default='Ordinary'
     )
 
@@ -64,8 +62,8 @@ class Ordinary(Base):
 class Second(ZNode, kw_only=True):
     camel_value: Int = field(name='camelValue')
     typename__: String
-    typename___1: Int
-    typename___2: Literal['Second'] | UnsetType = field(
+    typename___1_1: Int = field(name='typename___1')
+    typename___1: Literal['Second'] | UnsetType = field(
         name='__typename', default='Second'
     )
 
@@ -93,7 +91,7 @@ Choice: TypeAlias = Union[
 class ANode(ZNode, kw_only=True):
     camel_value: Int = field(name='camelValue')
     typename__: String
-    typename___1: Int
-    typename___2: Literal['ANode'] | UnsetType = field(
+    typename___1_1: Int = field(name='typename___1')
+    typename___1: Literal['ANode'] | UnsetType = field(
         name='__typename', default='ANode'
     )

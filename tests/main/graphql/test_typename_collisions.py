@@ -43,7 +43,7 @@ def _has_literal(annotation: object) -> bool:
 def test_graphql_typename_collisions(
     entrypoint: str, output_model_type: DataModelType, profile: str, no_typename: bool, output_file: Path
 ) -> None:
-    """Retain local typename attributes, including the older msgspec identity-alias boundary."""
+    """Retain local typename attributes and inherited aliases across backends."""
     settings = json.loads((DATA_PATH / "payloads/typename_collision_settings.json").read_text())[profile]
     payload = json.loads((DATA_PATH / "payloads" / f"typename_collision_{profile}.json").read_text())
     input_path = GRAPHQL_DATA_PATH / settings.pop("schema")
