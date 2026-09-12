@@ -41,6 +41,7 @@ from tests.main.conftest import (
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from typing import Literal
 
 
 MALFORMED_DATA_PATH = DATA_PATH / "malformed"
@@ -217,7 +218,7 @@ def test_generate_list_input_does_not_overwrite_input(tmp_path: Path) -> None:
 def test_output_path_can_write_inside_input_directory(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
-    entrypoint: str,
+    entrypoint: Literal["api", "cli"],
     layout: str,
     metadata_location: str | None,
     input_file_type: InputFileType,
@@ -250,7 +251,7 @@ def test_output_path_can_write_inside_input_directory(
                     lockfile=tmp_path / "refs.lock",
                     expected_directory=expected_directory,
                 )
-            case "cli":
+            case _:
                 extra_args = ["--disable-timestamp", "--formatters", "builtin"]
                 if metadata is not None:
                     extra_args.extend(["--emit-model-metadata", str(metadata)])
