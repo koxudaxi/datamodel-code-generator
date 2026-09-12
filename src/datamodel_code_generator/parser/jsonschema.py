@@ -1352,6 +1352,16 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     SCHEMA_PATHS: ClassVar[list[str]] = list(_DEFAULT_SCHEMA_PATHS)
     SCHEMA_OBJECT_TYPE: ClassVar[type[JsonSchemaObject]] = JsonSchemaObject
     REQUIRED_ONLY_SCHEMA_ALLOWED_FIELDS: ClassVar[frozenset[str]] = frozenset({"required", "type", "extras"})
+    STRING_PROPERTY_NAME_FIELDS: ClassVar[frozenset[str]] = frozenset({
+        "type",
+        "anyOf",
+        "pattern",
+        "minLength",
+        "maxLength",
+        "title",
+        "description",
+        "default",
+    })
     _cache_local_sources_during_parse: ClassVar[bool] = True
     _cache_parsed_sources_from_path: ClassVar[bool] = True
     _input_file_type: ClassVar[InputFileType] = InputFileType.JsonSchema
@@ -9616,21 +9626,20 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return self.data_type_manager.get_data_type(Types.string, **kwargs)
         return self.data_type_manager.get_data_type(Types.string)
 
-    def _parse_string_property_name_union(self, schema: JsonSchemaObject) -> tuple[DataType | None, bool]:
+    def _parse_string_property_name_union(
+        self, schema: JsonSchemaObject, *, discard_nonstring: bool = False
+    ) -> tuple[DataType | None, bool]:
         """Build constrained string keys, retaining unions already dominated by a plain string branch."""
-        if schema.model_fields_set - {
-            "type",
-            "anyOf",
-            "pattern",
-            "minLength",
-            "maxLength",
-            "title",
-            "description",
-            "default",
-        } or (
-            schema.type is not None
-            and schema.type != "string"
-            and (not isinstance(schema.type, list) or "string" not in schema.type)
+        if (
+            schema.model_fields_set - self.STRING_PROPERTY_NAME_FIELDS
+            or type(self)._property_names_forbids_all_keys(schema)  # noqa: SLF001
+            or (
+                # Newly enforced patterns must work without changing the regex engine.
+                # Keep complex patterns on their existing path, including Pydantic 2.0.
+                discard_nonstring
+                and schema.pattern
+                and _literal_pattern_value(schema.pattern.removeprefix("^")) is None
+            )
         ):
             return None, False
         if not schema.anyOf:
@@ -9640,12 +9649,17 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         data_types: list[DataType] = []
         branch_count = 0
         for branch in schema.anyOf:
-            if branch is False:
+            if branch is False or (
+                discard_nonstring
+                and isinstance(branch, JsonSchemaObject)
+                and not branch.model_fields_set - self.STRING_PROPERTY_NAME_FIELDS
+                and type(self)._property_names_forbids_all_keys(branch)  # noqa: SLF001
+            ):
                 continue
             data_type, unrestricted = (
                 (self.data_type_manager.get_data_type(Types.string), True)
                 if branch is True
-                else self._parse_string_property_name_union(branch)
+                else self._parse_string_property_name_union(branch, discard_nonstring=discard_nonstring)
             )
             if unrestricted and (not self.field_constraints or branch_count == 0 or len(data_types) != branch_count):
                 return None, True
@@ -9677,6 +9691,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     if key_type is not None:
                         return key_type
                 key_type = self.parse_item(name, property_names, get_special_path("propertyNames/key", path))
+                if property_names.anyOf and not any(item.reference for item in key_type.all_data_types):
+                    string_key_type, _ = self._parse_string_property_name_union(property_names, discard_nonstring=True)
+                    if string_key_type is not None:
+                        key_type = string_key_type
                 if (
                     not property_names.allOf
                     or self.field_constraints
