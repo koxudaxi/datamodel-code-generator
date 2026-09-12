@@ -19,6 +19,10 @@
       "value": 6,
       "label": "cross"
     },
+    "ordinary": {
+      "__typename": "Ordinary",
+      "value": 8
+    },
     "solo": {
       "__typename": "Solo",
       "label": "solo"
@@ -29,76 +33,108 @@
       "fields": [
         "camelValue",
         "typename__",
-        "typename___2"
+        "typename___1"
       ],
       "values": {
         "camelValue": 1,
         "label": "node",
         "__typename": "ZNode"
+      },
+      "attributes": {
+        "camelValue": 1,
+        "typename__": "node",
+        "typename___1": "ZNode"
       }
     },
     "ANode": {
       "fields": [
         "camelValue",
         "typename__",
-        "typename___2",
-        "typename___1"
+        "typename___1",
+        "typename___2"
       ],
       "values": {
         "camelValue": 2,
         "label": "child",
-        "__typename": "ANode",
-        "spare": 12
+        "spare": 12,
+        "__typename": "ANode"
+      },
+      "attributes": {
+        "camelValue": 2,
+        "typename__": "child",
+        "typename___1": 12,
+        "typename___2": "ANode"
       }
     },
     "Item": {
       "fields": [
         "camelValue",
         "typename__",
-        "typename___2",
-        "typename___1"
+        "typename___1",
+        "typename___2"
       ],
       "values": {
         "camelValue": 3,
         "label": "item",
-        "__typename": "Item",
-        "spare": 13
+        "spare": 13,
+        "__typename": "Item"
+      },
+      "attributes": {
+        "camelValue": 3,
+        "typename__": "item",
+        "typename___1": 13,
+        "typename___2": "Item"
       }
     },
     "Second": {
       "fields": [
         "camelValue",
         "typename__",
-        "typename___2",
-        "typename___1"
+        "typename___1",
+        "typename___2"
       ],
       "values": {
         "camelValue": 4,
         "label": "second",
-        "__typename": "Second",
-        "spare": 14
+        "spare": 14,
+        "__typename": "Second"
+      },
+      "attributes": {
+        "camelValue": 4,
+        "typename__": "second",
+        "typename___1": 14,
+        "typename___2": "Second"
       }
     },
     "Base": {
       "fields": [
         "value",
-        "typename___1"
+        "typename__"
       ],
       "values": {
         "value": 5,
         "__typename": "Base"
+      },
+      "attributes": {
+        "value": 5,
+        "typename__": "Base"
       }
     },
     "Cross": {
       "fields": [
         "value",
-        "typename___1",
-        "typename__"
+        "typename__",
+        "typename___1"
       ],
       "values": {
         "value": 6,
-        "__typename": "Cross",
-        "label": "cross"
+        "label": "cross",
+        "__typename": "Cross"
+      },
+      "attributes": {
+        "value": 6,
+        "typename__": "cross",
+        "typename___1": "Cross"
       }
     },
     "Solo": {
@@ -109,6 +145,10 @@
       "values": {
         "label": "solo",
         "__typename": "Solo"
+      },
+      "attributes": {
+        "typename__": "solo",
+        "typename___1": "Solo"
       }
     },
     "ItemInput": {
@@ -123,6 +163,26 @@
         "label": "input",
         "spare": 17,
         "__typename": "ItemInput"
+      },
+      "attributes": {
+        "camelValue": 7,
+        "typename__": "input",
+        "extra": 17,
+        "typename___1": "ItemInput"
+      }
+    },
+    "Ordinary": {
+      "fields": [
+        "value",
+        "typename__"
+      ],
+      "values": {
+        "value": 8,
+        "__typename": "Ordinary"
+      },
+      "attributes": {
+        "value": 8,
+        "typename__": "Ordinary"
       }
     }
   }

@@ -23,10 +23,12 @@ from datamodel_code_generator import (
     snooper_to_methods,
 )
 from datamodel_code_generator._format_types import DatetimeClassType
+from datamodel_code_generator.model.base import _find_base_classes, get_inherited_fields
 from datamodel_code_generator.model.enum import SPECIALIZED_ENUM_TYPE_MATCH, Enum, EnumMemberValue
 from datamodel_code_generator.parser.base import (
     DataType,
     Parser,
+    _copy_data_model_field,
 )
 from datamodel_code_generator.reference import ModelType, Reference
 from datamodel_code_generator.types import Types
@@ -547,33 +549,107 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
         schema: graphql.GraphQLSchema,
         collisions: list[graphql.GraphQLObjectType | graphql.GraphQLInterfaceType],
     ) -> None:
-        """Keep one synthetic slot throughout each affected inheritance family."""
-        visited: set[graphql.GraphQLObjectType | graphql.GraphQLInterfaceType] = set()
-        for root in collisions:
-            if root in visited:
-                continue
-            pending = [root]
-            excludes: set[str] = set()
-            typename_fields: list[tuple[str, DataModelFieldBase]] = []
-            while pending:
-                obj = pending.pop()
-                if obj in visited or obj.name not in self.references:
-                    continue
-                visited.add(obj)
-                pending.extend(obj.interfaces)
-                if isinstance(obj, graphql.GraphQLInterfaceType):
-                    implementations = schema.get_implementations(obj)
-                    pending.extend(implementations.objects)
-                    pending.extend(implementations.interfaces)
-                source = cast("DataModel", self.references[obj.name].source)
-                for field in source.fields:
-                    if field.alias == "__typename":
-                        typename_fields.append((obj.name, field))
-                    else:
-                        excludes.add(cast("str", field.name))
-            field_name = self.model_resolver.get_valid_field_name(
-                "typename__", excludes=excludes, model_type=self.field_name_model_type
+        """Override inherited synthetic slots without renaming unrelated models."""
+        resolved: set[graphql.GraphQLObjectType | graphql.GraphQLInterfaceType] = set()
+
+        def resolve(obj: graphql.GraphQLObjectType | graphql.GraphQLInterfaceType) -> None:
+            if obj in resolved or obj.name not in self.references:
+                return
+            resolved.add(obj)
+            for interface in obj.interfaces:
+                resolve(interface)
+            source = cast("DataModel", self.references[obj.name].source)
+            bases = _find_base_classes(source)
+            inherited_typename_names = {
+                field.name for base in bases for field in base.fields if field.alias == "__typename"
+            }
+            fields = {field.name: field for field in source.fields}
+            if self.data_model_type.REQUIRES_UNIQUE_FIELD_ALIASES and any(
+                field.name in inherited_typename_names and (field.alias is None or field.alias == field.name)
+                for field in source.fields
+            ):
+                self._share_typename_slot(schema, obj)
+                return
+            if not inherited_typename_names.difference(fields):
+                return
+            inherited_fields = get_inherited_fields(bases)
+            for inherited in inherited_fields.values():
+                if (
+                    inherited.alias != "__typename"
+                    and inherited.name in inherited_typename_names
+                    and (inherited.name not in fields or fields[inherited.name].alias == "__typename")
+                ):
+                    field = _copy_data_model_field(inherited)
+                    self.generation_store.insert_field(source, -1, field)
+                    fields[field.name] = field
+            inherited_typename = next(
+                (
+                    field
+                    for field in inherited_fields.values()
+                    if field.alias == "__typename" and field.name not in fields
+                ),
+                None,
             )
-            for name, field in typename_fields:
-                field.name = field_name
-                field.serialization_alias = self.get_serialization_alias("__typename", field_name, name)
+            typename_field = source.fields[-1]
+            typename_field.name = (
+                inherited_typename.name
+                if inherited_typename
+                else self.model_resolver.get_valid_field_name(
+                    "typename__",
+                    excludes={
+                        cast("str", field.name)
+                        for field in (*source.fields, *inherited_fields.values())
+                        if field.alias != "__typename"
+                    },
+                    model_type=self.field_name_model_type,
+                )
+            )
+            typename_field.serialization_alias = self.get_serialization_alias(
+                "__typename", cast("str", typename_field.name), obj.name
+            )
+
+        visited: set[graphql.GraphQLObjectType | graphql.GraphQLInterfaceType] = set()
+        pending = list(collisions)
+        while pending:
+            obj = pending.pop()
+            if obj in visited:
+                continue
+            visited.add(obj)
+            if isinstance(obj, graphql.GraphQLInterfaceType):
+                implementations = schema.get_implementations(obj)
+                pending.extend(implementations.objects)
+                pending.extend(implementations.interfaces)
+            resolve(obj)
+
+    def _share_typename_slot(
+        self,
+        schema: graphql.GraphQLSchema,
+        root: graphql.GraphQLObjectType | graphql.GraphQLInterfaceType,
+    ) -> None:
+        """Share a family slot when a backend cannot retain separate inherited aliases."""
+        pending = [root]
+        visited: set[graphql.GraphQLObjectType | graphql.GraphQLInterfaceType] = set()
+        excludes: set[str] = set()
+        typename_fields: list[tuple[str, DataModelFieldBase]] = []
+        while pending:
+            obj = pending.pop()
+            if obj in visited or obj.name not in self.references:
+                continue
+            visited.add(obj)
+            pending.extend(obj.interfaces)
+            if isinstance(obj, graphql.GraphQLInterfaceType):
+                implementations = schema.get_implementations(obj)
+                pending.extend(implementations.objects)
+                pending.extend(implementations.interfaces)
+            source = cast("DataModel", self.references[obj.name].source)
+            for field in source.fields:
+                if field.alias == "__typename":
+                    typename_fields.append((obj.name, field))
+                else:
+                    excludes.add(cast("str", field.name))
+        field_name = self.model_resolver.get_valid_field_name(
+            "typename__", excludes=excludes, model_type=self.field_name_model_type
+        )
+        for name, field in typename_fields:
+            field.name = field_name
+            field.serialization_alias = self.get_serialization_alias("__typename", field_name, name)

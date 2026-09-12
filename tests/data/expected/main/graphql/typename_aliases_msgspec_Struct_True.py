@@ -46,6 +46,10 @@ class Item(ZNode):
     typename___1: Int = field(name='spare')
 
 
+class Ordinary(Base):
+    value: Int
+
+
 class Second(ZNode):
     camelValue: Int
     typename__: String = field(name='label')

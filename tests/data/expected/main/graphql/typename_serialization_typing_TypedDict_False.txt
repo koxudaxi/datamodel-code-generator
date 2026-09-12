@@ -19,6 +19,10 @@
       "value": 6,
       "typename__": "cross"
     },
+    "ordinary": {
+      "__typename": "Ordinary",
+      "value": 8
+    },
     "solo": {
       "__typename": "Solo",
       "typename__": "solo"
@@ -29,22 +33,33 @@
       "fields": [
         "camelValue",
         "typename__",
-        "typename___2"
+        "typename___1"
       ],
       "values": {
         "camelValue": 1,
         "typename__": "node",
-        "typename___2": "ZNode"
+        "typename___1": "ZNode"
+      },
+      "attributes": {
+        "camelValue": 1,
+        "typename__": "node",
+        "typename___1": "ZNode"
       }
     },
     "ANode": {
       "fields": [
         "camelValue",
         "typename__",
-        "typename___2",
-        "typename___1"
+        "typename___1",
+        "typename___2"
       ],
       "values": {
+        "camelValue": 2,
+        "typename__": "child",
+        "typename___1": 12,
+        "typename___2": "ANode"
+      },
+      "attributes": {
         "camelValue": 2,
         "typename__": "child",
         "typename___1": 12,
@@ -55,10 +70,16 @@
       "fields": [
         "camelValue",
         "typename__",
-        "typename___2",
-        "typename___1"
+        "typename___1",
+        "typename___2"
       ],
       "values": {
+        "camelValue": 3,
+        "typename__": "item",
+        "typename___1": 13,
+        "typename___2": "Item"
+      },
+      "attributes": {
         "camelValue": 3,
         "typename__": "item",
         "typename___1": 13,
@@ -69,10 +90,16 @@
       "fields": [
         "camelValue",
         "typename__",
-        "typename___2",
-        "typename___1"
+        "typename___1",
+        "typename___2"
       ],
       "values": {
+        "camelValue": 4,
+        "typename__": "second",
+        "typename___1": 14,
+        "typename___2": "Second"
+      },
+      "attributes": {
         "camelValue": 4,
         "typename__": "second",
         "typename___1": 14,
@@ -82,20 +109,29 @@
     "Base": {
       "fields": [
         "value",
-        "typename___1"
+        "typename__"
       ],
       "values": {
         "value": 5,
-        "typename___1": "Base"
+        "typename__": "Base"
+      },
+      "attributes": {
+        "value": 5,
+        "typename__": "Base"
       }
     },
     "Cross": {
       "fields": [
         "value",
-        "typename___1",
-        "typename__"
+        "typename__",
+        "typename___1"
       ],
       "values": {
+        "value": 6,
+        "typename__": "cross",
+        "typename___1": "Cross"
+      },
+      "attributes": {
         "value": 6,
         "typename__": "cross",
         "typename___1": "Cross"
@@ -107,6 +143,10 @@
         "typename___1"
       ],
       "values": {
+        "typename__": "solo",
+        "typename___1": "Solo"
+      },
+      "attributes": {
         "typename__": "solo",
         "typename___1": "Solo"
       }
@@ -123,6 +163,26 @@
         "typename__": "input",
         "typename___1": 17,
         "typename___2": "ItemInput"
+      },
+      "attributes": {
+        "camelValue": 7,
+        "typename__": "input",
+        "typename___1": 17,
+        "typename___2": "ItemInput"
+      }
+    },
+    "Ordinary": {
+      "fields": [
+        "value",
+        "typename__"
+      ],
+      "values": {
+        "value": 8,
+        "typename__": "Ordinary"
+      },
+      "attributes": {
+        "value": 8,
+        "typename__": "Ordinary"
       }
     }
   }

@@ -50,6 +50,11 @@ class Item(ZNode):
     typename__: NotRequired[Literal['Item']]
 
 
+class Ordinary(Base):
+    value: Int
+    typename__: NotRequired[Literal['Ordinary']]
+
+
 class Second(ZNode):
     camelValue: Int
     label: String

@@ -53,6 +53,11 @@ class Item(ZNode):
 
 
 @dataclass
+class Ordinary(Base):
+    value: Int
+
+
+@dataclass
 class Second(ZNode):
     typename__: String
     typename___1: Int = Field(..., kw_only=True)
