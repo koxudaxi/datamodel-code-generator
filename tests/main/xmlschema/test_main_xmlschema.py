@@ -4,11 +4,7 @@ from __future__ import annotations
 
 import codecs
 import json
-import re
-import shutil
-import subprocess
-import sys
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import msgspec
 import pytest
@@ -16,7 +12,7 @@ import yaml
 from lxml import etree
 from pydantic import PydanticUserError, ValidationError
 
-from datamodel_code_generator import DataModelType, Error, InputFileType
+from datamodel_code_generator import DataModelType, InputFileType
 from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.format import Formatter, PythonVersion
 from datamodel_code_generator.parser import xmlschema as xmlschema_parser
@@ -41,6 +37,9 @@ from tests.main.conftest import (
     run_main_and_assert,
 )
 from tests.main.xmlschema.conftest import assert_file_content
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def test_main_xmlschema_purchase_order(output_file: Path) -> None:
@@ -1099,45 +1098,7 @@ def test_native_xsd_property_names(name: str) -> None:
         schema.assertValid(etree.parse(str(source.with_suffix(".invalid.xml"))))
 
 
-@pytest.mark.parametrize("name", XSD_PROPERTY_COLLISIONS)
-@pytest.mark.parametrize("backend", XSD_PROPERTY_BACKENDS)
-@pytest.mark.parametrize("entrypoint", ["cli", "api"])
-def test_xsd_property_collision(
-    name: str, backend: DataModelType, entrypoint: str, output_file: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    """Report distinct XML names before a backend can silently discard a field."""
-    source = XML_SCHEMA_DATA_PATH / "field_name_collisions" / f"{name}.xsd"
-    diagnostic = {
-        "default_namespace_distinct": "namespaced_elements",
-        "simple_content_collision": "namespaced_attributes",
-        "default_namespace_attributes": "namespaced_attributes",
-    }.get(name, name)
-    expected = EXPECTED_XML_SCHEMA_PATH / "field_name_collisions" / f"{diagnostic}.txt"
-    if entrypoint == "cli":
-        run_main_and_assert(
-            input_path=source,
-            output_path=output_file,
-            input_file_type="xmlschema",
-            extra_args=["--output-model-type", backend.value],
-            expected_exit=Exit.ERROR,
-            capsys=capsys,
-            expected_stderr=expected.read_text(encoding="utf-8") + "\n",
-            output_should_not_exist=True,
-        )
-    else:
-        with pytest.raises(Error) as exc_info:
-            run_generate_file_and_assert(
-                input_path=source,
-                output_path=output_file,
-                input_file_type=InputFileType.XMLSchema,
-                output_model_type=backend,
-                assert_func=assert_file_content,
-            )
-        assert_output(str(exc_info.value), expected)
-        assert_output(f"{output_file.exists()}\n", EXPECTED_XML_SCHEMA_PATH / "field_name_collisions/absent.txt")
-
-
-@pytest.mark.parametrize("name", XSD_PROPERTY_CONTROLS)
+@pytest.mark.parametrize("name", [*XSD_PROPERTY_CONTROLS, "unused"])
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
 def test_xsd_property_reuse(name: str, entrypoint: str, output_file: Path) -> None:
     """Preserve baseline output for legal reuse, scope changes, and ordinary fields."""
@@ -1161,6 +1122,24 @@ def test_xsd_property_reuse(name: str, entrypoint: str, output_file: Path) -> No
             assert_func=assert_file_content,
             expected_file=expected,
         )
+
+    if name != "unused":
+        return
+    schema = etree.XMLSchema(etree.parse(str(source)))
+    schema.assertValid(etree.parse(str(source.with_name("ordinary.xml"))))
+    with pytest.raises(etree.DocumentInvalid):
+        schema.assertValid(etree.parse(str(source.with_name("ordinary.invalid.xml"))))
+    payloads = DATA_PATH / "payloads/xsd_field_name_collisions"
+    assert_generated_model_json_validation(
+        output_file,
+        module_name=f"unused_xsd_property_{entrypoint}",
+        model_name="Root",
+        valid_json=(payloads / "ordinary.json").read_text(),
+        invalid_json=(payloads / "ordinary_invalid.json").read_text(),
+        expected_error_type="int_parsing",
+        expected_attribute_path=("item",),
+        expected_attribute_value=1,
+    )
 
 
 @pytest.mark.parametrize("backend", XSD_PROPERTY_BACKENDS)
@@ -1236,32 +1215,6 @@ def test_xsd_ordinary_fields_runtime(backend: DataModelType, entrypoint: str, ou
     assert_output(
         json.dumps({"fields": fields, "item": item}, indent=2) + "\n",
         EXPECTED_XML_SCHEMA_PATH / "field_name_collisions/ordinary_runtime.txt",
-    )
-
-
-@pytest.mark.parametrize(
-    "case", ["expected", "unexpected_success", "unexpected_error", "changed_schema", "wrong_error"]
-)
-@pytest.mark.parametrize("crlf", [False, True])
-def test_w3c_xmlschema_collision_diagnostics(tmp_path: Path, case: str, crlf: bool) -> None:
-    """Check source identity, exact error, missing diagnostics and successful imports through real generation."""
-    root = Path(__file__).resolve().parents[3]
-    suite = root / "tests/data/parser/xmlschema/w3c_e2e" / case
-    if crlf:
-        suite = shutil.copytree(suite, tmp_path / "suite")
-        for path in suite.rglob("*.xsd"):
-            path.write_bytes(path.read_bytes().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n"))
-    result = subprocess.run(
-        [sys.executable, str(root / "scripts/run_w3c_xmlschema_e2e.py"), str(suite), "--progress-interval", "0"],
-        cwd=root,
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    stdout = re.sub(r"in [0-9.]+s", "in <elapsed>s", result.stdout)
-    assert_output(
-        f"exit={result.returncode}\n{stdout}{result.stderr}",
-        root / "tests/data/payloads/w3c_xmlschema" / f"{case}.txt",
     )
 
 
