@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import operator
 from decimal import Inexact, Rounded, localcontext
 from pathlib import Path
 from typing import cast
@@ -332,6 +334,47 @@ def test_avro_mapped_logical_defaults(output_file: Path, output_model_type: Data
 
 
 @pytest.mark.parametrize(
+    "case",
+    json.loads((AVRO_DATA_PATH / "logical_default_overrides.json").read_text(encoding="utf-8")),
+    ids=operator.itemgetter("name"),
+)
+def test_avro_overridden_logical_defaults(output_file: Path, capsys: pytest.CaptureFixture[str], case: dict) -> None:
+    """Preserve physical overrides alongside logical defaults and revalidate their Python dumps."""
+    run_main_and_assert(
+        input_path=AVRO_DATA_PATH / f"{case['fixture']}.avsc",
+        output_path=output_file,
+        input_file_type="avro",
+        assert_func=assert_file_content,
+        expected_file=f"overridden_logical_defaults_{case['name']}.py",
+        extra_args=[
+            "--target-python-version",
+            "3.10",
+            "--disable-timestamp",
+            "--formatters",
+            "builtin",
+            "--output-model-type",
+            DataModelType.PydanticV2BaseModel.value,
+            "--type-overrides",
+            json.dumps(case["overrides"]),
+            *case["args"],
+        ],
+        force_exec_validation=True,
+        capsys=capsys,
+        assert_no_stderr=True,
+    )
+    runtime_file = AVRO_DATA_PATH.parent / f"expected/main/avro/overridden_logical_defaults_{case['name']}.txt"
+    with _generated_model(output_file, f"overridden_logical_defaults_{case['name']}", case["model"]) as model:
+        instance = model()
+        assert_output(f"{instance!r}\n{instance.model_dump(by_alias=True)!r}\n", runtime_file)
+        instance = model.model_validate(instance.model_dump(by_alias=True))
+        assert_output(f"{instance!r}\n{instance.model_dump(by_alias=True)!r}\n", runtime_file)
+        model.model_config["validate_default"] = True
+        model.model_rebuild(force=True)
+        instance = model()
+        assert_output(f"{instance!r}\n{instance.model_dump(by_alias=True)!r}\n", runtime_file)
+
+
+@pytest.mark.parametrize(
     ("mappings", "expected_file", "runtime_file"),
     [
         (
@@ -405,6 +448,7 @@ def test_main_avro_temporal_defaults_unused_by_typed_dict(output_file: Path) -> 
     )
 
 
+@pytest.mark.parametrize("type_overrides", [{}, {"Other.value": "builtins.int"}])
 @pytest.mark.parametrize(
     ("fixture", "message"),
     [
@@ -423,7 +467,11 @@ def test_main_avro_temporal_defaults_unused_by_typed_dict(output_file: Path) -> 
     ],
 )
 def test_main_avro_unrepresentable_temporal_default(
-    output_file: Path, capsys: pytest.CaptureFixture[str], fixture: str, message: str
+    output_file: Path,
+    capsys: pytest.CaptureFixture[str],
+    fixture: str,
+    message: str,
+    type_overrides: dict[str, str],
 ) -> None:
     """Report only temporal range and exactness errors through the real CLI."""
     run_main_and_assert(
@@ -431,6 +479,7 @@ def test_main_avro_unrepresentable_temporal_default(
         output_path=output_file,
         input_file_type="avro",
         expected_exit=Exit.ERROR,
+        extra_args=["--type-overrides", json.dumps(type_overrides)],
         capsys=capsys,
         expected_stderr_contains=message,
     )
@@ -977,6 +1026,10 @@ def test_main_avro_schema_version_not_supported(output_file: Path, capsys: pytes
 
 
 @pytest.mark.parametrize(
+    "type_overrides",
+    [{}, {"BrokenField.value": "builtins.int", "BrokenFieldItem.value": "builtins.int"}],
+)
+@pytest.mark.parametrize(
     ("fixture_name", "expected_stderr_contains"),
     [
         ("invalid_schema_no_type.avsc", "Avro schema object requires a string, object, or union type"),
@@ -1028,6 +1081,7 @@ def test_main_avro_invalid_schema_errors(
     capsys: pytest.CaptureFixture[str],
     fixture_name: str,
     expected_stderr_contains: str,
+    type_overrides: dict[str, str],
 ) -> None:
     """Report Avro parser errors through the normal CLI path."""
     run_main_and_assert(
@@ -1035,6 +1089,7 @@ def test_main_avro_invalid_schema_errors(
         output_path=output_file,
         input_file_type="avro",
         expected_exit=Exit.ERROR,
+        extra_args=["--type-overrides", json.dumps(type_overrides)],
         capsys=capsys,
         expected_stderr_contains=expected_stderr_contains,
     )

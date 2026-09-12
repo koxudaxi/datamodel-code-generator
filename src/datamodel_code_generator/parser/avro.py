@@ -29,6 +29,7 @@ if TYPE_CHECKING:
 
     from datamodel_code_generator._types import AvroParserConfigDict
     from datamodel_code_generator.config import AvroParserConfig
+    from datamodel_code_generator.imports import Import
     from datamodel_code_generator.parser.base import Source
 
 JsonSchema = dict[str, Any]
@@ -115,7 +116,8 @@ class _AvroSchemaConverter:
         logical_default: Callable[[str, str, str], Any] | None = None,
         *,
         convert_logical_defaults: bool = True,
-        logical_default_enabled: Callable[[str, str], bool] | None = None,
+        logical_default_enabled: Callable[[str, str, Import | None], bool] | None = None,
+        default_type_overrides: Callable[[str, JsonSchema, bool], dict[str, Import]] | None = None,
     ) -> None:
         self.named_schemas: dict[str, JsonSchema] = {}
         self.names: dict[str, _Name] = {}
@@ -125,6 +127,7 @@ class _AvroSchemaConverter:
         self._logical_default = logical_default
         self._convert_logical_defaults = convert_logical_defaults
         self._logical_default_enabled = logical_default_enabled
+        self._default_type_overrides = default_type_overrides
 
     def convert_raw(self, raw_obj: YamlValue) -> dict[str, YamlValue]:
         self._collect_named_schemas(raw_obj)
@@ -351,7 +354,7 @@ class _AvroSchemaConverter:
         self._building_definitions.add(fullname)
         type_value = raw_schema.get("type")
         if type_value == "record":
-            converted = self._convert_record(raw_schema, fullname)
+            converted = self._convert_record(raw_schema, fullname, as_root=as_root)
         elif type_value == "enum":
             converted = self._convert_enum(raw_schema, fullname)
         elif type_value == "fixed":
@@ -364,9 +367,14 @@ class _AvroSchemaConverter:
         self.definitions[definition_key] = converted
         return _copy_schema(converted) if as_root else converted
 
-    def _convert_record(self, schema: JsonSchema, fullname: str) -> JsonSchema:
+    def _convert_record(self, schema: JsonSchema, fullname: str, *, as_root: bool = False) -> JsonSchema:
         name_info = self.names[fullname]
         fields = schema.get("fields", [])
+        overrides = (
+            self._default_type_overrides(self.definition_names[fullname], schema, as_root)
+            if self._default_type_overrides is not None
+            else None
+        )
 
         properties: dict[str, JsonSchema] = {}
         required: list[str] = []
@@ -389,7 +397,10 @@ class _AvroSchemaConverter:
                 field_schema["x-avro-order"] = field["order"]
             if "default" in field:
                 field_schema["default"] = self._convert_default(
-                    field["default"], field.get("type"), name_info.namespace
+                    field["default"],
+                    field.get("type"),
+                    name_info.namespace,
+                    overrides.get(field_name) if overrides else None,
                 )
             else:
                 required.append(field_name)
@@ -405,11 +416,13 @@ class _AvroSchemaConverter:
         converted["x-avro-fullname"] = fullname
         return converted
 
-    def _convert_default(self, value: Any, schema: Any, namespace: str | None) -> Any:
+    def _convert_default(
+        self, value: Any, schema: Any, namespace: str | None, type_override: Import | None = None
+    ) -> Any:
         """Decode defaults using the Avro schema's physical and logical types."""
         if not isinstance(value, str | bytes | list | dict):
             return (
-                self._convert_integer_default(value, schema)
+                self._convert_integer_default(value, schema, type_override)
                 if type(value) is int and self._convert_logical_defaults
                 else value
             )
@@ -420,39 +433,43 @@ class _AvroSchemaConverter:
                 case {"type": "array", "items": item_schema} if isinstance(value, list):
                     converted = value
                     for index, item in enumerate(value):
-                        if (converted_item := self._convert_default(item, item_schema, namespace)) is not item:
+                        if (
+                            converted_item := self._convert_default(item, item_schema, namespace, type_override)
+                        ) is not item:
                             if converted is value:
                                 converted = value.copy()
                             converted[index] = converted_item
                     return converted
                 case {"type": "map" | "record"} if isinstance(value, dict):
-                    return self._convert_default_mapping(value, schema, namespace)
+                    return self._convert_default_mapping(value, schema, namespace, type_override)
                 case {"type": "bytes" | "fixed", "logicalType": "decimal"} | {
                     "type": "fixed",
                     "logicalType": "duration",
                 } if self._convert_logical_defaults:
-                    return self._convert_logical_bytes_default(value, schema)
+                    return self._convert_logical_bytes_default(value, schema, namespace, type_override)
                 case {"type": nested_schema}:
                     schema = nested_schema
                 case _:
                     return value
-        return self._convert_default_type(value, schema, namespace)
+        return self._convert_default_type(value, schema, namespace, type_override)
 
-    def _convert_integer_default(self, value: int, schema: Any) -> Any:
+    def _convert_integer_default(self, value: int, schema: Any, type_override: Import | None = None) -> Any:
         """Inspect only integer defaults for temporal logical types."""
         while isinstance(schema, list | dict):
             match schema:
                 case [first, *_]:
                     schema = first
                 case {"type": "int" | "long" as avro_type, "logicalType": str() as logical_type}:
-                    return self._convert_temporal_default(value, avro_type, logical_type)
+                    return self._convert_temporal_default(value, avro_type, logical_type, type_override)
                 case {"type": nested_schema}:
                     schema = nested_schema
                 case _:
                     return value
         return value
 
-    def _convert_temporal_default(self, value: int, avro_type: str, logical_type: str) -> Any:
+    def _convert_temporal_default(
+        self, value: int, avro_type: str, logical_type: str, type_override: Import | None = None
+    ) -> Any:
         """Preserve temporal units and timezone semantics without rounding."""
         match avro_type, logical_type:
             case "int", "date":
@@ -471,7 +488,9 @@ class _AvroSchemaConverter:
             case _:
                 return value
 
-        if self._logical_default_enabled is not None and not self._logical_default_enabled(kind, logical_type):
+        if self._logical_default_enabled is not None and not self._logical_default_enabled(
+            kind, logical_type, type_override
+        ):
             return value
 
         from datetime import datetime, timedelta, timezone  # ruff: ignore[import-outside-top-level]
@@ -505,7 +524,9 @@ class _AvroSchemaConverter:
             return microseconds
         return value
 
-    def _convert_default_type(self, value: Any, schema: Any, namespace: str | None) -> Any:
+    def _convert_default_type(
+        self, value: Any, schema: Any, namespace: str | None, type_override: Import | None = None
+    ) -> Any:
         """Resolve named defaults in their record scope and decode bytes leaves."""
         if not isinstance(schema, str):  # pragma: no cover - rejected while converting the field schema
             return value
@@ -514,11 +535,11 @@ class _AvroSchemaConverter:
             if (named_schema := self.named_schemas.get(fullname)) is None:
                 return value
             if named_schema.get("type") == "record" and isinstance(value, dict):
-                return self._convert_default_mapping(value, named_schema, namespace)
+                return self._convert_default_mapping(value, named_schema, namespace, type_override)
             if named_schema.get("type") != "fixed":
                 return value
             if named_schema.get("logicalType") in {"decimal", "duration"} and self._convert_logical_defaults:
-                return self._convert_logical_bytes_default(value, named_schema)
+                return self._convert_logical_bytes_default(value, named_schema, namespace, type_override)
         return self._decode_bytes_default(value)
 
     @staticmethod
@@ -532,12 +553,22 @@ class _AvroSchemaConverter:
             msg = "Avro bytes and fixed defaults must contain only code points from 0 through 255"
             raise Error(msg) from exc
 
-    def _convert_logical_bytes_default(self, value: Any, schema: JsonSchema) -> Any:
+    def _convert_logical_bytes_default(
+        self, value: Any, schema: JsonSchema, namespace: str | None, type_override: Import | None = None
+    ) -> Any:
         """Decode decimal and duration defaults using their distinct byte layouts."""
         value = self._decode_bytes_default(value)
+        if type_override is None and self._default_type_overrides is not None and schema["type"] == "fixed":
+            fullname = self._fullname_from_named_schema(schema, namespace)
+            type_override = self._default_type_overrides(self.definition_names[fullname], schema, False).get("")  # ruff: ignore[boolean-positional-value-in-call]
         if self._logical_default_enabled is not None and not self._logical_default_enabled(
-            "timedelta" if schema["logicalType"] == "duration" else "decimal", schema["logicalType"]
+            "timedelta" if schema["logicalType"] == "duration" else "decimal", schema["logicalType"], type_override
         ):
+            if type_override is not None and isinstance(value, bytes):
+                from datamodel_code_generator.python_literal import PythonCode  # ruff: ignore[import-outside-top-level]
+
+                # This is an intentional physical literal, including in shared Avro definitions.
+                return PythonCode(repr(value))
             return value
         if schema["logicalType"] == "duration":
             return self._convert_duration_default(value, schema)
@@ -589,11 +620,17 @@ class _AvroSchemaConverter:
             return self._logical_default("timedelta", "duration", milliseconds)
         return _logical_default_expression("timedelta", milliseconds)
 
-    def _convert_default_mapping(self, value: dict[str, Any], schema: JsonSchema, namespace: str | None) -> Any:
+    def _convert_default_mapping(
+        self, value: dict[str, Any], schema: JsonSchema, namespace: str | None, type_override: Import | None = None
+    ) -> Any:
         """Decode mapping leaves without changing the input values or their order."""
         field_types = None
+        overrides = None
         if schema["type"] == "record":
-            namespace = self.names[self._fullname_from_named_schema(schema, namespace)].namespace
+            fullname = self._fullname_from_named_schema(schema, namespace)
+            namespace = self.names[fullname].namespace
+            if self._default_type_overrides is not None:
+                overrides = self._default_type_overrides(self.definition_names[fullname], schema, False)  # ruff: ignore[boolean-positional-value-in-call]
             field_types = {
                 field["name"]: field.get("type")
                 for field in schema.get("fields", [])
@@ -602,7 +639,11 @@ class _AvroSchemaConverter:
         converted = value
         for name, item in value.items():
             item_schema = field_types.get(name) if field_types is not None else schema.get("values")
-            if (converted_item := self._convert_default(item, item_schema, namespace)) is not item:
+            if (
+                converted_item := self._convert_default(
+                    item, item_schema, namespace, overrides.get(name, type_override) if overrides else type_override
+                )
+            ) is not item:
                 if converted is value:
                     converted = value.copy()
                 converted[name] = converted_item
@@ -757,7 +798,10 @@ class AvroParser(JsonSchemaParser):
             lambda: _AvroSchemaConverter(
                 self._logical_default,
                 convert_logical_defaults=self.data_model_type.SUPPORTS_DESERIALIZED_DEFAULT_VALUES,
-                logical_default_enabled=self._logical_default_enabled if self.type_mappings else None,
+                logical_default_enabled=self._logical_default_enabled
+                if self.type_mappings or self._type_override_imports
+                else None,
+                default_type_overrides=self._default_type_overrides if self._type_override_imports else None,
             )
         )
         if self._has_runtime_expressions:
@@ -781,8 +825,46 @@ class AvroParser(JsonSchemaParser):
             case _:
                 return kind
 
-    def _logical_default_enabled(self, kind: str, logical_type: str) -> bool:
+    def _default_type_overrides(self, name: str, schema: JsonSchema, as_root: bool) -> dict[str, Import]:  # ruff: ignore[boolean-type-hint-positional-argument]
+        """Resolve default overrides with the existing model and field naming rules."""
+        if as_root:
+            name, preserve_name = self._resolve_root_model_name({"title": name})
+        else:
+            preserve_name = False
+        class_name = self.model_resolver.get_class_name(
+            name, unique=False, is_root=as_root, preserve_name=preserve_name
+        ).name
+        if schema["type"] == "fixed":
+            return (
+                {"": override}
+                if not self.collapse_root_models and (override := self._model_type_override_imports.get(class_name))
+                else {}
+            )
+        if class_name not in self._reuse_optimization_context.type_override_model_names:
+            return {}
+        overrides = {}
+        excludes: set[str] = set()
+        for field in schema.get("fields", []):
+            if not isinstance(field, dict) or not isinstance(field.get("name"), str):
+                continue
+            field_name, _ = self.model_resolver.get_valid_field_name_and_alias(
+                field["name"], excludes=excludes, model_type=self.field_name_model_type, class_name=class_name
+            )
+            excludes.add(field_name)
+            if override := self._type_override_imports.get(f"{class_name}.{field_name}"):
+                overrides[field["name"]] = override
+        return overrides
+
+    def _logical_default_enabled(self, kind: str, logical_type: str, type_override: Import | None = None) -> bool:
         """Keep physical defaults when a mapping replaces their logical representation."""
+        if (
+            type_override is not None
+            and type_override.from_ == "builtins"
+            and type_override.import_ in {"int", "bytes"}
+        ):
+            return False
+        if not self.type_mappings:
+            return True
         format_ = self._logical_default_format(kind, logical_type)
         mapped_type = self._get_type_with_mappings("string", format_)
         return (
