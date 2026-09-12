@@ -149,5 +149,23 @@
     "auxiliary_models": [
       "DecimalDefaults1"
     ]
+  },
+  {
+    "name": "representable_default_override",
+    "fixture": "mapped_logical_defaults_representable",
+    "model": "MappedDefaults",
+    "overrides": {
+      "MappedDefaults.instant": "builtins.int",
+      "MappedDefaults.local": "builtins.int",
+      "MappedDefaults.amount": "builtins.bytes",
+      "MappedDefaults.elapsed": "builtins.bytes",
+      "MappedDefaults.elapsed_again": "builtins.bytes"
+    },
+    "args": [
+      "--collapse-root-models",
+      "--default-values",
+      "{\"MappedDefaults1.instant\":1000}"
+    ],
+    "auxiliary_models": []
   }
 ]

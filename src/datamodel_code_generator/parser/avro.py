@@ -854,7 +854,10 @@ class AvroParser(JsonSchemaParser):
                         ):
                             continue
                         raw_field, physical_default = candidate
-                        if field.default != physical_default:
+                        _, has_default_override = self.model_resolver.resolve_default_value(
+                            raw_field["name"], None, has_default=False, class_name=model.class_name
+                        )
+                        if has_default_override:
                             continue
                         try:
                             default = converter._convert_default(  # ruff: ignore[private-member-access]
