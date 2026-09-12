@@ -17,7 +17,7 @@ class DecimalDefaults(BaseModel):
 
 
 class DecimalDefaults1(BaseModel):
-    positive: Decimal | None = Decimal('258E-2')
+    positive: Decimal | None = Decimal('3')
     negative: Decimal | None = Decimal('-258E-2')
     zero: Decimal | None = Decimal('0E-4')
     trailing: Decimal | None = Decimal('1200E-2')

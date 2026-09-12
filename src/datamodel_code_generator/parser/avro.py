@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
     from datamodel_code_generator._types import AvroParserConfigDict
     from datamodel_code_generator.config import AvroParserConfig
-    from datamodel_code_generator.parser.base import Source
+    from datamodel_code_generator.parser.base import ModuleContext, Source
 
 JsonSchema = dict[str, Any]
 
@@ -121,6 +121,7 @@ class _AvroSchemaConverter:
         convert_logical_defaults: bool = True,
         logical_default_enabled: Callable[[str, str, Import | None], bool] | None = None,
         default_type_overrides: Callable[[str, JsonSchema, bool], dict[str, Import]] | None = None,
+        default_converters: dict[str, _AvroSchemaConverter] | None = None,
     ) -> None:
         self.named_schemas: dict[str, JsonSchema] = {}
         self.names: dict[str, _Name] = {}
@@ -131,6 +132,10 @@ class _AvroSchemaConverter:
         self._convert_logical_defaults = convert_logical_defaults
         self._logical_default_enabled = logical_default_enabled
         self._default_type_overrides = default_type_overrides
+        self._default_converters = default_converters
+        self.overridden_defaults: dict[str, dict[str, tuple[JsonSchema, Any]]] | None = (
+            {} if default_converters is not None else None
+        )
 
     def convert_raw(self, raw_obj: YamlValue) -> dict[str, YamlValue]:
         self._collect_named_schemas(raw_obj)
@@ -143,6 +148,9 @@ class _AvroSchemaConverter:
         return cast("dict[str, YamlValue]", schema)
 
     def convert(self, source: Source) -> dict[str, YamlValue]:
+        if self._default_converters is not None:
+            self._default_converters[source.path.as_posix()] = self
+            self._default_converters = None
         raw_obj = source.raw_data if source.raw_data is not None else load_yaml(source.text)
         return self.convert_raw(raw_obj)
 
@@ -405,6 +413,12 @@ class _AvroSchemaConverter:
                     name_info.namespace,
                     overrides.get(field_name) if overrides else None,
                 )
+                if (
+                    self.overridden_defaults is not None
+                    and overrides
+                    and overrides.get(field_name) in _PHYSICAL_DEFAULT_OVERRIDES
+                ):
+                    self.overridden_defaults.setdefault(fullname, {})[field_name] = field, field_schema["default"]
             else:
                 required.append(field_name)
             properties[field_name] = field_schema
@@ -797,6 +811,7 @@ class AvroParser(JsonSchemaParser):
 
     def parse_raw(self) -> None:
         """Parse all Avro schema input sources into data models."""
+        self._default_converters: dict[str, _AvroSchemaConverter] | None = {} if self._type_override_imports else None
         self._parse_converted_sources(
             lambda: _AvroSchemaConverter(
                 self._logical_default,
@@ -805,6 +820,7 @@ class AvroParser(JsonSchemaParser):
                 if self.type_mappings or self._type_override_imports
                 else None,
                 default_type_overrides=self._default_type_overrides if self._type_override_imports else None,
+                default_converters=self._default_converters,
             )
         )
         if self._has_runtime_expressions:
@@ -816,6 +832,45 @@ class AvroParser(JsonSchemaParser):
                 for field in model.fields:
                     if imports := runtime_expression_imports(field.default):
                         field._set_runtime_expression_imports(imports)  # ruff: ignore[private-member-access]
+
+    def _finalize_structured_imports(self, contexts: list[ModuleContext]) -> None:
+        """Keep shared logical defaults aligned with the final non-overridden fields."""
+        if self._default_converters:
+            from datamodel_code_generator.python_literal import runtime_expression_imports  # ruff: ignore[import-outside-top-level]
+
+            for context in contexts:
+                for model in context.models:
+                    converter = self._default_converters.get(model.reference.path.partition("#")[0] or ".")
+                    fullname = model.extra_template_data.get("extensions", {}).get("x-avro-fullname")
+                    if converter is None or not converter.overridden_defaults:
+                        continue
+                    defaults = converter.overridden_defaults.get(fullname, {})
+                    for field in model.fields:
+                        candidate = defaults.get(field.original_name or "")
+                        if (
+                            candidate is None
+                            or f"{model.class_name}.{field.name}" in self._type_override_imports
+                            or field.data_type.import_ in self._model_type_override_imports.values()
+                        ):
+                            continue
+                        raw_field, physical_default = candidate
+                        if field.default != physical_default:
+                            continue
+                        try:
+                            default = converter._convert_default(  # ruff: ignore[private-member-access]
+                                raw_field["default"], raw_field["type"], converter.names[fullname].namespace
+                            )
+                        except Error:
+                            # An unrepresentable auxiliary default must not reject a valid physical override.
+                            continue
+                        if repr(default) == repr(physical_default):
+                            continue
+                        field.default = default
+                        field._set_runtime_expression_imports(runtime_expression_imports(default))  # ruff: ignore[private-member-access]
+                        field.invalidate_semantic_caches()
+                        model.clear_imports_cache()
+            self._default_converters = None
+        super()._finalize_structured_imports(contexts)
 
     @staticmethod
     def _logical_default_format(kind: str, logical_type: str) -> str:

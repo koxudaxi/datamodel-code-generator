@@ -15,7 +15,10 @@
     "overrides": {
       "DecimalDefaults.positive": "builtins.bytes"
     },
-    "args": []
+    "args": [],
+    "auxiliary_models": [
+      "DecimalDefaults1"
+    ]
   },
   {
     "name": "duration",
@@ -95,6 +98,56 @@
     },
     "args": [
       "--collapse-root-models"
+    ]
+  },
+  {
+    "name": "representable",
+    "fixture": "mapped_logical_defaults_representable",
+    "model": "MappedDefaults",
+    "overrides": {
+      "MappedDefaults.instant": "builtins.int",
+      "MappedDefaults.local": "builtins.int",
+      "MappedDefaults.amount": "builtins.bytes",
+      "MappedDefaults.elapsed": "builtins.bytes",
+      "MappedDefaults.elapsed_again": "builtins.bytes"
+    },
+    "args": [
+      "--collapse-root-models"
+    ],
+    "auxiliary_models": [
+      "MappedDefaults1"
+    ]
+  },
+  {
+    "name": "decimal_default_override",
+    "fixture": "decimal_defaults_simple",
+    "model": "DecimalDefaults",
+    "overrides": {
+      "DecimalDefaults.positive": "builtins.bytes"
+    },
+    "args": [
+      "--default-values",
+      "{\"DecimalDefaults1.positive\":3}",
+      "--deserialize-default-values",
+      "decimal"
+    ],
+    "auxiliary_models": [
+      "DecimalDefaults1"
+    ]
+  },
+  {
+    "name": "decimal_mapped",
+    "fixture": "decimal_defaults_simple",
+    "model": "DecimalDefaults",
+    "overrides": {
+      "DecimalDefaults.positive": "builtins.bytes"
+    },
+    "args": [
+      "--type-mappings",
+      "decimal=binary"
+    ],
+    "auxiliary_models": [
+      "DecimalDefaults1"
     ]
   }
 ]

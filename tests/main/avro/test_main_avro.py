@@ -362,16 +362,20 @@ def test_avro_overridden_logical_defaults(output_file: Path, capsys: pytest.Capt
         capsys=capsys,
         assert_no_stderr=True,
     )
-    runtime_file = AVRO_DATA_PATH.parent / f"expected/main/avro/overridden_logical_defaults_{case['name']}.txt"
-    with _generated_model(output_file, f"overridden_logical_defaults_{case['name']}", case["model"]) as model:
-        instance = model()
-        assert_output(f"{instance!r}\n{instance.model_dump(by_alias=True)!r}\n", runtime_file)
-        instance = model.model_validate(instance.model_dump(by_alias=True))
-        assert_output(f"{instance!r}\n{instance.model_dump(by_alias=True)!r}\n", runtime_file)
-        model.model_config["validate_default"] = True
-        model.model_rebuild(force=True)
-        instance = model()
-        assert_output(f"{instance!r}\n{instance.model_dump(by_alias=True)!r}\n", runtime_file)
+    for model_name in [case["model"], *case.get("auxiliary_models", [])]:
+        suffix = "" if model_name == case["model"] else f"_{model_name}"
+        runtime_file = (
+            AVRO_DATA_PATH.parent / f"expected/main/avro/overridden_logical_defaults_{case['name']}{suffix}.txt"
+        )
+        with _generated_model(output_file, f"overridden_logical_defaults_{case['name']}", model_name) as model:
+            instance = model()
+            assert_output(f"{instance!r}\n{instance.model_dump(by_alias=True)!r}\n", runtime_file)
+            instance = model.model_validate(instance.model_dump(by_alias=True))
+            assert_output(f"{instance!r}\n{instance.model_dump(by_alias=True)!r}\n", runtime_file)
+            model.model_config["validate_default"] = True
+            model.model_rebuild(force=True)
+            instance = model()
+            assert_output(f"{instance!r}\n{instance.model_dump(by_alias=True)!r}\n", runtime_file)
 
 
 @pytest.mark.parametrize(
