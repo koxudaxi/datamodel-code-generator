@@ -3336,16 +3336,6 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 variant_name, _ = self.model_resolver.get_valid_field_name_and_alias(
                     property_name, model_type=self.field_name_model_type, class_name=variant.class_name
                 )
-            if variant_name != property_name and any(
-                (candidate.alias or candidate.name) == variant_name
-                for candidate in variant.iter_all_fields()
-                if candidate.original_name != property_name
-            ):
-                msg = (
-                    f"Discriminator {property_name!r} resolves to field name {variant_name!r}, "
-                    "which conflicts with another field's input alias; use a distinct discriminator field alias."
-                )
-                raise Error(msg)
             if common_name is not None and common_name != variant_name:
                 msg = (
                     f"Discriminator {property_name!r} resolves to different field names "
