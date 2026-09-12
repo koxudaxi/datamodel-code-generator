@@ -974,6 +974,9 @@
     "expected_strategies": {
       "reuse-all": "regenerate-all",
       "reuse-foreign": "regenerate-all"
+    },
+    "expected_files": {
+      "dataclass/external/annotated_future_inline_regenerate-all.py": "dataclass/builtin/annotated_future_inline_regenerate-all.py"
     }
   },
   {
@@ -1041,7 +1044,19 @@
       "dataclasses.dataclass"
     ],
     "formatter_goldens": true,
-    "pydantic20_goldens": true
+    "pydantic20_goldens": true,
+    "expected_files": {
+      "dataclass/external/local_enum_regenerate-all.py": "dataclass/builtin/local_enum_regenerate-all.py",
+      "dataclass/local_enum_regenerate-all.txt": "local_enum_regenerate-all.txt",
+      "dataclass/local_enum_reuse-all.txt": "local_enum_reuse-all.txt",
+      "dataclass/pydantic20/builtin/local_enum_reuse-all.py": "dataclass/builtin/local_enum_reuse-all.py",
+      "dataclass/pydantic20/external/local_enum_regenerate-all.py": "dataclass/pydantic20/builtin/local_enum_regenerate-all.py",
+      "dataclass/pydantic20/external/local_enum_reuse-all.py": "dataclass/external/local_enum_reuse-all.py",
+      "external/local_enum_regenerate-all.py": "builtin/local_enum_regenerate-all.py",
+      "pydantic20/builtin/local_enum_reuse-all.py": "builtin/local_enum_reuse-all.py",
+      "pydantic20/external/local_enum_regenerate-all.py": "pydantic20/builtin/local_enum_regenerate-all.py",
+      "pydantic20/external/local_enum_reuse-all.py": "external/local_enum_reuse-all.py"
+    }
   },
   {
     "name": "local_enum_dataclass",
@@ -1087,7 +1102,25 @@
       "dataclasses.dataclass"
     ],
     "formatter_goldens": true,
-    "pydantic20_goldens": true
+    "pydantic20_goldens": true,
+    "expected_files": {
+      "dataclass/external/local_enum_dataclass_regenerate-all.py": "dataclass/builtin/local_enum_dataclass_regenerate-all.py",
+      "dataclass/local_enum_dataclass_regenerate-all.txt": "local_enum_dataclass_regenerate-all.txt",
+      "dataclass/local_enum_dataclass_reuse-all.txt": "local_enum_dataclass_reuse-all.txt",
+      "dataclass/pydantic20/builtin/local_enum_dataclass_reuse-all.py": "dataclass/builtin/local_enum_dataclass_reuse-all.py",
+      "dataclass/pydantic20/external/local_enum_dataclass_regenerate-all.py": "dataclass/pydantic20/builtin/local_enum_dataclass_regenerate-all.py",
+      "dataclass/pydantic20/external/local_enum_dataclass_reuse-all.py": "dataclass/external/local_enum_dataclass_reuse-all.py",
+      "dataclass/pydantic20/external/local_enum_dataclass_reuse-all_black23.py": "dataclass/external/local_enum_dataclass_reuse-all_black23.py",
+      "external/local_enum_dataclass_regenerate-all.py": "builtin/local_enum_dataclass_regenerate-all.py",
+      "pydantic20/builtin/local_enum_dataclass_reuse-all.py": "builtin/local_enum_dataclass_reuse-all.py",
+      "pydantic20/external/local_enum_dataclass_regenerate-all.py": "pydantic20/builtin/local_enum_dataclass_regenerate-all.py",
+      "pydantic20/external/local_enum_dataclass_reuse-all.py": "external/local_enum_dataclass_reuse-all.py",
+      "pydantic20/external/local_enum_dataclass_reuse-all_black23.py": "external/local_enum_dataclass_reuse-all_black23.py"
+    },
+    "legacy_code_names": {
+      "external_22_reuse-all": "local_enum_dataclass_reuse-all_black23.py",
+      "external_23_reuse-all": "local_enum_dataclass_reuse-all_black23.py"
+    }
   },
   {
     "name": "local_enum_typed",
@@ -1133,7 +1166,25 @@
       "dataclasses.dataclass"
     ],
     "formatter_goldens": true,
-    "pydantic20_goldens": true
+    "pydantic20_goldens": true,
+    "expected_files": {
+      "dataclass/external/local_enum_typed_regenerate-all.py": "dataclass/builtin/local_enum_typed_regenerate-all.py",
+      "dataclass/local_enum_typed_regenerate-all.txt": "local_enum_typed_regenerate-all.txt",
+      "dataclass/local_enum_typed_reuse-all.txt": "local_enum_typed_reuse-all.txt",
+      "dataclass/pydantic20/builtin/local_enum_typed_reuse-all.py": "dataclass/builtin/local_enum_typed_reuse-all.py",
+      "dataclass/pydantic20/external/local_enum_typed_regenerate-all.py": "dataclass/pydantic20/builtin/local_enum_typed_regenerate-all.py",
+      "dataclass/pydantic20/external/local_enum_typed_reuse-all.py": "dataclass/external/local_enum_typed_reuse-all.py",
+      "dataclass/pydantic20/external/local_enum_typed_reuse-all_black23.py": "dataclass/external/local_enum_typed_reuse-all_black23.py",
+      "external/local_enum_typed_regenerate-all.py": "builtin/local_enum_typed_regenerate-all.py",
+      "pydantic20/builtin/local_enum_typed_reuse-all.py": "builtin/local_enum_typed_reuse-all.py",
+      "pydantic20/external/local_enum_typed_regenerate-all.py": "pydantic20/builtin/local_enum_typed_regenerate-all.py",
+      "pydantic20/external/local_enum_typed_reuse-all.py": "external/local_enum_typed_reuse-all.py",
+      "pydantic20/external/local_enum_typed_reuse-all_black23.py": "external/local_enum_typed_reuse-all_black23.py"
+    },
+    "legacy_code_names": {
+      "external_22_reuse-all": "local_enum_typed_reuse-all_black23.py",
+      "external_23_reuse-all": "local_enum_typed_reuse-all_black23.py"
+    }
   },
   {
     "name": "annotated_future_typed",
@@ -1186,7 +1237,12 @@
       "pydantic_v2.BaseModel",
       "dataclasses.dataclass"
     ],
-    "formatter_goldens": true
+    "formatter_goldens": true,
+    "expected_files": {
+      "dataclass/annotated_future_model_reuse-all.txt": "annotated_future_model_reuse-all.txt",
+      "dataclass/external/annotated_future_model_regenerate-all.py": "dataclass/builtin/annotated_future_model_regenerate-all.py",
+      "external/annotated_future_model_regenerate-all.py": "builtin/annotated_future_model_regenerate-all.py"
+    }
   },
   {
     "name": "fallback_mixed",
@@ -1279,7 +1335,17 @@
       "pydantic_v2.BaseModel",
       "dataclasses.dataclass"
     ],
-    "formatter_goldens": true
+    "formatter_goldens": true,
+    "legacy_code_names": {
+      "external_22_regenerate-all": "fallback_mixed_regenerate-all_black23.py",
+      "external_22_reuse-all": "fallback_mixed_reuse-all_black23.py",
+      "external_23_regenerate-all": "fallback_mixed_regenerate-all_black23.py",
+      "external_23_reuse-all": "fallback_mixed_reuse-all_black23.py"
+    },
+    "expected_files": {
+      "dataclass/external/fallback_mixed_regenerate-all_black23.py": "dataclass/builtin/fallback_mixed_regenerate-all.py",
+      "dataclass/external/fallback_mixed_reuse-all_black23.py": "dataclass/builtin/fallback_mixed_reuse-all.py"
+    }
   },
   {
     "name": "fallback_mixed_reverse",
@@ -1372,7 +1438,17 @@
       "pydantic_v2.BaseModel",
       "dataclasses.dataclass"
     ],
-    "formatter_goldens": true
+    "formatter_goldens": true,
+    "legacy_code_names": {
+      "external_22_regenerate-all": "fallback_mixed_reverse_regenerate-all_black23.py",
+      "external_22_reuse-all": "fallback_mixed_reverse_reuse-all_black23.py",
+      "external_23_regenerate-all": "fallback_mixed_reverse_regenerate-all_black23.py",
+      "external_23_reuse-all": "fallback_mixed_reverse_reuse-all_black23.py"
+    },
+    "expected_files": {
+      "dataclass/external/fallback_mixed_reverse_regenerate-all_black23.py": "dataclass/builtin/fallback_mixed_reverse_regenerate-all.py",
+      "dataclass/external/fallback_mixed_reverse_reuse-all_black23.py": "dataclass/builtin/fallback_mixed_reverse_reuse-all.py"
+    }
   },
   {
     "name": "fallback_multi",
@@ -1457,6 +1533,12 @@
     "formatter_goldens": true,
     "expected_strategies": {
       "reuse-foreign": "reuse-foreign"
+    },
+    "legacy_code_names": {
+      "external_22_regenerate-all": "fallback_multi_regenerate-all_black23.py",
+      "external_22_reuse-foreign": "fallback_multi_reuse-foreign_black23.py",
+      "external_23_regenerate-all": "fallback_multi_regenerate-all_black23.py",
+      "external_23_reuse-foreign": "fallback_multi_reuse-foreign_black23.py"
     }
   },
   {
@@ -1542,6 +1624,12 @@
     "formatter_goldens": true,
     "expected_strategies": {
       "reuse-foreign": "reuse-foreign"
+    },
+    "legacy_code_names": {
+      "external_22_regenerate-all": "fallback_multi_reverse_regenerate-all_black23.py",
+      "external_22_reuse-foreign": "fallback_multi_reverse_reuse-foreign_black23.py",
+      "external_23_regenerate-all": "fallback_multi_reverse_regenerate-all_black23.py",
+      "external_23_reuse-foreign": "fallback_multi_reverse_reuse-foreign_black23.py"
     }
   },
   {
@@ -1587,6 +1675,14 @@
       "pydantic_v2.BaseModel",
       "dataclasses.dataclass"
     ],
-    "pydantic20_goldens": true
+    "pydantic20_goldens": true,
+    "expected_files": {
+      "dataclass/local_enum_future_regenerate-all.txt": "local_enum_future_regenerate-all.txt",
+      "dataclass/local_enum_future_reuse-all.txt": "local_enum_future_reuse-all.txt",
+      "dataclass/pydantic20/external/local_enum_future_regenerate-all.py": "dataclass/pydantic20/builtin/local_enum_future_regenerate-all.py",
+      "dataclass/pydantic20/external/local_enum_future_reuse-all.py": "dataclass/pydantic20/builtin/local_enum_future_reuse-all.py",
+      "pydantic20/external/local_enum_future_regenerate-all.py": "pydantic20/builtin/local_enum_future_regenerate-all.py",
+      "pydantic20/external/local_enum_future_reuse-all.py": "pydantic20/builtin/local_enum_future_reuse-all.py"
+    }
   }
 ]

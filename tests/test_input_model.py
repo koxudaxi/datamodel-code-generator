@@ -2813,6 +2813,9 @@ def test_python_generic_reuse(  # noqa: PLR0912, PLR0914
             f"{formatter}_{black.__version__.split('.')[0]}_{expected_strategy}", stem + ".py"
         )
     )
+    expected_files = record.get("expected_files", {})
+    code_file = (source_expected / code_name).relative_to(INPUT_GENERIC_EXPECTED).as_posix()
+    expected_file = INPUT_GENERIC_EXPECTED / expected_files.get(code_file, code_file)
     if entrypoint == "cli":
         extra_args = [
             "--disable-timestamp",
@@ -2827,14 +2830,14 @@ def test_python_generic_reuse(  # noqa: PLR0912, PLR0914
                 input_path=DATA_PATH / "jsonschema/generic_reuse_type.json",
                 input_file_type="jsonschema",
                 output_path=output,
-                expected_file=source_expected / code_name,
+                expected_file=expected_file,
                 extra_args=extra_args,
             )
         else:
             run_input_model_and_assert(
                 input_model=paths[0],
                 output_path=output,
-                expected_file=source_expected / code_name,
+                expected_file=expected_file,
                 extra_args=[*_input_model_args(paths[1:]), *extra_args],
             )
     else:
@@ -2854,7 +2857,7 @@ def test_python_generic_reuse(  # noqa: PLR0912, PLR0914
         )
         run_generate_and_assert(
             input_=schema,
-            expected_file=source_expected / code_name,
+            expected_file=expected_file,
             config=GenerateConfig(
                 input_file_type=InputFileType.JsonSchema,
                 output_model_type=DataModelType(output_model),
@@ -2957,7 +2960,10 @@ def test_python_generic_reuse(  # noqa: PLR0912, PLR0914
                         "value_identity": generated_value.value is native_value.value,
                     }
             rows.append(row)
-    assert_output(json.dumps(rows, indent=2) + "\n", expected_directory / (stem + ".txt"))
+    runtime_file = (expected_directory / (stem + ".txt")).relative_to(INPUT_GENERIC_EXPECTED).as_posix()
+    assert_output(
+        json.dumps(rows, indent=2) + "\n", INPUT_GENERIC_EXPECTED / expected_files.get(runtime_file, runtime_file)
+    )
 
 
 @pytest.mark.parametrize("case", ["name", "family", "index_type", "index_negative"])

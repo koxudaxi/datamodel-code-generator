@@ -3,17 +3,16 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel
+from dataclasses import dataclass
 
 import tests.data.python.input_model.generic_reuse
 
 
-class LocalEnumDataclass(BaseModel):
+@dataclass
+class LocalEnumDataclass:
     box: tests.data.python.input_model.generic_reuse.LocalEnumDataclass.__annotations__[
         'box'
     ]
-    validated: (
-        tests.data.python.input_model.generic_reuse.LocalEnumDataclass.__annotations__[
-            'validated'
-        ]
-    )
+    validated: tests.data.python.input_model.generic_reuse.LocalEnumDataclass.__annotations__[
+        'validated'
+    ]
