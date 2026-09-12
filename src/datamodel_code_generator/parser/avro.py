@@ -836,7 +836,9 @@ class AvroParser(JsonSchemaParser):
     def _finalize_structured_imports(self, contexts: list[ModuleContext]) -> None:
         """Keep shared logical defaults aligned with the final non-overridden fields."""
         if self._default_converters:
-            from datamodel_code_generator.python_literal import runtime_expression_imports  # ruff: ignore[import-outside-top-level]
+            from datamodel_code_generator.python_literal import (
+                runtime_expression_imports,
+            )
 
             for context in contexts:
                 for model in context.models:
