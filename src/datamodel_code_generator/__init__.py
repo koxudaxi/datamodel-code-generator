@@ -2020,13 +2020,17 @@ def _prepare_directory_input(input_: _GenerationInput, config: GenerateConfig) -
     files: set[Path] = set()
     output_directory = None
     for target, is_directory in ((output, output is not None and not output.suffix), (metadata, False)):
-        if target is None or not (resolved := target.resolve()).is_relative_to(input_root):
+        if target is None:
             continue
-        source_path = input_ / resolved.relative_to(input_root)
-        if is_directory:
-            output_directory = source_path
-        else:
-            files.add(source_path)
+        paths = (target.resolve(),) if is_directory else (target.parent.resolve() / target.name, target.resolve())
+        for resolved in paths:
+            if not resolved.is_relative_to(input_root):
+                continue
+            source_path = input_ / resolved.relative_to(input_root)
+            if is_directory:
+                output_directory = source_path
+            else:
+                files.add(source_path)
     if output_directory is None and not files:
         return config
 
@@ -2042,9 +2046,15 @@ def _prepare_directory_input(input_: _GenerationInput, config: GenerateConfig) -
                 raise Error(msg) from exc
             config.custom_file_header = custom_header
         if custom_header:
-            if custom_header.strip():
-                headers.append(custom_header)
-            headers.append(_build_header_with_future_imports(custom_header, "from __future__ import annotations"))
+            recognition_header = (
+                custom_header.rstrip("\r\n")
+                if config.custom_file_header_mode == CustomFileHeaderMode.Prepend
+                else custom_header
+            )
+            headers.extend((
+                recognition_header,
+                _build_header_with_future_imports(recognition_header, "from __future__ import annotations"),
+            ))
     config._directory_input_filter = DirectoryInputFilter(  # noqa: SLF001
         frozenset(files),
         output_directory,

@@ -6785,6 +6785,8 @@ def test_main_custom_file_header_with_docstring_and_import(output_file: Path, di
             extra_args=[
                 "--custom-file-header-path",
                 str(DATA_PATH / "custom_file_header_with_docstring_and_import.txt"),
+                # Keep helper-created config/parity outputs outside this repeated-input case.
+                *(["--formatters", "builtin"] if directory_input else []),
             ],
         )
 

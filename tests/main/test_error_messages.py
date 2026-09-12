@@ -269,6 +269,13 @@ def test_output_path_can_write_inside_input_directory(
         if run == 0:
             init_path = output_path / "__init__.py"
             init_path.write_text(init_path.read_text(encoding="utf-8").rstrip(), encoding="utf-8")
+            module_path = output_path / "person.py"
+            module_path.write_text(
+                module_path.read_text(encoding="utf-8").replace(
+                    "from __future__ import annotations", "from __future__ import annotations  # generated: model", 1
+                ),
+                encoding="utf-8",
+            )
     assert_output(
         f"{(input_path / source.name).read_text(encoding='utf-8')}\n",
         EXPECTED_MALFORMED_PATH / "path_conflict_input.txt",
@@ -293,18 +300,27 @@ def test_invalid_pyproject_configuration_is_a_clean_cli_error(
 
 
 @pytest.mark.parametrize(
-    ("suffix", "inside_output", "input_file_type", "header"),
+    ("suffix", "inside_output", "input_file_type", "header", "yaml_key"),
     [
-        (".schema", False, "jsonschema", None),
-        (".py", False, "jsonschema", None),
-        (".py", True, "jsonschema", None),
-        (".py", True, None, None),
-        (".json", False, "jsonschema", "\n"),
-        (".py", True, "jsonschema", "# Shared copyright header"),
+        (".schema", False, "jsonschema", None, None),
+        (".py", False, "jsonschema", None, None),
+        (".py", True, "jsonschema", None, None),
+        (".py", True, None, None, None),
+        (".json", False, "jsonschema", "\n", None),
+        (".py", True, "jsonschema", "# Shared copyright header", None),
+        (".py", True, "jsonschema", "# Shared copyright header", "Alias = model"),
+        (".py", True, "jsonschema", "# Shared copyright header", "Alias = lambda x"),
+        (".py", True, "jsonschema", "# Shared copyright header", "from module import name"),
+        (".py", True, "jsonschema", "# Shared copyright header", "class Model"),
     ],
 )
 def test_directory_input_preserves_nonstandard_schema_files(
-    tmp_path: Path, suffix: str, inside_output: bool, input_file_type: InputFileTypeLiteral | None, header: str | None
+    tmp_path: Path,
+    suffix: str,
+    inside_output: bool,
+    input_file_type: InputFileTypeLiteral | None,
+    header: str | None,
+    yaml_key: str | None,
 ) -> None:
     """Output location and suffix alone cannot identify a generated artifact."""
     input_path = tmp_path / "schemas"
@@ -313,8 +329,12 @@ def test_directory_input_preserves_nonstandard_schema_files(
     source_path = (output_path if inside_output else input_path) / f"person{suffix}"
     shutil.copyfile(DATA_PATH / "jsonschema" / "person.json", source_path)
     source_text = source_path.read_text(encoding="utf-8")
+    if yaml_key is not None:
+        source_text = yaml.safe_dump({yaml_key: {}, **json.loads(source_text)}, sort_keys=False)
     if header is not None and header.strip():
         source_path.write_text(f"{header}\n{source_text}", encoding="utf-8")
+    original_source = tmp_path / "original-schema.txt"
+    shutil.copyfile(source_path, original_source)
     module_path = output_path / ("generated/person.py" if inside_output else "person.py")
     extra_args = ["--disable-timestamp", "--formatters", "builtin"]
     if header is not None:
@@ -325,6 +345,8 @@ def test_directory_input_preserves_nonstandard_schema_files(
             output_path=output_path,
             input_file_type=input_file_type,
             extra_args=extra_args,
+            # The output tree also contains the intentionally non-Python .py input.
+            skip_code_validation=yaml_key is not None,
         )
         generated = module_path.read_text(encoding="utf-8")
         if header is not None:
@@ -336,10 +358,66 @@ def test_directory_input_preserves_nonstandard_schema_files(
                 f"#   filename:  {source_path.relative_to(input_path).as_posix()}", "#   filename:  person.json"
             )
         assert_output(generated, DATA_PATH / "expected" / "main" / "person.py")
-    preserved_source = source_path.read_text(encoding="utf-8")
-    if header is not None and header.strip():
-        preserved_source = preserved_source.removeprefix(header + "\n")
-    assert_output(f"{preserved_source}\n", EXPECTED_MALFORMED_PATH / "path_conflict_input.txt")
+    assert_output(source_path.read_text(encoding="utf-8"), original_source)
+
+
+@pytest.mark.parametrize(("mode", "trailing"), [("prepend", "\n\n"), ("prepend", "\r\n\r\n"), ("replace", "\n\n")])
+@pytest.mark.parametrize("comment_header", [False, True])
+def test_directory_input_custom_header_trailing_newlines(
+    tmp_path: Path, mode: str, trailing: str, comment_header: bool
+) -> None:
+    """Recognize the emitted prepend/replace header without changing its output."""
+    input_path = tmp_path / "schemas"
+    input_path.mkdir()
+    shutil.copyfile(DATA_PATH / "jsonschema" / "person.json", input_path / "person.json")
+    output_path = input_path / "generated"
+    header = (DATA_PATH / "custom_file_header.txt").read_text(encoding="utf-8").rstrip("\r\n") if comment_header else ""
+    for _ in range(2):
+        run_main_and_assert(
+            input_path=input_path,
+            output_path=output_path,
+            input_file_type="jsonschema",
+            extra_args=[
+                "--disable-timestamp",
+                "--formatters",
+                "builtin",
+                "--custom-file-header",
+                header + trailing,
+                "--custom-file-header-mode",
+                mode,
+            ],
+        )
+        generated = (output_path / "person.py").read_text(encoding="utf-8")
+        if mode == "prepend":
+            generated = generated.removeprefix(header + "\n#\n")
+        else:
+            generated = generated.removeprefix(header + "\n\n")
+            generated = f"# generated by datamodel-codegen:\n#   filename:  person.json\n\n{generated}"
+        assert_output(generated, DATA_PATH / "expected" / "main" / "person.py")
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="symlink creation requires elevated privileges")
+@pytest.mark.parametrize("target_inside", [False, True])
+def test_directory_input_excludes_metadata_symlink_spellings(tmp_path: Path, target_inside: bool) -> None:
+    """Exclude both a configured metadata symlink and its in-directory target."""
+    input_path = tmp_path / "schemas"
+    input_path.mkdir()
+    shutil.copyfile(DATA_PATH / "jsonschema" / "person.json", input_path / "person.json")
+    output_path = tmp_path / "generated"
+    metadata = input_path / "model_map.json"
+    metadata.symlink_to((input_path if target_inside else tmp_path) / "metadata.json")
+    expected_directory = tmp_path / "expected"
+    expected_directory.mkdir()
+    shutil.copyfile(DATA_PATH / "expected" / "main" / "person.py", expected_directory / "person.py")
+    shutil.copyfile(EXPECTED_MALFORMED_PATH / "directory_input_init.py", expected_directory / "__init__.py")
+    for _ in range(2):
+        run_main_and_assert(
+            input_path=input_path,
+            output_path=output_path,
+            input_file_type="jsonschema",
+            extra_args=["--disable-timestamp", "--formatters", "builtin", "--emit-model-metadata", str(metadata)],
+            expected_directory=expected_directory,
+        )
 
 
 def test_directory_input_does_not_ignore_unrelated_bytecode(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -357,6 +435,7 @@ def test_directory_input_does_not_ignore_unrelated_bytecode(tmp_path: Path, caps
         expected_exit=Exit.ERROR,
         capsys=capsys,
         expected_stderr_contains="codec can't decode",
+        extra_args=["--formatters", "builtin"],
     )
 
 
@@ -365,7 +444,7 @@ def test_directory_input_retains_type_aliases_without_future_imports(tmp_path: P
     source_path = tmp_path / "schemas"
     source_path.mkdir()
     shutil.copyfile(DATA_PATH / "jsonschema" / "external_collapse" / "child.json", source_path / "child.json")
-    for _ in range(2):
+    for run in range(2):
         run_main_and_assert(
             input_path=source_path,
             output_path=source_path,
@@ -383,6 +462,11 @@ def test_directory_input_retains_type_aliases_without_future_imports(tmp_path: P
             output_to_expected=[("child.py", "directory_input_alias.py")],
             skip_code_validation=sys.version_info < (3, 12),
         )
+        if run == 0:
+            module_path = source_path / "child.py"
+            module_path.write_text(
+                module_path.read_text(encoding="utf-8").rstrip() + "  # alias: generated\n", encoding="utf-8"
+            )
 
 
 def test_directory_auto_input_does_not_infer_from_generated_files(
@@ -398,6 +482,7 @@ def test_directory_auto_input_does_not_infer_from_generated_files(
         expected_exit=Exit.ERROR,
         capsys=capsys,
         expected_stderr_contains="File not found:",
+        extra_args=["--formatters", "builtin"],
     )
 
 

@@ -69,12 +69,26 @@ class DirectoryInputFilter:
                     start = line_end + 1
                 else:
                     break
-            if start == len(text) or text.startswith(("from ", "import ", "class ", "@"), start):
+            if start == len(text):
                 return True
             line_end = text.find("\n", start)
             line = text[start : None if line_end < 0 else line_end]
             target, assignment, _ = line.partition("=")
-            if assignment and target.removeprefix("type ").strip().isidentifier():
+            if not (
+                line.startswith(("from ", "import ", "class ", "@"))
+                or (assignment and target.removeprefix("type ").strip().isidentifier())
+            ):
+                continue
+            if ":" not in line:
+                return True
+
+            from datamodel_code_generator.util import get_yaml_parse_errors  # noqa: PLC0415
+
+            # A Python-looking statement can still be a YAML mapping key.
+            # Prefer the existing input interpretation in this ambiguous case.
+            try:
+                return not isinstance(load_yaml(text), (dict, list))
+            except get_yaml_parse_errors():
                 return True
         return False
 

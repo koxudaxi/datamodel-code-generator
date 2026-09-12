@@ -3354,6 +3354,8 @@ def test_custom_file_header_path_prepend_jsonschema_multi_file(output_dir: Path,
                 str(DATA_PATH / "custom_file_header_with_docstring_and_import.txt"),
                 "--custom-file-header-mode",
                 "prepend",
+                # Avoid helper-created config/parity outputs changing the overlapping layout.
+                *(["--formatters", "builtin"] if layout != "sibling" else []),
             ],
             expected_directory=EXPECTED_MAIN_PATH / "jsonschema" / "custom_file_header_path_prepend_multi_file",
         )
