@@ -7885,9 +7885,17 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         cls, obj: JsonSchemaObject, pattern_value_types: list[tuple[str, DataType]]
     ) -> Literal["declared", "models"] | None:
         """Limit changed helpers to proven skipped constraints or incompatible model instances."""
+        if not obj.extras.keys() <= {"title", "description"}:
+            return None
+        return cls._pattern_validation_intersection(obj, pattern_value_types)
+
+    @classmethod
+    def _pattern_validation_intersection(
+        cls, obj: JsonSchemaObject, pattern_value_types: list[tuple[str, DataType]]
+    ) -> Literal["declared", "models"] | None:
+        """Prove the same bounded intersection after root annotation eligibility."""
         if (
             obj.type != "object"
-            or not obj.extras.keys() <= {"title", "description"}
             or not obj.model_fields_set
             <= {
                 "type",
@@ -7977,6 +7985,50 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return "models"
         return None
 
+    def _plain_pattern_root_annotations(self, obj: JsonSchemaObject, patterns: list[tuple[str, DataType]]) -> bool:
+        """Recognize inert root annotations only in the standard generation context."""
+        if type(self) is not JsonSchemaParser or type(obj) is not JsonSchemaObject:
+            return False
+        if any(
+            name not in {"title", "description"}
+            and (
+                not name.startswith("x-")
+                or name.startswith("x-python-")
+                or name in {"x-is-base-class", "x-is-classvar"}
+            )
+            for name in obj.extras
+        ):
+            return False
+        config = self.config
+        if any((
+            config.model_extra_keys,
+            config.model_extra_keys_without_x_prefix,
+            config.validators,
+            config.class_decorators,
+            config.type_mappings,
+            config.type_overrides,
+            config.import_overrides,
+            config.custom_class_name_generator,
+            config.alias_generator,
+        )):
+            return False
+        if (get_types := self.data_model_type.PLAIN_PATTERN_ROOT_TYPES) is None:
+            return False
+        model_type, root_type, field_type, manager_type = get_types()
+        if (
+            self.data_model_type is not model_type
+            or self.data_model_root_type is not root_type
+            or self.data_model_field_type is not field_type
+            or type(self.data_type_manager) is not manager_type
+        ):
+            return False
+        return all(
+            type(model := data_type.reference.source) is model_type
+            and all(type(field) is field_type for field in cast("DataModel", model).fields)
+            for _, data_type in patterns
+            if data_type.reference is not None
+        )
+
     def _add_pattern_properties_validator(  # noqa: PLR0913, PLR0917
         self,
         reference_path: str,
@@ -8001,12 +8053,15 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             and self.config.extra_template_data is None
             else None
         )
-        if (
-            obj is self._pattern_validation_document_root
-            and intersection is None
-            and not self.force_optional_for_required_fields
-        ):
-            intersection = self._pattern_validation_with_undeclared_required(obj, pattern_value_types)
+        if obj is self._pattern_validation_document_root:
+            if intersection is None and not self.force_optional_for_required_fields:
+                intersection = self._pattern_validation_with_undeclared_required(obj, pattern_value_types)
+            if (
+                intersection is None
+                and not obj.extras.keys() <= {"title", "description"}
+                and self._plain_pattern_root_annotations(obj, pattern_value_types)
+            ):
+                intersection = self._pattern_validation_intersection(obj, pattern_value_types)
         match intersection:
             case "declared":
                 rule_type = IndependentDeclaredPatternPropertiesRule
