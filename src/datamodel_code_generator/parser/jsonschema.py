@@ -105,7 +105,12 @@ from datamodel_code_generator.parser.base import (
     get_special_path,
     title_to_class_name,
 )
-from datamodel_code_generator.parser.schema_version import get_data_formats
+from datamodel_code_generator.parser.schema_version import (
+    JsonSchemaFeatures,
+    _detect_declared_jsonschema_version,
+    detect_jsonschema_version,
+    get_data_formats,
+)
 from datamodel_code_generator.python_literal import _semantic_value_text
 from datamodel_code_generator.reference import (
     _ALIAS_RESOLUTION_CLASS_NAME_KEY,
@@ -134,7 +139,6 @@ if TYPE_CHECKING:
     from datamodel_code_generator._python_type_binding import BoundPythonType
     from datamodel_code_generator._types import JSONSchemaParserConfigDict
     from datamodel_code_generator.config import JSONSchemaParserConfig
-    from datamodel_code_generator.parser.schema_version import JsonSchemaFeatures
 
 JsonSchemaLiteral = Union[bool, int, str]  # noqa: UP007
 JsonSchemaConstraintKey = Literal[
@@ -1580,11 +1584,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     @cached_property
     def schema_features(self) -> JsonSchemaFeatures:
         """Get schema features based on config or detected version."""
-        from datamodel_code_generator.parser.schema_version import (  # noqa: PLC0415
-            JsonSchemaFeatures,
-            detect_jsonschema_version,
-        )
-
         config_version = getattr(self.config, "jsonschema_version", None)
         if config_version is not None and config_version != JsonSchemaVersion.Auto:
             return JsonSchemaFeatures.from_version(config_version)
@@ -1594,8 +1593,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     @cached_property
     def _ref_sibling_keywords_enabled(self) -> bool:
         """Return whether this JSON Schema draft evaluates validation beside ``$ref``."""
-        from datamodel_code_generator.parser.schema_version import detect_jsonschema_version  # noqa: PLC0415
-
         config_version = getattr(self.config, "jsonschema_version", None)
         version = (
             config_version
@@ -11255,11 +11252,30 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             ) and isinstance(value, dict):
                 yield (keyword,), value
 
-    def _register_schema_resources(
-        self, schema: dict[str, Any], document: str, pointer: str, base: str, keys: set[str]
+    def _schema_resource_identifier(
+        self, schema: dict[str, Any], id_field: str | None, *, is_root: bool
+    ) -> tuple[str | None, object]:
+        """Inherit draft identifiers while preserving fallbacks for roots and unknown dialects."""
+        if "$schema" in schema and getattr(self.config, "jsonschema_version", None) in {None, JsonSchemaVersion.Auto}:
+            version = _detect_declared_jsonschema_version(schema)
+            id_field = JsonSchemaFeatures.from_version(version).id_field if version is not None else None
+        identifier = schema.get(id_field or self.schema_features.id_field)
+        if not identifier and (is_root or id_field is None):
+            identifier = schema.get("$id") or schema.get("id")
+        return id_field, identifier
+
+    def _register_schema_resources(  # noqa: PLR0913
+        self,
+        schema: dict[str, Any],
+        document: str,
+        pointer: str,
+        base: str,
+        keys: set[str],
+        *,
+        id_field: str | None,
     ) -> bool:
         """Index resource URIs and resource-scoped anchors once for each document."""
-        identifier = schema.get(self.schema_features.id_field) or schema.get("$id") or schema.get("id")
+        id_field, identifier = self._schema_resource_identifier(schema, id_field, is_root=not pointer)
         nested = bool(pointer and isinstance(identifier, str) and not identifier.startswith("#"))
         location = f"{document}#{pointer}"
         if isinstance(identifier, str):
@@ -11278,7 +11294,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 keys.add(absolute)
         for path, child in self._iter_schema_resource_children(schema):
             child_pointer = pointer + "".join(f"/{str(part).replace('~', '~0').replace('/', '~1')}" for part in path)
-            nested |= self._register_schema_resources(child, document, child_pointer, base, keys)
+            nested |= self._register_schema_resources(child, document, child_pointer, base, keys, id_field=id_field)
         return nested
 
     def _resolve_schema_resource_ref(self, reference: str, base: str, document: str, *, nested_scope: bool) -> str:
@@ -11310,11 +11326,18 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             absolute = Path(url2pathname(resource[5:])).as_posix() + absolute[len(resource) :]
         return absolute if nested_scope else reference
 
-    def _rewrite_schema_resource_refs(
-        self, schema: dict[str, Any], document: str, base: str, root_base: str
+    def _rewrite_schema_resource_refs(  # noqa: PLR0913
+        self,
+        schema: dict[str, Any],
+        document: str,
+        base: str,
+        root_base: str,
+        id_field: str | None,
+        *,
+        is_root: bool = False,
     ) -> dict[str, Any]:
         """Copy only schema containers whose resource-relative references change."""
-        identifier = schema.get(self.schema_features.id_field) or schema.get("$id") or schema.get("id")
+        id_field, identifier = self._schema_resource_identifier(schema, id_field, is_root=is_root)
         if isinstance(identifier, str):
             base = urljoin(base, identifier).split("#", 1)[0]
         result = schema
@@ -11323,7 +11346,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if resolved != reference:
                 result = {**schema, "$ref": resolved}
         for path, child in self._iter_schema_resource_children(schema):
-            rewritten = self._rewrite_schema_resource_refs(child, document, base, root_base)
+            rewritten = self._rewrite_schema_resource_refs(child, document, base, root_base, id_field)
             if rewritten is child:
                 continue
             if result is schema:
@@ -11350,13 +11373,18 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 self._schema_resource_locations.pop(key, None)
         keys: set[str] = set()
         base = document if is_url(document) else Path(document).as_uri() if document else f"{self.base_path.as_uri()}/"
-        nested = self._register_schema_resources(raw, document, "", base, keys)
+        id_field = (
+            self.schema_features.id_field
+            if getattr(self.config, "jsonschema_version", None) not in {None, JsonSchemaVersion.Auto}
+            else None
+        )
+        nested = self._register_schema_resources(raw, document, "", base, keys, id_field=id_field)
         self._schema_resource_keys[document] = keys
         prepared = raw
         if nested:
             self._has_embedded_schema_resources = True
             prepared = self._rewrite_schema_resource_refs(
-                raw, document, base, self._schema_resource_root_bases[document]
+                raw, document, base, self._schema_resource_root_bases[document], id_field, is_root=True
             )
         self._schema_resource_cache[document] = raw, prepared
         return prepared
