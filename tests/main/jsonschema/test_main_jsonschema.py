@@ -23545,8 +23545,14 @@ COMPOUND_PROPERTY_EXPECTED = EXPECTED_JSON_SCHEMA_PATH / "compound_property_name
 COMPOUND_PROPERTY_CASES = json.loads((COMPOUND_PROPERTY_PAYLOADS / "cases.json").read_text())
 
 
-@pytest.mark.parametrize("name", COMPOUND_PROPERTY_CASES)
-@pytest.mark.parametrize("constraints", [False, True])
+@pytest.mark.parametrize(
+    ("name", "constraints"),
+    [
+        (name, constraints)
+        for name, case in COMPOUND_PROPERTY_CASES.items()
+        for constraints in case.get("constraints", [False, True])
+    ],
+)
 @pytest.mark.parametrize("entry", ["cli", "api", "dynamic"])
 def test_compound_property_name_generation(name: str, constraints: bool, entry: str, output_file: Path) -> None:
     """Preserve string keys, native acceptance, and deterministic generated output."""
@@ -23642,7 +23648,10 @@ def test_compound_property_names_compatibility(
                 "# Compound property names",
                 *(["--generate-schema-validators"] if schema_validators else []),
                 *(["--custom-template-dir", str(template_dir)] if template_dir else []),
+                *(["--field-constraints"] if payload.get("field_constraints") else []),
                 *(["--enable-faux-immutability"] if payload.get("faux_immutable") else []),
+                *(["--collapse-root-models"] if payload.get("collapse_root_models") else []),
+                *(["--use-type-alias"] if payload.get("use_type_alias") else []),
             ],
             assert_func=assert_file_content,
             expected_file=expected_file,
@@ -23655,7 +23664,10 @@ def test_compound_property_names_compatibility(
             custom_file_header="# Compound property names",
             generate_schema_validators=schema_validators,
             custom_template_dir=template_dir,
+            field_constraints=payload.get("field_constraints", False),
             enable_faux_immutability=payload.get("faux_immutable", False),
+            collapse_root_models=payload.get("collapse_root_models", False),
+            use_type_alias=payload.get("use_type_alias", False),
             assert_func=assert_file_content,
             expected_file=expected_file,
         )

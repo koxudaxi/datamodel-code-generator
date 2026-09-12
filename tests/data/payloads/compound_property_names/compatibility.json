@@ -45,5 +45,50 @@
       "ab": 1
     },
     "invalid": []
+  },
+  "unsupported_nonstring": {
+    "valid": {},
+    "invalid": []
+  },
+  "unsupported_nonstring_union": {
+    "valid": {},
+    "invalid": []
+  },
+  "nonstring_lookbehind": {
+    "expected": "unsupported_nonstring.py",
+    "valid": {
+      "bc": 1
+    },
+    "invalid": []
+  },
+  "allof_collapsed": {
+    "input": "unsupported_allof.json",
+    "collapse_root_models": true,
+    "valid": {
+      "ab": 1
+    },
+    "invalid": []
+  },
+  "allof_type_alias": {
+    "input": "unsupported_allof.json",
+    "use_type_alias": true,
+    "valid": {
+      "ab": 1
+    },
+    "invalid": []
+  },
+  "allof_field_constraints": {
+    "input": "unsupported_allof.json",
+    "field_constraints": true,
+    "expected": "allof_field_constraints.py",
+    "valid": {},
+    "invalid": []
+  },
+  "allof_lookbehind_field_constraints": {
+    "input": "allof_lookbehind.json",
+    "field_constraints": true,
+    "expected": "allof_field_constraints.py",
+    "valid": {},
+    "invalid": []
   }
 }

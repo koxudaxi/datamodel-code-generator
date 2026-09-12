@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
-from pydantic import Field, RootModel, constr
+from typing import Any
+
+from pydantic import Field, RootModel
 
 
-class Root(RootModel[dict[constr(pattern=r'^b'), int]]):
-    root: dict[constr(pattern=r'^b'), int] = Field(..., title='Root')
+class Root(RootModel[dict[dict[str, Any] | Any, int]]):
+    root: dict[dict[str, Any] | Any, int] = Field(..., title='Root')

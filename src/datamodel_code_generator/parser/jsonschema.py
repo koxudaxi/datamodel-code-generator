@@ -9642,12 +9642,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         for branch in schema.anyOf:
             if branch is False:
                 continue
-            if (
-                isinstance(branch, JsonSchemaObject)
-                and type(self)._property_names_forbids_all_keys(branch)  # noqa: SLF001
-                and self._get_x_python_type(branch) is None
-            ):
-                continue
             data_type, unrestricted = (
                 (self.data_type_manager.get_data_type(Types.string), True)
                 if branch is True
@@ -9685,6 +9679,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 key_type = self.parse_item(name, property_names, get_special_path("propertyNames/key", path))
                 if (
                     not property_names.allOf
+                    or self.field_constraints
+                    or self.collapse_root_models
                     or (reference := key_type.reference) is None
                     or not isinstance(root_model := reference.source, self.data_model_root_type)
                 ):
@@ -9697,7 +9693,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 ):
                     return key_type
                 if (
-                    root_model.decorators
+                    not root_model.IS_ROOT_MODEL
+                    or root_model.decorators
                     or root_model.extra_template_data.get("config")
                     or property_names.model_fields_set - {"allOf", "title", "description"}
                     or any(
