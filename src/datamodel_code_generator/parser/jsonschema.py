@@ -11778,6 +11778,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 yield source, path_parts
 
     def _iter_local_source_paths(self) -> Iterator[Path]:
+        if self._cache_local_sources and self._source_context.directory_input_filter is not None:
+            self._local_source_cache = tuple(self._iter_source_uncached())
+            yield from (self.base_path / source.path for source in self._local_source_cache)
+            return
         match self.source:
             case Path() as path if path.is_dir():
                 yield from (
@@ -11788,10 +11792,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             case list() as paths:
                 yield from ((self.base_path / path) for path in paths)
 
-    def _source_from_path(self, path: Path) -> Source:
+    def _source_from_path(self, path: Path, *, data: bytes | None = None) -> Source:
         """Load one source path and contextualize cached JSON/YAML parse failures."""
         try:
-            return super()._source_from_path(path)
+            return super()._source_from_path(path, data=data)
         except (json.JSONDecodeError, *get_yaml_parse_errors()) as exc:
             source_path = path.relative_to(self.base_path) if path.is_relative_to(self.base_path) else path
             raise InvalidFileFormatError(exc, self._input_file_type, source=source_path) from exc

@@ -6763,16 +6763,32 @@ def test_main_custom_file_header_with_import(output_file: Path) -> None:
     )
 
 
-def test_main_custom_file_header_with_docstring_and_import(output_file: Path) -> None:
+@pytest.mark.parametrize("directory_input", [False, True])
+def test_main_custom_file_header_with_docstring_and_import(output_file: Path, directory_input: bool) -> None:
     """Test future import placement with docstring and imports in custom header."""
-    run_main_and_assert(
-        input_path=OPEN_API_DATA_PATH / "api.yaml",
-        output_path=output_file,
-        input_file_type=None,
-        assert_func=assert_file_content,
-        expected_file="custom_file_header_with_docstring_and_import.py",
-        extra_args=["--custom-file-header-path", str(DATA_PATH / "custom_file_header_with_docstring_and_import.txt")],
-    )
+    input_path = OPEN_API_DATA_PATH / "api.yaml"
+    if directory_input:
+        input_path = output_file.parent / "schemas"
+        input_path.mkdir()
+        shutil.copyfile(OPEN_API_DATA_PATH / "api.yaml", input_path / "api.yaml")
+        output_file = input_path
+    for _ in range(2):
+        run_main_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type=None,
+            assert_func=assert_file_content,
+            expected_file="custom_file_header_with_docstring_and_import.py",
+            output_to_expected=[("api.py", "custom_file_header_with_docstring_and_import.py")]
+            if directory_input
+            else None,
+            extra_args=[
+                "--custom-file-header-path",
+                str(DATA_PATH / "custom_file_header_with_docstring_and_import.txt"),
+                # Keep helper-created config/parity outputs outside this repeated-input case.
+                *(["--formatters", "builtin"] if directory_input else []),
+            ],
+        )
 
 
 def test_main_custom_file_header_without_future_imports(output_file: Path) -> None:

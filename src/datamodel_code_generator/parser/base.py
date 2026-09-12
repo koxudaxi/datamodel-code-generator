@@ -2871,8 +2871,14 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 yield Source(path=Path(), text=self.source)
             case dict():
                 yield Source.from_dict(self.source)
-            case Path() as path:  # pragma: no cover
+            case Path() as path:
                 if path.is_dir():
+                    if (input_filter := self._source_context.directory_input_filter) is not None:
+                        for source_path, data in input_filter.iter_files(
+                            sorted(path.rglob("*"), key=lambda p: p.name), self.encoding
+                        ):
+                            yield self._source_from_path(source_path, data=data)
+                        return
                     for p in sorted(path.rglob("*"), key=lambda p: p.name):
                         if p.is_file():
                             yield self._source_from_path(p)
@@ -2889,10 +2895,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     ),
                 )
 
-    def _source_from_path(self, path: Path) -> Source:
+    def _source_from_path(self, path: Path, *, data: bytes | None = None) -> Source:
         try:
             prefetched_source = self.run_context.prefetched_source
-            data = prefetched_source[1] if prefetched_source is not None and path == prefetched_source[0] else None
+            if data is None and prefetched_source is not None and path == prefetched_source[0]:
+                data = prefetched_source[1]
             if self._use_parsed_source_cache:
                 return Source.from_cached_path(
                     path, self.base_path, self.encoding, keep_text=self.validation, data=data

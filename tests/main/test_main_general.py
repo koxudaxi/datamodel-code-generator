@@ -3335,23 +3335,33 @@ def test_all_exports_scope_recursive_jsonschema_multi_file(output_dir: Path) -> 
     )
 
 
-def test_custom_file_header_path_prepend_jsonschema_multi_file(output_dir: Path) -> None:
+@pytest.mark.parametrize("layout", ["sibling", "child", "same"])
+def test_custom_file_header_path_prepend_jsonschema_multi_file(output_dir: Path, layout: str) -> None:
     """Prepend a custom header while preserving per-file provenance and future imports."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "all_exports_multi_file",
-        output_path=output_dir,
-        input_file_type="jsonschema",
-        extra_args=[
-            "--disable-timestamp",
-            "--all-exports-scope",
-            "recursive",
-            "--custom-file-header-path",
-            str(DATA_PATH / "custom_file_header_with_docstring_and_import.txt"),
-            "--custom-file-header-mode",
-            "prepend",
-        ],
-        expected_directory=EXPECTED_MAIN_PATH / "jsonschema" / "custom_file_header_path_prepend_multi_file",
-    )
+    input_path = output_dir.parent / "all_exports_multi_file"
+    shutil.copytree(JSON_SCHEMA_DATA_PATH / input_path.name, input_path)
+    output_path = {"sibling": output_dir, "child": input_path / "generated", "same": input_path}[layout]
+    for run in range(2):
+        run_main_and_assert(
+            input_path=input_path,
+            output_path=output_path,
+            input_file_type="jsonschema",
+            extra_args=[
+                "--disable-timestamp",
+                "--all-exports-scope",
+                "recursive",
+                "--custom-file-header-path",
+                str(DATA_PATH / "custom_file_header_with_docstring_and_import.txt"),
+                "--custom-file-header-mode",
+                "prepend",
+                # Avoid helper-created config/parity outputs changing the overlapping layout.
+                *(["--formatters", "builtin"] if layout != "sibling" else []),
+            ],
+            expected_directory=EXPECTED_MAIN_PATH / "jsonschema" / "custom_file_header_path_prepend_multi_file",
+        )
+        if run == 0:
+            for module_path in output_path.rglob("*.py"):
+                module_path.write_bytes(module_path.read_text(encoding="utf-8").replace("\n", "\r\n").encode())
 
 
 def test_all_exports_recursive_local_model_collision_error(
