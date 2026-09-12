@@ -107,5 +107,13 @@
   "length_type_union": {
     "length_type_union_1.py": "lengths_0.py",
     "length_type_union_0.py": "lengths_0.py"
+  },
+  "unsupported_allof": {
+    "unsupported_allof_0.py": "unsupported_allof.py",
+    "unsupported_allof_runtime.txt": "scalar_keys_runtime.txt",
+    "payload": "allof_keys.json",
+    "constraints": [
+      false
+    ]
   }
 }

@@ -23545,8 +23545,14 @@ COMPOUND_PROPERTY_EXPECTED = EXPECTED_JSON_SCHEMA_PATH / "compound_property_name
 COMPOUND_PROPERTY_CASES = json.loads((COMPOUND_PROPERTY_PAYLOADS / "cases.json").read_text())
 
 
-@pytest.mark.parametrize("name", COMPOUND_PROPERTY_CASES)
-@pytest.mark.parametrize("constraints", [False, True])
+@pytest.mark.parametrize(
+    ("name", "constraints"),
+    [
+        (name, constraints)
+        for name, case in COMPOUND_PROPERTY_CASES.items()
+        for constraints in case.get("constraints", [False, True])
+    ],
+)
 @pytest.mark.parametrize("entry", ["cli", "api", "dynamic"])
 def test_compound_property_name_generation(name: str, constraints: bool, entry: str, output_file: Path) -> None:
     """Preserve string keys, native acceptance, and deterministic generated output."""
@@ -23586,7 +23592,9 @@ def test_compound_property_name_generation(name: str, constraints: bool, entry: 
     schema = json.loads(input_path.read_text())
     Draft202012Validator.check_schema(schema)
     validator = Draft202012Validator(schema)
-    payloads = json.loads((COMPOUND_PROPERTY_PAYLOADS / f"{name}.json").read_text())
+    payloads = json.loads(
+        (COMPOUND_PROPERTY_PAYLOADS / COMPOUND_PROPERTY_CASES[name].get("payload", f"{name}.json")).read_text()
+    )
     assert_output(
         json.dumps([validator.is_valid(value) for value in payloads], indent=2) + "\n",
         COMPOUND_PROPERTY_EXPECTED / COMPOUND_PROPERTY_CASES[name].get(f"{name}_runtime.txt", f"{name}_runtime.txt"),
@@ -23626,8 +23634,9 @@ def test_compound_property_names_compatibility(
     name: str, entry: str, output_file: Path, *, schema_validators: bool
 ) -> None:
     """Preserve valid dictionaries when their key constraint has no native type representation."""
-    input_path = COMPOUND_PROPERTY_INPUTS / f"{name}.json"
     payload = json.loads((COMPOUND_PROPERTY_PAYLOADS / "compatibility.json").read_text())[name]
+    input_path = COMPOUND_PROPERTY_INPUTS / payload.get("input", f"{name}.json")
+    template_dir = TEMPLATE_DIR if payload.get("builtin_template_directory") else None
     expected_file = "compound_property_names/" + payload.get("expected", f"{name}.py")
     if entry == "cli":
         run_main_and_assert(
@@ -23638,6 +23647,11 @@ def test_compound_property_names_compatibility(
                 "--custom-file-header",
                 "# Compound property names",
                 *(["--generate-schema-validators"] if schema_validators else []),
+                *(["--custom-template-dir", str(template_dir)] if template_dir else []),
+                *(["--field-constraints"] if payload.get("field_constraints") else []),
+                *(["--enable-faux-immutability"] if payload.get("faux_immutable") else []),
+                *(["--collapse-root-models"] if payload.get("collapse_root_models") else []),
+                *(["--use-type-alias"] if payload.get("use_type_alias") else []),
             ],
             assert_func=assert_file_content,
             expected_file=expected_file,
@@ -23649,6 +23663,11 @@ def test_compound_property_names_compatibility(
             input_file_type=InputFileType.JsonSchema,
             custom_file_header="# Compound property names",
             generate_schema_validators=schema_validators,
+            custom_template_dir=template_dir,
+            field_constraints=payload.get("field_constraints", False),
+            enable_faux_immutability=payload.get("faux_immutable", False),
+            collapse_root_models=payload.get("collapse_root_models", False),
+            use_type_alias=payload.get("use_type_alias", False),
             assert_func=assert_file_content,
             expected_file=expected_file,
         )

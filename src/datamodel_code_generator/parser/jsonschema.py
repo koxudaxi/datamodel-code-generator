@@ -9676,7 +9676,42 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     key_type, _ = self._parse_string_property_name_union(property_names)
                     if key_type is not None:
                         return key_type
-                return self.parse_item(name, property_names, get_special_path("propertyNames/key", path))
+                key_type = self.parse_item(name, property_names, get_special_path("propertyNames/key", path))
+                if (
+                    not property_names.allOf
+                    or self.field_constraints
+                    or self.collapse_root_models
+                    or (reference := key_type.reference) is None
+                    or not isinstance(root_model := reference.source, self.data_model_root_type)
+                ):
+                    return key_type
+                if (
+                    self.custom_template_dir
+                    or self.enable_faux_immutability
+                    or self.validators
+                    or (self.dataclass_arguments and self.dataclass_arguments.get("frozen"))
+                ):
+                    return key_type
+                if (
+                    not root_model.IS_ROOT_MODEL
+                    or root_model.decorators
+                    or root_model.extra_template_data.get("config")
+                    or property_names.model_fields_set - {"allOf", "title", "description"}
+                    or any(
+                        not isinstance(item, JsonSchemaObject)
+                        or item.type != "string"
+                        or item.model_fields_set - {"type", "pattern", "minLength", "maxLength"}
+                        for item in property_names.allOf
+                    )
+                ):
+                    return key_type
+                schemas = cast("list[JsonSchemaObject]", property_names.allOf)
+                merged = JsonSchemaParser._first_typed_schema_dict(schemas)
+                self._merge_schema_constraints(
+                    merged, schemas, intersect=self.allof_merge_mode != AllOfMergeMode.NoMerge
+                )
+                key_type.unregister_reference()
+                return self._parse_property_name_key_schema(self.SCHEMA_OBJECT_TYPE.model_validate(merged))
         return self._parse_property_name_key_schema(property_names)
 
     def _parse_simple_property_name_key_type(
