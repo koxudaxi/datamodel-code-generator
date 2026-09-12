@@ -526,6 +526,15 @@ _JSONSCHEMA_VERSION_PATTERNS: _JsonSchemaVersionPatterns = {
 }
 
 
+def _detect_declared_jsonschema_version(data: dict[str, Any]) -> JsonSchemaVersion | None:
+    """Detect a recognized declaration without applying undeclared-schema heuristics."""
+    if isinstance(schema_url := data.get("$schema", ""), str):
+        for pattern, version in _JSONSCHEMA_VERSION_PATTERNS.items():
+            if pattern in schema_url:
+                return version
+    return None
+
+
 def detect_jsonschema_version(data: dict[str, Any]) -> JsonSchemaVersion:
     """Detect JSON Schema version from $schema field or heuristics.
 
@@ -543,10 +552,8 @@ def detect_jsonschema_version(data: dict[str, Any]) -> JsonSchemaVersion:
     Returns:
         The detected JSON Schema version.
     """
-    if isinstance(schema_url := data.get("$schema", ""), str):
-        for pattern, version in _JSONSCHEMA_VERSION_PATTERNS.items():
-            if pattern in schema_url:
-                return version
+    if (version := _detect_declared_jsonschema_version(data)) is not None:
+        return version
 
     # Heuristic detection based on keywords
     # $defs was introduced in Draft 2019-09, but Draft 2020-12 also uses it.

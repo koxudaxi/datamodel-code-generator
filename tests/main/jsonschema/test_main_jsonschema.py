@@ -58,6 +58,7 @@ from datamodel_code_generator import (
     PythonVersionMin,
     SchemaValidatorType,
     TargetPydanticVersion,
+    VersionMode,
     _clear_parser_source_data_cache,
     cached_path_exists,
     chdir,
@@ -22301,6 +22302,11 @@ RESOURCES_CASES = json.loads((RESOURCES_EXPECTED / "cases.json").read_text(encod
         ),
         *(
             (case, entrypoint)
+            for case in ("id_metadata", "mixed_drafts", "mixed_resources")
+            for entrypoint in ("strict-cli", "strict-api")
+        ),
+        *(
+            (case, entrypoint)
             for case in RESOURCES_CASES
             if "http_requests" in RESOURCES_CASES[case]
             for entrypoint in ("url-cli", "url-api")
@@ -22362,6 +22368,7 @@ def test_nested_schema_resources(tmp_path: Path, case: str, entrypoint: str, for
                     str(DATA_PATH / "custom_file_header.txt"),
                     "--allow-remote-refs" if entrypoint.startswith("url-") else "--no-allow-remote-refs",
                     "--allow-private-network",
+                    *(["--strict-refs"] if entrypoint.startswith("strict-") else []),
                     *(
                         ["--custom-template-dir", str(DATA_PATH / "templates_nested_resources")]
                         if entrypoint.startswith("custom-")
@@ -22382,6 +22389,7 @@ def test_nested_schema_resources(tmp_path: Path, case: str, entrypoint: str, for
                         custom_file_header_path=DATA_PATH / "custom_file_header.txt",
                         allow_remote_refs=entrypoint.startswith("url-"),
                         allow_private_network=True,
+                        strict_refs=entrypoint.startswith("strict-"),
                         custom_template_dir=DATA_PATH / "templates_nested_resources"
                         if entrypoint.startswith("custom-")
                         else None,
@@ -22425,6 +22433,71 @@ def test_nested_schema_resources(tmp_path: Path, case: str, entrypoint: str, for
                 else:
                     records["generated"].append(value.model_dump(mode="json", by_alias=True))
     assert_output(json.dumps(records, indent=2), RESOURCES_EXPECTED / f"{case}_runtime.txt")
+
+
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("strict_refs", [False, True])
+@pytest.mark.parametrize(
+    "case",
+    json.loads((RESOURCES_EXPECTED / "identifier_cases.json").read_text(encoding="utf-8")),
+    ids=lambda case: f"{case['source']}-{case['version']}-{case.get('mode', 'lenient')}",
+)
+def test_schema_resource_identifier_versions(
+    output_file: Path, entrypoint: str, strict_refs: bool, case: dict[str, str]
+) -> None:
+    """Keep root and undeclared ID compatibility while applying explicit version overrides."""
+    source = JSON_SCHEMA_DATA_PATH / "nested_resources" / case["source"] / "root.json"
+    expected_file = RESOURCES_EXPECTED / case["expected"]
+    with warnings.catch_warnings(record=True) as recorded_warnings:
+        warnings.simplefilter("always", UserWarning)
+        if entrypoint == "cli":
+            run_main_and_assert(
+                input_path=source,
+                output_path=output_file,
+                input_file_type="jsonschema",
+                expected_file=expected_file,
+                assert_func=assert_file_content,
+                extra_args=[
+                    "--disable-timestamp",
+                    "--custom-file-header-path",
+                    str(DATA_PATH / "custom_file_header.txt"),
+                    "--no-allow-remote-refs",
+                    "--schema-version",
+                    case["version"],
+                    "--schema-version-mode",
+                    case.get("mode", "lenient"),
+                    *(["--strict-refs"] if strict_refs else []),
+                ],
+            )
+        else:
+            run_generate_and_assert(
+                input_=source,
+                expected_file=expected_file,
+                config=GenerateConfig(
+                    input_file_type=InputFileType.JsonSchema,
+                    output=output_file,
+                    disable_timestamp=True,
+                    custom_file_header_path=DATA_PATH / "custom_file_header.txt",
+                    allow_remote_refs=False,
+                    schema_version=case["version"],
+                    schema_version_mode=VersionMode(case.get("mode", "lenient")),
+                    strict_refs=strict_refs,
+                ),
+            )
+    assert_output(
+        json.dumps([str(warning.message) for warning in recorded_warnings], indent=2),
+        RESOURCES_EXPECTED / "no_warnings.txt",
+    )
+    records = []
+    with _generated_model(output_file, "generated_resource_identifier", "Root") as model:
+        for payload in RESOURCES_CASES["id_metadata"]["payloads"]:
+            try:
+                value = model.model_validate(payload)
+            except ValidationError:  # noqa: PERF203
+                records.append("rejected")
+            else:
+                records.append(value.model_dump(mode="json"))
+    assert_output(json.dumps(records, indent=2), RESOURCES_EXPECTED / case["runtime"])
 
 
 @pytest.mark.parametrize("entrypoint", ["cli", "api", "dict", "url-cli", "url-api"])
