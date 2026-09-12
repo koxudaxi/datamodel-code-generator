@@ -28,13 +28,13 @@ The `String` scalar type represents textual data, represented as UTF-8 character
 
 class Base(TypedDict):
     value: Int
-    typename___1: NotRequired[Literal['Base']]
+    typename__: NotRequired[Literal['Base']]
 
 
 class ZNode(TypedDict):
     camelValue: Int
     typename__: String
-    typename___2: NotRequired[Literal['ZNode']]
+    typename___1: NotRequired[Literal['ZNode']]
 
 
 class Cross(Base):
@@ -48,6 +48,11 @@ class Item(ZNode):
     typename__: String
     typename___1: Int
     typename___2: NotRequired[Literal['Item']]
+
+
+class Ordinary(Base):
+    value: Int
+    typename__: NotRequired[Literal['Ordinary']]
 
 
 class Second(ZNode):

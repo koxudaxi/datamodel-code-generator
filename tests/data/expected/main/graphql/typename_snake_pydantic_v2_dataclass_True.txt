@@ -19,6 +19,10 @@
       "value": 6,
       "typename__": "cross"
     },
+    "ordinary": {
+      "__typename": "Ordinary",
+      "value": 8
+    },
     "solo": {
       "__typename": "Solo",
       "typename__": "solo"
@@ -33,6 +37,10 @@
       "values": {
         "typename__": "node",
         "camelValue": 1
+      },
+      "attributes": {
+        "typename__": "node",
+        "camel_value": 1
       }
     },
     "ANode": {
@@ -44,6 +52,11 @@
       "values": {
         "typename__": "child",
         "camelValue": 2,
+        "typename___1": 12
+      },
+      "attributes": {
+        "typename__": "child",
+        "camel_value": 2,
         "typename___1": 12
       }
     },
@@ -57,6 +70,11 @@
         "typename__": "item",
         "camelValue": 3,
         "typename___1": 13
+      },
+      "attributes": {
+        "typename__": "item",
+        "camel_value": 3,
+        "typename___1": 13
       }
     },
     "Second": {
@@ -69,6 +87,11 @@
         "typename__": "second",
         "camelValue": 4,
         "typename___1": 14
+      },
+      "attributes": {
+        "typename__": "second",
+        "camel_value": 4,
+        "typename___1": 14
       }
     },
     "Base": {
@@ -76,6 +99,9 @@
         "value"
       ],
       "values": {
+        "value": 5
+      },
+      "attributes": {
         "value": 5
       }
     },
@@ -87,6 +113,10 @@
       "values": {
         "value": 6,
         "typename__": "cross"
+      },
+      "attributes": {
+        "value": 6,
+        "typename__": "cross"
       }
     },
     "Solo": {
@@ -94,6 +124,9 @@
         "typename__"
       ],
       "values": {
+        "typename__": "solo"
+      },
+      "attributes": {
         "typename__": "solo"
       }
     },
@@ -107,6 +140,22 @@
         "typename__": "input",
         "typename___1": 17,
         "camelValue": 7
+      },
+      "attributes": {
+        "typename__": "input",
+        "typename___1": 17,
+        "camel_value": 7
+      }
+    },
+    "Ordinary": {
+      "fields": [
+        "value"
+      ],
+      "values": {
+        "value": 8
+      },
+      "attributes": {
+        "value": 8
       }
     }
   }

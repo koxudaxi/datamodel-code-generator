@@ -29,17 +29,17 @@ The `String` scalar type represents textual data, represented as UTF-8 character
 
 class Base(BaseModel):
     value: Int
-    typename___1: Literal['Base'] | None = Field('Base', alias='__typename')
+    typename__: Literal['Base'] | None = Field('Base', alias='__typename')
 
 
 class ZNode(BaseModel):
     camelValue: Int
     typename__: String
-    typename___2: Literal['ZNode'] | None = Field('ZNode', alias='__typename')
+    typename___1: Literal['ZNode'] | None = Field('ZNode', alias='__typename')
 
 
 class Cross(Base):
-    typename__: String
+    typename__: String = Field(..., alias='typename__')
     value: Int
     typename___1: Literal['Cross'] | None = Field('Cross', alias='__typename')
 
@@ -51,6 +51,11 @@ class Item(ZNode):
     typename___2: Literal['Item'] | None = Field(
         'Item', alias='__typename', serialization_alias='__typename'
     )
+
+
+class Ordinary(Base):
+    value: Int
+    typename__: Literal['Ordinary'] | None = Field('Ordinary', alias='__typename')
 
 
 class Second(ZNode):

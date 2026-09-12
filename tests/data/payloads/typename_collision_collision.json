@@ -1,5 +1,5 @@
 {
-  "query": "query Check($input: ItemInput!) {\n item(input: $input) { __typename camelValue typename__ typename___1 }\n choice { __typename ... on Second { camelValue typename__ typename___1 } }\n cross { __typename value typename__ }\n solo { __typename typename__ }\n}",
+  "query": "query Check($input: ItemInput!) {\n item(input: $input) { __typename camelValue typename__ typename___1 }\n choice { __typename ... on Second { camelValue typename__ typename___1 } }\n cross { __typename value typename__ }\n ordinary { __typename value }\n solo { __typename typename__ }\n}",
   "models": {
     "ZNode": {
       "camelValue": 1,
@@ -34,6 +34,9 @@
       "camelValue": 7,
       "typename__": "input",
       "typename___1": 17
+    },
+    "Ordinary": {
+      "value": 8
     }
   },
   "python": {
@@ -70,6 +73,9 @@
       "camelValue": 7,
       "typename__": "input",
       "typename___1": 17
+    },
+    "Ordinary": {
+      "value": 8
     }
   },
   "root": {
@@ -90,6 +96,9 @@
     },
     "solo": {
       "typename__": "solo"
+    },
+    "ordinary": {
+      "value": 8
     }
   },
   "variables": {
@@ -103,6 +112,7 @@
     "Item": "item",
     "Second": "choice",
     "Cross": "cross",
-    "Solo": "solo"
+    "Solo": "solo",
+    "Ordinary": "ordinary"
   }
 }
