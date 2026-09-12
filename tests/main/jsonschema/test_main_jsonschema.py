@@ -3726,9 +3726,18 @@ def test_main_generate_pydantic_v2_dataclass_extra_ignore(output_file: Path) -> 
 
 
 @pytest.mark.parametrize("extra_args", [[], ["--use-type-alias-type"]], ids=["default", "explicit"])
-def test_main_pydantic_v2_dataclass_reference_alias_defaults(output_file: Path, extra_args: list[str]) -> None:
+@pytest.mark.parametrize(
+    "template_dir",
+    [None, TEMPLATE_DIR, DATA_PATH / "templates/mapping_legacy_helper", DATA_PATH / "templates/type_alias_compat"],
+    ids=["builtin", "builtin-directory", "unrelated-custom", "custom-alias"],
+)
+def test_main_pydantic_v2_dataclass_reference_alias_defaults(
+    output_file: Path, extra_args: list[str], template_dir: Path | None
+) -> None:
     """Validate reference aliases and their defaults on supported Pydantic runtimes."""
     suffix = "legacy" if PYDANTIC_V2_DATACLASS_TYPE_ALIAS_NEEDS_FALLBACK else "modern"
+    if template_dir is not None and template_dir.name == "type_alias_compat":
+        suffix = "custom"
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "msgspec_alias_defaults.json",
         output_path=output_file,
@@ -3743,6 +3752,7 @@ def test_main_pydantic_v2_dataclass_reference_alias_defaults(output_file: Path, 
             "--disable-timestamp",
             "--formatters",
             "builtin",
+            *(["--custom-template-dir", str(template_dir)] if template_dir is not None else []),
             *extra_args,
         ],
         force_exec_validation=True,
