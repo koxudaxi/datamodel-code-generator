@@ -70,6 +70,7 @@ def test_root_model_sequence_interface() -> None:
     assert not any(import_.import_ == "Iterator" for import_ in root_model.imports)
 
     root_model.add_sequence_interface("str", "list[str]")
+    root_model.finalize_sequence_interface()
 
     assert root_model.render() == (
         "class TestRootModel(RootModel[list[str]], Sequence[str]):\n"

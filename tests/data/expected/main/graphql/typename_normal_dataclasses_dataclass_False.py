@@ -54,6 +54,12 @@ class Item(ZNode):
 
 
 @dataclass
+class Ordinary(Base):
+    value: Int
+    typename__: Literal['Ordinary'] | None = 'Ordinary'
+
+
+@dataclass
 class Second(ZNode):
     camelValue: Int
     label: String

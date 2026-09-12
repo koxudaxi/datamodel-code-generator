@@ -7,11 +7,7 @@
   },
   "aliases": {
     "schema": "typename_collision_control.graphql",
-    "aliases": {
-      "label": "typename__",
-      "spare": "typename___1",
-      "ItemInput.spare": "extra"
-    }
+    "aliases": "typename_collision_aliases.json"
   },
   "snake": {
     "schema": "typename_collision.graphql",
@@ -19,9 +15,11 @@
   },
   "serialization": {
     "schema": "typename_collision.graphql",
-    "serialization_aliases": {
-      "Item.typename___2": "__typename",
-      "Item.typename__": "custom_name"
-    }
+    "serialization_aliases": "typename_collision_serialization_aliases.json",
+    "aliases": "typename_collision_aliases.json"
+  },
+  "scoped": {
+    "schema": "typename_collision_scoped.graphql",
+    "aliases": "typename_collision_scoped_aliases.json"
   }
 }

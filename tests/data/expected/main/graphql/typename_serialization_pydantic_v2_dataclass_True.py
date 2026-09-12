@@ -41,8 +41,8 @@ class ZNode:
 
 @dataclass
 class Cross(Base):
-    typename__: String
     value: Int
+    typename__: String = Field(..., alias='typename__')
 
 
 @dataclass
@@ -50,6 +50,11 @@ class Item(ZNode):
     camelValue: Int
     typename___1: Int = Field(..., kw_only=True)
     typename__: String = Field(..., serialization_alias='custom_name')
+
+
+@dataclass
+class Ordinary(Base):
+    value: Int
 
 
 @dataclass

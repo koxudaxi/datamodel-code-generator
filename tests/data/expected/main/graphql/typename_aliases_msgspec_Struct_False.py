@@ -28,18 +28,18 @@ The `String` scalar type represents textual data, represented as UTF-8 character
 
 class Base(Struct):
     value: Int
-    typename___1: Literal['Base'] | UnsetType = field(name='__typename', default='Base')
+    typename__: Literal['Base'] | UnsetType = field(name='__typename', default='Base')
 
 
 class ZNode(Struct):
     camelValue: Int
     typename__: String = field(name='label')
-    typename___2: Literal['ZNode'] | UnsetType = field(
+    typename___1: Literal['ZNode'] | UnsetType = field(
         name='__typename', default='ZNode'
     )
 
 
-class Cross(Base, kw_only=True):
+class Cross(Base):
     typename__: String = field(name='label')
     value: Int
     typename___1: Literal['Cross'] | UnsetType = field(
@@ -47,14 +47,21 @@ class Cross(Base, kw_only=True):
     )
 
 
-class Item(ZNode, kw_only=True):
+class Item(ZNode):
     camelValue: Int
     typename__: String = field(name='label')
     typename___1: Int = field(name='spare')
     typename___2: Literal['Item'] | UnsetType = field(name='__typename', default='Item')
 
 
-class Second(ZNode, kw_only=True):
+class Ordinary(Base):
+    value: Int
+    typename__: Literal['Ordinary'] | UnsetType = field(
+        name='__typename', default='Ordinary'
+    )
+
+
+class Second(ZNode):
     camelValue: Int
     typename__: String = field(name='label')
     typename___1: Int = field(name='spare')
@@ -83,7 +90,7 @@ Choice: TypeAlias = Union[
 ]
 
 
-class ANode(ZNode, kw_only=True):
+class ANode(ZNode):
     camelValue: Int
     typename__: String = field(name='label')
     typename___1: Int = field(name='spare')

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import TypeAlias, Union
 
-from msgspec import Struct
+from msgspec import Struct, field
 
 Boolean: TypeAlias = bool
 """
@@ -36,7 +36,7 @@ class ZNode(Struct):
 
 
 class Cross(Base):
-    typename__: String
+    typename__: String = field(name='typename__')
     value: Int
 
 
@@ -44,6 +44,10 @@ class Item(ZNode):
     camelValue: Int
     typename__: String
     typename___1: Int
+
+
+class Ordinary(Base):
+    value: Int
 
 
 class Second(ZNode):
