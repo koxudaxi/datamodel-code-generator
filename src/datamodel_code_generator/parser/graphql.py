@@ -580,8 +580,7 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
                     and (inherited.name not in fields or fields[inherited.name].alias == "__typename")
                 ):
                     field = _copy_data_model_field(inherited)
-                    field.parent = source
-                    source.fields.insert(-1, field)
+                    self.generation_store.insert_field(source, -1, field)
                     fields[field.name] = field
             inherited_typename = next(
                 (
