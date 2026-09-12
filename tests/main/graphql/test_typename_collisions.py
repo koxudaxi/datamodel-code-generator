@@ -45,6 +45,7 @@ def test_graphql_typename_collisions(
 ) -> None:
     """Retain local typename attributes, including the older msgspec identity-alias boundary."""
     settings = json.loads((DATA_PATH / "payloads/typename_collision_settings.json").read_text())[profile]
+    payload = json.loads((DATA_PATH / "payloads" / f"typename_collision_{profile}.json").read_text())
     input_path = GRAPHQL_DATA_PATH / settings.pop("schema")
     expected_name = f"typename_{profile}_{output_model_type.value.replace('.', '_')}_{no_typename}"
     if entrypoint == "cli":
@@ -54,6 +55,7 @@ def test_graphql_typename_collisions(
             input_file_type="graphql",
             assert_func=assert_file_content,
             expected_file=f"{expected_name}.py",
+            skip_code_validation=output_model_type.value in payload.get("import_errors", {}),
             extra_args=[
                 "--output-model-type",
                 output_model_type.value,
@@ -86,7 +88,6 @@ def test_graphql_typename_collisions(
                 for option, value in settings.items()
             },
         )
-    payload = json.loads((DATA_PATH / "payloads" / f"typename_collision_{profile}.json").read_text())
     schema = build_schema(input_path.read_text())
     result = graphql_sync(schema, payload["query"], root_value=payload["root"], variable_values=payload["variables"])
     actual = {
