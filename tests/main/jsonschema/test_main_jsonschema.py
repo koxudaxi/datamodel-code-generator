@@ -23678,7 +23678,7 @@ def test_compound_property_names_compatibility(
         model_name="Root",
         valid_json=json.dumps(payload["valid"]),
         invalid_json=json.dumps(payload["invalid"]),
-        expected_error_type="dict_type",
+        expected_error_type=payload.get("error_type", "dict_type"),
     )
 
 
