@@ -142,6 +142,23 @@ EXCLUDED_CASES: dict[str, str] = {
     "jsonschema/msgspec_decimal_constraints.json": (
         "format decimal strings from hypothesis-jsonschema are arbitrary text that Decimal cannot parse"
     ),
+    **dict.fromkeys(
+        (
+            "jsonschema/nested_resources/draft4_id_scope/root.json",
+            "jsonschema/nested_resources/undeclared_modern_scope/root.json",
+        ),
+        "hypothesis-jsonschema resolves the child resource's local pointer against the outer document, "
+        "producing strings where the source requires integers; test_schema_resource_identifier_versions "
+        "retains the focused generation and runtime checks",
+    ),
+    "jsonschema/nested_resources/undeclared_id_scope/root.json": (
+        "undeclared-dialect compatibility retains legacy id scoping, while jsonschema's default modern "
+        "oracle ignores id; test_schema_resource_identifier_versions covers this compatibility policy"
+    ),
+    "jsonschema/nested_resources/unrecognized_id_scope/root.json": (
+        "unknown-metaschema compatibility has no declared standard oracle; jsonschema warns and selects "
+        "a different modern id policy; test_schema_resource_identifier_versions covers the legacy fallback"
+    ),
     "jsonschema/non_finite_container_defaults.json": (
         "non-finite defaults cannot be represented in the JSON payloads hypothesis-jsonschema generates"
     ),
