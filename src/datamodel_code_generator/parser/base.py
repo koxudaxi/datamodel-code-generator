@@ -108,6 +108,7 @@ from datamodel_code_generator.python_literal import (
     _semantic_value_text,
     rewrite_runtime_expressions,
     rewrite_runtime_imports,
+    runtime_expression_imports,
 )
 from datamodel_code_generator.reference import (
     _ALIAS_RESOLUTION_CLASS_NAME_KEY,
@@ -899,6 +900,7 @@ def _alias_field_runtime_expressions(
     if not imports or (rewritten_imports := rewrite_runtime_imports(imports, aliased_imports)) is imports:
         return False
     field.default = rewrite_runtime_expressions(field.default, aliased_imports)
+    field.extras = cast("dict[str, Any]", rewrite_runtime_expressions(field.extras, aliased_imports))
     field._set_runtime_expression_imports(rewritten_imports)  # noqa: SLF001
     return True
 
@@ -3952,6 +3954,13 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                             **root_type_field.extras,
                             **model_field.extras,
                         }
+                        if root_type_field.runtime_expression_imports:
+                            model_field._set_runtime_expression_imports(  # noqa: SLF001
+                                (
+                                    *model_field.runtime_expression_imports,
+                                    *runtime_expression_imports(model_field.extras),
+                                )
+                            )
                         model_field.process_const()
 
                         if self.field_constraints:

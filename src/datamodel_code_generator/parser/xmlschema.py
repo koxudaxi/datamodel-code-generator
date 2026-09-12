@@ -1694,10 +1694,13 @@ class XMLSchemaParser(JsonSchemaParser):
         self._register_runtime_expression_imports()
 
     def _register_runtime_expression_imports(self) -> None:
-        """Scan XML defaults once so repeated field import collection stays constant time."""
+        """Prepare XML expressions once so repeated field import collection stays constant time."""
         for model in self.results:
             for field in model.fields:
                 field._set_runtime_expression_imports(_collect_python_expression_imports(field.default))  # noqa: SLF001
+                if (prepare_patterns := field.PREPARE_PYTHON_PATTERNS) is not None:
+                    # Only combined XSD patterns use this prefix; single patterns keep their existing representation.
+                    prepare_patterns(field, r"(?=\A")
 
 
 __all__ = ["XMLSchemaParser", "convert_xml_schema_data", "detect_xmlschema_version", "is_xml_schema_text"]

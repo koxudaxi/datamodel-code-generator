@@ -81,6 +81,7 @@ from datamodel_code_generator.model.runtime_validation import (
     unique_items_path_uses_regex,
 )
 from datamodel_code_generator.python_literal import (
+    PythonRuntimeExpression,
     _normalize_string,
     represent_untrusted_python_value,
 )
@@ -203,6 +204,8 @@ _ALIAS_GENERATOR_INTERNAL_KEY = "_alias_generator"
 _NO_ALIAS_INTERNAL_KEY = "_no_alias"
 _MISSING_SENTINEL = "MISSING"
 _CONFIG_ITEMS_TEMPLATE_DATA_KEY = "config_items"
+_COMPILED_PATTERN_KEY = "_compiled_python_pattern"
+_IMPORT_RE_COMPILE = Import.from_full_path("re.compile")
 _NEUTRALIZE_ROOT_MODEL_EXTRA_CONFIG_TEMPLATE_DATA_KEY = "neutralize_root_model_extra_config"
 _MIN_QUOTED_STRING_LENGTH = 2
 _LEGACY_CONFIG_LITERAL_STRINGS: frozenset[str] = frozenset({"False", "None", "True"})
@@ -436,12 +439,46 @@ else:
     _PYDANTIC_V2_DEFAULT_FIELD_KEYS = _PYDANTIC_V2_BASE_FIELD_KEYS | {"deprecated"}
 
 
+def _compiled_python_pattern(pattern: object, prefix: str) -> PythonRuntimeExpression | None:
+    """Keep a synthesized Python pattern independent of its consuming model's config."""
+    if not isinstance(pattern, str) or not pattern.startswith(prefix):
+        return None
+    # Pydantic >=2.8 uses Python's engine for compiled patterns, even without an enclosing model's config.
+    return PythonRuntimeExpression.from_import_call(_IMPORT_RE_COMPILE, repr(pattern), value=str(pattern))
+
+
+def _prepare_python_patterns(field: DataModelFieldBase, prefix: str) -> None:
+    """Prepare selected Python patterns using the existing runtime-expression import machinery."""
+    if (
+        isinstance(field, _PydanticBaseDataModelField)
+        and isinstance(field.constraints, Constraints)
+        and (pattern := _compiled_python_pattern(field.constraints.pattern, prefix))
+        and not field._has_anyurl_outside_container()  # noqa: SLF001
+    ):
+        field.extras[_COMPILED_PATTERN_KEY] = pattern
+        field._set_runtime_expression_imports((*field.runtime_expression_imports, pattern.import_))  # noqa: SLF001
+    for data_type in field.data_type.all_data_types:
+        if data_type.kwargs and (pattern := _compiled_python_pattern(data_type.kwargs.get("pattern"), prefix)):
+            data_type.kwargs["pattern"] = pattern
+            data_type._set_runtime_expression_imports((*data_type.runtime_expression_imports, pattern.import_))  # noqa: SLF001
+
+
+def _apply_compiled_python_pattern(data: dict[str, Any]) -> None:
+    """Replace a surviving pattern constraint without exposing internal expression metadata."""
+    if not isinstance(pattern := data.get(_COMPILED_PATTERN_KEY), PythonRuntimeExpression):
+        return
+    data.pop(_COMPILED_PATTERN_KEY)
+    if data.get("pattern") == str(pattern):
+        data["pattern"] = pattern
+
+
 class DataModelField(_PydanticBaseDataModelField):
     """Pydantic v2 field with Field() constraints and json_schema_extra support."""
 
     SUPPORTS_ANNOTATED_CONSTRAINTS: ClassVar[bool] = True
     ANNOTATED_CONSTRAINTS_CONTEXT: ClassVar[object | None] = _ANNOTATED_CONSTRAINTS_CONTEXT
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = True
+    PREPARE_PYTHON_PATTERNS = staticmethod(_prepare_python_patterns)
     _EXCLUDE_FIELD_KEYS: ClassVar[set[str]] = {
         "alias",
         "default",
@@ -603,6 +640,7 @@ class DataModelField(_PydanticBaseDataModelField):
         return self._type_hint_from_data_type(data_type.model_copy(update={"use_standard_collections": False}))
 
     def _process_data_in_str(self, data: dict[str, Any]) -> None:
+        _apply_compiled_python_pattern(data)
         if self.const:
             # const is removed in pydantic 2.0
             data.pop("const")
@@ -815,6 +853,8 @@ def has_lookaround_pattern(
             return True
         for data_type in field.data_type.all_data_types:
             pattern = (data_type.kwargs or {}).get("pattern")
+            if isinstance(pattern, PythonRuntimeExpression):
+                pattern = str(pattern)
             if pattern and _LOOKAROUND_PATTERN.search(pattern):
                 return True
             if not follow_references or data_type.reference is None:

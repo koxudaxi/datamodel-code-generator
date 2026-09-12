@@ -535,6 +535,7 @@ class DataModelFieldBase(_BaseModel):  # noqa: PLR0904
     """Base class for model field representation and rendering."""
 
     PARSER_CONSTRUCTOR: ClassVar[Callable[..., DataModelFieldBase] | None] = None
+    PREPARE_PYTHON_PATTERNS: ClassVar[Callable[[DataModelFieldBase, str], None] | None] = None
     _FIELD_IMPORTS_CACHE_MAX_SIZE: ClassVar[int] = 4096
     _field_imports_cache: ClassVar[dict[tuple[Any, ...], tuple[Import, ...]]] = {}
     _SEMANTIC_CACHE_KEYS: ClassVar[tuple[str, ...]] = (

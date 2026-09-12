@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from re import compile
 from typing import Annotated
 
 from pydantic import ConfigDict, Field
@@ -11,7 +12,9 @@ from typing_extensions import TypeAliasType
 
 Token = TypeAliasType(
     "Token",
-    Annotated[str, Field(..., pattern='(?=\\A)(?:[A-Z]+|[0-9]+)\\Z', title='Token')],
+    Annotated[
+        str, Field(..., pattern=compile('(?=\\A)(?:[A-Z]+|[0-9]+)\\Z'), title='Token')
+    ],
 )
 
 

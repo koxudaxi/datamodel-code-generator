@@ -1050,6 +1050,75 @@ def test_xmlschema_pattern_alternatives(
                     valid = True
                 results.append({"field": field, "value": value, "valid": valid})
     assert_output(json.dumps(results, indent=2) + "\n", EXPECTED_XML_SCHEMA_PATH / f"{fixture}.validation.txt")
+    if backend != "msgspec.Struct":
+        assert_generated_model_json_validation(
+            output_file,
+            module_name=f"generated_{fixture}_{suffix}_{entrypoint}_alias",
+            model_name="Token",
+            valid_json=json.dumps(cases["alias"]["valid"]),
+            invalid_json=json.dumps(cases["alias"]["invalid"]),
+            expected_error_type="string_pattern_mismatch",
+        )
+
+
+@pytest.mark.parametrize(
+    ("name", "backend", "extra_args"),
+    [
+        (
+            "inherited",
+            "pydantic_v2.BaseModel",
+            [
+                "--field-constraints",
+                "--base-class",
+                "tests.data.python.pattern_intersection_base.PythonRegexIntermediate",
+                "--reuse-model",
+            ],
+        ),
+        ("constrained", "pydantic_v2.dataclass", []),
+        ("collapsed", "pydantic_v2.BaseModel", ["--field-constraints", "--collapse-root-models"]),
+        ("collapsed_dataclass", "pydantic_v2.dataclass", ["--field-constraints", "--collapse-root-models"]),
+        (
+            "custom_alias",
+            "pydantic_v2.BaseModel",
+            [
+                "--field-constraints",
+                "--use-root-model-type-alias",
+                "--custom-template-dir",
+                str(DATA_PATH / "templates" / "root_alias_constraints"),
+            ],
+        ),
+    ],
+)
+@pytest.mark.filterwarnings("ignore:Possible set symmetric difference:FutureWarning")
+def test_xmlschema_compiled_patterns(output_file: Path, name: str, backend: str, extra_args: list[str]) -> None:
+    """Keep Python pattern semantics across import aliases, inheritance and root model transformations."""
+    run_main_and_assert(
+        input_path=XML_SCHEMA_DATA_PATH / "pattern_runtime.xsd",
+        output_path=output_file,
+        input_file_type="xmlschema",
+        extra_args=[
+            "--output-model-type",
+            backend,
+            "--disable-timestamp",
+            "--target-python-version",
+            "3.10",
+            "--formatters",
+            "builtin",
+            *extra_args,
+        ],
+        assert_func=assert_file_content,
+        expected_file=f"pattern_runtime_{name}.py",
+    )
+    cases = json.loads((XML_SCHEMA_DATA_PATH / "pattern_runtime.cases.json").read_text())
+    for case in cases:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name=f"generated_pattern_runtime_{name}",
+            model_name="Root",
+            valid_json=json.dumps(case["valid"]),
+            invalid_json=json.dumps(case["invalid"]),
+            expected_error_type="string_pattern_mismatch",
+        )
 
 
 XSD_PROPERTY_COLLISIONS = (

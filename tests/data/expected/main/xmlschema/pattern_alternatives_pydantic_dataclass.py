@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from re import compile
 from typing import Annotated
 
 from pydantic import ConfigDict, Field
@@ -12,7 +13,10 @@ from typing_extensions import TypeAliasType
 Branches = TypeAliasType(
     "Branches",
     Annotated[
-        str, Field(..., pattern='(?=\\A)(?:ab|cd|xy|[0-9]{2})\\Z', title='Branches')
+        str,
+        Field(
+            ..., pattern=compile('(?=\\A)(?:ab|cd|xy|[0-9]{2})\\Z'), title='Branches'
+        ),
     ],
 )
 
@@ -23,7 +27,9 @@ Deeper = TypeAliasType(
         str,
         Field(
             ...,
-            pattern='(?=\\A(?:(?=\\A(?:(?=\\A)(?:[A-Z]+|[0-9]+)\\Z)\\Z)(?:(?=\\A)(?:[A-M]+|[3-7]+)\\Z)\\Z)\\Z)(?:(?=\\A)(?:[A-C]+|[4-5]+)\\Z)\\Z',
+            pattern=compile(
+                '(?=\\A(?:(?=\\A(?:(?=\\A)(?:[A-Z]+|[0-9]+)\\Z)\\Z)(?:(?=\\A)(?:[A-M]+|[3-7]+)\\Z)\\Z)\\Z)(?:(?=\\A)(?:[A-C]+|[4-5]+)\\Z)\\Z'
+            ),
             title='Deeper',
         ),
     ],
@@ -36,7 +42,9 @@ Derived = TypeAliasType(
         str,
         Field(
             ...,
-            pattern='(?=\\A(?:(?=\\A)(?:[A-Z]+|[0-9]+)\\Z)\\Z)(?:(?=\\A)(?:[A-M]+|[3-7]+)\\Z)\\Z',
+            pattern=compile(
+                '(?=\\A(?:(?=\\A)(?:[A-Z]+|[0-9]+)\\Z)\\Z)(?:(?=\\A)(?:[A-M]+|[3-7]+)\\Z)\\Z'
+            ),
             title='Derived',
         ),
     ],
@@ -44,25 +52,33 @@ Derived = TypeAliasType(
 
 
 Empty = TypeAliasType(
-    "Empty", Annotated[str, Field(..., pattern='(?=\\A)(?:|Q)\\Z', title='Empty')]
+    "Empty",
+    Annotated[str, Field(..., pattern=compile('(?=\\A)(?:|Q)\\Z'), title='Empty')],
 )
 
 
 Escaped = TypeAliasType(
     "Escaped",
-    Annotated[str, Field(..., pattern='(?=\\A)(?:a\\+b|x\\.y)\\Z', title='Escaped')],
+    Annotated[
+        str, Field(..., pattern=compile('(?=\\A)(?:a\\+b|x\\.y)\\Z'), title='Escaped')
+    ],
 )
 
 
 Newline = TypeAliasType(
     "Newline",
-    Annotated[str, Field(..., pattern='(?=\\A)(?:A\nB|C)\\Z', title='Newline')],
+    Annotated[
+        str, Field(..., pattern=compile('(?=\\A)(?:A\nB|C)\\Z'), title='Newline')
+    ],
 )
 
 
 Reversed = TypeAliasType(
     "Reversed",
-    Annotated[str, Field(..., pattern='(?=\\A)(?:[0-9]+|[A-Z]+)\\Z', title='Reversed')],
+    Annotated[
+        str,
+        Field(..., pattern=compile('(?=\\A)(?:[0-9]+|[A-Z]+)\\Z'), title='Reversed'),
+    ],
 )
 
 
@@ -78,7 +94,7 @@ SingleDerived = TypeAliasType(
         str,
         Field(
             ...,
-            pattern='(?=\\A(?:[A-Z]{2}|[0-9]{3})\\Z)(?:[A-Z]+)\\Z',
+            pattern=compile('(?=\\A(?:[A-Z]{2}|[0-9]{3})\\Z)(?:[A-Z]+)\\Z'),
             title='SingleDerived',
         ),
     ],
@@ -87,7 +103,9 @@ SingleDerived = TypeAliasType(
 
 Token = TypeAliasType(
     "Token",
-    Annotated[str, Field(..., pattern='(?=\\A)(?:[A-Z]+|[0-9]+)\\Z', title='Token')],
+    Annotated[
+        str, Field(..., pattern=compile('(?=\\A)(?:[A-Z]+|[0-9]+)\\Z'), title='Token')
+    ],
 )
 
 
@@ -102,4 +120,6 @@ class Root:
     empty: Empty
     escaped: Escaped
     newline: Newline
-    inline: str = Field(..., pattern='(?=\\A(?:[ab]+)\\Z)(?:(?=\\A)(?:a+|b+)\\Z)\\Z')
+    inline: str = Field(
+        ..., pattern=compile('(?=\\A(?:[ab]+)\\Z)(?:(?=\\A)(?:a+|b+)\\Z)\\Z')
+    )
