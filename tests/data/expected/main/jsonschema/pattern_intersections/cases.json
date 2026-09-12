@@ -535,7 +535,6 @@
         }
       }
     ],
-    "unresolved": true,
     "legacy_code_names": {
       "external_22_False": "constrained_objects_disabled_black23.py",
       "external_23_False": "constrained_objects_disabled_black23.py"
@@ -612,7 +611,6 @@
         }
       }
     ],
-    "unresolved": true,
     "legacy_code_names": {
       "external_22_False": "different_literals_disabled_black23.py",
       "external_23_False": "different_literals_disabled_black23.py"
@@ -657,8 +655,7 @@
       {
         "x": {}
       }
-    ],
-    "unresolved": true
+    ]
   },
   "unreachable_declared": {
     "payloads": [

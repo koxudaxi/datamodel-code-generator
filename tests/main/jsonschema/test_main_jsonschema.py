@@ -35,6 +35,7 @@ import pytest
 from jinja2 import TemplateNotFound
 from jsonschema import Draft7Validator, Draft202012Validator, FormatChecker
 from jsonschema import ValidationError as SchemaValidationError
+from jsonschema.exceptions import SchemaError as JsonSchemaError
 from jsonschema.validators import validator_for
 from packaging import version
 from pydantic import VERSION as PYDANTIC_VERSION
@@ -23838,10 +23839,8 @@ def test_pattern_property_intersections(
 @pytest.mark.parametrize("formatter", ["external", "builtin"])
 def test_invalid_pattern_does_not_change_generation(tmp_path: Path, formatter: str) -> None:
     """Keep unsupported regex generation unchanged while limiting intersection detection."""
-    from jsonschema.exceptions import SchemaError
-
     source = JSON_SCHEMA_DATA_PATH / "pattern_intersections_invalid_regex.json"
-    with pytest.raises(SchemaError):
+    with pytest.raises(JsonSchemaError):
         Draft202012Validator.check_schema(json.loads(source.read_text()))
     output = tmp_path / "output.py"
     run_main_and_assert(
@@ -23858,4 +23857,111 @@ def test_invalid_pattern_does_not_change_generation(tmp_path: Path, formatter: s
         ],
         expected_file=PATTERN_INTERSECTION_EXPECTED / "invalid_regex.py",
         skip_code_validation=True,
+    )
+
+
+ADDITIONAL_PATTERN_FIXTURES = JSON_SCHEMA_DATA_PATH / "additional_pattern_intersections"
+
+
+ADDITIONAL_PATTERN_CASES = json.loads((DATA_PATH / "payloads/additional_pattern_intersections.json").read_text())
+
+
+ADDITIONAL_PATTERN_EXPECTED = EXPECTED_JSON_SCHEMA_PATH / "additional_pattern_intersections"
+
+
+@pytest.mark.parametrize("case", ADDITIONAL_PATTERN_CASES)
+@pytest.mark.parametrize("enabled", [False, True])
+@pytest.mark.parametrize("field_constraints", [False, True])
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+@pytest.mark.parametrize("formatter", ["builtin", "external"])
+def test_additional_pattern_intersections(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    case: str,
+    enabled: bool,
+    field_constraints: bool,
+    entrypoint: str,
+    formatter: str,
+) -> None:
+    """Check complete generated code, native validation, dumps and input mutation."""
+    # Each formatter has its own golden for intentionally different formatting.
+    monkeypatch.delenv("DATAMODEL_CODE_GENERATOR_CHECK_BUILTIN_FORMATTER_PARITY", raising=False)
+    source = ADDITIONAL_PATTERN_FIXTURES / f"{case}.json"
+    record = ADDITIONAL_PATTERN_CASES[case]
+    template = JSON_SCHEMA_DATA_PATH.parent / "templates" / record["custom"] if record["custom"] else None
+    output = tmp_path / "output.py"
+    formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
+    mode = f"{enabled}_{field_constraints}_{formatter}"
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=source,
+            output_path=output,
+            input_file_type="jsonschema",
+            extra_args=[
+                "--output-model-type",
+                "pydantic_v2.BaseModel",
+                "--disable-timestamp",
+                "--formatters",
+                *formatters,
+                *(["--generate-schema-validators"] if enabled else []),
+                *(["--field-constraints"] if field_constraints else []),
+                *(["--custom-template-dir", str(template)] if template else []),
+            ],
+            expected_file=ADDITIONAL_PATTERN_EXPECTED
+            / record.get("legacy_code_names", {}).get(
+                f"{mode}_{black.__version__.split('.')[0]}", record["code_names"][mode]
+            ),
+            skip_code_validation=True,
+        )
+    else:
+        run_generate_and_assert(
+            input_=source,
+            config=GenerateConfig(
+                output=output,
+                input_file_type=InputFileType.JsonSchema,
+                output_model_type=DataModelType.PydanticV2BaseModel,
+                disable_timestamp=True,
+                generate_schema_validators=enabled,
+                field_constraints=field_constraints,
+                custom_template_dir=template,
+                formatters=[Formatter(value) for value in formatters],
+            ),
+            expected_file=ADDITIONAL_PATTERN_EXPECTED
+            / record.get("legacy_code_names", {}).get(
+                f"{mode}_{black.__version__.split('.')[0]}", record["code_names"][mode]
+            ),
+        )
+    schema = json.loads(source.read_text())
+    if record.get("invalid_schema"):
+        with pytest.raises(JsonSchemaError):
+            Draft202012Validator.check_schema(schema)
+        native = None
+    else:
+        Draft202012Validator.check_schema(schema)
+        native = Draft202012Validator(schema)
+    records = []
+    with _generated_model(output, "additional_pattern_generated", "Root") as model:
+        for payload in record["payloads"]:
+            result = {"native": native.is_valid(payload)} if native is not None else {}
+            with assert_inputs_not_mutated({"payload": payload}):
+                try:
+                    result["json"] = model.model_validate_json(json.dumps(payload)).model_dump(mode="json")
+                except ValidationError:
+                    result["json"] = "rejected"
+                try:
+                    result["python"] = model.model_validate(payload).model_dump(mode="json")
+                except ValidationError:
+                    result["python"] = "rejected"
+            records.append(result)
+    runtime_expected = (
+        ADDITIONAL_PATTERN_EXPECTED / "pydantic20"
+        if case in {"minimum_number", "minimum_shared"} and PYDANTIC_VERSION.split(".")[:2] == ["2", "0"]
+        else ADDITIONAL_PATTERN_EXPECTED
+    )
+    assert_output(
+        json.dumps(records, indent=2),
+        runtime_expected
+        / record.get("runtime_names", {}).get(
+            f"{enabled}_{field_constraints}", f"{case}_{enabled}_{field_constraints}_runtime.txt"
+        ),
     )

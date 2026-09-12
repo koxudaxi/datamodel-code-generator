@@ -15,8 +15,6 @@
   },
   {
     "schema_valid": false,
-    "generated": {
-      "x": {}
-    }
+    "generated": "rejected"
   }
 ]
