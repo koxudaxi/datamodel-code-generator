@@ -6519,7 +6519,22 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     format_ in self._data_formats.get(schema_type, {}) or (schema_type, format_) in self.type_mappings
                 ):
                     mapped_type = self._get_type_with_mappings(schema_type, format_)
-                    if mapped_type in {Types.date_time, Types.date_time_local} and schema_type == "string":
+                    if schema_type == "string" and mapped_type in {
+                        Types.date,
+                        Types.date_time,
+                        Types.date_time_local,
+                        Types.timedelta,
+                        Types.uuid,
+                        Types.uuid1,
+                        Types.uuid2,
+                        Types.uuid3,
+                        Types.uuid4,
+                        Types.uuid5,
+                        Types.ipv4,
+                        Types.ipv6,
+                        Types.ipv4_network,
+                        Types.ipv6_network,
+                    }:
                         constraint_types = frozenset()
                     elif mapped_type in _NUMBER_CONSTRAINT_TYPES:
                         constraint_types = frozenset({"number"})

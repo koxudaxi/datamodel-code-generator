@@ -418,5 +418,54 @@
     },
     "schema": "number_mapped_string_length",
     "expected_case": "number_mapped_string_length"
+  },
+  {
+    "name": "date_length",
+    "valid": [
+      "2026-01-01"
+    ],
+    "invalid": [
+      []
+    ],
+    "error_type": "date_type",
+    "expected_constraints": false,
+    "dump_file": "date_length_dump.txt"
+  },
+  {
+    "name": "duration_length",
+    "valid": [
+      "PT1S"
+    ],
+    "invalid": [
+      []
+    ],
+    "error_type": "time_delta_type",
+    "expected_constraints": false,
+    "dump_file": "duration_length_dump.txt"
+  },
+  {
+    "name": "uuid4_length",
+    "valid": [
+      "00000000-0000-4000-8000-000000000000"
+    ],
+    "invalid": [
+      "",
+      []
+    ],
+    "error_type": "uuid_parsing",
+    "expected_constraints": false,
+    "dump_file": "uuid4_length_dump.txt"
+  },
+  {
+    "name": "ipv4_length",
+    "valid": [
+      "127.0.0.1"
+    ],
+    "invalid": [
+      []
+    ],
+    "error_type": "ip_v4_address",
+    "expected_constraints": false,
+    "dump_file": "ipv4_length_dump.txt"
   }
 ]

@@ -115,6 +115,14 @@ ALLOF_REF_SIBLING_DIAGNOSTICS = json.loads(
 EXCLUDED_CASES: dict[str, str] = {
     **dict.fromkeys(
         (
+            "jsonschema/allof_outer_constraints/duration_length.json",
+            "jsonschema/allof_outer_constraints/uuid4_length.json",
+        ),
+        "hypothesis-jsonschema generates arbitrary strings for these outer allOf formats; "
+        "test_allof_outer_constraints checks native duration and UUID4 validation and serialization",
+    ),
+    **dict.fromkeys(
+        (
             "jsonschema/allof_outer_constraints/mapped_date_time_length.json",
             "jsonschema/allof_outer_constraints/number_mapped_email_length.json",
             "jsonschema/allof_outer_constraints/number_mapped_string_length.json",
