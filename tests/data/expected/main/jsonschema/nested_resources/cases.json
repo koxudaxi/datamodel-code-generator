@@ -300,5 +300,88 @@
       "root.json"
     ],
     "normal": false
+  },
+  "id_metadata": {
+    "payloads": [
+      {
+        "child": {
+          "value": "ok"
+        }
+      },
+      {
+        "child": {
+          "value": 123
+        }
+      }
+    ],
+    "resources": [
+      "root.json"
+    ],
+    "http_requests": [
+      "/root.json"
+    ],
+    "normal": true
+  },
+  "mixed_drafts": {
+    "payloads": [
+      {
+        "legacy": {
+          "value": "ok"
+        },
+        "modern": {
+          "value": "also ok"
+        }
+      },
+      {
+        "legacy": {
+          "value": 123
+        },
+        "modern": {
+          "value": 456
+        }
+      }
+    ],
+    "resources": [
+      "root.json",
+      "legacy.json",
+      "modern.json"
+    ],
+    "http_requests": [
+      "/root.json",
+      "/legacy.json",
+      "/modern.json"
+    ],
+    "normal": false
+  },
+  "mixed_resources": {
+    "payloads": [
+      {
+        "legacy": {
+          "value": "ok"
+        },
+        "current": {
+          "child": {
+            "value": "also ok"
+          }
+        }
+      },
+      {
+        "legacy": {
+          "value": 123
+        },
+        "current": {
+          "child": {
+            "value": 456
+          }
+        }
+      }
+    ],
+    "resources": [
+      "root.json"
+    ],
+    "http_requests": [
+      "/root.json"
+    ],
+    "normal": false
   }
 }

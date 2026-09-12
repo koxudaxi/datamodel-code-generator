@@ -399,7 +399,7 @@ class OpenAPIParser(JsonSchemaParser):
             root_result.body = self._insert_info_version_constant(root_result.body, self.openapi_info_version)
         return result
 
-    def get_data_type(self, obj: JsonSchemaObject) -> DataType:
+    def _get_data_type(self, obj: JsonSchemaObject, *, localize_constraints: bool) -> DataType:
         """Get data type from JSON schema object, handling OpenAPI nullable semantics.
 
         Uses schema_features.nullable_keyword to handle version differences:
@@ -419,7 +419,7 @@ class OpenAPIParser(JsonSchemaParser):
                 if self.strict_nullable and isinstance(obj.type, str):
                     obj.type = [obj.type, "null"]
 
-        return super().get_data_type(obj)
+        return super()._get_data_type(obj, localize_constraints=localize_constraints)
 
     def _normalize_discriminator_mapping_ref(self, mapping_value: str) -> str:  # noqa: PLR6301
         """Normalize a discriminator mapping value to a full $ref path.

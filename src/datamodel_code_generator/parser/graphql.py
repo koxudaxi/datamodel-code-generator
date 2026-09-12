@@ -564,15 +564,48 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
                 field.name for base in bases for field in base.fields if field.alias == "__typename"
             }
             fields = {field.name: field for field in source.fields}
-            if self.data_model_type.REQUIRES_UNIQUE_FIELD_ALIASES and any(
-                field.name in inherited_typename_names and (field.alias is None or field.alias == field.name)
-                for field in source.fields
+            inherited_fields = None
+            if self.data_model_type.REQUIRES_UNIQUE_FIELD_ALIASES and (
+                conflicts := [
+                    field
+                    for field in source.fields
+                    if field.name in inherited_typename_names and (field.alias is None or field.alias == field.name)
+                ]
             ):
-                self._share_typename_slot(schema, obj)
-                return
+                inherited_fields = get_inherited_fields(bases)
+                excludes = {
+                    cast("str", field.name)
+                    for field in (*source.fields, *inherited_fields.values())
+                    if field.alias != "__typename"
+                }
+                for field in conflicts:
+                    wire_name = cast("str", field.name)
+                    fields.pop(wire_name)
+                    inherited = next(
+                        (
+                            candidate
+                            for candidate in inherited_fields.values()
+                            if (candidate.alias or candidate.name) == wire_name
+                        ),
+                        None,
+                    )
+                    field.name = (
+                        inherited.name
+                        if inherited
+                        else self.model_resolver.get_valid_field_name(
+                            wire_name, excludes=excludes, model_type=self.field_name_model_type
+                        )
+                    )
+                    field.alias = wire_name
+                    field.serialization_alias = self.get_serialization_alias(
+                        wire_name, cast("str", field.name), obj.name
+                    )
+                    excludes.add(cast("str", field.name))
+                    fields[field.name] = field
             if not inherited_typename_names.difference(fields):
                 return
-            inherited_fields = get_inherited_fields(bases)
+            if inherited_fields is None:
+                inherited_fields = get_inherited_fields(bases)
             for inherited in inherited_fields.values():
                 if (
                     inherited.alias != "__typename"
@@ -620,36 +653,3 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
                 pending.extend(implementations.objects)
                 pending.extend(implementations.interfaces)
             resolve(obj)
-
-    def _share_typename_slot(
-        self,
-        schema: graphql.GraphQLSchema,
-        root: graphql.GraphQLObjectType | graphql.GraphQLInterfaceType,
-    ) -> None:
-        """Share a family slot when a backend cannot retain separate inherited aliases."""
-        pending = [root]
-        visited: set[graphql.GraphQLObjectType | graphql.GraphQLInterfaceType] = set()
-        excludes: set[str] = set()
-        typename_fields: list[tuple[str, DataModelFieldBase]] = []
-        while pending:
-            obj = pending.pop()
-            if obj in visited or obj.name not in self.references:
-                continue
-            visited.add(obj)
-            pending.extend(obj.interfaces)
-            if isinstance(obj, graphql.GraphQLInterfaceType):
-                implementations = schema.get_implementations(obj)
-                pending.extend(implementations.objects)
-                pending.extend(implementations.interfaces)
-            source = cast("DataModel", self.references[obj.name].source)
-            for field in source.fields:
-                if field.alias == "__typename":
-                    typename_fields.append((obj.name, field))
-                else:
-                    excludes.add(cast("str", field.name))
-        field_name = self.model_resolver.get_valid_field_name(
-            "typename__", excludes=excludes, model_type=self.field_name_model_type
-        )
-        for name, field in typename_fields:
-            field.name = field_name
-            field.serialization_alias = self.get_serialization_alias("__typename", field_name, name)

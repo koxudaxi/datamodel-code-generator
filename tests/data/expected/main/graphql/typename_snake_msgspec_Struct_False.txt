@@ -33,7 +33,7 @@
       "fields": [
         "camel_value",
         "typename__",
-        "typename___2"
+        "typename___1"
       ],
       "values": {
         "camelValue": 1,
@@ -43,15 +43,15 @@
       "attributes": {
         "camel_value": 1,
         "typename__": "node",
-        "typename___2": "ZNode"
+        "typename___1": "ZNode"
       }
     },
     "ANode": {
       "fields": [
         "camel_value",
         "typename__",
-        "typename___2",
-        "typename___1"
+        "typename___1",
+        "typename___1_1"
       ],
       "values": {
         "camelValue": 2,
@@ -62,16 +62,16 @@
       "attributes": {
         "camel_value": 2,
         "typename__": "child",
-        "typename___2": "ANode",
-        "typename___1": 12
+        "typename___1": "ANode",
+        "typename___1_1": 12
       }
     },
     "Item": {
       "fields": [
         "camel_value",
         "typename__",
-        "typename___2",
-        "typename___1"
+        "typename___1",
+        "typename___1_1"
       ],
       "values": {
         "camelValue": 3,
@@ -82,16 +82,16 @@
       "attributes": {
         "camel_value": 3,
         "typename__": "item",
-        "typename___2": "Item",
-        "typename___1": 13
+        "typename___1": "Item",
+        "typename___1_1": 13
       }
     },
     "Second": {
       "fields": [
         "camel_value",
         "typename__",
-        "typename___2",
-        "typename___1"
+        "typename___1",
+        "typename___1_1"
       ],
       "values": {
         "camelValue": 4,
@@ -102,14 +102,14 @@
       "attributes": {
         "camel_value": 4,
         "typename__": "second",
-        "typename___2": "Second",
-        "typename___1": 14
+        "typename___1": "Second",
+        "typename___1_1": 14
       }
     },
     "Base": {
       "fields": [
         "value",
-        "typename___1"
+        "typename__"
       ],
       "values": {
         "value": 5,
@@ -117,14 +117,14 @@
       },
       "attributes": {
         "value": 5,
-        "typename___1": "Base"
+        "typename__": "Base"
       }
     },
     "Cross": {
       "fields": [
         "value",
-        "typename___1",
-        "typename__"
+        "typename__",
+        "typename___1"
       ],
       "values": {
         "value": 6,
@@ -133,8 +133,8 @@
       },
       "attributes": {
         "value": 6,
-        "typename___1": "Cross",
-        "typename__": "cross"
+        "typename__": "Cross",
+        "typename___1": "cross"
       }
     },
     "Solo": {
@@ -174,7 +174,7 @@
     "Ordinary": {
       "fields": [
         "value",
-        "typename___1"
+        "typename__"
       ],
       "values": {
         "value": 8,
@@ -182,7 +182,7 @@
       },
       "attributes": {
         "value": 8,
-        "typename___1": "Ordinary"
+        "typename__": "Ordinary"
       }
     }
   }

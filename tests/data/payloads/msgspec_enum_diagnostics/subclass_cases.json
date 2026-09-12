@@ -4,7 +4,6 @@
     "indices": [
       0
     ],
-    "error": false,
     "payload": {
       "value": 1
     }
@@ -14,7 +13,6 @@
     "indices": [
       0
     ],
-    "error": false,
     "payload": {
       "value": 0
     }
@@ -24,7 +22,6 @@
     "indices": [
       2
     ],
-    "error": false,
     "payload": {
       "value": 0
     }
@@ -34,27 +31,6 @@
     "indices": [
       0
     ],
-    "error": false,
-    "payload": {
-      "value": 1
-    }
-  },
-  {
-    "name": "subclass_rejected",
-    "indices": [
-      0
-    ],
-    "error": true,
-    "payload": {
-      "value": 1
-    }
-  },
-  {
-    "name": "subclass_reverse",
-    "indices": [
-      1
-    ],
-    "error": true,
     "payload": {
       "value": 1
     }

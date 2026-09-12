@@ -13,6 +13,7 @@ from pydantic import (
     Field,
     RootModel,
     TypeAdapter,
+    conint,
     constr,
     model_validator,
 )
@@ -239,5 +240,5 @@ class Payload(_JsonSchemaRuntimeValidationBase):
     titledValueMap: dict[str, NamedValue]
     modeledIrrelevantConstraintMap: dict[str, ModeledIrrelevantConstraintMap]
     arrayIrrelevantConstraintMap: dict[str, list[int]]
-    heterogeneousValueMap: dict[str, int | str]
+    heterogeneousValueMap: dict[str, conint(ge=1) | str]
     booleanIrrelevantConstraintMap: dict[str, bool]

@@ -279,8 +279,8 @@ def test_parse_python_type_annotation_handles_external_parser_errors(
 
     parse_python_type_annotation.cache_clear()
     monkeypatch.setattr(
-        _python_type_annotation_codec.ast,
-        "parse",
+        _python_type_annotation_codec,
+        "_parse_python_type_annotation_ast",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(error),
     )
 

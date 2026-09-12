@@ -55,6 +55,14 @@ class PatternPropertiesRule:
         return (*data_types, self.additional_property_type)
 
 
+class IndependentDeclaredPatternPropertiesRule(PatternPropertiesRule):
+    """Pattern validation must preserve the input for a declared field."""
+
+
+class IndependentModelPatternPropertiesRule(PatternPropertiesRule):
+    """Distinct pattern models must validate the same original input."""
+
+
 @dataclass(frozen=True)
 class RequiredGroupsRule:
     """Runtime rule for required-property oneOf/anyOf groups."""
