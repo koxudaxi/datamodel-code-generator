@@ -20487,7 +20487,6 @@ EXPLICIT_ALIAS_ALIASES = json.loads((ALIASES_DATA_PATH / "explicit_alias_names.j
         ("reserved_config", DataModelType.PydanticV2BaseModel),
         ("reserved_validate", DataModelType.PydanticV2BaseModel),
         ("reserved_legacy", DataModelType.PydanticV2BaseModel),
-        ("reserved_legacy_prefix", DataModelType.PydanticV2BaseModel),
         ("reserved_msgspec", DataModelType.MsgspecStruct),
         ("discriminator_invalid", DataModelType.PydanticV2BaseModel),
         ("discriminator_keyword", DataModelType.PydanticV2BaseModel),
@@ -20692,6 +20691,73 @@ def test_explicit_alias_names_valid_shadows(
             invalid_json='{"a": "A"}',
             expected_error_type="missing",
             expected_repr=f"AliasNames({name}='A', b=1)",
+        )
+
+
+@pytest.mark.parametrize("target_version", [None, TargetPydanticVersion.V2, TargetPydanticVersion.V2_11])
+@pytest.mark.parametrize("template_dir", [None, DATA_PATH / "templates_pydantic_extra_pre_3593"])
+@pytest.mark.parametrize("case", ["namespace_prefix", "namespace_scoped", "namespace_choices", "namespace_warning"])
+def test_explicit_alias_names_namespace_prefix(
+    case: str, template_dir: Path | None, target_version: TargetPydanticVersion | None, output_file: Path
+) -> None:
+    """Keep namespace-only aliases usable on 2.0.3+ and expose the existing 2.0.0 import limitation."""
+    expected_case = "namespace_prefix" if case == "namespace_scoped" else case
+    expected_file = f"explicit_alias_names_{expected_case}.py"
+    aliases = EXPLICIT_ALIAS_ALIASES[case]
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "explicit_alias_names.json",
+        output_path=output_file,
+        input_file_type=InputFileType.JsonSchema,
+        aliases=aliases,
+        target_pydantic_version=target_version,
+        custom_template_dir=template_dir,
+        disable_timestamp=True,
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        unchanged_inputs={"aliases": aliases},
+    )
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "explicit_alias_names.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--aliases",
+            json.dumps(aliases),
+            "--disable-timestamp",
+            *(["--target-pydantic-version", target_version.value] if target_version else []),
+            *(["--custom-template-dir", str(template_dir)] if template_dir else []),
+        ],
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+    )
+    if PYDANTIC_VERSION in {"2.0", "2.0.0"}:
+        with pytest.raises(NameError, match='has conflict with protected namespace "model_"'):
+            _assert_python_module_importable(output_file, "namespace_output", "AliasNames")
+        return
+    payloads = json.loads((DATA_PATH / "payloads/explicit_alias_namespace_prefix.json").read_text())
+    with (
+        pytest.warns(UserWarning, match="protected namespace")
+        if case == "namespace_warning" or version.parse(PYDANTIC_VERSION) < version.parse("2.10")
+        else nullcontext(),
+        _generated_model(output_file, "namespace_output", "AliasNames") as model,
+    ):
+        parsed = model.model_validate(payloads["choice" if case == "namespace_choices" else "valid"])
+        _assert_model_json_invalid(model.model_validate, payloads["invalid"], "missing")
+        assert_output(
+            json.dumps(
+                {
+                    "fields": list(model.model_fields),
+                    "attribute": getattr(
+                        parsed, "model_validate_custom" if case == "namespace_warning" else "model_foo"
+                    ),
+                    "dump": parsed.model_dump(),
+                    "dump_by_alias": parsed.model_dump(by_alias=True),
+                    "config": model.model_config,
+                },
+                indent=2,
+            )
+            + "\n",
+            EXPECTED_JSON_SCHEMA_PATH / f"explicit_alias_names_{expected_case}_runtime.txt",
         )
 
 

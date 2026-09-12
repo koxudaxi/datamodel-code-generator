@@ -819,9 +819,11 @@ def has_lookaround_pattern(
 
 
 def _explicit_alias_conflicts_with_pydantic(field: DataModelFieldBase, name: str) -> bool:
-    """Respect generated namespace configuration without importing custom bases."""
+    """Respect configured namespaces for actual attribute collisions, retaining warning-only aliases."""
     if name == "model_config" or name.startswith("_"):
         return True
+    if not hasattr(PydanticBaseModel, name):
+        return False
     model = cast("DataModel", field.parent)
     match model.extra_template_data.get("target_pydantic_version"):
         case TargetPydanticVersion() | str() as target_version if not _is_pydantic_version_at_least(
@@ -829,8 +831,6 @@ def _explicit_alias_conflicts_with_pydantic(field: DataModelFieldBase, name: str
         ):
             namespaces = ("model_",)
         case _:
-            if not hasattr(PydanticBaseModel, name):
-                return False
             namespaces = ("model_validate", "model_dump")
     pending = [model]
     while pending:
