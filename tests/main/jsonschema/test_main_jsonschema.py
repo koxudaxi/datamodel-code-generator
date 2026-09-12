@@ -68,7 +68,7 @@ from datamodel_code_generator import (
     load_data_from_path,
 )
 from datamodel_code_generator.__main__ import Exit
-from datamodel_code_generator.format import Formatter, is_supported_in_black
+from datamodel_code_generator.format import DatetimeClassType, Formatter, is_supported_in_black
 from datamodel_code_generator.model import base as model_base
 from datamodel_code_generator.model import get_data_model_types
 from datamodel_code_generator.model.base import TEMPLATE_DIR
@@ -21903,6 +21903,13 @@ def test_allof_literal_patterns(
             "mapped_date_time_length",
             "nullable_date_time_length",
             "mapped_number",
+            "integer_date_time_bounds",
+            "number_date_time_bounds",
+            "number_mapped_string_length",
+            "number_mapped_email_length",
+            "number_mapped_binary_length",
+            "number_mapped_password_length",
+            "number_mapped_hostname_length",
         )
     ]
     + [(case, enabled) for case in ("enum", "const") for enabled in (False, True)],
@@ -21917,7 +21924,7 @@ def test_allof_outer_constraints(
     formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
     suffix = "_validators" if validators else ""
     expected_constraints = payloads.get("expected_constraints", constraints or validators or case == "format")
-    expected = f"allof_outer_constraints/{case}{suffix}_{expected_constraints}_all.py"
+    expected = f"allof_outer_constraints/{payloads.get('expected_case', case)}{suffix}_{expected_constraints}_all.py"
     with pytest.warns(UserWarning, match=payloads["warning"]) if "warning" in payloads else nullcontext():
         if entrypoint == "cli":
             run_main_and_assert(
@@ -21935,6 +21942,7 @@ def test_allof_outer_constraints(
                     *(["--field-constraints"] if constraints else []),
                     *(["--generate-schema-validators"] if validators else []),
                     *(["--type-mappings", *payloads["type_mappings"]] if "type_mappings" in payloads else []),
+                    *(["--output-datetime-class", payloads["datetime_class"]] if "datetime_class" in payloads else []),
                 ],
             )
         else:
@@ -21949,18 +21957,26 @@ def test_allof_outer_constraints(
                 field_constraints=constraints,
                 generate_schema_validators=validators,
                 type_mappings=payloads.get("type_mappings"),
+                output_datetime_class=DatetimeClassType(payloads["datetime_class"])
+                if "datetime_class" in payloads
+                else None,
                 formatters=[Formatter(value) for value in formatters],
             )
     error_type = payloads.get("validator_error_type", payloads["error_type"]) if validators else payloads["error_type"]
-    validator = Draft7Validator(json.loads(schema.read_text()), format_checker=FormatChecker())
+    validator = Draft7Validator(
+        payloads.get("mapped_schema", json.loads(schema.read_text())), format_checker=FormatChecker()
+    )
     with _generated_model(output_file, "allof_outer_constraints", "Root") as model:
-        validate = _model_json_validator(model)
+        python_validation = payloads.get("python_validation", False)
+        validate = model.model_validate if python_validation else _model_json_validator(model)
         assert_output(
             "\n".join(model.model_fields) + "\n",
             EXPECTED_JSON_SCHEMA_PATH / "allof_outer_constraints/root_fields.txt",
         )
         for value in payloads["valid"]:
             validator.validate(value)
+            if python_validation:
+                continue
             assert_generated_model_json_validation(
                 output_file,
                 module_name="allof_outer_constraints_valid",
@@ -21974,13 +21990,15 @@ def test_allof_outer_constraints(
         if "dump_file" in payloads:
             assert_output(
                 json.dumps([model.model_validate(value).model_dump(mode="json") for value in payloads["valid"]]) + "\n",
-                EXPECTED_JSON_SCHEMA_PATH / "allof_outer_constraints" / payloads["dump_file"],
+                EXPECTED_JSON_SCHEMA_PATH
+                / "allof_outer_constraints"
+                / payloads.get("runtime_dump_files", {}).get(PYDANTIC_VERSION, payloads["dump_file"]),
             )
         for value in payloads["invalid"]:
             with pytest.raises(SchemaValidationError):
                 validator.validate(value)
             with pytest.raises(ValidationError):
-                validate(json.dumps(value))
+                validate(value if python_validation else json.dumps(value))
         for value in payloads.get("literal_invalid", []):
             with pytest.raises(SchemaValidationError):
                 validator.validate(value)

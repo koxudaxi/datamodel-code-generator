@@ -6519,10 +6519,19 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     format_ in self._data_formats.get(schema_type, {}) or (schema_type, format_) in self.type_mappings
                 ):
                     mapped_type = self._get_type_with_mappings(schema_type, format_)
-                    if mapped_type in {Types.date_time, Types.date_time_local}:
+                    if mapped_type in {Types.date_time, Types.date_time_local} and schema_type == "string":
                         constraint_types = frozenset()
                     elif mapped_type in _NUMBER_CONSTRAINT_TYPES:
                         constraint_types = frozenset({"number"})
+                    elif mapped_type in {
+                        Types.string,
+                        Types.byte,
+                        Types.binary,
+                        Types.password,
+                        Types.email,
+                        Types.hostname,
+                    }:
+                        constraint_types = frozenset({"string"})
                 merged_dict = self._drop_incompatible_inherited_constraints(merged_dict, constraint_types)
             merged_schema = self.SCHEMA_OBJECT_TYPE.model_validate(merged_dict)
 
