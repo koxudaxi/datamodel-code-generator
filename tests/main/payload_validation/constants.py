@@ -115,6 +115,23 @@ ALLOF_REF_SIBLING_DIAGNOSTICS = json.loads(
 EXCLUDED_CASES: dict[str, str] = {
     **dict.fromkeys(
         (
+            "jsonschema/allof_outer_constraints/mapped_date_time_length.json",
+            "jsonschema/allof_outer_constraints/number_mapped_email_length.json",
+            "jsonschema/allof_outer_constraints/number_mapped_string_length.json",
+        ),
+        "custom type-mapping fixtures require explicit generation options; test_allof_outer_constraints "
+        "checks the configured runtime types and their mapped schema constraints",
+    ),
+    **dict.fromkeys(
+        (
+            "jsonschema/allof_outer_constraints/unknown_format.json",
+            "jsonschema/allof_outer_constraints/unknown_length.json",
+        ),
+        "unknown formats intentionally emit compatibility warnings; test_allof_outer_constraints "
+        "asserts these warnings and the fallback runtime behavior",
+    ),
+    **dict.fromkeys(
+        (
             "jsonschema/compound_property_names/unsupported_allof.json",
             "jsonschema/compound_property_names/unsupported_one_sibling.json",
             "jsonschema/compound_property_names/unsupported_sibling.json",
@@ -239,6 +256,14 @@ PAYLOAD_BACKEND_EXTRA_ARGS_BY_CASE_ID: dict[str, dict[PayloadBackend, tuple[str,
     },
 }
 ROUND_TRIP_EXCLUDED_CASES: dict[str, str] = {
+    **dict.fromkeys(
+        (
+            "jsonschema/allof_outer_constraints/integer_date_time_bounds.json",
+            "jsonschema/allof_outer_constraints/number_date_time_bounds.json",
+        ),
+        "native Pydantic datetime JSON serialization emits strings for numeric timestamps; "
+        "test_allof_outer_constraints checks the preserved numeric bounds and exact serialized values",
+    ),
     "jsonschema/default_factory_nested_model_with_dict.json": (
         "pydantic union branch normalization can dump a oneOf value into a shape that matches multiple branches"
     ),
