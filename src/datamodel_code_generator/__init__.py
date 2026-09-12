@@ -2046,7 +2046,9 @@ def _prepare_directory_input(input_: _GenerationInput, config: GenerateConfig) -
                 headers.append(custom_header)
             headers.append(_build_header_with_future_imports(custom_header, "from __future__ import annotations"))
     config._directory_input_filter = DirectoryInputFilter(  # noqa: SLF001
-        frozenset(files), output_directory, tuple(headers)
+        frozenset(files),
+        output_directory,
+        tuple(header.replace("\r\n", "\n").replace("\r", "\n") for header in headers),
     )
     return config
 

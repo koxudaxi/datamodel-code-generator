@@ -91,7 +91,7 @@ class DirectoryInputFilter:
                         source_path = Path(source_from_cache(str(path)))
                 if source_path.suffix == ".py" and (source_path == path or source_path.is_file()):
                     source_data = source_path.read_bytes()
-                    text = source_data.decode(encoding)
+                    text = source_data.decode(encoding).replace("\r\n", "\n").replace("\r", "\n")
                     if self._is_generated(text) or (source_path.name == "__init__.py" and not text.strip()):
                         continue
                     if source_path == path:

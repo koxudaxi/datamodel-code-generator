@@ -3341,7 +3341,7 @@ def test_custom_file_header_path_prepend_jsonschema_multi_file(output_dir: Path,
     input_path = output_dir.parent / "all_exports_multi_file"
     shutil.copytree(JSON_SCHEMA_DATA_PATH / input_path.name, input_path)
     output_path = {"sibling": output_dir, "child": input_path / "generated", "same": input_path}[layout]
-    for _ in range(2):
+    for run in range(2):
         run_main_and_assert(
             input_path=input_path,
             output_path=output_path,
@@ -3357,6 +3357,9 @@ def test_custom_file_header_path_prepend_jsonschema_multi_file(output_dir: Path,
             ],
             expected_directory=EXPECTED_MAIN_PATH / "jsonschema" / "custom_file_header_path_prepend_multi_file",
         )
+        if run == 0:
+            for module_path in output_path.rglob("*.py"):
+                module_path.write_bytes(module_path.read_text(encoding="utf-8").replace("\n", "\r\n").encode())
 
 
 def test_all_exports_recursive_local_model_collision_error(
