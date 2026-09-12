@@ -73,6 +73,8 @@ from datamodel_code_generator.model.pydantic_v2.version import (
     _get_dict_key_reference_classes_capability,
 )
 from datamodel_code_generator.model.runtime_validation import (
+    IndependentDeclaredPatternPropertiesRule,
+    IndependentModelPatternPropertiesRule,
     SchemaRuntimeValidation,
     _is_internal_schema_runtime_validation,
     conditional_value_uses_json_equality,
@@ -156,6 +158,14 @@ def _supports_pydantic_typed_extra_dict_key(data_type: DataType) -> bool:  # noq
         ):
             return True
     return False
+
+
+def _get_plain_pattern_root_types() -> tuple[type, type, type, type]:
+    """Identify the uncustomized model types eligible for inert root annotations."""
+    from .root_model import RootModel  # noqa: PLC0415
+    from .types import DataTypeManager  # noqa: PLC0415
+
+    return BaseModel, RootModel, DataModelField, DataTypeManager
 
 
 def _get_schema_runtime_validation_root_model() -> type[DataModel]:
@@ -970,6 +980,7 @@ class BaseModel(BaseModelBase):
     SUPPORTS_FIELD_RENAMING: ClassVar[bool] = True
     SUPPORTS_ANNOTATED_CONSTRAINTS: ClassVar[bool] = True
     SUPPORTS_SCHEMA_RUNTIME_VALIDATION: ClassVar[bool] = True
+    PLAIN_PATTERN_ROOT_TYPES = staticmethod(_get_plain_pattern_root_types)
     SCHEMA_RUNTIME_VALIDATION_ROOT_MODEL = staticmethod(_get_schema_runtime_validation_root_model)
     ANNOTATED_CONSTRAINTS_CONTEXT: ClassVar[object | None] = _ANNOTATED_CONSTRAINTS_CONTEXT
     SUPPORTS_CONFIG_EXTRA: ClassVar[bool] = True
@@ -1559,6 +1570,17 @@ class BaseModel(BaseModelBase):
                 for rule in runtime_validation.unique_items
             ),
         }
+        if any(
+            isinstance(rule, IndependentDeclaredPatternPropertiesRule)
+            or (
+                isinstance(rule, IndependentModelPatternPropertiesRule)
+                and len({data_type.reference.path for _, data_type in rule.pattern_properties if data_type.reference})
+                > 1
+            )
+            for validation in runtime_validations
+            for rule in validation.pattern_properties
+        ):
+            context["has_pattern_property_intersections"] = True
         if custom_template_dir is None and cls.__module__.startswith("datamodel_code_generator.model."):
             from datamodel_code_generator.model._compiled_templates import get_builtin_renderer  # noqa: PLC0415
 

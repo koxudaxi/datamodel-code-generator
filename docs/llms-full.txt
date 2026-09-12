@@ -7662,6 +7662,14 @@ When a schema defines a simple type (not an object with properties), `datamodel-
 - 📌 RootModel and type aliases do not fully support field-specific metadata (default, alias, etc). See [Named Type Aliases](https://docs.pydantic.dev/latest/concepts/types/#named-type-aliases) for details.
 - 🚫 Type aliases do not support some RootModel features (e.g. `model_config`)
 - 📄 A RootModel or type alias is also generated for the main schema, allowing you to define a single type alias from a schema file (e.g. `model.json` containing `{"title": "MyString", "type": "string"}`)
+
+When `--use-root-model-type-alias` is enabled, roots with field constraints or
+patterns that require Python regex configuration use a regular `RootModel` class
+to preserve validation. Unconstrained roots and constraints already represented
+in the alias type keep the alias form. This does not change `--use-type-alias`.
+An existing custom `pydantic_v2/RootModelTypeAlias.jinja2` remains selected;
+that template is responsible for preserving its root constraints.
+
 ## 📊 Type Alias Behavior by Output Type and Python Version
 
 The type of type alias generated depends on the output model type and target Python version:
@@ -31960,6 +31968,13 @@ composed object models, required-only oneOf/anyOf groups, simple
 if/then/else required-property conditions, and uniqueItems array validation.
 This feature is experimental and may change as JSON Schema coverage is expanded.
 
+With standard models and templates, required names absent from generated fields
+are checked against the raw object input. This also preserves required names
+that are not declared in `properties` when validating overlapping open object
+patterns. `--force-optional` retains its existing behavior. Custom base classes,
+custom templates, and extra template data retain their previous handling of
+undeclared required names.
+
 When generating uniqueItems validation, do not override
 `pydantic_v2/schema_runtime_validation_helpers.jinja2`; custom helper overrides
 are unsupported and generation fails fast.
@@ -41532,6 +41547,11 @@ datamodel-codegen --allof-merge-mode all ...
 # Don't merge any fields
 datamodel-codegen --allof-merge-mode none ...
 ```
+
+When primitive `allOf` branches are merged, combining `number` and `integer`
+produces `integer` in every merge mode. Numeric type arrays may also include
+`null`; only types shared by every branch are retained, in their original order.
+An empty numeric/null intersection raises a schema error.
 
 See [CLI Reference: `--allof-merge-mode`](cli-reference/typing-customization.md#allof-merge-mode) for details.
 

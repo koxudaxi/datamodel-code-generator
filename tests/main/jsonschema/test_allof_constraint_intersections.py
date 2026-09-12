@@ -8,8 +8,7 @@ from typing import TYPE_CHECKING
 import pytest
 from jsonschema import Draft202012Validator
 
-from datamodel_code_generator import InputFileType, SchemaParseError, generate
-from datamodel_code_generator.__main__ import Exit
+from datamodel_code_generator import InputFileType
 from datamodel_code_generator.enums import AllOfClassHierarchy, AllOfMergeMode
 from tests.conftest import assert_output
 from tests.main.conftest import (
@@ -123,26 +122,42 @@ def test_allof_constraint_intersections(
 
 @pytest.mark.parametrize("fixture", ["empty_enum", "boolean_number_enum", "complex_empty_enum", "empty_enums"])
 @pytest.mark.parametrize("entry_point", ["api", "cli"])
+@pytest.mark.parametrize("schema_validators", [False, True])
 def test_allof_empty_enum_intersection(
-    output_file: Path, capsys: pytest.CaptureFixture[str], fixture: str, entry_point: str
+    output_file: Path, fixture: str, entry_point: str, *, schema_validators: bool
 ) -> None:
-    """Report unsupported empty intersections instead of widening them to unconstrained values."""
-    input_path = DATA_PATH / "parser" / "jsonschema" / "allof_constraint_intersections" / f"{fixture}.json"
-    expected_error = EXPECTED_JSON_SCHEMA_PATH / "allof_constraint_intersections" / "empty_enum.txt"
+    """Keep optional properties usable when their enum intersection has no values."""
+    input_path = DATA_PATH / "parser/jsonschema/allof_constraint_intersections" / f"{fixture}.json"
+    expected_file = f"allof_constraint_intersections/{fixture}.py"
     if entry_point == "api":
-        with pytest.raises(SchemaParseError) as error:
-            generate(input_path, input_file_type=InputFileType.JsonSchema)
-        assert_output(f"{error.value}\n", expected_error)
+        run_generate_file_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            disable_timestamp=True,
+            generate_schema_validators=schema_validators,
+            assert_func=assert_file_content,
+            expected_file=expected_file,
+        )
     else:
         run_main_and_assert(
             input_path=input_path,
             output_path=output_file,
             input_file_type="jsonschema",
-            expected_exit=Exit.ERROR,
-            capsys=capsys,
-            expected_stderr=expected_error.read_text(encoding="utf-8"),
-            output_should_not_exist=True,
+            extra_args=["--disable-timestamp", *(["--generate-schema-validators"] if schema_validators else [])],
+            assert_func=assert_file_content,
+            expected_file=expected_file,
         )
+    payloads = json.loads((DATA_PATH / "payloads/allof_constraint_intersection_empty.json").read_text())
+    Draft202012Validator(json.loads(input_path.read_text())).validate(payloads["valid"])
+    assert_generated_model_json_validation(
+        output_file,
+        module_name=f"allof_empty_enum_{fixture}_{entry_point}",
+        model_name="Root",
+        valid_json=json.dumps(payloads["valid"]),
+        invalid_json=json.dumps(payloads["invalid"]),
+        expected_error_type="model_type",
+    )
 
 
 @pytest.mark.parametrize("mode", ["partial", "equal"])
@@ -170,12 +185,12 @@ def test_allof_enum_scalar_subclasses(output_file: Path, mode: str, scalar_kind:
     expected = EXPECTED_JSON_SCHEMA_PATH / "allof_constraint_intersections" / f"scalars_{mode}_api{suffix}.py"
     run_generate_and_assert(
         input_=schema,
+        output=output_file,
         expected_file=expected,
         assert_input_unchanged=True,
         input_file_type=InputFileType.JsonSchema,
         disable_timestamp=True,
     )
-    generate(schema, input_file_type=InputFileType.JsonSchema, output=output_file, disable_timestamp=True)
     payloads = json.loads(
         (DATA_PATH / "payloads/allof_constraint_intersection_scalars.json").read_text(encoding="utf-8")
     )

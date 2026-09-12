@@ -8,6 +8,10 @@ from datamodel_code_generator.format import PythonVersion, is_supported_in_black
 from tests.main.conftest import CURRENT_PYTHON_VERSION, DATA_PATH
 from tests.main.payload_validation.models import PayloadBackend
 
+PAYLOAD_CODEGEN_WARNING_FILES: dict[str, str] = json.loads(
+    (DATA_PATH / "payloads/numeric_allof_type_warning_files.json").read_text(encoding="utf-8")
+)
+
 PAYLOAD_CLASS_NAME = "Payload"
 PAYLOAD_CURRENT_PYTHON_VERSION = PythonVersion(CURRENT_PYTHON_VERSION)
 SCHEMA_FILE_SUFFIXES = {".json", ".yaml", ".yml"}
@@ -109,6 +113,41 @@ ALLOF_REF_SIBLING_DIAGNOSTICS = json.loads(
     (DATA_PATH / "payloads/allof_ref_sibling_diagnostics.json").read_text(encoding="utf-8")
 )
 EXCLUDED_CASES: dict[str, str] = {
+    **dict.fromkeys(
+        (
+            "jsonschema/allof_outer_constraints/duration_length.json",
+            "jsonschema/allof_outer_constraints/uuid4_length.json",
+        ),
+        "hypothesis-jsonschema generates arbitrary strings for these outer allOf formats; "
+        "test_allof_outer_constraints checks native duration and UUID4 validation and serialization",
+    ),
+    **dict.fromkeys(
+        (
+            "jsonschema/allof_outer_constraints/mapped_date_time_length.json",
+            "jsonschema/allof_outer_constraints/number_mapped_email_length.json",
+            "jsonschema/allof_outer_constraints/number_mapped_string_length.json",
+        ),
+        "custom type-mapping fixtures require explicit generation options; test_allof_outer_constraints "
+        "checks the configured runtime types and their mapped schema constraints",
+    ),
+    **dict.fromkeys(
+        (
+            "jsonschema/allof_outer_constraints/unknown_format.json",
+            "jsonschema/allof_outer_constraints/unknown_length.json",
+        ),
+        "unknown formats intentionally emit compatibility warnings; test_allof_outer_constraints "
+        "asserts these warnings and the fallback runtime behavior",
+    ),
+    **dict.fromkeys(
+        (
+            "jsonschema/compound_property_names/allof_branch_title.json",
+            "jsonschema/compound_property_names/allof_lookbehind.json",
+            "jsonschema/compound_property_names/unsupported_one_sibling.json",
+            "jsonschema/compound_property_names/unsupported_sibling.json",
+        ),
+        "legacy propertyNames model keys cannot validate nonempty dictionaries; "
+        "valid empty dictionaries are covered by test_compound_property_names_compatibility",
+    ),
     **{
         f"jsonschema/allof_ref_siblings/{name}.json": (
             "empty literal intersection; CLI/API diagnostics and native rejection are exercised by "
@@ -128,6 +167,23 @@ EXCLUDED_CASES: dict[str, str] = {
     ),
     "jsonschema/msgspec_decimal_constraints.json": (
         "format decimal strings from hypothesis-jsonschema are arbitrary text that Decimal cannot parse"
+    ),
+    **dict.fromkeys(
+        (
+            "jsonschema/nested_resources/draft4_id_scope/root.json",
+            "jsonschema/nested_resources/undeclared_modern_scope/root.json",
+        ),
+        "hypothesis-jsonschema resolves the child resource's local pointer against the outer document, "
+        "producing strings where the source requires integers; test_schema_resource_identifier_versions "
+        "retains the focused generation and runtime checks",
+    ),
+    "jsonschema/nested_resources/undeclared_id_scope/root.json": (
+        "undeclared-dialect compatibility retains legacy id scoping, while jsonschema's default modern "
+        "oracle ignores id; test_schema_resource_identifier_versions covers this compatibility policy"
+    ),
+    "jsonschema/nested_resources/unrecognized_id_scope/root.json": (
+        "unknown-metaschema compatibility has no declared standard oracle; jsonschema warns and selects "
+        "a different modern id policy; test_schema_resource_identifier_versions covers the legacy fallback"
     ),
     "jsonschema/non_finite_container_defaults.json": (
         "non-finite defaults cannot be represented in the JSON payloads hypothesis-jsonschema generates"
@@ -192,6 +248,12 @@ MISSING_SENTINEL_PAYLOAD_CASE_IDS = (
 )
 PAYLOAD_BACKEND_EXTRA_ARGS_BY_CASE_ID: dict[str, dict[PayloadBackend, tuple[str, ...]]] = {
     **{
+        f"jsonschema/type_union_constraints/{name}.json": {
+            PayloadBackend.PYDANTIC_V2: ("--field-constraints",),
+        }
+        for name in ("keys_field", "keys_root", "keys_count_field", "keys_count_root")
+    },
+    **{
         case_id: {PayloadBackend.PYDANTIC_V2: ("--use-missing-sentinel",)}
         for case_id in MISSING_SENTINEL_PAYLOAD_CASE_IDS
     },
@@ -203,6 +265,14 @@ PAYLOAD_BACKEND_EXTRA_ARGS_BY_CASE_ID: dict[str, dict[PayloadBackend, tuple[str,
     },
 }
 ROUND_TRIP_EXCLUDED_CASES: dict[str, str] = {
+    **dict.fromkeys(
+        (
+            "jsonschema/allof_outer_constraints/integer_date_time_bounds.json",
+            "jsonschema/allof_outer_constraints/number_date_time_bounds.json",
+        ),
+        "native Pydantic datetime JSON serialization emits strings for numeric timestamps; "
+        "test_allof_outer_constraints checks the preserved numeric bounds and exact serialized values",
+    ),
     "jsonschema/default_factory_nested_model_with_dict.json": (
         "pydantic union branch normalization can dump a oneOf value into a shape that matches multiple branches"
     ),

@@ -1,0 +1,22 @@
+[
+  {
+    "schema_valid": false,
+    "generated": {
+      "x": {
+        "a": 1
+      }
+    }
+  },
+  {
+    "schema_valid": false,
+    "generated": {
+      "x": {
+        "a": "a"
+      }
+    }
+  },
+  {
+    "schema_valid": true,
+    "generated": "rejected"
+  }
+]
