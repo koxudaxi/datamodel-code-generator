@@ -20696,12 +20696,33 @@ def test_explicit_alias_names_valid_shadows(
 
 @pytest.mark.parametrize("target_version", [None, TargetPydanticVersion.V2, TargetPydanticVersion.V2_11])
 @pytest.mark.parametrize("template_dir", [None, DATA_PATH / "templates_pydantic_extra_pre_3593"])
-@pytest.mark.parametrize("case", ["namespace_prefix", "namespace_scoped", "namespace_choices", "namespace_warning"])
+@pytest.mark.parametrize(
+    ("case", "base_class"),
+    [
+        ("namespace_prefix", None),
+        ("namespace_scoped", None),
+        ("namespace_choices", None),
+        ("namespace_warning", None),
+        pytest.param("namespace_prefix", "explicit_alias_base.NamespaceBase", id="configured-custom-base"),
+        pytest.param("namespace_prefix", "explicit_alias_base.NamespaceMethodBase", id="external-method-collision"),
+    ],
+)
 def test_explicit_alias_names_namespace_prefix(
-    case: str, template_dir: Path | None, target_version: TargetPydanticVersion | None, output_file: Path
+    case: str,
+    base_class: str | None,
+    template_dir: Path | None,
+    target_version: TargetPydanticVersion | None,
+    output_file: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Keep namespace-only aliases usable on 2.0.3+ and expose the existing 2.0.0 import limitation."""
+    """Preserve namespace-only successes and known minimum-runtime/external-base import limitations."""
     expected_case = "namespace_prefix" if case == "namespace_scoped" else case
+    external_method = base_class == "explicit_alias_base.NamespaceMethodBase"
+    config_path = None
+    if base_class:
+        expected_case += "_configured_method" if external_method else "_configured"
+        config_path = ALIASES_DATA_PATH / "explicit_alias_names_protected_prefix_config.json"
+        monkeypatch.syspath_prepend(str(DATA_PATH / "python"))
     expected_file = f"explicit_alias_names_{expected_case}.py"
     aliases = EXPLICIT_ALIAS_ALIASES[case]
     run_generate_file_and_assert(
@@ -20709,6 +20730,8 @@ def test_explicit_alias_names_namespace_prefix(
         output_path=output_file,
         input_file_type=InputFileType.JsonSchema,
         aliases=aliases,
+        base_class=base_class or "pydantic.BaseModel",
+        extra_template_data=defaultdict(dict, json.loads(config_path.read_text())) if config_path else None,
         target_pydantic_version=target_version,
         custom_template_dir=template_dir,
         disable_timestamp=True,
@@ -20726,6 +20749,7 @@ def test_explicit_alias_names_namespace_prefix(
             "--disable-timestamp",
             *(["--target-pydantic-version", target_version.value] if target_version else []),
             *(["--custom-template-dir", str(template_dir)] if template_dir else []),
+            *(["--base-class", base_class, "--extra-template-data", str(config_path)] if base_class else []),
         ],
         assert_func=assert_file_content,
         expected_file=expected_file,
@@ -20734,10 +20758,15 @@ def test_explicit_alias_names_namespace_prefix(
         with pytest.raises(NameError, match='has conflict with protected namespace "model_"'):
             _assert_python_module_importable(output_file, "namespace_output", "AliasNames")
         return
+    if external_method:
+        # External attributes are unknown during generation; this collision also failed before alias checking.
+        with pytest.raises((NameError, ValueError), match=r"conflicts with member .*\.model_foo"):
+            _assert_python_module_importable(output_file, "namespace_output", "AliasNames")
+        return
     payloads = json.loads((DATA_PATH / "payloads/explicit_alias_namespace_prefix.json").read_text())
     with (
         pytest.warns(UserWarning, match="protected namespace")
-        if case == "namespace_warning" or version.parse(PYDANTIC_VERSION) < version.parse("2.10")
+        if base_class or case == "namespace_warning" or version.parse(PYDANTIC_VERSION) < version.parse("2.10")
         else nullcontext(),
         _generated_model(output_file, "namespace_output", "AliasNames") as model,
     ):
