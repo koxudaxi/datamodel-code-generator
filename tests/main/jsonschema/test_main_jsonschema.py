@@ -19830,42 +19830,6 @@ def test_custom_template_dependencies_bound_generation_roots(tmp_path: Path) -> 
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
 @pytest.mark.parametrize(
     "case",
-    json.loads((DATA_PATH / "payloads/msgspec_enum_diagnostics/errors.json").read_text()),
-    ids=itemgetter("name"),
-)
-def test_msgspec_enum_diagnostics_reject_unsupported_members(
-    output_file: Path, capsys: pytest.CaptureFixture[str], entrypoint: str, case: dict
-) -> None:
-    """Reject unusable bool/float Enum members before CLI or API writes generated output."""
-    schema = JSON_SCHEMA_DATA_PATH / "msgspec_enum_diagnostics" / f"{case['schema']}.json"
-    expected = EXPECTED_JSON_SCHEMA_PATH / "msgspec_enum_diagnostics" / f"error_{case['name']}.txt"
-    if entrypoint == "cli":
-        run_main_and_assert(
-            input_path=schema,
-            output_path=output_file,
-            input_file_type="jsonschema",
-            extra_args=["--output-model-type", "msgspec.Struct", *case["cli"]],
-            expected_exit=Exit.ERROR,
-            capsys=capsys,
-            expected_stderr=expected.read_text(),
-            output_should_not_exist=True,
-        )
-    else:
-        run_generate_and_assert(
-            input_=schema,
-            output=output_file,
-            expected_file=expected,
-            expected_error=Error,
-            input_file_type=InputFileType.JsonSchema,
-            output_model_type=DataModelType.MsgspecStruct,
-            **case["options"],
-        )
-        assert_output(f"{output_file.exists()}\n", EXPECTED_JSON_SCHEMA_PATH / "msgspec_enum_diagnostics/absent.txt")
-
-
-@pytest.mark.parametrize("entrypoint", ["cli", "api"])
-@pytest.mark.parametrize(
-    "case",
     json.loads((DATA_PATH / "payloads/msgspec_enum_diagnostics/controls.json").read_text()),
     ids=itemgetter("name"),
 )
@@ -19990,16 +19954,15 @@ def test_msgspec_enum_diagnostics_preserve_other_backends(
 
 
 @pytest.mark.parametrize(
-    "integer_type", ["IntValue", "UnhashableInt", "CustomHashInt", "CustomEqualInt", "HashRaisesInt"]
+    "integer_type",
+    ["IntValue", "UnhashableInt", "CustomHashInt", "CustomEqualInt", "HashRaisesInt", "EqualityRaisesInt"],
 )
 @pytest.mark.parametrize(
     "case",
     json.loads((DATA_PATH / "payloads/msgspec_enum_diagnostics/subclass_cases.json").read_text()),
     ids=itemgetter("name"),
 )
-def test_msgspec_enum_diagnostics_integer_subclasses(
-    output_file: Path, capsys: pytest.CaptureFixture[str], integer_type: str, case: dict
-) -> None:
+def test_msgspec_enum_diagnostics_integer_subclasses(output_file: Path, integer_type: str, case: dict) -> None:
     """Keep mapping integer aliases equivalent to canonical JSON and usable by msgspec."""
     import msgspec
 
@@ -20028,30 +19991,6 @@ def test_msgspec_enum_diagnostics_integer_subclasses(
         "--custom-file-header",
         "# Integer subclass control",
     ]
-    if case["error"]:
-        message = "msgspec.Struct does not support float Enum members in 'Value'."
-        run_generate_and_assert(
-            input_=schema,
-            output=output_file,
-            expected_file=data / "subclass_error.txt",
-            expected_error=Error,
-            **options,
-        )
-        assert_output(
-            f"{output_file.exists()}\n",
-            EXPECTED_JSON_SCHEMA_PATH / "msgspec_enum_diagnostics" / "absent.txt",
-        )
-        run_main_and_assert(
-            input_path=schema_path,
-            output_path=output_file,
-            input_file_type="jsonschema",
-            extra_args=cli,
-            expected_exit=Exit.ERROR,
-            capsys=capsys,
-            expected_stderr=f"{message}\n",
-            output_should_not_exist=True,
-        )
-        return
     expected = f"msgspec_enum_diagnostics/{case['name']}.py"
     run_generate_and_assert(
         input_=schema,
@@ -20079,22 +20018,53 @@ def test_msgspec_enum_diagnostics_integer_subclasses(
     )
 
 
-def test_msgspec_enum_diagnostics_preserve_integer_comparison_error(output_file: Path) -> None:
-    """Retain the original first-equal lookup exception for custom API comparisons."""
-    from tests.data.python.msgspec_enum_int_values import EqualityRaisesInt
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+def test_msgspec_unused_enum_generation(output_file: Path, entrypoint: str) -> None:
+    """Allow a usable root alongside definitions whose Enum values msgspec cannot decode."""
+    import msgspec
 
-    data = JSON_SCHEMA_DATA_PATH / "msgspec_enum_diagnostics"
-    schema = json.loads((data / "subclass_float.json").read_text())
-    schema["properties"]["value"]["enum"][0] = EqualityRaisesInt(1)
-    run_generate_and_assert(
-        input_=schema,
-        output=output_file,
-        expected_file=EXPECTED_JSON_SCHEMA_PATH / "msgspec_enum_diagnostics/comparison_error.txt",
-        expected_error=TypeError,
-        input_file_type=InputFileType.JsonSchema,
-        output_model_type=DataModelType.MsgspecStruct,
+    input_path = JSON_SCHEMA_DATA_PATH / "msgspec_enum_diagnostics/unused.json"
+    expected_file = "msgspec_enum_diagnostics/unused.py"
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file=expected_file,
+            extra_args=[
+                "--output-model-type",
+                "msgspec.Struct",
+                "--target-python-version",
+                "3.10",
+                "--disable-timestamp",
+            ],
+            force_exec_validation=True,
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            output_model_type=DataModelType.MsgspecStruct,
+            target_python_version=PythonVersion.PY_310,
+            disable_timestamp=True,
+            assert_func=assert_file_content,
+            expected_file=expected_file,
+        )
+    payloads = json.loads((DATA_PATH / "payloads/msgspec_enum_diagnostics/unused.json").read_text())
+    with _generated_model(output_file, f"unused_enums_{entrypoint}", "Payload") as model:
+        result = {
+            "convert": msgspec.to_builtins(msgspec.convert(payloads["valid"], type=model)),
+            "decode": msgspec.to_builtins(msgspec.json.decode(json.dumps(payloads["valid"]), type=model)),
+        }
+        with pytest.raises(msgspec.ValidationError):
+            msgspec.convert(payloads["invalid"], type=model)
+        with pytest.raises(msgspec.ValidationError):
+            msgspec.json.decode(json.dumps(payloads["invalid"]), type=model)
+    assert_output(
+        json.dumps(result, indent=2) + "\n", EXPECTED_JSON_SCHEMA_PATH / "msgspec_enum_diagnostics/unused.txt"
     )
-    assert_output(f"{output_file.exists()}\n", EXPECTED_JSON_SCHEMA_PATH / "msgspec_enum_diagnostics/absent.txt")
 
 
 MSGSPEC_INHERITANCE_DATA = DATA_PATH / "msgspec_inheritance"
