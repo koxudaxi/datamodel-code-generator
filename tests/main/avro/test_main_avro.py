@@ -583,16 +583,53 @@ def test_avro_decimal_defaults_preserve_raw_input(output_file: Path, fixture: st
     assert_output(f"{rendered}\n", AVRO_DATA_PATH.parent / f"expected/main/avro/{Path(fixture).stem}_converted.txt")
 
 
-def test_main_avro_decimal_default_controls(output_file: Path) -> None:
+@pytest.mark.parametrize(
+    ("fixture", "expected_file", "extra_args", "warning"),
+    [
+        (
+            "decimal_default_controls",
+            "decimal_default_controls.py",
+            [],
+            "10 Decimal default values were emitted as serialized data",
+        ),
+        *(
+            (
+                "decimal_defaults_simple",
+                "decimal_defaults_logical_override_mapping.py",
+                [
+                    "--type-overrides",
+                    '{"DecimalDefaults.positive":"decimal.Decimal"}',
+                    "--type-mappings",
+                    "decimal=binary",
+                    *(["--deserialize-default-values", "decimal"] if deserialize else []),
+                ],
+                "1 Decimal default value could not be deserialized"
+                if deserialize
+                else "1 Decimal default value was emitted as serialized data",
+            )
+            for deserialize in (False, True)
+        ),
+    ],
+)
+def test_main_avro_decimal_default_controls(
+    output_file: Path, fixture: str, expected_file: str, extra_args: list[str], warning: str
+) -> None:
     """Keep ordinary bytes, unsupported metadata and default-free logical schemas unchanged."""
-    with pytest.warns(DefaultValueTypeWarning, match="10 Decimal default values were emitted as serialized data"):
+    with pytest.warns(DefaultValueTypeWarning, match=warning):
         run_main_and_assert(
-            input_path=AVRO_DATA_PATH / "decimal_default_controls.avsc",
+            input_path=AVRO_DATA_PATH / f"{fixture}.avsc",
             output_path=output_file,
             input_file_type="avro",
             assert_func=assert_file_content,
-            expected_file="decimal_default_controls.py",
-            extra_args=["--target-python-version", "3.10", "--disable-timestamp", "--formatters", "builtin"],
+            expected_file=expected_file,
+            extra_args=[
+                "--target-python-version",
+                "3.10",
+                "--disable-timestamp",
+                "--formatters",
+                "builtin",
+                *extra_args,
+            ],
             force_exec_validation=True,
         )
 

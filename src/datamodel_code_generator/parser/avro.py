@@ -19,6 +19,7 @@ from datamodel_code_generator._avro_detection import (
     is_avro_schema_data as _is_avro_schema_data,
 )
 from datamodel_code_generator._source import YamlValue, load_yaml
+from datamodel_code_generator.imports import Import
 from datamodel_code_generator.parser._convert_common import _copy_schema, _namespace_name, _unique_name
 from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
 
@@ -29,7 +30,6 @@ if TYPE_CHECKING:
 
     from datamodel_code_generator._types import AvroParserConfigDict
     from datamodel_code_generator.config import AvroParserConfig
-    from datamodel_code_generator.imports import Import
     from datamodel_code_generator.parser.base import Source
 
 JsonSchema = dict[str, Any]
@@ -37,6 +37,10 @@ JsonSchema = dict[str, Any]
 NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 MICROSECONDS_PER_DAY = 86_400_000_000
 DURATION_BYTE_LENGTH = 12
+_PHYSICAL_DEFAULT_OVERRIDES = frozenset({
+    Import.from_full_path("builtins.int"),
+    Import.from_full_path("builtins.bytes"),
+})
 
 STRING_SCHEMA: JsonSchema = {"type": "string"}
 NULL_SCHEMA: JsonSchema = {"type": "null"}
@@ -94,7 +98,6 @@ def _is_valid_namespace(namespace: str) -> bool:
 
 def _logical_default_expression(kind: str, value: str) -> Any:
     """Build a logical constructor with an import identity that can be aliased."""
-    from datamodel_code_generator.imports import Import  # ruff: ignore[import-outside-top-level]
     from datamodel_code_generator.python_literal import (  # ruff: ignore[import-outside-top-level]
         PythonRuntimeExpression,
     )
@@ -564,7 +567,7 @@ class _AvroSchemaConverter:
         if self._logical_default_enabled is not None and not self._logical_default_enabled(
             "timedelta" if schema["logicalType"] == "duration" else "decimal", schema["logicalType"], type_override
         ):
-            if type_override is not None and isinstance(value, bytes):
+            if type_override in _PHYSICAL_DEFAULT_OVERRIDES and isinstance(value, bytes):
                 from datamodel_code_generator.python_literal import PythonCode  # ruff: ignore[import-outside-top-level]
 
                 # This is an intentional physical literal, including in shared Avro definitions.
@@ -857,11 +860,7 @@ class AvroParser(JsonSchemaParser):
 
     def _logical_default_enabled(self, kind: str, logical_type: str, type_override: Import | None = None) -> bool:
         """Keep physical defaults when a mapping replaces their logical representation."""
-        if (
-            type_override is not None
-            and type_override.from_ == "builtins"
-            and type_override.import_ in {"int", "bytes"}
-        ):
+        if type_override in _PHYSICAL_DEFAULT_OVERRIDES:
             return False
         if not self.type_mappings:
             return True
