@@ -11,14 +11,12 @@ from pydantic import AnyUrl, BaseModel, ConfigDict, Field, RootModel
 Token = RootModel[
     Annotated[
         str,
-        Field(..., pattern=compile_aliased('(?=\\A)(?:[A-Z]+|[0-9]+)\\Z'), title='Token'),
+        Field(pattern=compile_aliased('(?=\\A)(?:[A-Z]+|[0-9]+)\\Z'), title='Token'),
     ],
 ]
 
 
-from typing import Annotated
-
-Tokens = RootModel[Annotated[list[Token], Field(..., title='Tokens')]]
+Tokens = RootModel[Annotated[list[Token], Field(title='Tokens')]]
 
 
 class Parent(BaseModel):
@@ -26,7 +24,10 @@ class Parent(BaseModel):
         regex_engine="python-re",
     )
     compile: str | None = 'shadow'
-    word: str = Field(..., pattern=compile_aliased('(?=\\A)(?:\\w+|Q)\\Z'))
+    word: Annotated[str, Field(pattern=compile_aliased('(?=\\A)(?:\\w+|Q)\\Z'))]
+    mirror: Annotated[
+        str | None, Field(pattern=compile_aliased('(?=\\A)(?:\\w+|Q)\\Z'))
+    ] = None
     uri: AnyUrl
 
 
@@ -38,8 +39,8 @@ class Derived(Intermediate):
     model_config = ConfigDict(
         regex_engine="python-re",
     )
-    nonword: str = Field(..., pattern=compile_aliased('(?=\\A)(?:\\W+|Q)\\Z'))
-    tilde: str = Field(..., pattern=compile_aliased('(?=\\A)(?:[a~~b]+|Q)\\Z'))
+    nonword: Annotated[str, Field(pattern=compile_aliased('(?=\\A)(?:\\W+|Q)\\Z'))]
+    tilde: Annotated[str, Field(pattern=compile_aliased('(?=\\A)(?:[a~~b]+|Q)\\Z'))]
     token: Token
     tokens: Tokens
 

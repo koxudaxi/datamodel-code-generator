@@ -1083,6 +1083,7 @@ def test_xmlschema_pattern_alternatives(
             [
                 "--field-constraints",
                 "--use-root-model-type-alias",
+                "--use-annotated",
                 "--custom-template-dir",
                 str(DATA_PATH / "templates" / "root_alias_constraints"),
             ],
@@ -1109,14 +1110,14 @@ def test_xmlschema_compiled_patterns(output_file: Path, name: str, backend: str,
         assert_func=assert_file_content,
         expected_file=f"pattern_runtime_{name}.py",
     )
-    cases = json.loads((XML_SCHEMA_DATA_PATH / "pattern_runtime.cases.json").read_text())
-    for case in cases:
+    cases = json.loads((XML_SCHEMA_DATA_PATH / "pattern_runtime.cases.json").read_text(encoding="utf-8"))
+    for case in cases["cases"]:
         assert_generated_model_json_validation(
             output_file,
             module_name=f"generated_pattern_runtime_{name}",
             model_name="Root",
-            valid_json=json.dumps(case["valid"]),
-            invalid_json=json.dumps(case["invalid"]),
+            valid_json=json.dumps(cases["base"] | case["valid"]),
+            invalid_json=json.dumps(cases["base"] | case["invalid"]),
             expected_error_type="string_pattern_mismatch",
         )
 

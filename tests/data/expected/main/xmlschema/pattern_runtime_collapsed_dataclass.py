@@ -26,6 +26,7 @@ class Parent:
     uri: AnyUrl
     compile: str | None = 'shadow'
     word: str = Field(..., pattern=compile_aliased('(?=\\A)(?:\\w+|Q)\\Z'))
+    mirror: str | None = Field(None, pattern=compile_aliased('(?=\\A)(?:\\w+|Q)\\Z'))
 
 
 @dataclass

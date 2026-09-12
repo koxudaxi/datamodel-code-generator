@@ -13,7 +13,7 @@ from typing_extensions import TypeAliasType
 Token = TypeAliasType(
     "Token",
     Annotated[
-        constr(pattern=compile_aliased(r'(?=\A)(?:[A-Z]+|[0-9]+)\Z')),
+        constr(pattern=compile_aliased('(?=\\A)(?:[A-Z]+|[0-9]+)\\Z')),
         Field(..., title='Token'),
     ],
 )
@@ -24,9 +24,10 @@ Tokens = TypeAliasType("Tokens", Annotated[list[Token], Field(..., title='Tokens
 
 @dataclass(config=ConfigDict(regex_engine="python-re"))
 class Parent:
-    word: constr(pattern=compile_aliased(r'(?=\A)(?:\w+|Q)\Z'))
+    word: constr(pattern=compile_aliased('(?=\\A)(?:\\w+|Q)\\Z'))
     uri: AnyUrl
     compile: str | None = 'shadow'
+    mirror: constr(pattern=compile_aliased('(?=\\A)(?:\\w+|Q)\\Z')) | None = None
 
 
 @dataclass
@@ -36,10 +37,10 @@ class Intermediate(Parent):
 
 @dataclass(config=ConfigDict(regex_engine="python-re"))
 class Derived(Intermediate):
-    nonword: constr(pattern=compile_aliased(r'(?=\A)(?:\W+|Q)\Z')) = Field(
+    nonword: constr(pattern=compile_aliased('(?=\\A)(?:\\W+|Q)\\Z')) = Field(
         ..., kw_only=True
     )
-    tilde: constr(pattern=compile_aliased(r'(?=\A)(?:[a~~b]+|Q)\Z')) = Field(
+    tilde: constr(pattern=compile_aliased('(?=\\A)(?:[a~~b]+|Q)\\Z')) = Field(
         ..., kw_only=True
     )
     token: Token = Field(..., kw_only=True)

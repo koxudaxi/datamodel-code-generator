@@ -12,7 +12,7 @@ class Token(RootModel[str]):
     model_config = ConfigDict(
         regex_engine="python-re",
     )
-    root: constr(pattern=compile(r'(?=\A)(?:[A-Z]+|[0-9]+)\Z')) = Field(
+    root: constr(pattern=compile('(?=\\A)(?:[A-Z]+|[0-9]+)\\Z')) = Field(
         ..., title='Token'
     )
 

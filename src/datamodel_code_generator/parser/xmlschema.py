@@ -49,6 +49,7 @@ if TYPE_CHECKING:
     from datamodel_code_generator._source import YamlValue
     from datamodel_code_generator._types import XMLSchemaParserConfigDict
     from datamodel_code_generator.config import XMLSchemaParserConfig
+    from datamodel_code_generator.python_literal import PythonRuntimeExpression
 
 XML_SCHEMA_VERSIONING_NAMESPACE = "http://www.w3.org/2007/XMLSchema-versioning"
 XSD11_ELEMENTS = frozenset({"alternative", "assert", "assertion", "defaultOpenContent", "openContent", "override"})
@@ -1695,12 +1696,14 @@ class XMLSchemaParser(JsonSchemaParser):
 
     def _register_runtime_expression_imports(self) -> None:
         """Prepare XML expressions once so repeated field import collection stays constant time."""
+        # Share immutable expressions within this generation without retaining schemas in a global cache.
+        prepared_patterns: dict[str, PythonRuntimeExpression] = {}
         for model in self.results:
             for field in model.fields:
                 field._set_runtime_expression_imports(_collect_python_expression_imports(field.default))  # noqa: SLF001
                 if (prepare_patterns := field.PREPARE_PYTHON_PATTERNS) is not None:
                     # Only combined XSD patterns use this prefix; single patterns keep their existing representation.
-                    prepare_patterns(field, r"(?=\A")
+                    prepare_patterns(field, r"(?=\A", prepared_patterns)
 
 
 __all__ = ["XMLSchemaParser", "convert_xml_schema_data", "detect_xmlschema_version", "is_xml_schema_text"]
