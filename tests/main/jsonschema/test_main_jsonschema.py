@@ -17,7 +17,7 @@ import warnings
 from collections import UserDict, defaultdict
 from collections.abc import Callable as ABCCallable
 from collections.abc import Sequence
-from contextlib import ExitStack, nullcontext
+from contextlib import ExitStack, nullcontext, suppress
 from dataclasses import Field as DataclassField
 from decimal import Decimal
 from functools import partial
@@ -7229,6 +7229,10 @@ def test_main_jsonschema_additional_properties_value_constraints_annotated(
 
             with _generated_model(output_file, "additional_properties_constraints_msgspec", "Payload") as model:
                 instance = msgspec.json.decode(_ADDITIONAL_PROPERTIES_CONSTRAINTS_VALID_JSON.encode(), type=model)
+                msgspec.json.decode(
+                    (DATA_PATH / "payloads/type_union_constraints/legacy_mapping_valid.json").read_bytes(),
+                    type=model,
+                )
                 with pytest.raises(msgspec.ValidationError):
                     msgspec.json.decode(
                         (DATA_PATH / "payloads/type_union_constraints/legacy_mapping_invalid.json").read_bytes(),
@@ -23592,7 +23596,6 @@ def test_type_union_constraints(name: str, constraints: bool, entry: str, output
     )
     runtime_name = f"{name}_native.txt" if constraints else f"{name}_0_runtime.txt"
     runtime_path = TYPE_UNION_EXPECTED / TYPE_UNION_CASES[name].get(runtime_name, runtime_name)
-    acceptance = json.loads(runtime_path.read_text())
     context = (
         nullcontext(
             generate_dynamic_models(schema, config=GenerateConfig(field_constraints=constraints), cache_size=0)["Root"]
@@ -23602,14 +23605,12 @@ def test_type_union_constraints(name: str, constraints: bool, entry: str, output
     )
     actual = []
     with context as model:
-        for value, valid in zip(payloads, acceptance, strict=True):
-            if valid:
+        for value in payloads:
+            accepted = False
+            with suppress(ValidationError):
                 model.model_validate(value)
-                actual.append(True)
-            else:
-                with pytest.raises(ValidationError):
-                    model.model_validate(value)
-                actual.append(False)
+                accepted = True
+            actual.append(accepted)
     assert_output(json.dumps(actual, indent=2) + "\n", runtime_path)
 
 
@@ -23671,20 +23672,17 @@ def test_type_union_constraint_options(name: str, mode: str, entry: str, output_
     payloads = json.loads((TYPE_UNION_PAYLOADS / f"{name}.json").read_text())
     runtime_name = f"{name}_{mode}_runtime.txt" if mode == "msgspec_plain" else f"{name}_native.txt"
     expected_runtime = TYPE_UNION_EXPECTED / TYPE_UNION_CASES[name].get(runtime_name, runtime_name)
-    acceptance = json.loads(expected_runtime.read_text())
     actual = []
     with _generated_model(output_file, "type_union_options", "Root") as model:
         validate = (
             partial(msgspec.convert, type=model) if mode.startswith("msgspec") else TypeAdapter(model).validate_python
         )
-        for value, valid in zip(payloads, acceptance, strict=True):
-            if valid:
+        for value in payloads:
+            accepted = False
+            with suppress(ValidationError, msgspec.ValidationError):
                 validate(value)
-                actual.append(True)
-            else:
-                with pytest.raises((ValidationError, msgspec.ValidationError)):
-                    validate(value)
-                actual.append(False)
+                accepted = True
+            actual.append(accepted)
     assert_output(json.dumps(actual, indent=2) + "\n", expected_runtime)
 
 
