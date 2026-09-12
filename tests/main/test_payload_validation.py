@@ -511,6 +511,7 @@ def test_payload_backend_full_matrix_exclusions_are_classified() -> None:
         "jsonschema/allof_constraint_intersections/scalars_equal.json",
         "jsonschema/allof_constraint_intersections/scalars_partial.json",
         "jsonschema/custom_template_dependencies_many.json",
+        "jsonschema/optional_nested_factory_requirements/union.json",
         "jsonschema/numeric_constraint_precision/large.json",
         "jsonschema/exact_imports_collapse_root_models_module_split_oneof.json",
         "jsonschema/strict_types.json",

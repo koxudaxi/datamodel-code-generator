@@ -230,8 +230,12 @@ MSGSPEC_VALIDATION_EXCLUDED_CASES: Final[dict[str, str]] = {
         ),
         "msgspec conversion only supports Enum classes with homogeneous str or int values",
     ),
-    "jsonschema/custom_template_dependencies_many.json": (
-        "msgspec conversion requires tagged Struct unions for combined object schemas"
+    **dict.fromkeys(
+        (
+            "jsonschema/custom_template_dependencies_many.json",
+            "jsonschema/optional_nested_factory_requirements/union.json",
+        ),
+        "msgspec conversion requires tagged Struct unions for combined object schemas",
     ),
     "jsonschema/numeric_constraint_precision/large.json": (
         "msgspec Meta cannot represent integer constraints outside its native numeric range"
