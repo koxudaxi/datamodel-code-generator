@@ -1694,12 +1694,43 @@ def test_mcp_tools_dynamic_definition_references(entrypoint: str, output_file: P
         "referenced_false_output_definition",
         "referenced_nested_false_definition",
         "referenced_false_dynamic_definition",
+        "negated_false_definition",
     ],
 )
-def test_mcp_tools_referenced_false_definition_api(input_name: str) -> None:
-    """Reject unsupported false definitions instead of emitting a permissive model."""
-    with pytest.raises(Error, match="Referenced MCP boolean false definition is not supported: Denied"):
-        generate(DATA_PATH / "mcp_tools" / f"{input_name}.json", input_file_type=InputFileType.MCPTools)
+@pytest.mark.parametrize("entrypoint", ["cli", "api"])
+def test_mcp_tools_referenced_false_definitions(input_name: str, entrypoint: str, output_file: Path) -> None:
+    """Keep valid tool inputs usable when an optional or negated definition is false."""
+    input_path = DATA_PATH / "mcp_tools" / f"{input_name}.json"
+    expected_file = f"mcp_tools/{input_name}.py"
+    if entrypoint == "cli":
+        run_main_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type="mcp-tools",
+            assert_func=assert_file_content,
+            expected_file=expected_file,
+            extra_args=["--disable-timestamp", "--formatters", "builtin"],
+            force_exec_validation=True,
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type=InputFileType.MCPTools,
+            assert_func=assert_file_content,
+            expected_file=expected_file,
+            disable_timestamp=True,
+            formatters=[Formatter.BUILTIN],
+        )
+    payload = json.loads((DATA_PATH / "mcp_tools/boolean_definition_payloads.json").read_text())[input_name]
+    assert_generated_model_json_validation(
+        output_file,
+        module_name=f"mcp_{input_name}_{entrypoint}",
+        model_name=payload["model"],
+        valid_json=json.dumps(payload["valid"]),
+        invalid_json=json.dumps(payload["invalid"]),
+        expected_error_type=payload["error"],
+    )
 
 
 @pytest.mark.parametrize("input_name", ["schema_value_references", "schema_reference_positions"])
@@ -1856,13 +1887,6 @@ def test_mcp_tools_url_preserves_relative_ref_context(
         ("invalid_output_schema.json", "MCP tool 'bad_output' outputSchema must be a JSON Schema object"),
         ("invalid_tool_title.json", "MCP tool 'bad_title' title must be a string"),
         ("invalid_json.json", "Invalid file format for mcp-tools"),
-        ("referenced_false_definition.json", "Referenced MCP boolean false definition is not supported: Denied"),
-        ("referenced_false_output_definition.json", "Referenced MCP boolean false definition is not supported: Denied"),
-        ("referenced_nested_false_definition.json", "Referenced MCP boolean false definition is not supported: Denied"),
-        (
-            "referenced_false_dynamic_definition.json",
-            "Referenced MCP boolean false definition is not supported: Denied",
-        ),
     ],
 )
 def test_mcp_tools_invalid(

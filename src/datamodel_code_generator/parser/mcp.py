@@ -302,12 +302,8 @@ def _add_tool_schema_definition(
     normalized, hoisted_definitions = _normalize_schema(schema, definition_name, used_names, references)
     # A later sibling definition can reference a boolean schema hoisted earlier.
     for name, value in hoisted_definitions.items():
-        if isinstance(value, bool):
-            if name not in references:
-                continue
-            if value is False:
-                msg = f"Referenced MCP boolean false definition is not supported: {name}"
-                raise Error(msg)
+        if isinstance(value, bool) and name not in references:
+            continue
         definitions[name] = value
     definitions[definition_name] = normalized
 
