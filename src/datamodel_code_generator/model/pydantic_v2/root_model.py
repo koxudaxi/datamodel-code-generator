@@ -47,6 +47,11 @@ class RootModel(BaseModel):
     SUPPORTS_CONFIG_EXTRA: ClassVar[bool] = False
     SUPPORTS_ARBITRARY_TYPES_ALLOWED: ClassVar[bool] = False
 
+    @classmethod
+    def _uses_builtin_hash_implementation(cls) -> bool:
+        """Recognize the builtin root without a reverse import from BaseModel."""
+        return cls is RootModel
+
     def add_literal_validation(self, values: list[object]) -> None:
         """Keep finite JSON literal membership beside the root's existing value constraints."""
         self._requires_literal_validation = True

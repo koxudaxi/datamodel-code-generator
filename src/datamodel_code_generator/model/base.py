@@ -2421,6 +2421,11 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         return 0
 
     @classmethod
+    def get_native_hash_model_paths(cls, models: list[DataModel]) -> set[str]:  # noqa: ARG003
+        """Return models whose backend hash can replace the legacy set-item hash."""
+        return set()
+
+    @classmethod
     def prepare_module_code(cls, models: list[DataModel]) -> None:
         """Prepare shared module metadata before imports are collected."""
 
