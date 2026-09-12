@@ -1,17 +1,9 @@
 {
-  "unsupported_allof": {
-    "valid": {},
-    "invalid": []
-  },
   "unsupported_oneof": {
     "valid": {},
     "invalid": []
   },
   "unsupported_sibling": {
-    "valid": {},
-    "invalid": []
-  },
-  "unsupported_nonstring": {
     "valid": {},
     "invalid": []
   },
@@ -27,15 +19,31 @@
     "valid": {},
     "invalid": []
   },
-  "unsupported_nonstring_union": {
-    "valid": {},
-    "invalid": []
-  },
   "unconstrained_oneof": {
     "valid": {
       "x": 1
     },
     "invalid": [],
     "expected": "unsupported_one_constrained.py"
+  },
+  "allof_custom_template": {
+    "input": "unsupported_allof.json",
+    "builtin_template_directory": true,
+    "expected": "allof_custom_template.py",
+    "valid": {},
+    "invalid": []
+  },
+  "allof_branch_title": {
+    "valid": {},
+    "invalid": [],
+    "expected": "allof_custom_template.py"
+  },
+  "allof_frozen": {
+    "input": "unsupported_allof.json",
+    "faux_immutable": true,
+    "valid": {
+      "ab": 1
+    },
+    "invalid": []
   }
 }
