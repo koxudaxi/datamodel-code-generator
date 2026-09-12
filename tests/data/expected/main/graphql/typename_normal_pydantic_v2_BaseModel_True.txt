@@ -19,6 +19,10 @@
       "value": 6,
       "label": "cross"
     },
+    "ordinary": {
+      "__typename": "Ordinary",
+      "value": 8
+    },
     "solo": {
       "__typename": "Solo",
       "label": "solo"
@@ -33,6 +37,10 @@
       "values": {
         "camelValue": 1,
         "label": "node"
+      },
+      "attributes": {
+        "camelValue": 1,
+        "label": "node"
       }
     },
     "ANode": {
@@ -42,6 +50,11 @@
         "spare"
       ],
       "values": {
+        "camelValue": 2,
+        "label": "child",
+        "spare": 12
+      },
+      "attributes": {
         "camelValue": 2,
         "label": "child",
         "spare": 12
@@ -57,6 +70,11 @@
         "camelValue": 3,
         "label": "item",
         "spare": 13
+      },
+      "attributes": {
+        "camelValue": 3,
+        "label": "item",
+        "spare": 13
       }
     },
     "Second": {
@@ -69,6 +87,11 @@
         "camelValue": 4,
         "label": "second",
         "spare": 14
+      },
+      "attributes": {
+        "camelValue": 4,
+        "label": "second",
+        "spare": 14
       }
     },
     "Base": {
@@ -76,6 +99,9 @@
         "value"
       ],
       "values": {
+        "value": 5
+      },
+      "attributes": {
         "value": 5
       }
     },
@@ -87,6 +113,10 @@
       "values": {
         "value": 6,
         "label": "cross"
+      },
+      "attributes": {
+        "value": 6,
+        "label": "cross"
       }
     },
     "Solo": {
@@ -94,6 +124,9 @@
         "label"
       ],
       "values": {
+        "label": "solo"
+      },
+      "attributes": {
         "label": "solo"
       }
     },
@@ -107,6 +140,22 @@
         "camelValue": 7,
         "label": "input",
         "spare": 17
+      },
+      "attributes": {
+        "camelValue": 7,
+        "label": "input",
+        "spare": 17
+      }
+    },
+    "Ordinary": {
+      "fields": [
+        "value"
+      ],
+      "values": {
+        "value": 8
+      },
+      "attributes": {
+        "value": 8
       }
     }
   }

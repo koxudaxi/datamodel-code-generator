@@ -3336,16 +3336,6 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 variant_name, _ = self.model_resolver.get_valid_field_name_and_alias(
                     property_name, model_type=self.field_name_model_type, class_name=variant.class_name
                 )
-            if variant_name != property_name and any(
-                (candidate.alias or candidate.name) == variant_name
-                for candidate in variant.iter_all_fields()
-                if candidate.original_name != property_name
-            ):
-                msg = (
-                    f"Discriminator {property_name!r} resolves to field name {variant_name!r}, "
-                    "which conflicts with another field's input alias; use a distinct discriminator field alias."
-                )
-                raise Error(msg)
             if common_name is not None and common_name != variant_name:
                 msg = (
                     f"Discriminator {property_name!r} resolves to different field names "
@@ -3600,16 +3590,24 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                             )
         return references
 
-    @classmethod
-    def __mark_set_item_models_hashable(cls, models: list[DataModel]) -> None:
+    def __mark_set_item_models_hashable(self, models: list[DataModel]) -> None:
         """Mark models used as set/frozenset items with hash flag for __hash__ generation."""
-        set_item_references = cls.__collect_set_item_references(models)
-
-        for model in models:
-            if model.reference.path in set_item_references:
-                if isinstance(model, Enum):
-                    continue
-                model._append_internal_template_data("class_body_lines", "__hash__ = object.__hash__")  # noqa: SLF001
+        set_item_references = self.__collect_set_item_references(models)
+        if not set_item_references:
+            return
+        set_item_models = [
+            model for model in models if model.reference.path in set_item_references and not isinstance(model, Enum)
+        ]
+        # User imports may shadow the builtin annotations recognized by the backend.
+        native_hash_paths = (
+            set()
+            if self.config.additional_imports
+            else self.data_model_type.get_native_hash_model_paths(set_item_models)
+        )
+        for model in set_item_models:
+            if model.reference.path in native_hash_paths:
+                continue
+            model._append_internal_template_data("class_body_lines", "__hash__ = object.__hash__")  # noqa: SLF001
 
     @classmethod
     def __set_reference_default_value_to_field(
@@ -6212,13 +6210,16 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         module_to_import: dict[ModulePath, Imports],
     ) -> None:
         """Finalize module processing: apply generic base class and remove unused imports."""
+        self.__apply_generic_base_class(contexts)
         all_models = [model for ctx in contexts for model in ctx.models]
         self.__mark_set_item_models_hashable(all_models)
-        self.__apply_generic_base_class(contexts)
         self._finalize_structured_imports(contexts)
         if self.use_default_factory_for_optional_nested_models:
             # Inherited defaults may have changed since a consumer first queried its factory imports.
             _clear_model_imports_cache(all_models)
+        if self.use_root_model_sequence_interface:
+            for model in all_models:
+                model.finalize_sequence_interface()
         model_imports = {model: model.imports for ctx in contexts for model in ctx.models}
 
         for ctx in contexts:
@@ -6259,6 +6260,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             renamed_models = (
                 self.__change_imported_model_name(ctx.models, ctx.imports, ctx.scoped_model_resolver) or renamed_models
             )
+        if self.use_root_model_sequence_interface and renamed_models:
+            for model in all_models:
+                model.finalize_sequence_interface()
         if self.generate_schema_validators and renamed_models:
             # Helper-name reservations include referenced models from other modules,
             # so a rare import collision must invalidate every module plan.

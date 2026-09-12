@@ -53,6 +53,11 @@ class Item(ZNode):
 
 
 @dataclass
+class Ordinary(Base):
+    value: Int
+
+
+@dataclass
 class Second(ZNode):
     camelValue: Int
     typename__: String = Field(..., alias='label')

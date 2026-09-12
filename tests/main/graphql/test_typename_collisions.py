@@ -5,6 +5,7 @@ from __future__ import annotations
 import dataclasses
 import json
 import sys
+from contextlib import nullcontext
 from typing import TYPE_CHECKING, Literal, get_args, get_origin, get_type_hints
 
 import msgspec
@@ -37,13 +38,14 @@ def _has_literal(annotation: object) -> bool:
 
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
 @pytest.mark.parametrize("output_model_type", list(DataModelType))
-@pytest.mark.parametrize("profile", ["collision", "normal", "aliases", "snake", "serialization"])
+@pytest.mark.parametrize("profile", ["collision", "normal", "aliases", "snake", "serialization", "scoped"])
 @pytest.mark.parametrize("no_typename", [False, True])
 def test_graphql_typename_collisions(
     entrypoint: str, output_model_type: DataModelType, profile: str, no_typename: bool, output_file: Path
 ) -> None:
-    """Round-trip wire aliases and retain both native fields through inheritance."""
+    """Retain local typename attributes, including the older msgspec identity-alias boundary."""
     settings = json.loads((DATA_PATH / "payloads/typename_collision_settings.json").read_text())[profile]
+    payload = json.loads((DATA_PATH / "payloads" / f"typename_collision_{profile}.json").read_text())
     input_path = GRAPHQL_DATA_PATH / settings.pop("schema")
     expected_name = f"typename_{profile}_{output_model_type.value.replace('.', '_')}_{no_typename}"
     if entrypoint == "cli":
@@ -53,6 +55,7 @@ def test_graphql_typename_collisions(
             input_file_type="graphql",
             assert_func=assert_file_content,
             expected_file=f"{expected_name}.py",
+            skip_code_validation=output_model_type.value in payload.get("import_errors", {}),
             extra_args=[
                 "--output-model-type",
                 output_model_type.value,
@@ -63,8 +66,8 @@ def test_graphql_typename_collisions(
                     argument
                     for option, value in settings.items()
                     for argument in (
-                        [f"--{option.replace('_', '-')}", str(GRAPHQL_DATA_PATH / f"typename_collision_{option}.json")]
-                        if isinstance(value, dict)
+                        [f"--{option.replace('_', '-')}", str(GRAPHQL_DATA_PATH / value)]
+                        if isinstance(value, str)
                         else [f"--{option.replace('_', '-')}"]
                     )
                 ],
@@ -80,9 +83,11 @@ def test_graphql_typename_collisions(
             output_model_type=output_model_type,
             target_python_version=PythonVersion.PY_310,
             graphql_no_typename=no_typename,
-            **settings,
+            **{
+                option: json.loads((GRAPHQL_DATA_PATH / value).read_text()) if isinstance(value, str) else value
+                for option, value in settings.items()
+            },
         )
-    payload = json.loads((DATA_PATH / "payloads" / f"typename_collision_{profile}.json").read_text())
     schema = build_schema(input_path.read_text())
     result = graphql_sync(schema, payload["query"], root_value=payload["root"], variable_values=payload["variables"])
     actual = {
@@ -92,7 +97,14 @@ def test_graphql_typename_collisions(
         "models": {},
     }
     inherited_type_roles = []
-    with _generated_model(output_file, "graphql_typename_runtime", "Item") as item:
+    with (
+        (
+            pytest.raises(ValueError, match=payload["import_errors"][output_model_type.value])
+            if output_model_type.value in payload.get("import_errors", {})
+            else nullcontext()
+        ) as error_info,
+        _generated_model(output_file, "graphql_typename_runtime", "Item") as item,
+    ):
         for name in payload["models"]:
             model = getattr(sys.modules[item.__module__], name)
             values = (
@@ -129,14 +141,32 @@ def test_graphql_typename_collisions(
                         values.update({field: name for field in fields if field not in values})
                     dumped = model(**values)
             annotations = get_type_hints(model, include_extras=True)
+            # Synthetic fields can move when a child adds a colliding user field.
             inherited_type_roles.extend(
-                (_has_literal(annotation), _has_literal(annotations[field]))
+                (
+                    _has_literal(annotation),
+                    (
+                        any(_has_literal(child_annotation) for child_annotation in annotations.values())
+                        if _has_literal(annotation)
+                        else _has_literal(annotations[field])
+                    ),
+                )
                 for interface in getattr(schema.get_type(name), "interfaces", ())
                 for field, annotation in get_type_hints(
                     getattr(sys.modules[item.__module__], interface.name), include_extras=True
                 ).items()
             )
-            actual["models"][name] = {"fields": fields, "values": dumped}
+            actual["models"][name] = {
+                "fields": fields,
+                "values": dumped,
+                "attributes": (
+                    dumped
+                    if output_model_type == DataModelType.TypingTypedDict
+                    else {field: getattr(instance, field) for field in fields}
+                ),
+            }
+    if error_info is not None:
+        actual["import_error"] = str(error_info.value)
     assert_output(
         f"{all(base == child for base, child in inherited_type_roles)}\n",
         DATA_PATH / "payloads/typename_inherited_type_compatible.txt",

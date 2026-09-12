@@ -458,9 +458,6 @@ class _XMLSchemaConverter:
         self.local_elements: set[QNameKey] = set()
         self._loaded_locations: set[tuple[Path, str | None]] = set()
         self._element_namespaces: dict[int, dict[str, str]] = {}
-        self._property_sources: dict[str, ET.Element] = {}
-        self._schema_namespace_contexts: list[tuple[ET.Element, str]] = []
-        self._declaration_names: dict[int, QNameKey] | None = None
         self._building_definitions: set[DefinitionKey] = set()
         self._built_definitions: dict[DefinitionKey, JsonSchema] = {}
         self._definitions: dict[str, JsonSchema] = {}
@@ -518,10 +515,9 @@ class _XMLSchemaConverter:
                 schema = self._convert_global_element_as_root(root_element, root_name)
         else:
             properties: dict[str, JsonSchema] = {}
-            with self._property_scope():
-                for _key, element in global_elements:
-                    name = cast("str", element.get("name"))
-                    self._set_property(properties, name, self._convert_global_element_as_property(element), element)
+            for _key, element in global_elements:
+                name = cast("str", element.get("name"))
+                properties[name] = self._convert_global_element_as_property(element)
             schema = {
                 "title": "Model",
                 "type": "object",
@@ -662,8 +658,6 @@ class _XMLSchemaConverter:
     ) -> None:
         source_dir = source_path.parent if source_path.name else self.base_path
         schema_namespace = root.get("targetNamespace") or namespace_override
-        if schema_namespace:
-            self._schema_namespace_contexts.append((root, schema_namespace))
         for child in _xsd_children(root, "include", "import", "redefine", "override"):
             schema_location = child.get("schemaLocation")
             if not schema_location:
@@ -1111,15 +1105,14 @@ class _XMLSchemaConverter:
         mixed_owners: tuple[ET.Element, ...] | None = None,
     ) -> JsonSchema:
         schema: JsonSchema = {"type": "object", "properties": {}}
-        with self._property_scope():
-            self._apply_open_content(owner, schema)
-            self._apply_model_group(owner, schema)
-            self._apply_attributes(owner, schema)
-            if mixed_owners:
-                mixed_owner, *additional_owners = mixed_owners
-                self._apply_mixed_content(mixed_owner, schema, *additional_owners)
-            else:
-                self._apply_mixed_content(owner, schema)
+        self._apply_open_content(owner, schema)
+        self._apply_model_group(owner, schema)
+        self._apply_attributes(owner, schema)
+        if mixed_owners:
+            mixed_owner, *additional_owners = mixed_owners
+            self._apply_mixed_content(mixed_owner, schema, *additional_owners)
+        else:
+            self._apply_mixed_content(owner, schema)
         return schema
 
     def _convert_complex_type(self, complex_type: ET.Element) -> JsonSchema:
@@ -1222,11 +1215,9 @@ class _XMLSchemaConverter:
             schema = inherited
             schema["properties"]["value"] = value_schema
         inherited_required = frozenset(schema["required"]) if inherited is not None else None
-        with self._property_scope():
-            self._property_sources["value"] = simple_content
-            self._apply_attributes(owner, schema, inherited_required=inherited_required)
-            if child is not None:
-                self._apply_attributes(child, schema, inherited_required=inherited_required)
+        self._apply_attributes(owner, schema, inherited_required=inherited_required)
+        if child is not None:
+            self._apply_attributes(child, schema, inherited_required=inherited_required)
         return schema
 
     def _apply_model_group(
@@ -1350,53 +1341,6 @@ class _XMLSchemaConverter:
                 if not already_active:
                     self._active_groups.remove(target_key)
 
-    @contextlib.contextmanager
-    def _property_scope(self) -> Iterator[None]:
-        previous = self._property_sources
-        self._property_sources = {}
-        try:
-            yield
-        finally:
-            self._property_sources = previous
-
-    def _property_identity(self, declaration: ET.Element) -> tuple[str, QNameKey]:
-        kind = _local_name(declaration.tag)
-        if kind == "simpleContent":
-            return "simple content", (None, "value")
-        if declaration.get("mixed") == "true":
-            return "mixed content", (None, "value")
-        if ref := declaration.get("ref"):
-            if ":" not in ref and (namespace := self._namespaces_for(declaration).get("")):
-                return kind, (namespace, ref)
-            return kind, self._resolve_key(
-                ref, self.elements if kind == "element" else self.attributes, element=declaration
-            )
-        if self._declaration_names is None:
-            self._declaration_names = {}
-            for root, namespace in self._schema_namespace_contexts:
-                for child in root.iter():
-                    if _is_xsd_element(child, "element", "attribute") and (name := child.get("name")):
-                        form = child.get("form", root.get(f"{_local_name(child.tag)}FormDefault", "unqualified"))
-                        self._declaration_names[id(child)] = (namespace if form == "qualified" else None, name)
-            for registry in (self.elements, self.attributes):
-                self._declaration_names.update((id(element), key) for key, element in registry.items())
-        return kind, self._declaration_names.get(id(declaration), (None, cast("str", declaration.get("name"))))
-
-    def _set_property(self, properties: JsonSchema, name: str, value: JsonSchema, declaration: ET.Element) -> None:
-        if (previous := self._property_sources.get(name)) is not None and previous is not declaration:
-            previous_kind, previous_key = self._property_identity(previous)
-            kind, key = self._property_identity(declaration)
-            if (previous_kind, previous_key) != (kind, key):
-                previous_name = f"{{{previous_key[0]}}}{previous_key[1]}" if previous_key[0] else previous_key[1]
-                current_name = f"{{{key[0]}}}{key[1]}" if key[0] else key[1]
-                msg = (
-                    f"XML Schema cannot represent both {previous_kind} '{previous_name}' "
-                    f"and {kind} '{current_name}' as property '{name}'."
-                )
-                raise Error(msg)
-        self._property_sources[name] = declaration
-        properties[name] = value
-
     def _add_property_from_element(
         self,
         element: ET.Element,
@@ -1417,7 +1361,7 @@ class _XMLSchemaConverter:
                 min_items=occurrence.min_items,
                 max_items=occurrence.max_items,
             )
-        self._set_property(properties, name, property_schema, element)
+        properties[name] = property_schema
         if occurrence.required and element.get("minOccurs", "1") != "0":
             schema.setdefault("required", []).append(name)
 
@@ -1491,19 +1435,19 @@ class _XMLSchemaConverter:
             fixed = source_attribute.get("fixed")
         if fixed is not None:
             self._apply_fixed_value(attribute_schema, self._parse_literal(fixed, attribute_schema))
-        self._set_property(schema.setdefault("properties", {}), name, attribute_schema, attribute)
+        schema.setdefault("properties", {})[name] = attribute_schema
         if use == "required" and (inherited_required is None or name not in inherited_required):
             schema.setdefault("required", []).append(name)
 
+    @staticmethod
     def _apply_mixed_content(
-        self,
         owner: ET.Element,
         schema: JsonSchema,
         *additional_owners: ET.Element,
     ) -> None:
         for candidate in (owner, *additional_owners):
             if candidate.get("mixed") == "true":
-                self._set_property(schema.setdefault("properties", {}), "value", _copy_schema(STRING_SCHEMA), candidate)
+                schema.setdefault("properties", {})["value"] = _copy_schema(STRING_SCHEMA)
                 return
 
     def _schema_for_substitution_group(self, head_key: QNameKey) -> JsonSchema | None:

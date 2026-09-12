@@ -50,6 +50,13 @@ class Item(ZNode, kw_only=True):
     typename__: Literal['Item'] | UnsetType = field(name='__typename', default='Item')
 
 
+class Ordinary(Base):
+    value: Int
+    typename__: Literal['Ordinary'] | UnsetType = field(
+        name='__typename', default='Ordinary'
+    )
+
+
 class Second(ZNode, kw_only=True):
     camelValue: Int
     label: String

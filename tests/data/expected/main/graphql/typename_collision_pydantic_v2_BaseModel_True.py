@@ -47,6 +47,10 @@ class Item(ZNode):
     typename___1: Int
 
 
+class Ordinary(Base):
+    value: Int
+
+
 class Second(ZNode):
     camelValue: Int
     typename__: String

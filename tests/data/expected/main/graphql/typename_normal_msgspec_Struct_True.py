@@ -46,6 +46,10 @@ class Item(ZNode):
     spare: Int
 
 
+class Ordinary(Base):
+    value: Int
+
+
 class Second(ZNode):
     camelValue: Int
     label: String

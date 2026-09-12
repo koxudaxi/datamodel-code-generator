@@ -51,6 +51,11 @@ class Item(ZNode):
     typename__: Literal['Item'] | None = Field('Item', alias='__typename')
 
 
+class Ordinary(Base):
+    value: Int
+    typename__: Literal['Ordinary'] | None = Field('Ordinary', alias='__typename')
+
+
 class Second(ZNode):
     camelValue: Int
     label: String

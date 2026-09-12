@@ -40,7 +40,7 @@ class ZNode(Struct):
 
 
 class Cross(Base, kw_only=True):
-    typename__: String
+    typename__: String = field(name='typename__')
     value: Int
     typename___1: Literal['Cross'] | UnsetType = field(
         name='__typename', default='Cross'
@@ -52,6 +52,13 @@ class Item(ZNode, kw_only=True):
     typename__: String
     typename___1: Int
     typename___2: Literal['Item'] | UnsetType = field(name='__typename', default='Item')
+
+
+class Ordinary(Base):
+    value: Int
+    typename___1: Literal['Ordinary'] | UnsetType = field(
+        name='__typename', default='Ordinary'
+    )
 
 
 class Second(ZNode, kw_only=True):

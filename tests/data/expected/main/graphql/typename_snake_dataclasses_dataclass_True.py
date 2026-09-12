@@ -50,6 +50,11 @@ class Item(ZNode):
 
 
 @dataclass
+class Ordinary(Base):
+    value: Int
+
+
+@dataclass
 class Second(ZNode):
     camel_value: Int
     typename__: String
