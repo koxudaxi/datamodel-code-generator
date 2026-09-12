@@ -11255,13 +11255,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _schema_resource_identifier(
         self, schema: dict[str, Any], id_field: str | None, *, is_root: bool
     ) -> tuple[str | None, object]:
-        """Inherit declared drafts, retaining identifier fallbacks for roots and undeclared schemas."""
-        if (
-            "$schema" in schema
-            and getattr(self.config, "jsonschema_version", None) in {None, JsonSchemaVersion.Auto}
-            and (version := _detect_declared_jsonschema_version(schema)) is not None
-        ):
-            id_field = JsonSchemaFeatures.from_version(version).id_field
+        """Inherit draft identifiers while preserving fallbacks for roots and unknown dialects."""
+        if "$schema" in schema and getattr(self.config, "jsonschema_version", None) in {None, JsonSchemaVersion.Auto}:
+            version = _detect_declared_jsonschema_version(schema)
+            id_field = JsonSchemaFeatures.from_version(version).id_field if version is not None else None
         identifier = schema.get(id_field or self.schema_features.id_field)
         if not identifier and (is_root or id_field is None):
             identifier = schema.get("$id") or schema.get("id")

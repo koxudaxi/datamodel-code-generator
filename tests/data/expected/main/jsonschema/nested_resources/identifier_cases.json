@@ -116,5 +116,45 @@
     "mode": "strict",
     "expected": "id_metadata.py",
     "runtime": "modern_id_scope_runtime.txt"
+  },
+  {
+    "source": "modern_unknown_child",
+    "version": "auto",
+    "mode": "lenient",
+    "expected": "id_metadata.py",
+    "runtime": "modern_id_scope_runtime.txt"
+  },
+  {
+    "source": "modern_unknown_child",
+    "version": "auto",
+    "mode": "strict",
+    "expected": "id_metadata.py",
+    "runtime": "modern_id_scope_runtime.txt"
+  },
+  {
+    "source": "modern_unknown_child",
+    "version": "draft-04",
+    "expected": "id_metadata.py",
+    "runtime": "modern_id_scope_runtime.txt"
+  },
+  {
+    "source": "draft4_unknown_child",
+    "version": "auto",
+    "mode": "lenient",
+    "expected": "id_metadata.py",
+    "runtime": "modern_id_scope_runtime.txt"
+  },
+  {
+    "source": "draft4_unknown_child",
+    "version": "auto",
+    "mode": "strict",
+    "expected": "id_metadata.py",
+    "runtime": "modern_id_scope_runtime.txt"
+  },
+  {
+    "source": "draft4_unknown_child",
+    "version": "2020-12",
+    "expected": "id_metadata.py",
+    "runtime": "modern_id_scope_runtime.txt"
   }
 ]
