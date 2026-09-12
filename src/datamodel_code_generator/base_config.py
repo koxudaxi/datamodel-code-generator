@@ -49,6 +49,7 @@ from datamodel_code_generator.enums import (
 )
 
 if TYPE_CHECKING:
+    from datamodel_code_generator._source import DirectoryInputFilter
     from datamodel_code_generator.preset_names import PresetName as PresetNameValue
 else:
     PresetNameValue: TypeAlias = str
@@ -84,6 +85,8 @@ class BaseGenerateConfig(BaseModel):
     # retaining the caller-selected output path as the formatter/process context.
     # Keeping this private preserves the public configuration schema.
     _logical_output: Path | None = PrivateAttr(default=None)
+    _logical_model_metadata: Path | None = PrivateAttr(default=None)
+    _directory_input_filter: DirectoryInputFilter | None = PrivateAttr(default=None)
 
     input_file_type: InputFileType = InputFileType.Auto
     output: Path | None = None

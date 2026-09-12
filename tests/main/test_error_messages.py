@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import py_compile
 import shutil
 import sys
 import warnings
@@ -30,7 +31,13 @@ from datamodel_code_generator.parser.graphql import GraphQLParser
 from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
 from datamodel_code_generator.parser.openapi import OpenAPIParser
 from tests.conftest import assert_output, assert_warnings_contain, create_assert_file_content
-from tests.main.conftest import DATA_PATH, InputFileTypeLiteral, run_main_and_assert, run_main_with_args
+from tests.main.conftest import (
+    DATA_PATH,
+    InputFileTypeLiteral,
+    run_generate_file_and_assert,
+    run_main_and_assert,
+    run_main_with_args,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -203,28 +210,68 @@ def test_generate_list_input_does_not_overwrite_input(tmp_path: Path) -> None:
     )
 
 
+@pytest.mark.parametrize(("entrypoint", "update_lock"), [("api", False), ("cli", False), ("api", True), ("cli", True)])
+@pytest.mark.parametrize("layout", ["sibling", "child", "same"])
+@pytest.mark.parametrize("metadata_location", [None, "inside", "outside"])
+@pytest.mark.parametrize("input_file_type", [InputFileType.JsonSchema, InputFileType.Auto])
 def test_output_path_can_write_inside_input_directory(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
+    entrypoint: str,
+    layout: str,
+    metadata_location: str | None,
+    input_file_type: InputFileType,
+    update_lock: bool,
 ) -> None:
-    """Preserve the existing one-shot layout with output below the input directory."""
+    """Repeated API and CLI generation retain inputs and ignore their own artifacts."""
     source = DATA_PATH / "jsonschema" / "person.json"
     input_path = tmp_path / "schemas"
     input_path.mkdir()
     shutil.copyfile(source, input_path / source.name)
-    output_path = input_path / "generated"
-
-    run_main_and_assert(
-        input_path=input_path,
-        output_path=output_path,
-        input_file_type="jsonschema",
-        extra_args=["--disable-timestamp", "--formatters", "builtin"],
-        capsys=capsys,
-        assert_no_stderr=True,
-    )
+    output_path = {"sibling": tmp_path / "generated", "child": input_path / "generated", "same": input_path}[layout]
+    metadata = None
+    if metadata_location is not None:
+        metadata = (input_path if metadata_location == "inside" else tmp_path) / "model_map.json"
+    expected_directory = tmp_path / "expected"
+    expected_directory.mkdir()
+    shutil.copyfile(DATA_PATH / "expected" / "main" / "person.py", expected_directory / "person.py")
+    shutil.copyfile(EXPECTED_MALFORMED_PATH / "directory_input_init.py", expected_directory / "__init__.py")
+    for run in range(2):
+        match entrypoint:
+            case "api":
+                run_generate_file_and_assert(
+                    input_path=input_path,
+                    output_path=output_path,
+                    input_file_type=input_file_type,
+                    disable_timestamp=True,
+                    formatters=[Formatter.BUILTIN],
+                    emit_model_metadata=metadata,
+                    update_lock=update_lock,
+                    lockfile=tmp_path / "refs.lock",
+                    expected_directory=expected_directory,
+                )
+            case "cli":
+                extra_args = ["--disable-timestamp", "--formatters", "builtin"]
+                if metadata is not None:
+                    extra_args.extend(["--emit-model-metadata", str(metadata)])
+                if update_lock:
+                    extra_args.extend(["--update-lock", "--lockfile", str(tmp_path / "refs.lock")])
+                run_main_and_assert(
+                    input_path=input_path,
+                    output_path=output_path,
+                    input_file_type="jsonschema" if input_file_type == InputFileType.JsonSchema else None,
+                    extra_args=extra_args,
+                    expected_directory=expected_directory,
+                    capsys=capsys,
+                    assert_no_stderr=input_file_type == InputFileType.JsonSchema,
+                )
+        py_compile.compile(str(output_path / "person.py"), doraise=True)
+        if run == 0:
+            init_path = output_path / "__init__.py"
+            init_path.write_text(init_path.read_text(encoding="utf-8").rstrip(), encoding="utf-8")
     assert_output(
-        (output_path / "person.py").read_text(encoding="utf-8"),
-        DATA_PATH / "expected" / "main" / "person.py",
+        f"{(input_path / source.name).read_text(encoding='utf-8')}\n",
+        EXPECTED_MALFORMED_PATH / "path_conflict_input.txt",
     )
 
 
@@ -242,6 +289,115 @@ def test_invalid_pyproject_configuration_is_a_clean_cli_error(
         expected_exit=Exit.ERROR,
         capsys=capsys,
         expected_stderr_contains="Invalid configuration: 1 validation error for Config",
+    )
+
+
+@pytest.mark.parametrize(
+    ("suffix", "inside_output", "input_file_type", "header"),
+    [
+        (".schema", False, "jsonschema", None),
+        (".py", False, "jsonschema", None),
+        (".py", True, "jsonschema", None),
+        (".py", True, None, None),
+        (".json", False, "jsonschema", "\n"),
+        (".py", True, "jsonschema", "# Shared copyright header"),
+    ],
+)
+def test_directory_input_preserves_nonstandard_schema_files(
+    tmp_path: Path, suffix: str, inside_output: bool, input_file_type: InputFileTypeLiteral | None, header: str | None
+) -> None:
+    """Output location and suffix alone cannot identify a generated artifact."""
+    input_path = tmp_path / "schemas"
+    output_path = input_path / "generated"
+    output_path.mkdir(parents=True)
+    source_path = (output_path if inside_output else input_path) / f"person{suffix}"
+    shutil.copyfile(DATA_PATH / "jsonschema" / "person.json", source_path)
+    source_text = source_path.read_text(encoding="utf-8")
+    if header is not None and header.strip():
+        source_path.write_text(f"{header}\n{source_text}", encoding="utf-8")
+    module_path = output_path / ("generated/person.py" if inside_output else "person.py")
+    extra_args = ["--disable-timestamp", "--formatters", "builtin"]
+    if header is not None:
+        extra_args.extend(["--custom-file-header", header])
+    for _ in range(2):
+        run_main_and_assert(
+            input_path=input_path,
+            output_path=output_path,
+            input_file_type=input_file_type,
+            extra_args=extra_args,
+        )
+        generated = module_path.read_text(encoding="utf-8")
+        if header is not None:
+            if header.strip():
+                generated = generated.removeprefix(header + "\n\n")
+            generated = f"# generated by datamodel-codegen:\n#   filename:  person.json\n\n{generated}"
+        else:
+            generated = generated.replace(
+                f"#   filename:  {source_path.relative_to(input_path).as_posix()}", "#   filename:  person.json"
+            )
+        assert_output(generated, DATA_PATH / "expected" / "main" / "person.py")
+    preserved_source = source_path.read_text(encoding="utf-8")
+    if header is not None and header.strip():
+        preserved_source = preserved_source.removeprefix(header + "\n")
+    assert_output(f"{preserved_source}\n", EXPECTED_MALFORMED_PATH / "path_conflict_input.txt")
+
+
+def test_directory_input_does_not_ignore_unrelated_bytecode(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """A Python cache is excluded only when its source is recognized as generated output."""
+    input_path = tmp_path / "schemas"
+    output_path = input_path / "generated"
+    output_path.mkdir(parents=True)
+    schema_path = output_path / "schema.py"
+    shutil.copyfile(DATA_PATH / "jsonschema" / "simple_string.json", schema_path)
+    py_compile.compile(str(schema_path), doraise=True)
+    run_main_and_assert(
+        input_path=input_path,
+        output_path=output_path,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="codec can't decode",
+    )
+
+
+def test_directory_input_retains_type_aliases_without_future_imports(tmp_path: Path) -> None:
+    """Recognize generated assignment-only modules without parsing target-version syntax."""
+    source_path = tmp_path / "schemas"
+    source_path.mkdir()
+    shutil.copyfile(DATA_PATH / "jsonschema" / "external_collapse" / "child.json", source_path / "child.json")
+    for _ in range(2):
+        run_main_and_assert(
+            input_path=source_path,
+            output_path=source_path,
+            input_file_type="jsonschema",
+            extra_args=[
+                "--disable-timestamp",
+                "--formatters",
+                "builtin",
+                "--use-type-alias",
+                "--target-python-version",
+                "3.12",
+                "--disable-future-imports",
+            ],
+            assert_func=assert_file_content,
+            output_to_expected=[("child.py", "directory_input_alias.py")],
+            skip_code_validation=sys.version_info < (3, 12),
+        )
+
+
+def test_directory_auto_input_does_not_infer_from_generated_files(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A directory containing only previous output has no schema to infer."""
+    source_path = tmp_path / "schemas"
+    source_path.mkdir()
+    shutil.copyfile(DATA_PATH / "expected" / "main" / "person.py", source_path / "person.py")
+    run_main_and_assert(
+        input_path=source_path,
+        output_path=source_path,
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="File not found:",
     )
 
 
@@ -332,16 +488,24 @@ def test_cli_input_errors_are_clean(
     )
 
 
+@pytest.mark.parametrize("directory_input", [False, True])
 def test_missing_custom_file_header_is_a_clean_cli_error(
     output_file: Path,
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
+    directory_input: bool,
 ) -> None:
     """Custom header I/O failures report a CLI error without a traceback."""
     header_path = tmp_path / "missing-header.txt"
+    input_path = DATA_PATH / "jsonschema" / "person.json"
+    if directory_input:
+        input_path = tmp_path / "schemas"
+        input_path.mkdir()
+        shutil.copyfile(DATA_PATH / "jsonschema" / "person.json", input_path / "person.json")
+        output_file = input_path / "generated"
 
     run_main_and_assert(
-        input_path=DATA_PATH / "jsonschema" / "person.json",
+        input_path=input_path,
         output_path=output_file,
         input_file_type="jsonschema",
         extra_args=["--custom-file-header-path", str(header_path)],

@@ -548,7 +548,8 @@ class WatchDependencies(_Weakrefable):
         if path_variants & snapshot.recovery_paths:
             return True
         if any(
-            resolved_path == output or (is_directory and resolved_path.is_relative_to(output))
+            resolved_path == output
+            or (is_directory and resolved_path.is_relative_to(output) and not path_variants & snapshot.files)
             for output, is_directory in snapshot.outputs.items()
         ):
             return False

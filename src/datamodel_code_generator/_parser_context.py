@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from datamodel_code_generator._shared_types import DefaultPutDict
+    from datamodel_code_generator._source import DirectoryInputFilter
 
 
 @dataclass(frozen=True, slots=True)
@@ -20,6 +21,7 @@ class ParserSourceContext:
 
     base_path: Path | None = None
     encoding: str = "utf-8"
+    directory_input_filter: DirectoryInputFilter | None = None
     remote_text_cache: DefaultPutDict[str, str] | None = None
     allow_remote_refs: bool | None = None
     strict_refs: bool = False

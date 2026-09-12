@@ -2156,9 +2156,11 @@ def _stage_job_plan(plan: JobPlan) -> _StagedJobPlan:
             model_metadata_anchor = publication_anchor(cast("Path", plan.resolved_model_metadata_parent))
             anchors.append(model_metadata_anchor)
 
+        staged_config = plan.config.model_copy(update=updates)
+        staged_config._logical_model_metadata = model_metadata  # noqa: SLF001
         return _StagedJobPlan(
             plan,
-            plan.config.model_copy(update=updates),
+            staged_config,
             output,
             staged_output,
             plan.resolved_output_root,

@@ -2463,17 +2463,20 @@ def test_watch_with_no_collected_dependencies_stops_cleanly(tmp_path: Path) -> N
     )
 
 
-def test_watch_cli_regenerates_directory_output_on_change(tmp_path: Path) -> None:
+@pytest.mark.parametrize("layout", ["sibling", "child", "same"])
+@pytest.mark.parametrize("emit_metadata", [False, True])
+def test_watch_cli_regenerates_directory_output_on_change(tmp_path: Path, layout: str, emit_metadata: bool) -> None:
     """Watch mode regenerates package output when a schema directory changes."""
     input_dir = tmp_path / "schemas"
     input_dir.mkdir()
     input_file = input_dir / "schema.json"
-    output_dir = tmp_path / "models"
+    output_dir = {"sibling": tmp_path / "models", "child": input_dir / "models", "same": input_dir}[layout]
     output_file = output_dir / "schema.py"
     input_file.write_text(WATCH_SCHEMA_INITIAL, encoding="utf-8")
     process, stdout_lines, stderr_lines, stdout_thread, stderr_thread = _start_watch_cli_until_ready(
         input_dir,
         output_dir,
+        ["--emit-model-metadata", str(input_dir / "model_map.json")] if emit_metadata else None,
     )
 
     try:

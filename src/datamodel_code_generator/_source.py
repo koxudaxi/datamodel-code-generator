@@ -5,14 +5,16 @@ from __future__ import annotations
 import contextlib
 import sys
 from collections import OrderedDict
+from dataclasses import dataclass
 from functools import lru_cache
 from hashlib import sha256
+from importlib.util import source_from_cache
 from pathlib import Path
 from threading import RLock
 from typing import TYPE_CHECKING, TextIO, TypeAlias
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterable, Iterator
 
 # Pydantic 2.5 cannot build schemas from stdlib TypeAliasType on Python 3.12.
 if sys.version_info >= (3, 14):
@@ -42,6 +44,59 @@ _parser_source_data_seen_keys: OrderedDict[_ParserSourceDataSeenKey, None] = Ord
 _parser_source_data_cache_lock = RLock()
 _parsed_source_cache_enable_count = 0
 _enable_parsed_source_cache = False
+
+
+@dataclass(frozen=True, slots=True)
+class DirectoryInputFilter:
+    """Exclude configured artifacts without excluding schemas by their suffix."""
+
+    files: frozenset[Path]
+    output_directory: Path | None
+    headers: tuple[str, ...]
+
+    def _is_generated(self, text: str) -> bool:
+        """Require Python output after a header that a schema may also share."""
+        for header in self.headers:
+            if not text.startswith(header):
+                continue
+            start = len(header)
+            while start < len(text):
+                if text[start].isspace():
+                    start += 1
+                elif text[start] == "#":
+                    if (line_end := text.find("\n", start)) < 0:
+                        return True
+                    start = line_end + 1
+                else:
+                    break
+            if start == len(text) or text.startswith(("from ", "import ", "class ", "@"), start):
+                return True
+            line_end = text.find("\n", start)
+            line = text[start : None if line_end < 0 else line_end]
+            target, assignment, _ = line.partition("=")
+            if assignment and target.removeprefix("type ").strip().isidentifier():
+                return True
+        return False
+
+    def iter_files(self, paths: Iterable[Path], encoding: str) -> Iterator[tuple[Path, bytes | None]]:
+        """Retain candidate bytes so recognizing an artifact never rereads a schema."""
+        for path in paths:
+            if not path.is_file() or path in self.files:
+                continue
+            data = None
+            if self.output_directory is not None and path.is_relative_to(self.output_directory):
+                source_path = path
+                if path.suffix == ".pyc" and path.parent.name == "__pycache__":
+                    with contextlib.suppress(ValueError):
+                        source_path = Path(source_from_cache(str(path)))
+                if source_path.suffix == ".py" and (source_path == path or source_path.is_file()):
+                    source_data = source_path.read_bytes()
+                    text = source_data.decode(encoding)
+                    if self._is_generated(text) or (source_path.name == "__init__.py" and not text.strip()):
+                        continue
+                    if source_path == path:
+                        data = source_data
+            yield path, data
 
 
 def enable_parsed_source_cache() -> Callable[[], None]:
