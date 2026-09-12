@@ -272,6 +272,23 @@ _REF_SIBLING_KEYWORDS_DISABLED_VERSIONS = frozenset({
 _PYTHON_FIELD_OVERRIDES_KEY = "__python_field_overrides"
 
 
+_NUMERIC_TYPE_DOMAINS = {
+    "integer": frozenset({"integer"}),
+    "number": frozenset({"integer", "number"}),
+    "null": frozenset({"null"}),
+}
+
+
+def _numeric_type_domain(schema_type: str | list[str]) -> frozenset[str] | None:
+    """Expand number to its numeric subtypes within the numeric/null domain."""
+    if isinstance(schema_type, str):
+        return _NUMERIC_TYPE_DOMAINS.get(schema_type)
+    types = frozenset(schema_type)
+    if not types.issubset(_NUMERIC_TYPE_DOMAINS):
+        return None
+    return types | _NUMERIC_TYPE_DOMAINS["integer"] if "number" in types else types
+
+
 def _field_source_name(field: DataModelFieldBase) -> str | None:
     return field.original_name if field.original_name is not None else field.name
 
@@ -351,9 +368,7 @@ def _intersect_all_of_enum(parent: list[Any], child: list[Any]) -> list[Any]:
             any(_json_literal_values_equal(item, candidate) for candidate in parent) for item in child
         ):
             return parent + child
-    if not intersection:
-        raise SchemaParseError(message="allOf enum intersection is empty and cannot be represented")
-    return intersection
+    return intersection or parent + child
 
 
 def _align_all_of_enum_metadata(parent: dict[str, Any], child: dict[str, Any], result: dict[str, Any]) -> None:
@@ -4187,10 +4202,30 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     @staticmethod
     def _first_typed_schema_dict(items: list[JsonSchemaObject]) -> dict[str, Any]:
-        return next(
+        base_dict = next(
             (item.model_dump(exclude_unset=True, by_alias=True) for item in items if item.type),
             {},
         )
+        if (original_domain := _numeric_type_domain(base_dict.get("type", ""))) is None:
+            return base_dict
+        domain = original_domain
+        original_type = base_dict["type"]
+        for item in items:
+            if item.type and item.type != original_type:
+                if (item_domain := _numeric_type_domain(item.type)) is None:
+                    return base_dict
+                domain &= item_domain
+        if not domain:
+            return base_dict
+        if domain != original_domain:
+            types = original_type if isinstance(original_type, list) else [original_type]
+            narrowed_types = dict.fromkeys(
+                "integer" if type_ == "number" and "number" not in domain else type_
+                for type_ in types
+                if type_ in domain or (type_ == "number" and "integer" in domain)
+            )
+            base_dict["type"] = next(iter(narrowed_types)) if len(narrowed_types) == 1 else list(narrowed_types)
+        return base_dict
 
     @staticmethod
     def _schema_constraint_value(item: JsonSchemaObject, field: str) -> Any:
@@ -4254,6 +4289,13 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     base_dict[field] = value
         if patterns:
             base_dict["pattern"] = _intersect_patterns(patterns)
+        if (
+            base_dict.get("type") in ("null", ["null"])
+            and all(not item.type or _numeric_type_domain(item.type) is not None for item in items)
+            and any("integer" in (_numeric_type_domain(item.type or "") or ()) for item in items)
+        ):
+            for field in _NUMBER_CONSTRAINT_KEYS:
+                base_dict.pop(field, None)
 
     def _build_allof_type(  # noqa: PLR0911, PLR0912, PLR0913, PLR0915, PLR0917
         self,
@@ -6424,7 +6466,15 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                         ("integer", "number"),
                         ("number", "integer"),
                     }
-                    if item.type != ref_schema.type and (item.type, ref_schema.type) not in compatible_type_pairs:
+                    numeric_types = (
+                        _numeric_type_domain(item.type) is not None
+                        and _numeric_type_domain(ref_schema.type) is not None
+                    )
+                    if (
+                        not numeric_types
+                        and item.type != ref_schema.type
+                        and (item.type, ref_schema.type) not in compatible_type_pairs
+                    ):
                         return None
                 constraint_items.append(item)
 
