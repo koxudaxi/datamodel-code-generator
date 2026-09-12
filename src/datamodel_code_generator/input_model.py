@@ -1197,11 +1197,16 @@ def _exported_runtime_symbol(tp: object, modules: list[str]) -> PythonTypeRuntim
 
 
 def _exported_generic_expression(  # ruff: ignore[too-many-return-statements]
-    tp: object, modules: list[str]
+    tp: object, modules: list[str] | None
 ) -> PythonTypeExpr | None:
-    """Reuse an actual exported metadata alias without reconstructing its values."""
+    """Try symbolic reuse, deferring metadata alias lookup until native paths are tried."""
     if not _has_annotated_generic_argument(tp):
-        return _reused_python_type_expression(tp)
+        try:
+            return _reused_python_type_expression(tp)
+        except Error:
+            return _exported_runtime_symbol(tp, modules) if modules is not None else None
+    if modules is None:
+        return None
     if exported := _exported_runtime_symbol(tp, modules):
         return exported
     if get_origin(tp) is Annotated:
@@ -1222,13 +1227,11 @@ def _exported_generic_expression(  # ruff: ignore[too-many-return-statements]
 
 
 def _generic_python_import(
-    tp: type,
     origin: type,
     expression_collector: PythonTypeExpressionCollector | None,
-    expression: PythonTypeExpr | None = None,
+    expression: PythonTypeExpr,
 ) -> dict[str, Any]:
     """Transport generic syntax and exact runtime leaves through the existing IR."""
-    expression = expression or _reused_python_type_expression(tp)
     symbols: dict[str, dict[str, str]] = {}
 
     def remember_symbol(item: PythonTypeExpr) -> PythonTypeExpr:
@@ -1281,8 +1284,7 @@ def _filter_defs_by_strategy(  # ruff: ignore[too-many-branches, too-many-argume
 
         if should_reuse:
             if metadata := _pydantic_generic_metadata(nested_type):
-                expression = None
-                if _has_annotated_generic_argument(nested_type):
+                if (expression := _exported_generic_expression(nested_type, None)) is None:
                     if native_paths is None:
                         native_paths = _native_generic_field_paths(model_classes or list(nested_models.values()))
                     if path := native_paths.get(nested_type):
@@ -1299,16 +1301,12 @@ def _filter_defs_by_strategy(  # ruff: ignore[too-many-branches, too-many-argume
                     )
                     expression = _exported_generic_expression(nested_type, modules)
                     if expression is None:
-                        msg = (
-                            f"Cannot safely reuse {nested_type.__name__!r}: its Annotated metadata has no stable "
-                            "field annotation or exported alias. Export the Annotated type or specialization from "
-                            "the input module, use eager annotations, or select regenerate-all."
-                        )
-                        raise Error(msg)
+                        # Keep this definition and its references on the legacy schema path.
+                        # Unreachable Python validators cannot be recovered from JSON Schema.
+                        new_defs[def_name] = def_schema
+                        continue
                 new_defs[def_name] = {
-                    "x-python-import": _generic_python_import(
-                        nested_type, metadata["origin"], expression_collector, expression
-                    )
+                    "x-python-import": _generic_python_import(metadata["origin"], expression_collector, expression)
                 }
                 continue
             new_defs[def_name] = {

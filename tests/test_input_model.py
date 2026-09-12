@@ -30,7 +30,6 @@ from datamodel_code_generator import __main__ as main_module
 from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.enums import InputModelRefStrategy
 from datamodel_code_generator.format import Formatter
-from datamodel_code_generator.input_model import Error as InputModelError
 from datamodel_code_generator.input_model import load_model_schema
 from tests.conftest import (
     BUILTIN_FORMATTER_VALUE,
@@ -46,6 +45,7 @@ from tests.main.conftest import (
     DATA_PATH,
     EXPECTED_MAIN_PATH,
     _generated_model,
+    _model_json_validator,
     _uses_external_test_default_formatter,
     run_generate_and_assert,
     run_main_and_assert,
@@ -2772,31 +2772,40 @@ INPUT_GENERIC_CASES = json.loads((INPUT_GENERIC_FIXTURES / "generic_reuse_cases.
 
 
 @pytest.mark.parametrize(
-    ("record", "strategy", "preserved"),
+    ("record", "strategy", "output_model", "preserved"),
     [
         *(
-            pytest.param(record, strategy, False, id=f"{strategy}-{record['name']}")
+            pytest.param(record, strategy, output_model, False, id=f"{strategy}-{record['name']}-{output_model}")
             for record in INPUT_GENERIC_CASES
             for strategy in record.get("strategies", ["regenerate-all", "reuse-all", "reuse-foreign"])
+            for output_model in record.get("output_models", ["pydantic_v2.BaseModel"])
         ),
-        pytest.param(INPUT_GENERIC_CASES[0], "reuse-all", True, id="preserved"),
+        pytest.param(INPUT_GENERIC_CASES[0], "reuse-all", "pydantic_v2.BaseModel", True, id="preserved"),
     ],
 )
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])
 @pytest.mark.parametrize("formatter", ["builtin", "external"])
 def test_python_generic_reuse(  # noqa: PLR0912, PLR0914
-    record: dict, strategy: str, entrypoint: str, formatter: str, tmp_path: Path, *, preserved: bool
+    record: dict, strategy: str, output_model: str, entrypoint: str, formatter: str, tmp_path: Path, *, preserved: bool
 ) -> None:
     """Preserve original validators and specialization identity without changing regeneration."""
     paths = ["tests.data.python.input_model." + source for source in record["sources"]]
     (tmp_path / "pyproject.toml").write_text((INPUT_GENERIC_FIXTURES / "collision_settings/pyproject.toml").read_text())
     formatters = ["builtin"] if formatter == "builtin" else ["black", "isort"]
     output = tmp_path / "output.py"
-    expected_strategy = "regenerate-all" if strategy == "regenerate-all" else "reuse-all"
+    expected_strategy = (
+        "regenerate-all"
+        if strategy == "regenerate-all" or (strategy == "reuse-foreign" and output_model == "dataclasses.dataclass")
+        else "reuse-all"
+    )
+    expected_strategy = record.get("expected_strategies", {}).get(strategy, expected_strategy)
     stem = record["name"] + "_" + expected_strategy
-    source_expected = INPUT_GENERIC_EXPECTED / formatter if record.get("formatter_goldens") else INPUT_GENERIC_EXPECTED
+    expected_directory = (
+        INPUT_GENERIC_EXPECTED / "dataclass" if output_model == "dataclasses.dataclass" else INPUT_GENERIC_EXPECTED
+    )
+    source_expected = expected_directory / formatter if record.get("formatter_goldens") else expected_directory
     if record.get("pydantic20_goldens") and PYDANTIC_VERSION.split(".")[:2] == ["2", "0"]:
-        source_expected = INPUT_GENERIC_EXPECTED / "pydantic20" / formatter
+        source_expected = expected_directory / "pydantic20" / formatter
     code_name = (
         "preserved.py"
         if preserved
@@ -2805,21 +2814,29 @@ def test_python_generic_reuse(  # noqa: PLR0912, PLR0914
         )
     )
     if entrypoint == "cli":
-        args = (
-            ["--input", str(DATA_PATH / "jsonschema/generic_reuse_type.json"), "--input-file-type", "jsonschema"]
-            if preserved
-            else _input_model_args(paths)
-        )
-        run_main_with_args([
-            *args,
-            "--output",
-            str(output),
+        extra_args = [
             "--disable-timestamp",
+            "--output-model-type",
+            output_model,
             *([] if preserved else ["--input-model-ref-strategy", strategy]),
             "--formatters",
             *formatters,
-        ])
-        assert_output(output.read_text(), source_expected / code_name)
+        ]
+        if preserved:
+            run_main_and_assert(
+                input_path=DATA_PATH / "jsonschema/generic_reuse_type.json",
+                input_file_type="jsonschema",
+                output_path=output,
+                expected_file=source_expected / code_name,
+                extra_args=extra_args,
+            )
+        else:
+            run_input_model_and_assert(
+                input_model=paths[0],
+                output_path=output,
+                expected_file=source_expected / code_name,
+                extra_args=[*_input_model_args(paths[1:]), *extra_args],
+            )
     else:
         schema = (
             DATA_PATH / "jsonschema/generic_reuse_type.json"
@@ -2830,7 +2847,7 @@ def test_python_generic_reuse(  # noqa: PLR0912, PLR0914
                         paths,
                         InputFileType.JsonSchema,
                         InputModelRefStrategy(strategy),
-                        DataModelType.PydanticV2BaseModel,
+                        DataModelType(output_model),
                     )
                 )
             )
@@ -2840,6 +2857,7 @@ def test_python_generic_reuse(  # noqa: PLR0912, PLR0914
             expected_file=source_expected / code_name,
             config=GenerateConfig(
                 input_file_type=InputFileType.JsonSchema,
+                output_model_type=DataModelType(output_model),
                 disable_timestamp=True,
                 input_filename=None if preserved else "<stdin>",
                 output=output,
@@ -2853,21 +2871,28 @@ def test_python_generic_reuse(  # noqa: PLR0912, PLR0914
             module_name, name = source.split(":")
             native = getattr(importlib.import_module("tests.data.python.input_model." + module_name), name)
             generated = getattr(sys.modules["generic_output"], name)
+            if output_model == "dataclasses.dataclass":
+                _model_json_validator(generated)
             native_fields = getattr(native, "model_fields", None)
             native_annotations = (
                 {field: info.annotation for field, info in native_fields.items()}
                 if native_fields is not None
                 else get_type_hints(native)
             )
+            generated_annotations = (
+                {field: info.annotation for field, info in generated.model_fields.items()}
+                if hasattr(generated, "model_fields")
+                else get_type_hints(generated)
+            )
             row = {
                 "name": name,
-                "fields": list(generated.model_fields),
+                "fields": list(generated_annotations),
                 "annotations_equal": {
-                    field: generated.model_fields[field].annotation == annotation
+                    field: generated_annotations[field] == annotation
                     for field, annotation in native_annotations.items()
                 },
                 "type_identity": {
-                    field: generated.model_fields[field].annotation is annotation
+                    field: generated_annotations[field] is annotation
                     for field, annotation in native_annotations.items()
                     if get_origin(annotation) is None and isinstance(annotation, type)
                 },
@@ -2876,7 +2901,7 @@ def test_python_generic_reuse(  # noqa: PLR0912, PLR0914
             leaf_ids = {}
             for label, annotations in [
                 ("native", native_annotations),
-                ("generated", {field: info.annotation for field, info in generated.model_fields.items()}),
+                ("generated", generated_annotations),
             ]:
                 leaf_ids[label] = {}
                 for field, annotation in annotations.items():
@@ -2908,8 +2933,31 @@ def test_python_generic_reuse(  # noqa: PLR0912, PLR0914
                     row["results"][label]["invalid"] = [(list(item["loc"]), item["type"]) for item in error.errors()]
                 else:
                     row["results"][label]["invalid"] = None
+                if record.get("extra_invalid"):
+                    extra_invalid = []
+                    for extra in record["extra_invalid"]:
+                        try:
+                            adapter.validate_python(extra)
+                        except ValidationError as error:  # noqa: PERF203
+                            extra_invalid.append([(list(item["loc"]), item["type"]) for item in error.errors()])
+                        else:
+                            extra_invalid.append(None)
+                    row["results"][label]["extra_invalid"] = extra_invalid
+            if record.get("instance_fields"):
+                native_instance = TypeAdapter(native).validate_python(payload)
+                generated_instance = TypeAdapter(generated).validate_python(payload)
+                row["instances"] = {}
+                for field in record["instance_fields"]:
+                    native_value = (
+                        native_instance[field] if isinstance(native_instance, dict) else getattr(native_instance, field)
+                    )
+                    generated_value = getattr(generated_instance, field)
+                    row["instances"][field] = {
+                        "type_identity": type(generated_value) is type(native_value),
+                        "value_identity": generated_value.value is native_value.value,
+                    }
             rows.append(row)
-    assert_output(json.dumps(rows, indent=2) + "\n", INPUT_GENERIC_EXPECTED / (stem + ".txt"))
+    assert_output(json.dumps(rows, indent=2) + "\n", expected_directory / (stem + ".txt"))
 
 
 @pytest.mark.parametrize("case", ["name", "family", "index_type", "index_negative"])
@@ -2922,44 +2970,6 @@ def test_python_native_field_invalid_path(case: str, tmp_path: Path) -> None:
             expected_file=tmp_path / "output.py",
             config=GenerateConfig(input_file_type=InputFileType.JsonSchema, output=tmp_path / "output.py"),
         )
-
-
-@pytest.mark.parametrize("entrypoint", ["cli", "api"])
-@pytest.mark.parametrize("strategy", ["reuse-all", "reuse-foreign"])
-@pytest.mark.parametrize("formatter", ["builtin", "external"])
-@pytest.mark.parametrize(
-    "fixture",
-    json.loads((INPUT_GENERIC_FIXTURES / "generic_reuse_diagnostic.json").read_text()),
-    ids=lambda fixture: fixture["source"].rsplit(":", 1)[-1],
-)
-def test_python_inline_future_generic_diagnostic(
-    entrypoint: str, strategy: str, formatter: str, capsys: pytest.CaptureFixture[str], tmp_path: Path, fixture: dict
-) -> None:
-    """Diagnose annotations without a safe reusable expression."""
-    if entrypoint == "cli":
-        run_main_with_args(
-            [
-                "--input-model",
-                fixture["source"],
-                "--input-model-ref-strategy",
-                strategy,
-                "--output",
-                str(tmp_path / "output.py"),
-                "--formatters",
-                *(["builtin"] if formatter == "builtin" else ["black", "isort"]),
-            ],
-            expected_exit=Exit.ERROR,
-            capsys=capsys,
-            expected_stderr_contains=fixture["message"],
-        )
-    else:
-        with pytest.raises(InputModelError, match=fixture["message"]):
-            load_model_schema(
-                [fixture["source"]],
-                InputFileType.JsonSchema,
-                InputModelRefStrategy(strategy),
-                DataModelType.PydanticV2BaseModel,
-            )
 
 
 @pytest.mark.parametrize("entrypoint", ["cli", "api"])

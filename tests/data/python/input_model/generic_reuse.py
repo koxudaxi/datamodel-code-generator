@@ -67,7 +67,7 @@ class DataclassRoot:
 class TypedRoot(TypedDict):
     box: Box[int]
 
-from enum import Enum
+from enum import Enum, IntEnum
 class Tag(str, Enum):
     A = 'a'
 class EnumRoot(BaseModel):
@@ -125,10 +125,36 @@ def _local_enum_model():
     class LocalTag(str, Enum):
         A = "a"
 
+    class LocalNumber(IntEnum):
+        ONE = 1
+        ZERO = 0
+
     class LocalEnumRoot(BaseModel):
         box: Box[Literal[LocalTag.A]]
+        validated: Box[Literal[LocalNumber.ONE, LocalNumber.ZERO]]
 
-    return LocalEnumRoot
+    @dataclass
+    class LocalEnumDataclass:
+        box: Box[Literal[LocalTag.A]]
+        validated: Box[Literal[LocalNumber.ONE, LocalNumber.ZERO]]
+
+    class LocalEnumTyped(TypedDict):
+        box: Box[Literal[LocalTag.A]]
+        validated: Box[Literal[LocalNumber.ONE, LocalNumber.ZERO]]
+
+    return LocalEnumRoot, LocalEnumDataclass, LocalEnumTyped
 
 
-LocalEnumRoot = _local_enum_model()
+LocalEnumRoot, LocalEnumDataclass, LocalEnumTyped = _local_enum_model()
+
+
+class DefaultBox(Box[T], Generic[T]):
+    value: T = 4
+    label: str = 'kept'
+
+    @field_validator('value')
+    @classmethod
+    def not_five(cls, value):
+        if value == 5:
+            raise ValueError('must not be five')
+        return value
