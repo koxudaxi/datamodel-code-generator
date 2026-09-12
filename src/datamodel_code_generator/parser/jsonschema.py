@@ -9319,6 +9319,46 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return self.data_type_manager.get_data_type(Types.string, **kwargs)
         return self.data_type_manager.get_data_type(Types.string)
 
+    def _parse_string_property_name_union(self, schema: JsonSchemaObject) -> tuple[DataType | None, bool]:
+        """Build constrained string keys, retaining unions already dominated by a plain string branch."""
+        if schema.model_fields_set - {
+            "type",
+            "anyOf",
+            "pattern",
+            "minLength",
+            "maxLength",
+            "title",
+            "description",
+            "default",
+        } or (
+            schema.type is not None
+            and schema.type != "string"
+            and (not isinstance(schema.type, list) or "string" not in schema.type)
+        ):
+            return None, False
+        if not schema.anyOf:
+            return self._parse_property_name_key_schema(schema), not schema.has_constraint
+        if schema.has_constraint:
+            return None, False
+        data_types: list[DataType] = []
+        branch_count = 0
+        for branch in schema.anyOf:
+            if branch is False:
+                continue
+            data_type, unrestricted = (
+                (self.data_type_manager.get_data_type(Types.string), True)
+                if branch is True
+                else self._parse_string_property_name_union(branch)
+            )
+            if unrestricted and (not self.field_constraints or branch_count == 0 or len(data_types) != branch_count):
+                return None, True
+            branch_count += 1
+            if data_type is not None:
+                data_types.append(data_type)
+        if not data_types or len(data_types) != branch_count:
+            return None, False
+        return self.data_type(data_types=data_types), False
+
     def _parse_property_names_key_type(
         self,
         name: str,
@@ -9335,11 +9375,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         match property_names:
             case JsonSchemaObject() if property_names.anyOf or property_names.oneOf or property_names.allOf:
-                return self.parse_item(
-                    name,
-                    property_names,
-                    get_special_path("propertyNames/key", path),
-                )
+                if property_names.anyOf:
+                    key_type, _ = self._parse_string_property_name_union(property_names)
+                    if key_type is not None:
+                        return key_type
+                return self.parse_item(name, property_names, get_special_path("propertyNames/key", path))
         return self._parse_property_name_key_schema(property_names)
 
     def _parse_simple_property_name_key_type(

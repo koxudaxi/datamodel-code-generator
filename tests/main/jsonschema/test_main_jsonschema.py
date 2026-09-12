@@ -61,6 +61,7 @@ from datamodel_code_generator import (
     cached_path_exists,
     chdir,
     generate,
+    generate_dynamic_models,
     load_data,
     load_data_from_path,
 )
@@ -23384,4 +23385,134 @@ def test_numeric_null_custom_template(output_file: Path, entrypoint: str) -> Non
         valid_json="null",
         invalid_json="2",
         expected_error_type="none_required",
+    )
+
+
+COMPOUND_PROPERTY_INPUTS = JSON_SCHEMA_DATA_PATH / "compound_property_names"
+
+
+COMPOUND_PROPERTY_PAYLOADS = DATA_PATH / "payloads" / "compound_property_names"
+
+
+COMPOUND_PROPERTY_EXPECTED = EXPECTED_JSON_SCHEMA_PATH / "compound_property_names"
+
+
+COMPOUND_PROPERTY_CASES = json.loads((COMPOUND_PROPERTY_PAYLOADS / "cases.json").read_text())
+
+
+@pytest.mark.parametrize("name", COMPOUND_PROPERTY_CASES)
+@pytest.mark.parametrize("constraints", [False, True])
+@pytest.mark.parametrize("entry", ["cli", "api", "dynamic"])
+def test_compound_property_name_generation(name: str, constraints: bool, entry: str, output_file: Path) -> None:
+    """Preserve string keys, native acceptance, and deterministic generated output."""
+    input_path = COMPOUND_PROPERTY_INPUTS / f"{name}.json"
+    suffix = (
+        "_legacy_pydantic"
+        if PYDANTIC_V2_ROOT_MODEL_DICT_KEY_FORWARD_REF_NEEDS_SORTING and name in {"enum_refs", "ref_then_any"}
+        else ""
+    )
+    expected_file = COMPOUND_PROPERTY_CASES[name].get(
+        f"{name}_{int(constraints)}{suffix}.py", f"{name}_{int(constraints)}{suffix}.py"
+    )
+    expected_file = f"compound_property_names/{expected_file}"
+    if entry == "cli":
+        run_main_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            extra_args=[
+                "--custom-file-header",
+                "# Compound property names",
+                *(["--field-constraints"] if constraints else []),
+            ],
+            assert_func=assert_file_content,
+            expected_file=expected_file,
+        )
+    elif entry == "api":
+        run_generate_file_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            custom_file_header="# Compound property names",
+            field_constraints=constraints,
+            assert_func=assert_file_content,
+            expected_file=expected_file,
+        )
+    schema = json.loads(input_path.read_text())
+    Draft202012Validator.check_schema(schema)
+    validator = Draft202012Validator(schema)
+    payloads = json.loads((COMPOUND_PROPERTY_PAYLOADS / f"{name}.json").read_text())
+    assert_output(
+        json.dumps([validator.is_valid(value) for value in payloads], indent=2) + "\n",
+        COMPOUND_PROPERTY_EXPECTED / COMPOUND_PROPERTY_CASES[name].get(f"{name}_runtime.txt", f"{name}_runtime.txt"),
+    )
+    actual = []
+    context = (
+        nullcontext(
+            generate_dynamic_models(schema, config=GenerateConfig(field_constraints=constraints), cache_size=0)["Root"]
+        )
+        if entry == "dynamic"
+        else _generated_model(output_file, "compound_keys", "Root")
+    )
+    with context as model:
+        for value in payloads:
+            if validator.is_valid(value):
+                model.model_validate(value)
+                actual.append(True)
+            else:
+                with pytest.raises(ValidationError):
+                    model.model_validate(value)
+                actual.append(False)
+    assert_output(
+        json.dumps(actual, indent=2) + "\n",
+        COMPOUND_PROPERTY_EXPECTED / COMPOUND_PROPERTY_CASES[name].get(f"{name}_runtime.txt", f"{name}_runtime.txt"),
+    )
+
+
+@pytest.mark.parametrize(
+    ("name", "schema_validators"),
+    [
+        *[(name, False) for name in json.loads((COMPOUND_PROPERTY_PAYLOADS / "compatibility.json").read_text())],
+        ("unconstrained_oneof", True),
+    ],
+)
+@pytest.mark.parametrize("entry", ["cli", "api"])
+def test_compound_property_names_compatibility(
+    name: str, entry: str, output_file: Path, *, schema_validators: bool
+) -> None:
+    """Preserve valid dictionaries when their key constraint has no native type representation."""
+    input_path = COMPOUND_PROPERTY_INPUTS / f"{name}.json"
+    payload = json.loads((COMPOUND_PROPERTY_PAYLOADS / "compatibility.json").read_text())[name]
+    expected_file = "compound_property_names/" + payload.get("expected", f"{name}.py")
+    if entry == "cli":
+        run_main_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type="jsonschema",
+            extra_args=[
+                "--custom-file-header",
+                "# Compound property names",
+                *(["--generate-schema-validators"] if schema_validators else []),
+            ],
+            assert_func=assert_file_content,
+            expected_file=expected_file,
+        )
+    else:
+        run_generate_file_and_assert(
+            input_path=input_path,
+            output_path=output_file,
+            input_file_type=InputFileType.JsonSchema,
+            custom_file_header="# Compound property names",
+            generate_schema_validators=schema_validators,
+            assert_func=assert_file_content,
+            expected_file=expected_file,
+        )
+    Draft202012Validator(json.loads(input_path.read_text())).validate(payload["valid"])
+    assert_generated_model_json_validation(
+        output_file,
+        module_name=f"compound_property_compatibility_{entry}_{name}",
+        model_name="Root",
+        valid_json=json.dumps(payload["valid"]),
+        invalid_json=json.dumps(payload["invalid"]),
+        expected_error_type="dict_type",
     )
